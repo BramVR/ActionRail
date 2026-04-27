@@ -37,10 +37,12 @@ Use repo-local state:
 
 Prefer Maya 2025 unless a task needs another version.
 The module path below points at the current checkout folder; product and API naming remain `ActionRail`/`actionrail`.
+Use a repo/tool-specific daemon port so other Maya sessions are not affected. For this repo, prefer `7217` unless it is already in use.
 
 ```powershell
 & ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli start `
   --state-dir .gg-maya-sessiond `
+  --port 7217 `
   --maya-exe "C:/Program Files/Autodesk/Maya2025/bin/maya.exe" `
   --mcp-python C:/PROJECTS/GG/GG_MayaSessiond/.venv/Scripts/python.exe `
   --mcp-src C:/PROJECTS/GG/GG_MayaMCP `
@@ -49,6 +51,14 @@ The module path below points at the current checkout folder; product and API nam
 ```
 
 If Maya is already running under sessiond, use `status` first instead of starting a second session.
+
+Before starting, check that the chosen port is free:
+
+```powershell
+Get-NetTCPConnection -LocalPort 7217 -ErrorAction SilentlyContinue
+```
+
+If it returns an existing listener, pick another repo-specific port and record it in `docs/04_status.md`.
 
 ## Status
 

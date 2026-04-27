@@ -1,0 +1,12 @@
+{
+  "id": "transform_stack",
+  "anchor": "viewport.left.center",
+  "items": [
+    {"type": "toolButton", "label": "M", "action": "maya.tool.move"},
+    {"type": "toolButton", "label": "T", "action": "maya.tool.translate"},
+    {"type": "toolButton", "label": "R", "action": "maya.tool.rotate"},
+    {"type": "toolButton", "label": "S", "action": "maya.tool.scale", "tone": "pink"},
+    {"type": "spacer", "size": 14},
+    {"type": "button", "label": "K", "action": "maya.anim.set_key", "tone": "teal"}
+  ]
+}

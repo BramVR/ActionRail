@@ -23,30 +23,51 @@ Last updated: 2026-04-27
   - `docs/03_maya_sessiond_workflow.md`
   - `docs/04_status.md`
 - Tech stack decision documented in `docs/05_tech_stack.md`.
+- Phase 0 prototype implemented:
+  - Maya module skeleton: `ActionRail.mod`, `scripts/actionrail`, `icons`, `presets`, `examples`.
+  - Lazy PySide6/PySide2 import shim in `scripts/actionrail/qt.py`.
+  - Runtime APIs: `actionrail.show_example("transform_stack")`, `actionrail.hide_all()`, `actionrail.reload()`.
+  - Viewport overlay host parented under the active Maya model panel.
+  - Hard-coded `M/T/R/S + K` transform stack matching the research reference.
+  - Maya action bindings for move/translate, rotate, scale, and set key.
+  - Pure Python unit tests and allowlisted MayaSessiond smoke scripts.
+- `docs/03_maya_sessiond_workflow.md` now documents the repo-specific MayaSessiond port rule. Use port `7217` for ActionRail unless it is already in use.
 
 ## In Progress
 
-- Ready for Phase 0 implementation.
+- Phase 0 is implemented and verified.
 
 ## Next
 
-1. Create Maya module skeleton.
-2. Add PySide import shim.
-3. Add viewport overlay host.
-4. Render hard-coded `M/T/R/S + K` stack.
-5. Bind Maya actions.
-6. Add reload/show/hide APIs.
-7. Verify with MayaSessiond.
-8. Update this file.
+1. Start Phase 1 declarative MVP: load the transform stack from JSON instead of hard-coded widget construction.
+2. Add theme token/QSS generation.
+3. Add a shelf/menu toggle once reload cleanup stays stable.
+4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 
 ## Blockers
 
-- None known.
-- MayaSessiond has not yet been run from this repo.
+- No ActionRail implementation blocker known.
+- `GG_MayaSessiond doctor --mcp-src ../GG_MayaMCP` is currently blocked by a sibling repo compatibility lock: sessiond expects GG_MayaMCP commit `2e7a28df7f4d029d81f6421549fb23cb056c4693` / version `0.4.0`, while `../GG_MayaMCP` is at `637954c0510296543126c6504dd445f066eb4559` / version `0.4.1`.
+- Workaround used for verification: omit `--mcp-src` so sessiond uses the MCP package installed in its venv. `doctor` passes in that mode.
 
 ## Verification History
 
-- Docs only. No code verification yet.
+- 2026-04-27 local venv:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 13 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- 2026-04-27 Maya import fallback:
+  - `PYTHONPATH=C:\\PROJECTS\\GG\\ScreenUI\\scripts` with Maya 2025 `mayapy.exe` imported `actionrail 0.1.0`.
+  - `PYTHONNOUSERSITE=1` avoids a user-site NumPy 2 warning while importing Maya's PySide6.
+- 2026-04-27 MayaSessiond:
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on ActionRail-specific port `7217`.
+  - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - Re-ran `tests/maya_smoke/actionrail_phase0_smoke.py` with no manual `sys.path` injection; `import actionrail` worked from `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `ActionRail.mod`.
+  - `tests/maya_smoke/actionrail_capture_smoke.py` saved overlay screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `2560x1440`, visible widget size `40x196`, button count `5`.
+  - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
+  - Session stopped cleanly after verification.
 
 ## Decisions
 
