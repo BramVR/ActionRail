@@ -32,14 +32,18 @@ The reference target is in `research/`:
 4. `docs/01_architecture.md`
 5. `docs/02_implementation_plan.md`
 6. `docs/03_maya_sessiond_workflow.md`
-7. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
+7. `docs/05_tech_stack.md`
+8. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
 
 ## Product Decision
 
 Build PySide6/Qt overlay first.
 
 - PySide overlay draws on top of Maya's viewport.
+- Use Python 3.11 in Maya, PySide6/Qt Widgets, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons with PNG fallbacks, Maya `.mod` packaging, and MayaSessiond verification.
+- Spike Maya 2026 `moverlay` early, but only adopt it if it proves ActionRail's anchoring, hit testing, styling, and cleanup needs.
 - Viewport 2.0 is later, only for native scene/viewport drawing.
+- Web tools are for authoring/import only, not the core runtime.
 - Core UX is declarative presets plus reusable Maya actions.
 
 ## First Agent Task

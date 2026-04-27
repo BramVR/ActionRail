@@ -22,6 +22,7 @@ Last updated: 2026-04-27
   - `docs/02_implementation_plan.md`
   - `docs/03_maya_sessiond_workflow.md`
   - `docs/04_status.md`
+- Tech stack decision documented in `docs/05_tech_stack.md`.
 
 ## In Progress
 
@@ -54,3 +55,6 @@ Last updated: 2026-04-27
 - Designer/Quick Create is deferred until Phase 0 and declarative MVP are stable.
 - Use `GG_MayaSessiond` for live Maya verification when feasible.
 - Use `ActionRail` for product/module naming and `actionrail` for Python package/API naming.
+- Use Python 3.11 in Maya, PySide6/Qt Widgets, custom transparent overlay, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons, `.mod` packaging, and MayaSessiond verification.
+- Spike Autodesk `moverlay` before committing to any overlay helper.
+- Keep web tech out of the core runtime; use it only for authoring/import tooling.

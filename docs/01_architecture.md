@@ -11,6 +11,7 @@ read_when:
 ## MVP Shape
 
 ActionRail is a PySide6-first Maya module.
+See `docs/05_tech_stack.md` for the current stack decision and deferred alternatives.
 
 ```text
 ActionRail/
@@ -41,6 +42,7 @@ Use this layout unless implementation proves a smaller split is cleaner.
 - Locate Maya main window and active model panel.
 - Create/recreate overlay safely.
 - Expose `actionrail.reload()`, `actionrail.show_example()`, `actionrail.hide_all()`.
+- Probe Maya 2026 `moverlay` as a possible helper/reference, but keep the MVP overlay host custom until the probe proves fit.
 
 ### Qt Overlay
 
@@ -48,6 +50,7 @@ Use this layout unless implementation proves a smaller split is cleaner.
 - Empty space must pass through to Maya viewport interaction.
 - Controls receive mouse input only inside their bounds.
 - Reposition on resize, panel changes, workspace switches where possible.
+- Use `QApplication.instance()` and parent widgets under Maya-owned Qt widgets.
 
 ### Widgets
 
@@ -114,6 +117,7 @@ Do not implement these in Phase 0:
 - Icon import pipeline.
 - Viewport 2.0 drawing backend.
 - QML/WebEngine runtime.
+- React/Electron or network-backed web UI.
 - Marking-menu export.
 
 ## Main Risks
