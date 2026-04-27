@@ -14,7 +14,8 @@ Last updated: 2026-04-27
 
 - Research images collected in `research/`.
 - Architecture/report written in `MAYA_UI_FRAMEWORK_REPORT.md`.
-- Local `AGENTS.MD` updated with ScreenUI rules and MayaSessiond workflow.
+- Local `AGENTS.MD` updated with ActionRail rules and MayaSessiond workflow.
+- Product name selected and docs renamed to ActionRail.
 - Agent onboarding docs created:
   - `docs/00_start_here.md`
   - `docs/01_architecture.md`
@@ -52,3 +53,4 @@ Last updated: 2026-04-27
 - Viewport 2.0 is deferred until Qt overlay is stable.
 - Designer/Quick Create is deferred until Phase 0 and declarative MVP are stable.
 - Use `GG_MayaSessiond` for live Maya verification when feasible.
+- Use `ActionRail` for product/module naming and `actionrail` for Python package/API naming.

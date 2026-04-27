@@ -28,17 +28,17 @@ Goal: show the research UI in Maya as a clickable PySide6 overlay.
    - scale tool
    - set key
 7. Add reload/show/hide API:
-   - `screenui.reload()`
-   - `screenui.show_example("transform_stack")`
-   - `screenui.hide_all()`
+   - `actionrail.reload()`
+   - `actionrail.show_example("transform_stack")`
+   - `actionrail.hide_all()`
 8. Add minimal cleanup registry for widgets/callbacks.
 9. Verify in Maya and capture a screenshot if possible.
 10. Update `docs/04_status.md`.
 
 ### Acceptance Criteria
 
-- `import screenui` works in Maya.
-- `screenui.show_example("transform_stack")` shows the stack.
+- `import actionrail` works in Maya.
+- `actionrail.show_example("transform_stack")` shows the stack.
 - Empty overlay space does not block viewport navigation.
 - Buttons trigger expected Maya actions.
 - Repeated show/hide/reload does not duplicate visible widgets.

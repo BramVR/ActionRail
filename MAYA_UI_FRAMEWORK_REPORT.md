@@ -1,9 +1,9 @@
 ---
-summary: Research and architecture proposal for a Maya UI framework that creates polished viewport and tool UIs like the reference screenshots.
-read_when: Planning ScreenUI architecture, implementation phases, user workflow, or Maya/Qt extension choices.
+summary: Research and architecture proposal for ActionRail, a Maya UI framework that creates polished viewport and tool UIs like the reference screenshots.
+read_when: Planning ActionRail architecture, implementation phases, user workflow, or Maya/Qt extension choices.
 ---
 
-# Maya ScreenUI Framework Research
+# ActionRail Framework Research
 
 Date: 2026-04-27
 
@@ -69,7 +69,7 @@ This keeps the MVP simple and useful while leaving room for more serious viewpor
 
 I did not find an open-source GitHub project that already provides the exact proposed product: an artist-friendly Maya framework for declarative, polished, clickable viewport overlay UI elements with designer, themes, action registry, icons, and optional Viewport 2.0 backend. There are useful adjacent projects:
 
-| Project | What it is | Useful for ScreenUI | Gap |
+| Project | What it is | Useful for ActionRail | Gap |
 |---|---|---|---|
 | [danbradham/mvp](https://github.com/danbradham/mvp) | Maya Viewport API wrapper | Model panel/model editor abstraction; draws viewport text with Qt labels | Not a UI creation framework or designer |
 | [theodox/mGui](https://github.com/theodox/mGui) | Cleaner syntax around Maya built-in UI commands | Declarative-ish API ideas and simple Maya UI ergonomics | Built on Maya cmds widgets, not PySide overlay |
@@ -85,7 +85,7 @@ Conclusion: reuse ideas, not code wholesale. `mvp` is the closest reference for 
 
 ## Agent Workflow References
 
-Steipete's public GitHub material is useful for how we build ScreenUI, not for the Maya UI runtime itself.
+Steipete's public GitHub material is useful for how we build ActionRail, not for the Maya UI runtime itself.
 
 Relevant references:
 
@@ -138,7 +138,7 @@ What not to copy:
 
 ## UX And Workflow Updates From Research
 
-The main UX update is to make ScreenUI feel like a visual authoring layer for Maya's existing command ecosystem, not a separate UI universe.
+The main UX update is to make ActionRail feel like a visual authoring layer for Maya's existing command ecosystem, not a separate UI universe.
 
 Research signals:
 
@@ -166,9 +166,9 @@ Add a **Command Capture** workflow:
 
 - User clicks `Record Action`.
 - User performs an operation in Maya.
-- ScreenUI inspects the Script Editor/history/runtime command where possible and proposes a binding.
-- User can save the result as a reusable ScreenUI action.
-- If the capture is ambiguous, ScreenUI stores a draft and asks the user to choose between detected MEL/Python/runtime-command candidates.
+- ActionRail inspects the Script Editor/history/runtime command where possible and proposes a binding.
+- User can save the result as a reusable ActionRail action.
+- If the capture is ambiguous, ActionRail stores a draft and asks the user to choose between detected MEL/Python/runtime-command candidates.
 
 Add a **Live Edit Mode** separate from normal use:
 
@@ -200,7 +200,7 @@ Add **validation and recovery UX**:
 - Broken action badge on controls with missing commands.
 - Missing icon badge with fallback label.
 - Hotkey conflict warning before assignment.
-- Startup safe mode: hold a modifier or run `screenui.safe_start()` to disable all overlays if one breaks Maya startup.
+- Startup safe mode: hold a modifier or run `actionrail.safe_start()` to disable all overlays if one breaks Maya startup.
 - Diagnostics panel: active overlays, callbacks, object names, model panel parents, preset source, icon source, and last errors.
 
 Add **visual review workflow**:
@@ -231,7 +231,7 @@ Use Oracle or an equivalent second-model review for those gates, but only with s
 
 ### Updated UX North Star
 
-ScreenUI should let a Maya user make a polished tool palette in under five minutes:
+ActionRail should let a Maya user make a polished tool palette in under five minutes:
 
 1. Pick a template.
 2. Record or choose commands.
@@ -245,7 +245,7 @@ The advanced designer and Python API can be deeper, but the first-run path must 
 ## Target Architecture
 
 ```text
-screenui/
+actionrail/
   bootstrap/
     install shelf/hotkey/menu entry points
     locate Maya main window and model panels
@@ -286,7 +286,7 @@ screenui/
 The framework should treat UI definitions as data, then mount them into a backend:
 
 ```python
-from screenui import ui
+from actionrail import ui
 
 palette = ui.palette(
     id="transform_stack",
@@ -334,7 +334,7 @@ Responsibilities:
 - Create a transparent child widget that covers the viewport.
 - Maintain child palettes anchored to viewport edges/corners/center.
 - Reposition on viewport resize, panel change, workspace switch, DPI change, and full-screen changes.
-- Pass mouse/keyboard events through except where a ScreenUI control owns the hit area.
+- Pass mouse/keyboard events through except where an ActionRail control owns the hit area.
 - Clean up all widgets and callbacks on reload/unload.
 
 Implementation notes:
@@ -391,7 +391,7 @@ The framework should support three authoring levels:
 
 1. **Preset-first**
    - User starts with templates: vertical stack, horizontal toolbar, radial menu, status strip, mini inspector.
-   - They change labels/icons/actions/colors in the ScreenUI Designer.
+   - They change labels/icons/actions/colors in the ActionRail Designer.
 
 2. **Data-first**
    - UI is stored in JSON/YAML specs.
@@ -419,7 +419,7 @@ Useful icon sources:
 
 Recommended web-tool usage:
 
-- Good: Figma/Illustrator/Inkscape/SVG editors for designing icons and mockups, Iconify or icon-pack websites for discovery, local SVG import into ScreenUI.
+- Good: Figma/Illustrator/Inkscape/SVG editors for designing icons and mockups, Iconify or icon-pack websites for discovery, local SVG import into ActionRail.
 - Good: optional web-based preset/icon browser during development if it exports static JSON/SVG.
 - Risky for core runtime: live CDN icons, remote web pages, online JS bundles, or WebEngine-only controls inside the viewport.
 - Acceptable later: an optional `QWebEngineView` designer panel if `PySide6.QtWebEngineWidgets` imports successfully in the target Maya version.
@@ -463,7 +463,7 @@ The UI binds to state with simple expressions or Python predicates. Example: a s
 
 ### 7. Designer
 
-Provide a dockable `ScreenUI Designer` for non-coders:
+Provide a dockable `ActionRail Designer` for non-coders:
 
 - Choose template: tool stack, floating toolbar, status strip, radial menu.
 - Add buttons, spacers, sliders, badges.
@@ -493,10 +493,10 @@ Avoid using this backend for normal buttons at first. Interactive hit testing, s
 Ship as a Maya module:
 
 ```text
-ScreenUI/
-  ScreenUI.mod
+ActionRail/
+  ActionRail.mod
   scripts/
-    screenui/
+    actionrail/
   icons/
   plug-ins/
   presets/
@@ -510,8 +510,8 @@ The `.mod` file should add `scripts` to `PYTHONPATH` and expose icons. Use versi
 ### Coder Workflow
 
 1. Install the module or add the source checkout to `MAYA_MODULE_PATH`.
-2. In Maya, run `import screenui; screenui.show_example("transform_stack")`.
-3. Create a Python UI spec using `screenui.ui`.
+2. In Maya, run `import actionrail; actionrail.show_example("transform_stack")`.
+3. Create a Python UI spec using `actionrail.ui`.
 4. Bind controls to registered Maya actions.
 5. Run live reload while iterating.
 6. Save the spec to a user or project preset.
@@ -520,7 +520,7 @@ The `.mod` file should add `scripts` to `PYTHONPATH` and expose icons. Use versi
 
 ### Artist Workflow
 
-1. Open `ScreenUI Quick Create` from shelf/menu.
+1. Open `ActionRail Quick Create` from shelf/menu.
 2. Pick `Vertical Tool Stack`.
 3. Choose context: Modeling, Rigging, Animation, FX, Rendering, or Custom.
 4. Add buttons `M`, `T`, `R`, `S`, and `K`.
@@ -545,8 +545,8 @@ The `.mod` file should add `scripts` to `PYTHONPATH` and expose icons. Use versi
 
 MVP:
 
-1. `screenui.reload()` for fast iteration.
-2. `screenui.show_example("transform_stack")`.
+1. `actionrail.reload()` for fast iteration.
+2. `actionrail.show_example("transform_stack")`.
 3. Viewport overlay host with anchors and input hit testing.
 4. `ToolStack`, `ToolButton`, `ActionButton`, `Spacer`.
 5. Theme token loader and QSS compiler.
@@ -574,7 +574,7 @@ Next:
 8. Radial/marking-menu widget.
 9. Project/studio preset layering.
 10. Command Capture from Script Editor/runtime-command history.
-11. Maya marking-menu export from the ScreenUI action registry.
+11. Maya marking-menu export from the ActionRail action registry.
 12. Telemetry-free diagnostics panel for callbacks, widgets, and orphan cleanup.
 
 ## Implementation Phases
@@ -657,7 +657,7 @@ Exit criteria:
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
-| Overlay intercepts viewport input | Artists need normal tumble/pan/select behavior | Hit-test only ScreenUI controls; pass through empty overlay space |
+| Overlay intercepts viewport input | Artists need normal tumble/pan/select behavior | Hit-test only ActionRail controls; pass through empty overlay space |
 | Model panel widget discovery is fragile | Maya UI hierarchy changes across versions | Isolate in one adapter module; support active-panel remounting |
 | PySide2/PySide6 split | Maya 2024 and 2025+ differ | Support PySide6 first; add import shim only if 2024 is required |
 | High DPI sizing bugs | Qt6 high DPI is always on | Use device-independent sizes, test mixed scaling |
@@ -703,6 +703,6 @@ Do not build the designer, QML backend, or Viewport 2.0 backend until this MVP w
 
 ## Final Architecture Decision
 
-Build **ScreenUI as a PySide6-first Maya overlay framework** with a declarative spec, theme tokens, action registry, and state observer. Package it as a Maya module. Add Viewport 2.0 drawing later as a second backend, not as the foundation.
+Build **ActionRail as a PySide6-first Maya overlay framework** with a declarative spec, theme tokens, action registry, and state observer. Package it as a Maya module. Add Viewport 2.0 drawing later as a second backend, not as the foundation.
 
 This matches the research images because the desired UI is fundamentally a polished, clickable, screen-space widget stack. Qt gives the fastest path to that result inside Maya, while Maya APIs remain responsible for tool execution, state, packaging, and later deep viewport integration.

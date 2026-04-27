@@ -1,7 +1,7 @@
 ---
-summary: Compact architecture for the ScreenUI MVP and the boundaries between Qt overlay, Maya actions, presets, and later Viewport 2.0.
+summary: Compact architecture for the ActionRail MVP and the boundaries between Qt overlay, Maya actions, presets, and later Viewport 2.0.
 read_when:
-  - Implementing or reviewing ScreenUI code structure.
+  - Implementing or reviewing ActionRail code structure.
   - Deciding where a feature belongs.
   - Avoiding premature Viewport 2.0 or designer work.
 ---
@@ -10,13 +10,13 @@ read_when:
 
 ## MVP Shape
 
-ScreenUI is a PySide6-first Maya module.
+ActionRail is a PySide6-first Maya module.
 
 ```text
-ScreenUI/
-  ScreenUI.mod
+ActionRail/
+  ActionRail.mod
   scripts/
-    screenui/
+    actionrail/
       __init__.py
       qt.py
       runtime.py
@@ -40,7 +40,7 @@ Use this layout unless implementation proves a smaller split is cleaner.
 
 - Locate Maya main window and active model panel.
 - Create/recreate overlay safely.
-- Expose `screenui.reload()`, `screenui.show_example()`, `screenui.hide_all()`.
+- Expose `actionrail.reload()`, `actionrail.show_example()`, `actionrail.hide_all()`.
 
 ### Qt Overlay
 

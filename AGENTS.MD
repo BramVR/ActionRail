@@ -1,9 +1,9 @@
 read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 
-# ScreenUI
+# ActionRail
 
 ## Context
-- Goal: Maya ScreenUI framework; polished viewport UI like `research/`.
+- Goal: ActionRail for Maya; polished viewport UI like `research/`.
 - Start docs: `docs/00_start_here.md`; deep reference: `MAYA_UI_FRAMEWORK_REPORT.md`.
 - PySide6/Qt overlay first. Viewport 2.0 only for scene/native drawing.
 
@@ -18,7 +18,7 @@ read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 - Keep docs current so agents know big picture, done state, next work, and blockers.
 
 ## Build Rules
-- Package as Maya module: `scripts/screenui`, `icons`, `presets`, `examples`.
+- Package as Maya module: `scripts/actionrail`, `icons`, `presets`, `examples`.
 - Use `maya.cmds` + PySide6; no PyMEL unless asked.
 - Keep UI declarative: Python API + JSON presets + reusable actions.
 - Verify UI changes in MayaSessiond or state exact blocker.

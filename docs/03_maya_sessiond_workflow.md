@@ -1,7 +1,7 @@
 ---
 summary: How to use GG_MayaSessiond from this repo for live Maya verification and screenshot-capable agent loops.
 read_when:
-  - Verifying ScreenUI inside Maya.
+  - Verifying ActionRail inside Maya.
   - Running MCP tool calls from an agent.
   - Diagnosing a blocked Maya test loop.
 ---
@@ -36,6 +36,7 @@ Use repo-local state:
 ## Start
 
 Prefer Maya 2025 unless a task needs another version.
+The module path below points at the current checkout folder; product and API naming remain `ActionRail`/`actionrail`.
 
 ```powershell
 & ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli start `
@@ -87,7 +88,7 @@ For a specific tool:
   --json
 ```
 
-Prefer native inspection tools over raw script execution. Use raw script execution only when needed to import/run ScreenUI APIs.
+Prefer native inspection tools over raw script execution. Use raw script execution only when needed to import/run ActionRail APIs.
 
 ## Stop
 
@@ -104,7 +105,7 @@ Record these in `docs/04_status.md`:
 - `doctor` result.
 - `start/status` result.
 - `scene.info` result.
-- ScreenUI import result.
+- ActionRail import result.
 - show/hide/reload result.
 - screenshot path, if capture works.
 - exact blocker, if any step fails.

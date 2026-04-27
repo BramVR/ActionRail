@@ -1,8 +1,8 @@
 ---
-summary: First doc to read before working on ScreenUI; explains the goal, current state, read order, and first implementation slice.
+summary: First doc to read before working on ActionRail; explains the goal, current state, read order, and first implementation slice.
 read_when:
   - Starting a new agent session.
-  - Picking up ScreenUI implementation work.
+  - Picking up ActionRail implementation work.
   - Updating docs after a meaningful change.
 ---
 
@@ -10,7 +10,7 @@ read_when:
 
 ## Goal
 
-ScreenUI is a Maya framework for polished, user-created viewport UI: compact tool stacks, buttons, badges, and later authoring tools like Quick Create.
+ActionRail is a Maya framework for polished, user-created viewport UI: compact tool stacks, buttons, badges, and later authoring tools like Quick Create.
 
 The reference target is in `research/`:
 
@@ -22,7 +22,7 @@ The reference target is in `research/`:
 - Research report exists: `MAYA_UI_FRAMEWORK_REPORT.md`.
 - Local agent guidance exists: `AGENTS.MD`.
 - No implementation exists yet.
-- This directory is not currently a git repo.
+- Git repo initialized with the initial docs commit.
 
 ## Read Order
 
