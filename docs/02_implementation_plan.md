@@ -17,9 +17,10 @@ Goal: prove the reference transform stack can run in Maya as a clickable PySide6
 1. Create module skeleton.
 2. Create PySide compatibility shim.
 3. Locate Maya main window and active model panel.
-4. Create transparent overlay widget parented to the inner viewport-area widget,
-   falling back to the model panel only when Maya does not expose an inner
-   viewport child.
+4. Resolve the inner viewport-area widget for anchor geometry and show the
+   visible rail as a small frameless Maya-owned tool window, falling back to
+   direct viewport parenting only outside Maya or when the main window cannot be
+   resolved.
 5. Add hard-coded reference stack:
    - `M`, `T`, `R`, `S` grouped vertically.
    - `S` pink active/accent state.
@@ -41,7 +42,8 @@ Goal: prove the reference transform stack can run in Maya as a clickable PySide6
 
 - `import actionrail` works in Maya.
 - `actionrail.show_example("transform_stack")` shows the stack.
-- Empty overlay space does not block viewport navigation.
+- The overlay does not create viewport-sized transparent hit areas and does not
+  block viewport navigation outside visible controls.
 - Buttons trigger expected Maya actions.
 - Repeated show/hide/reload does not duplicate visible widgets.
 - Resize or panel switch does not leave a broken overlay in the common case.
@@ -186,6 +188,11 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 ## Current Priority
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
+
+Next implementation slice: live predicate refresh after overlay creation.
+Use `docs/04_status.md` as the detailed handoff; likely files are
+`scripts/actionrail/overlay.py`, `scripts/actionrail/widgets.py`,
+`scripts/actionrail/state.py`, and `tests/maya_smoke/actionrail_predicates_smoke.py`.
 
 ## Research Backlog
 

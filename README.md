@@ -59,7 +59,8 @@ $env:MAYA_MODULE_PATH = "."
 
 ## What Works Now
 
-- Transparent Qt viewport overlay parented under Maya's inner viewport area.
+- Qt rail overlay anchored to Maya model-panel geometry and shown as a small
+  frameless Maya-owned tool window to avoid Viewport 2.0 repaint artifacts.
 - Built-in `transform_stack` and `horizontal_tools` JSON presets.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.
@@ -139,7 +140,8 @@ in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 - Data-driven rails: Python API plus JSON presets.
 - Stable dimensions; hover, active, disabled, and badge states must not shift
   layout.
-- Empty overlay space must pass through to Maya viewport interaction.
+- The rail must not create viewport-sized transparent widgets; normal viewport
+  interaction should remain available outside the visible controls.
 - Runtime commands for anything that should be visible in Maya's Hotkey Editor.
 - Locked studio presets should never be silently overwritten by user edits.
 

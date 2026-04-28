@@ -28,7 +28,7 @@ Last updated: 2026-04-28
   - Maya module skeleton: `ActionRail.mod`, `scripts/actionrail`, `icons`, `presets`, `examples`.
   - Lazy PySide6/PySide2 import shim in `scripts/actionrail/qt.py`.
   - Runtime APIs: `actionrail.show_example("transform_stack")`, `actionrail.hide_all()`, `actionrail.reload()`.
-  - Viewport overlay host parented under the active Maya model panel's inner viewport-area widget when Maya exposes one.
+  - Viewport overlay host resolves the active Maya model panel's inner viewport-area widget for anchor geometry.
   - Hard-coded `M/T/R/S + K` transform stack matching the research reference.
   - Maya action bindings for move/translate, rotate, scale, and set key.
   - Pure Python unit tests and allowlisted MayaSessiond smoke scripts.
@@ -57,7 +57,7 @@ Last updated: 2026-04-28
   - Explicit runtime-command sync helpers now publish the current default actions or preset slots and remove stale generated ActionRail commands for renamed/removed ids.
   - A safe predicate evaluator now drives initial `visible_when`, `enabled_when`, and `active_when` state from Maya selection/tool/panel/camera/playback state plus action, command, and plugin availability checks.
   - Predicate state snapshots now receive the overlay's resolved model panel, so `active.panel` and `active.camera` match explicit `panel=` targets and model-panel fallback instead of whatever UI control currently has focus.
-  - Overlay parenting now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container, avoiding transient ghost copies of the rail when Maya toolbar controls repaint.
+  - Overlay anchoring now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container.
   - Overlay creation now removes stale ActionRail Qt widgets for the same preset before creating a replacement rail, preventing duplicate rails after reload/show cycles or interrupted live development.
   - The visible rail now uses a small frameless Maya-owned tool window positioned from the resolved viewport geometry instead of being parented directly under the OpenGL viewport widget, avoiding model-panel toolbar repaint ghosts without covering the viewport.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
@@ -89,22 +89,50 @@ Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
 2. First recommended coding slice: add live refresh for predicate-driven active/enabled state after overlay creation.
-3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
+3. Use the "Next Coding Slice: Live Predicate Refresh" brief below before editing code.
+4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest viewport-parent fix:
+Checks already run for the latest overlay host fix:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 77 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 78 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - MayaSessiond started on port `7217` with `--maya-module-path .`, absolute `--mcp-script-dirs`, and raw execution enabled for interactive inspection.
 - Live `actionrail.show_example("transform_stack")` check showed the overlay anchored from the inner `QmayaLayoutWidget modelPanel4`; the visible rail is a small `MayaWindow`-owned tool window, so viewport repaint does not duplicate it at local origin.
-- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`.
+- `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.run` raw execution: one active overlay id, one visible `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, and rail geometry matched the expected global viewport anchor.
+- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.run` raw execution: buttons still triggered Maya actions through the floating rail host.
 
 ## Next
 
 1. Add live refresh for predicate-driven active/enabled state after overlay creation.
 2. Add a shelf/menu toggle once reload cleanup stays stable.
 3. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
-5. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
+4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
+
+## Next Coding Slice: Live Predicate Refresh
+
+Goal: visible overlays should update predicate-driven button `visible_when`, `enabled_when`, and `active_when` state after creation when Maya state changes, without requiring `actionrail.reload()`.
+
+Known current behavior:
+
+- Predicate state is evaluated once while building widgets in `scripts/actionrail/widgets.py`.
+- `scripts/actionrail/state.py::snapshot()` already captures current tool, selection count, active panel, active camera, and playback state.
+- `ViewportOverlayHost` already stores `spec`, `registry`, `cmds`, and resolved `panel`, so it has enough context to recompute predicates.
+- `tests/maya_smoke/actionrail_predicates_smoke.py` verifies initial predicate state only.
+
+Suggested implementation shape:
+
+1. Add a widget refresh helper in `scripts/actionrail/widgets.py` that can update existing rendered buttons from a fresh `PredicateContext`.
+   Start with `enabled_when` and `active_when`; if `visible_when` changes, rebuilding the rail or hiding/showing existing slot widgets may be needed.
+2. Add `ViewportOverlayHost.refresh_state()` or similar in `scripts/actionrail/overlay.py` that calls `snapshot(self.cmds, active_panel=self.panel)` and applies the widget refresh helper.
+3. Add a small timer or Maya event/scriptJob bridge only after the manual refresh path is covered by tests. Keep callback cleanup centralized in `ViewportOverlayHost.close()`.
+4. Extend `tests/maya_smoke/actionrail_predicates_smoke.py` or add a focused new smoke script that changes selection/tool after `host.show()`, calls the refresh path, and verifies active/enabled/visible state updates.
+
+Acceptance criteria:
+
+- Changing Maya tool after overlay creation updates the active button state without rebuilding through `actionrail.reload()`.
+- Changing selection after overlay creation updates at least enabled/active predicate state; if visible predicates are implemented in the same slice, hidden/visible slots update without leaving empty clusters.
+- Refresh cleanup does not leave timers, scriptJobs, duplicate widgets, or stale overlay ids after `actionrail.hide_all()`.
+- Verification is recorded here with exact local and MayaSessiond commands/results.
 
 ## Blockers
 
@@ -224,7 +252,7 @@ Checks already run for the latest viewport-parent fix:
   - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered only `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, widget size was `40x120`, panel was `modelPanel4`, and the widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_predicates_widget.png`.
-  - Live interactive inspection reproduced the outer model-panel repaint artifact, then verified `actionrail.show_example("transform_stack")` now parents to the inner `QmayaLayoutWidget modelPanel4` at `[1, 22, 1957, 1086]` with the rail at `[12, 445]`.
+  - Live interactive inspection reproduced the outer model-panel repaint artifact, then verified the overlay could anchor from the inner `QmayaLayoutWidget modelPanel4`; this was superseded by the later floating rail host fix after direct viewport-child parenting still produced toolbar repaint ghosts.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
   - A fresh interactive `transform_stack` overlay was restored after the smoke run.
 - 2026-04-28 stale overlay cleanup and floating rail host:
@@ -245,6 +273,6 @@ Checks already run for the latest viewport-parent fix:
 - Build the hotkey bridge through Maya runtime commands so bindings remain visible to Maya and not only to ActionRail.
 - Use `GG_MayaSessiond` for live Maya verification when feasible.
 - Use `ActionRail` for product/module naming and `actionrail` for Python package/API naming.
-- Use Python 3.11 in Maya, PySide6/Qt Widgets, custom transparent overlay, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons, `.mod` packaging, and MayaSessiond verification.
+- Use Python 3.11 in Maya, PySide6/Qt Widgets, custom Qt rail overlay, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons, `.mod` packaging, and MayaSessiond verification.
 - Spike Autodesk `moverlay` before committing to any overlay helper.
 - Keep web tech out of the core runtime; use it only for authoring/import tooling.

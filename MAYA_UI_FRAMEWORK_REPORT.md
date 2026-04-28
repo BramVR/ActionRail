@@ -20,7 +20,7 @@ The reference style is screen-space, compact, tool-like, low-chrome, dark neutra
 
 Use a hybrid framework:
 
-1. **Primary renderer: PySide6/Qt transparent viewport overlay**
+1. **Primary renderer: PySide6/Qt rail overlay**
    - Best match for polished clickable controls, hover/press states, animation, tooltips, menus, high-level layouts, theme tokens, and user-defined actions.
    - Parent overlay widgets to Maya's existing Qt widgets. Do not create a new `QApplication`.
 
@@ -177,7 +177,7 @@ Add a **Command Capture** workflow:
 
 Add a **Live Edit Mode** separate from normal use:
 
-- Normal mode: overlay controls are clickable; empty overlay space passes through to the viewport.
+- Normal mode: overlay controls are clickable; ActionRail avoids viewport-sized transparent hit areas so normal viewport interaction remains available outside visible controls.
 - Edit mode: show anchors, hit boxes, spacing guides, safe margins, and drag handles.
 - Test mode: controls execute in a temporary preset without writing user prefs.
 - Publish mode: validates actions, icons, hotkeys, DPI assets, and missing dependencies before saving.
@@ -270,8 +270,8 @@ actionrail/
     session lifecycle, callback cleanup, logging
     central registry of overlays, panels, specs, actions
   overlay/
-    ViewportOverlayHost parented to modelPanel widgets
-    anchor/layout engine, resize tracking, input pass-through
+    ViewportOverlayHost anchored from modelPanel widgets
+    small MayaWindow-owned rail windows, resize tracking, input isolation
   widgets/
     Button, ToggleButton, ToolStack, Separator, Badge, Slider, PieMenu
     all styled by theme tokens, not per-widget ad hoc CSS
@@ -348,10 +348,10 @@ The same spec should also be serializable for non-programmers:
 Responsibilities:
 
 - Find the active model panel and its Qt widget.
-- Create a transparent child widget that covers the viewport.
-- Maintain child palettes anchored to viewport edges/corners/center.
+- Resolve model-panel viewport geometry for anchors.
+- Create small frameless Maya-owned rail windows positioned over the viewport.
 - Reposition on viewport resize, panel change, workspace switch, DPI change, and full-screen changes.
-- Pass mouse/keyboard events through except where an ActionRail control owns the hit area.
+- Avoid viewport-sized transparent hit areas; only visible ActionRail controls should receive input.
 - Clean up all widgets and callbacks on reload/unload.
 
 Implementation notes:
@@ -598,13 +598,13 @@ Next:
 
 ### Phase 0 - Prototype
 
-Goal: prove the reference UI can be recreated as a transparent child overlay in Maya.
+Goal: prove the reference UI can be recreated as a clickable Qt rail overlay in Maya.
 
 Deliverables:
 
 - PySide import shim.
 - Main-window/model-panel widget discovery.
-- Transparent overlay host.
+- Qt overlay host anchored to model-panel geometry.
 - Hard-coded `M/T/R/S + K` stack.
 - Tool switching and set-key command.
 - Active-state polling or minimal callbacks.
@@ -613,7 +613,7 @@ Deliverables:
 Exit criteria:
 
 - Overlay appears in the active viewport.
-- Buttons are clickable without breaking viewport navigation outside button bounds.
+- Buttons are clickable without blocking viewport navigation outside button bounds.
 - It survives panel resize and workspace switching.
 
 ### Phase 1 - MVP Framework
@@ -674,7 +674,7 @@ Exit criteria:
 
 | Risk | Why it matters | Mitigation |
 |---|---|---|
-| Overlay intercepts viewport input | Artists need normal tumble/pan/select behavior | Hit-test only ActionRail controls; pass through empty overlay space |
+| Overlay intercepts viewport input | Artists need normal tumble/pan/select behavior | Use small rail windows or precise hit regions; avoid viewport-sized transparent hit areas |
 | Model panel widget discovery is fragile | Maya UI hierarchy changes across versions | Isolate in one adapter module; support active-panel remounting |
 | PySide2/PySide6 split | Maya 2024 and 2025+ differ | Support PySide6 first; add import shim only if 2024 is required |
 | High DPI sizing bugs | Qt6 high DPI is always on | Use device-independent sizes, test mixed scaling |
@@ -709,7 +709,7 @@ The smallest useful product is:
 
 - A module-installable package.
 - A Python API and JSON spec format.
-- A transparent viewport overlay backend.
+- A Qt rail overlay backend anchored to viewport/model-panel geometry.
 - A compact dark theme matching the research images.
 - `ToolStack` buttons with active/accent states.
 - Built-in move/translate/rotate/scale/set-key actions.

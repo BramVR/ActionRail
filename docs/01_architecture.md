@@ -43,7 +43,9 @@ Long-term ActionRail authoring should follow the WoW-style customization roadmap
 
 Conceptual states:
 
-- **Normal Mode**: rails execute actions; empty overlay space passes through to Maya.
+- **Normal Mode**: rails execute actions; the overlay host avoids viewport-sized
+  transparent hit areas so normal Maya viewport interaction remains available
+  outside visible controls.
 - **Edit Mode**: rails show outlines, anchors, handles, snap guides, safe margins, and per-rail settings.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.
 
@@ -58,13 +60,19 @@ The customization layer is planned after the declarative MVP, but the spec and a
 
 ### Qt Overlay
 
-- Transparent child widget over Maya's inner viewport-area widget. Avoid
-  parenting to the outer model-panel container because it also owns toolbar UI
-  and can produce transient repaint artifacts over Viewport 2.0.
-- Empty space must pass through to Maya viewport interaction.
+- Resolve the active model panel and its inner viewport-area widget for anchor
+  geometry.
+- Show visible rails as small frameless Maya-owned tool windows positioned from
+  that viewport geometry. Avoid parenting the rail directly under the OpenGL
+  viewport widget or a viewport-sized transparent container because Maya can
+  briefly repaint those child widgets at local origin during model-panel toolbar
+  refreshes.
+- Do not create empty viewport-sized overlay space; normal Maya viewport
+  interaction should remain available outside the visible controls.
 - Controls receive mouse input only inside their bounds.
 - Reposition on resize, panel changes, workspace switches where possible.
-- Use `QApplication.instance()` and parent widgets under Maya-owned Qt widgets.
+- Use `QApplication.instance()` and parent visible rail windows under Maya's main
+  Qt window to keep object ownership stable.
 
 ### Widgets
 

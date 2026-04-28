@@ -15,7 +15,7 @@ Build ActionRail as:
 ```text
 Python 3.11 in Maya
 + PySide6 / Qt Widgets
-+ custom transparent viewport overlay
++ custom Qt rail overlay anchored to model-panel geometry
 + maya.cmds / OpenMayaUI / shiboken6
 + JSON specs and Python builder API
 + Maya runtime commands for publishable hotkey targets
@@ -28,7 +28,8 @@ Python 3.11 in Maya
 
 - Use Maya's bundled Python and Qt. Maya 2026 is Python 3.11.4 with Qt/PySide6 6.5.3.
 - Use `QApplication.instance()`. Never create a new `QApplication`.
-- Parent widgets under Maya widgets and keep stable `objectName()` values.
+- Parent visible rails under Maya's main Qt window, use model-panel widgets for
+  anchor geometry, and keep stable `objectName()` values.
 - Use `maya.cmds` first. Use Maya API 2.0 only where `cmds` is not enough.
 - Use Maya runtime commands as the bridge for ActionRail actions and slots that should be bindable through Maya's Hotkey Editor.
 - Avoid PyMEL unless explicitly requested.
@@ -36,7 +37,8 @@ Python 3.11 in Maya
 ## UI Layer
 
 - Use PySide6 / Qt Widgets for the MVP.
-- Implement a custom transparent viewport overlay host.
+- Implement a custom Qt overlay host that resolves model-panel geometry and
+  positions small frameless rail windows over the viewport.
 - Use custom `QWidget`/`QPainter` controls for the compact stack when standard buttons fight the design.
 - Use `QAction` concepts internally for reusable commands, even if widgets are custom-painted.
 - Use QSS/theme tokens for consistent colors, spacing, radius, and states.
@@ -50,7 +52,8 @@ Maya 2026 includes Autodesk's `moverlay` module for Qt-based 2D overlays over Ma
 Spike it early as a reference or adapter, but do not make it the core until it proves:
 
 - viewport/model-panel anchoring works for ActionRail
-- empty overlay space can pass through viewport input
+- it can avoid viewport-sized transparent hit areas while still anchoring to
+  model panels
 - controls can own precise hit areas
 - reload cleanup is reliable
 - styling can match the reference UI
