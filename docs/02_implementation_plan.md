@@ -59,7 +59,7 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
 - Python builder API.
 - Theme tokens and QSS generation.
 - Reusable action registry.
-- Shelf/menu toggle.
+- Shelf/menu toggle. Done for the default `transform_stack` preset through idempotent menu and shelf installers.
 - Basic validation for missing actions and bad preset shape.
 - `scripts/maya-smoke.ps1` if command shape is stable.
 
@@ -189,18 +189,17 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: add a shelf/menu toggle entry point now that reload
-cleanup and manual predicate refresh are stable. Use `docs/04_status.md` as
-the detailed handoff; likely files are `scripts/actionrail/runtime.py`, a Maya
-startup/menu integration module under `scripts/actionrail`, and focused tests.
+Next implementation slice: add a reusable smoke command wrapper if the
+MayaSessiond command shape remains stable. Use `docs/04_status.md` as the
+detailed handoff.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Shelf/menu entry points and safe-mode diagnostics.
-2. Reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+1. Reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+2. Safe-mode diagnostics.
 3. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
 4. Bind Mode, then flyouts, then command rings.
 5. Icon import pipeline with license/source tracking.

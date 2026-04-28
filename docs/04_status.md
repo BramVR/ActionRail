@@ -64,6 +64,11 @@ Last updated: 2026-04-28
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
+- Maya-native UI entry point:
+  - `actionrail.toggle_default()` shows the default `transform_stack` preset when hidden and hides it when visible.
+  - `actionrail.install_menu_toggle()` and `actionrail.uninstall_menu_toggle()` manage an idempotent Maya menu item.
+  - `actionrail.install_shelf_toggle()` and `actionrail.uninstall_shelf_toggle()` manage an idempotent Maya shelf button.
+  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
 - Test/docs hardening:
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
   - Runtime tests now cover unknown slots and slots without actions.
@@ -89,60 +94,34 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add a shelf/menu toggle entry point now that reload cleanup and manual predicate refresh are stable.
-3. Use the "Next Coding Slice: Shelf/Menu Toggle" brief below before editing code.
+2. First recommended coding slice: add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+3. Use the exact command shapes from the latest verification history before wrapping them.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest live predicate refresh slice:
+Checks already run for the latest Maya UI toggle slice:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 80 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 88 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
 - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
 - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
-- `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: initial buttons were `VS/DK/CK`; tool-only `host.refresh_state()` did not rebuild and cleared `VS`/`CK` active state with `refreshed=2`; clearing selection requested a visibility rebuild and rendered `HE/DK/CK` at size `[46, 138]` with no empty cluster frames.
+- `tests/maya_smoke/actionrail_maya_ui_smoke.py` passed through `script.execute`: menu and shelf entries installed idempotently, both command strings were `import actionrail; actionrail.toggle_default()`, toggle showed `transform_stack` at size `[46, 214]`, toggle hid it back to no active overlays, and uninstall removed both entries.
+- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
 
 ## Latest Handoff
 
-- Task goal completed: added manual live predicate refresh after overlay creation.
-- Files changed: `scripts/actionrail/widgets.py`, `scripts/actionrail/overlay.py`, `tests/test_widgets.py`, `tests/maya_smoke/actionrail_predicates_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and this status doc.
-- Checks run: local pytest and ruff passed; MayaSessiond predicate smoke passed through `script.execute`.
-- Current live state: MayaSessiond is running on port `7217`; the predicate smoke now closes its temporary host by default after verification.
-- Blockers/risks: automatic timer/scriptJob refresh is not implemented yet; the new path is manual via `ViewportOverlayHost.refresh_state()`.
-- Exact next step: continue Phase 1 by adding a shelf/menu toggle entry point.
+- Task goal completed: added Maya-native menu and shelf toggle entry points for the default ActionRail preset.
+- Files changed: `scripts/actionrail/maya_ui.py`, `scripts/actionrail/__init__.py`, `tests/test_maya_ui.py`, `tests/maya_smoke/actionrail_maya_ui_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/03_maya_sessiond_workflow.md`, and this status doc.
+- Checks run: local pytest and ruff passed; MayaSessiond Maya UI smoke and phase0 smoke passed through `script.execute`.
+- Current live state: MayaSessiond is running on port `7217`; the phase0 smoke closed its overlay at the end.
+- Blockers/risks: automatic timer/scriptJob predicate refresh is not implemented yet; no shelf/menu implementation blocker known.
+- Exact next step: add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 
 ## Next
 
-1. Add a shelf/menu toggle entry point.
+1. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 2. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
-3. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
-4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
-
-## Next Coding Slice: Shelf/Menu Toggle
-
-Goal: provide a Maya-native entry point to show/hide the default ActionRail preset without requiring users to run Python manually.
-
-Known current behavior:
-
-- Runtime APIs exist: `actionrail.show_example("transform_stack")`, `actionrail.hide_all()`, and `actionrail.reload()`.
-- Reload cleanup and stale-widget cleanup are stable.
-- Manual `ViewportOverlayHost.refresh_state()` is covered by unit tests and Maya predicate smoke.
-- No shelf/menu installer currently exists.
-
-Suggested implementation shape:
-
-1. Add a small Maya UI integration module that can create/remove an ActionRail menu item or shelf button idempotently.
-2. Use existing runtime APIs rather than duplicating overlay lifecycle logic.
-3. Keep install/uninstall functions safe to call repeatedly during live reload.
-4. Add focused pure Python tests for idempotent command construction where feasible, plus a Maya smoke check if menu/shelf mutation is reliable through Sessiond.
-
-Acceptance criteria:
-
-- A user can install a Maya-native ActionRail toggle entry point from Python.
-- Re-running install does not create duplicate menu items/shelf buttons.
-- The toggle shows the default `transform_stack` preset when hidden and hides it when visible.
-- Uninstall removes the created UI entry point without touching unrelated Maya UI.
-- Verification is recorded here with exact local and MayaSessiond commands/results.
+3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
 ## Blockers
 
@@ -291,6 +270,14 @@ Acceptance criteria:
   - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: initial buttons were `VS/DK/CK`; tool-only `host.refresh_state()` did not rebuild and cleared `VS`/`CK` active state with `refreshed=2`; clearing selection requested a visibility rebuild and rendered `HE/DK/CK` at size `[46, 138]` with no empty cluster frames.
+- 2026-04-28 Maya UI toggle:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 88 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` passed through `script.execute`: menu and shelf entries installed idempotently, both command strings were `import actionrail; actionrail.toggle_default()`, toggle showed `transform_stack` at size `[46, 214]`, toggle hid it back to no active overlays, and uninstall removed both entries.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
 
 ## Decisions
 
