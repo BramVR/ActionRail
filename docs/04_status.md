@@ -12,7 +12,8 @@ Last updated: 2026-04-28
 
 ## Done
 
-- Research images collected in `research/`.
+- Reference images were collected in local `research/`; that folder is now ignored by Git.
+- README/documentation images live in `docs/assets/`.
 - Architecture/report written in `MAYA_UI_FRAMEWORK_REPORT.md`.
 - Local `AGENTS.MD` updated with ActionRail rules and MayaSessiond workflow.
 - Product name selected and docs renamed to ActionRail.
@@ -105,7 +106,7 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 13 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - 2026-04-27 Maya import fallback:
-  - `PYTHONPATH=C:\\PROJECTS\\GG\\ScreenUI\\scripts` with Maya 2025 `mayapy.exe` imported `actionrail 0.1.0`.
+  - `PYTHONPATH=./scripts` with Maya 2025 `mayapy.exe` imported `actionrail 0.1.0`.
   - `PYTHONNOUSERSITE=1` avoids a user-site NumPy 2 warning while importing Maya's PySide6.
 - 2026-04-27 MayaSessiond:
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
@@ -113,7 +114,7 @@ Checks already run for the roadmap update:
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
-  - Re-ran `tests/maya_smoke/actionrail_phase0_smoke.py` with no manual `sys.path` injection; `import actionrail` worked from `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `ActionRail.mod`.
+  - Re-ran `tests/maya_smoke/actionrail_phase0_smoke.py` with no manual `sys.path` injection; `import actionrail` worked from `--maya-module-path .` and `ActionRail.mod`.
   - `tests/maya_smoke/actionrail_capture_smoke.py` saved overlay screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `2560x1440`, visible widget size `40x196`, button count `5`.
   - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
   - Session stopped cleanly after verification.
@@ -125,7 +126,7 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - 2026-04-28 MayaSessiond:
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
-  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and `--mcp-script-dirs tests/maya_smoke`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
@@ -133,7 +134,7 @@ Checks already run for the roadmap update:
   - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
 - 2026-04-28 MayaSessiond after theme token/QSS generation:
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
-  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and `--mcp-script-dirs tests/maya_smoke`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
@@ -143,7 +144,7 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - 2026-04-28 MayaSessiond after Phase 1A rail schema:
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
-  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and `--mcp-script-dirs tests/maya_smoke`.
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, modified after smoke setup, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
@@ -158,7 +159,7 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 55 passed after review fixes.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
-  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and `--mcp-script-dirs tests/maya_smoke`.
   - `tests/maya_smoke/actionrail_hotkey_bridge_smoke.py` passed through `script.execute`: default action runtime command existed and switched Maya to `RotateSuperContext`, repeated action publish reused the same runtime command name, preset slot runtime command existed and set 10 keyframes, unqualified slot publishing also set 10 keyframes, 5 action-bearing slots were published, and no overlay ids were active.
 - 2026-04-28 tests/docs hardening:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 52 passed.

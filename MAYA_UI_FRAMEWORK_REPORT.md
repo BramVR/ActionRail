@@ -9,7 +9,7 @@ Date: 2026-04-27
 
 ## Brief
 
-Build a Maya framework that lets a user create small, polished, reusable UI elements inside Maya, especially viewport-adjacent controls like the references in `research/`:
+Build a Maya framework that lets a user create small, polished, reusable UI elements inside Maya, especially viewport-adjacent controls like the local references in ignored `research/` checkouts:
 
 - `research/Move_translate_rotate_scale.png`: 229 x 227, vertical stack of square buttons labeled `M`, `T`, `R`, `S`, with `S` highlighted.
 - `research/Move_translate_rotate_scale_key.png`: 68 x 258, same stack plus a separate accented `K` button.

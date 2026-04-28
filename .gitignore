@@ -2,5 +2,6 @@
 .gg-maya-sessiond/
 .pytest_cache/
 .ruff_cache/
+research/
 __pycache__/
 *.py[cod]

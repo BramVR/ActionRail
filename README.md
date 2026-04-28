@@ -11,7 +11,7 @@ authoring. It is PySide6-first, data-driven, and built to feel like part of
 Maya instead of a large docked tool window.
 
 <p align="center">
-  <img src="research/actionrail_readme_hero.png" alt="ActionRail viewport UI hero image">
+  <img src="docs/assets/actionrail_readme_hero.png" alt="ActionRail viewport UI hero image">
 </p>
 
 ## Why
@@ -21,8 +21,9 @@ editors. ActionRail fills a different slot: tiny viewport-adjacent controls that
 artists and TDs can define as data, share as presets, and bind through Maya's
 native command system.
 
-The current built-in examples include the reference transform stack in
-`research/`: `M/T/R/S` plus a separate `K` key button.
+The first proof preset is the compact transform stack: `M/T/R/S` plus a
+separate `K` key button. Local reference images can live in `research/`, which
+is intentionally ignored by Git.
 
 ## Quick Start
 
@@ -53,10 +54,8 @@ actionrail.run_slot("transform_stack", "set_key")
 During local development this repo is verified as a Maya module with:
 
 ```powershell
-$env:MAYA_MODULE_PATH = "C:\PROJECTS\GG\ScreenUI"
+$env:MAYA_MODULE_PATH = "."
 ```
-
-or through `GG_MayaSessiond` with `--maya-module-path C:/PROJECTS/GG/ScreenUI`.
 
 ## What Works Now
 
@@ -69,7 +68,7 @@ or through `GG_MayaSessiond` with `--maya-module-path C:/PROJECTS/GG/ScreenUI`.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
 - Theme tokens compiled to QSS.
-- Pure Python tests plus MayaSessiond smoke scripts.
+- Pure Python tests plus Maya smoke scripts.
 
 ## Roadmap
 
@@ -105,7 +104,7 @@ ActionRail.mod              Maya module descriptor
 scripts/actionrail/         Runtime package
 presets/                    Built-in JSON rail presets
 icons/                      Icon manifest and future imported assets
-research/                   Reference screenshots
+docs/assets/                README and documentation images
 tests/                      Pure Python and Maya smoke tests
 docs/                       Architecture, workflow, roadmap, status
 ```
@@ -119,16 +118,8 @@ Run local tests:
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
-Maya verification uses the sibling session daemon:
-
-```powershell
-& ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli doctor --state-dir .gg-maya-sessiond --json
-& ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli start --state-dir .gg-maya-sessiond --maya-module-path C:/PROJECTS/GG/ScreenUI --port 7217
-& ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli call --state-dir .gg-maya-sessiond --list --json
-```
-
-Read [docs/03_maya_sessiond_workflow.md](docs/03_maya_sessiond_workflow.md)
-before changing Maya-facing behavior.
+For Maya-facing changes, run the relevant smoke scripts from `tests/maya_smoke/`
+in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 
 ## Docs
 
@@ -136,8 +127,6 @@ before changing Maya-facing behavior.
 - [Architecture](docs/01_architecture.md) - runtime boundaries and planned
   layers.
 - [Implementation plan](docs/02_implementation_plan.md) - phase roadmap.
-- [MayaSessiond workflow](docs/03_maya_sessiond_workflow.md) - live Maya
-  verification.
 - [Status](docs/04_status.md) - done state, blockers, verification history.
 - [Tech stack](docs/05_tech_stack.md) - PySide6/Qt overlay decision.
 - [Customization roadmap](docs/06_wow_style_customization.md) - Edit Mode,

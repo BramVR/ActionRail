@@ -14,7 +14,8 @@ ActionRail is a Maya framework for polished, user-created viewport UI: compact r
 
 The `M/T/R/S/K` transform stack is the first proof preset, not the product boundary. ActionRail should be able to recreate it, but the broader goal is to let users compose their own rails, slots, hotkey badges, flyouts, and command layouts without changing framework code.
 
-The visual reference for the proof preset is in `research/`:
+The proof-preset visual references live in local `research/` checkouts when present.
+That folder is ignored by Git; committed documentation images live in `docs/assets/`.
 
 - `Move_translate_rotate_scale.png`: compact `M/T/R/S` stack.
 - `Move_translate_rotate_scale_key.png`: same stack plus separate `K` key button.

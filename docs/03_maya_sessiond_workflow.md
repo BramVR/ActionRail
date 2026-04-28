@@ -44,10 +44,10 @@ Use a repo/tool-specific daemon port so other Maya sessions are not affected. Fo
 & ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli start `
   --state-dir .gg-maya-sessiond `
   --port 7217 `
-  --maya-exe "C:/Program Files/Autodesk/Maya2025/bin/maya.exe" `
-  --mcp-python C:/PROJECTS/GG/GG_MayaSessiond/.venv/Scripts/python.exe `
-  --maya-module-path "C:/PROJECTS/GG/ScreenUI" `
-  --mcp-script-dirs "C:/PROJECTS/GG/ScreenUI/tests/maya_smoke" `
+  --maya-exe "../path/to/Maya2025/bin/maya.exe" `
+  --mcp-python ../GG_MayaSessiond/.venv/Scripts/python.exe `
+  --maya-module-path "." `
+  --mcp-script-dirs "tests/maya_smoke" `
   --json
 ```
 
@@ -99,7 +99,7 @@ For a specific tool:
   --json
 ```
 
-Prefer native inspection tools over raw script execution. Use `script.execute` for checked-in smoke scripts under `tests/maya_smoke`; start sessiond with `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke` so file execution is allowlisted. Use raw script execution only when needed to import/run ActionRail APIs.
+Prefer native inspection tools over raw script execution. Use `script.execute` for checked-in smoke scripts under `tests/maya_smoke`; start sessiond with `--mcp-script-dirs tests/maya_smoke` so file execution is allowlisted. Use raw script execution only when needed to import/run ActionRail APIs.
 
 ## Stop
 
