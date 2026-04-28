@@ -170,9 +170,10 @@ def _build_single_button(
 
 def _build_button(item: StackItem, registry: ActionRegistry, theme: ActionRailTheme) -> object:
     qt = load()
-    button_text = item.label if not item.key_label else f"{item.label}\n{item.key_label}"
-    button = qt.QtWidgets.QPushButton(button_text)
+    button = qt.QtWidgets.QPushButton(_button_text(item.label, item.key_label))
     button.setProperty("actionRailRole", "button")
+    button.setProperty("actionRailLabel", item.label)
+    button.setProperty("actionRailKeyLabel", item.key_label)
     button.setProperty("actionRailSlotId", item.id)
     button.setProperty("actionRailTone", item.tone)
     button.setFixedSize(theme.button_size, theme.button_size)
@@ -183,6 +184,29 @@ def _build_button(item: StackItem, registry: ActionRegistry, theme: ActionRailTh
     button.setEnabled(item.enabled_when != "false")
     button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
+
+
+def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
+    """Update rendered button text for a slot and return the number of matches."""
+
+    qt = load()
+    updated = 0
+    for button in root.findChildren(qt.QtWidgets.QPushButton):
+        if button.property("actionRailSlotId") != slot_id:
+            continue
+
+        label = button.property("actionRailLabel")
+        if not isinstance(label, str) or not label:
+            label = button.text().split("\n", 1)[0]
+        button.setProperty("actionRailKeyLabel", key_label)
+        button.setText(_button_text(label, key_label))
+        updated += 1
+
+    return updated
+
+
+def _button_text(label: str, key_label: str) -> str:
+    return label if not key_label else f"{label}\n{key_label}"
 
 
 def _is_item_visible(item: StackItem) -> bool:

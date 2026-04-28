@@ -154,7 +154,7 @@ def query_hotkey_binding(
     cmds = _require_cmds(cmds_module)
     flag = "releaseName" if release else "name"
     name = cmds.hotkey(
-        keyShortcut=key,
+        key,
         query=True,
         ctrlModifier=ctrl,
         altModifier=alt,
@@ -208,6 +208,87 @@ def assign_hotkey(
     return HotkeyBinding(key, name_command, ctrl, alt, shift, command, release)
 
 
+def assign_published_hotkey(
+    published: PublishedCommand,
+    key: str,
+    *,
+    ctrl: bool = False,
+    alt: bool = False,
+    shift: bool = False,
+    command: bool = False,
+    release: bool = False,
+    overwrite: bool = False,
+    sync_visible: bool = True,
+    cmds_module: Any | None = None,
+) -> HotkeyBinding:
+    """Assign a hotkey to a published command and refresh visible slot labels."""
+
+    binding = assign_hotkey(
+        published.name_command,
+        key,
+        ctrl=ctrl,
+        alt=alt,
+        shift=shift,
+        command=command,
+        release=release,
+        overwrite=overwrite,
+        cmds_module=cmds_module,
+    )
+    if sync_visible:
+        sync_visible_key_label(published, binding)
+    return binding
+
+
+def assign_slot_hotkey(
+    preset_id: str,
+    slot_id: str,
+    key: str,
+    *,
+    ctrl: bool = False,
+    alt: bool = False,
+    shift: bool = False,
+    command: bool = False,
+    release: bool = False,
+    overwrite: bool = False,
+    label: str = "",
+    sync_visible: bool = True,
+    cmds_module: Any | None = None,
+) -> HotkeyBinding:
+    """Publish a preset slot, assign its hotkey, and refresh its visible key label."""
+
+    published = publish_slot(preset_id, slot_id, label=label, cmds_module=cmds_module)
+    return assign_published_hotkey(
+        published,
+        key,
+        ctrl=ctrl,
+        alt=alt,
+        shift=shift,
+        command=command,
+        release=release,
+        overwrite=overwrite,
+        sync_visible=sync_visible,
+        cmds_module=cmds_module,
+    )
+
+
+def sync_visible_key_label(
+    published: PublishedCommand,
+    binding: HotkeyBinding,
+) -> int:
+    """Refresh visible overlay key labels for a slot command assignment."""
+
+    if published.target_kind != "slot":
+        return 0
+
+    preset_id, slot_id = _split_slot_target_id(published.target_id)
+    if not preset_id or not slot_id:
+        return 0
+
+    from .runtime import update_slot_key_label
+
+    return update_slot_key_label(preset_id, slot_id, _binding_label(binding))
+
+
 def runtime_command_name(kind: TargetKind, target_id: str) -> str:
     """Return the stable Maya runtime command name for an ActionRail target."""
 
@@ -251,6 +332,26 @@ def format_hotkey(
         parts.append("Command")
     parts.append(key)
     return "+".join(parts)
+
+
+def _binding_label(binding: HotkeyBinding) -> str:
+    label = format_hotkey(
+        binding.key,
+        ctrl=binding.ctrl,
+        alt=binding.alt,
+        shift=binding.shift,
+        command=binding.command,
+    )
+    if binding.release:
+        return f"{label} Up"
+    return label
+
+
+def _split_slot_target_id(target_id: str) -> tuple[str, str]:
+    preset_id, separator, slot_suffix = target_id.partition(".")
+    if not separator:
+        return "", ""
+    return preset_id, slot_suffix
 
 
 def _publish_runtime_command(

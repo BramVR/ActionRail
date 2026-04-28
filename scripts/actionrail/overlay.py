@@ -7,7 +7,7 @@ from typing import Any
 from .actions import ActionRegistry, create_default_registry
 from .qt import load
 from .spec import StackSpec
-from .widgets import build_transform_stack
+from .widgets import build_transform_stack, set_slot_key_label
 
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 DEFAULT_MARGIN = 12
@@ -174,6 +174,13 @@ class ViewportOverlayHost:
         self.widget = None
         self.parent = None
         self._resize_filter = None
+
+    def update_slot_key_label(self, slot_id: str, key_label: str) -> int:
+        """Update the key label for a rendered slot."""
+
+        if self.widget is None:
+            return 0
+        return set_slot_key_label(self.widget, slot_id, key_label)
 
 
 def _anchored_position(

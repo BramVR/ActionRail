@@ -52,7 +52,10 @@ Last updated: 2026-04-28
   - `actionrail.run_slot(preset_id, slot_id)` runs action-bearing preset slots by stable slot id.
   - `actionrail.hotkeys` can publish default actions and preset slots as Maya runtime commands plus paired nameCommands for hotkey assignment.
   - Hotkey assignment now has conflict-aware helpers that refuse to overwrite existing bindings unless explicitly requested.
+  - Slot-aware hotkey assignment now updates visible rendered key labels through the runtime overlay registry.
+  - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
+  - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
 - Test/docs hardening:
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
   - Runtime tests now cover unknown slots and slots without actions.
@@ -78,7 +81,7 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: wire assigned hotkeys back into rendered key labels.
+2. First recommended coding slice: add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
 3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 Checks already run for the roadmap update:
@@ -88,8 +91,8 @@ Checks already run for the roadmap update:
 
 ## Next
 
-1. Add key-label update wiring after hotkey assignment so rendered slots reflect published bindings.
-2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
+1. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
+2. Add safe unpublish/update behavior for renamed or removed published hotkey commands.
 3. Add a shelf/menu toggle once reload cleanup stays stable.
 4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 5. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
@@ -170,6 +173,14 @@ Checks already run for the roadmap update:
 - 2026-04-28 product-scope docs clarification:
   - `git diff --check` -> no whitespace errors; Git reported LF/CRLF warnings only.
   - No pytest, ruff, or MayaSessiond run needed for this docs-only wording update.
+- 2026-04-28 hotkey label sync:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 59 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_hotkey_label_sync_smoke.py` passed through `script.execute`: visible `transform_stack.set_key` button changed from `K\nS` to `K\nF12`, `actionRailKeyLabel` became `F12`, and the button kept its fixed `34x34` size.
 
 ## Decisions
 

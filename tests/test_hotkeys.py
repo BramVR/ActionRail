@@ -5,11 +5,14 @@ import pytest
 from actionrail.hotkeys import (
     HotkeyConflictError,
     assign_hotkey,
+    assign_published_hotkey,
+    assign_slot_hotkey,
     format_hotkey,
     name_command_name,
     publish_action,
     publish_default_actions,
     publish_preset_slots,
+    publish_slot,
     query_hotkey_binding,
     runtime_command_name,
     slot_target_id,
@@ -41,9 +44,10 @@ class FakeCmds:
         self.name_commands[name] = dict(kwargs)
         return name
 
-    def hotkey(self, **kwargs: object) -> object:
+    def hotkey(self, *args: object, **kwargs: object) -> object:
+        key_shortcut = args[0] if args else kwargs["keyShortcut"]
         key = (
-            str(kwargs["keyShortcut"]),
+            str(key_shortcut),
             bool(kwargs.get("ctrlModifier", False)),
             bool(kwargs.get("altModifier", False)),
             bool(kwargs.get("shiftModifier", False)),
@@ -178,6 +182,68 @@ def test_assign_hotkey_allows_overwrite_and_reports_binding() -> None:
 
     assert binding.name == name
     assert query_hotkey_binding("S", cmds_module=cmds).name == name
+
+
+def test_assign_published_hotkey_syncs_slot_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    published = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    binding = assign_published_hotkey(published, "K", ctrl=True, cmds_module=cmds)
+
+    assert binding.name == published.name_command
+    assert updates == [("transform_stack", "set_key", "Ctrl+K")]
+
+
+def test_assign_slot_hotkey_publishes_assigns_and_syncs_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    binding = assign_slot_hotkey(
+        "transform_stack",
+        "set_key",
+        "S",
+        release=True,
+        cmds_module=cmds,
+    )
+
+    assert binding.name == "ActionRail_slot_transform_stack_set_key_NameCommand"
+    assert "ActionRail_slot_transform_stack_set_key" in cmds.runtime_commands
+    assert updates == [("transform_stack", "set_key", "S Up")]
+
+
+def test_assign_published_hotkey_leaves_action_labels_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    published = publish_action("maya.tool.rotate", label="Rotate", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assign_published_hotkey(published, "R", cmds_module=cmds)
+
+    assert updates == []
 
 
 def test_assign_hotkey_supports_release_and_command_modifiers() -> None:

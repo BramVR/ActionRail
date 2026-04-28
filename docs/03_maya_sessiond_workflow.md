@@ -128,5 +128,6 @@ Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by t
 - `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, anchor, and opacity.
 - `actionrail_hidden_visibility_smoke.py`: literal false visibility handling and empty-cluster regression.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
+- `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
 
 After adding a new smoke script, update this list and add the exact result to `docs/04_status.md`.

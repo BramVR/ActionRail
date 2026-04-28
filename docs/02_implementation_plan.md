@@ -95,7 +95,7 @@ Goal: make the declarative MVP compatible with later Edit Mode, Bind Mode, flyou
 
 Goal: make ActionRail actions bindable through Maya-native hotkeys.
 
-Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, and no-overlay action/slot execution are started. Remaining Phase 1B work is wiring assigned bindings back into rendered key labels and deciding how renamed/removed published commands are cleaned up in user scenes.
+Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, no-overlay action/slot execution, and visible key-label sync after ActionRail slot hotkey assignment are started. Remaining Phase 1B work is deciding how renamed/removed published commands are cleaned up in user scenes.
 
 ### Tasks
 
@@ -192,8 +192,8 @@ The highest-priority missing features are:
 
 1. Real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
 2. Live active/enabled button state driven by Maya state.
-3. Hotkey label sync after publish/assignment.
-4. Shelf/menu entry points and safe-mode diagnostics.
+3. Shelf/menu entry points and safe-mode diagnostics.
+4. Safe cleanup for renamed or removed published hotkey commands.
 5. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
 6. Bind Mode, then flyouts, then command rings.
 7. Icon import pipeline with license/source tracking.

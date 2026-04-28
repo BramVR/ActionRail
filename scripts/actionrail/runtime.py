@@ -50,6 +50,15 @@ def active_overlay_ids() -> tuple[str, ...]:
     return tuple(_OVERLAYS)
 
 
+def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+    """Update the rendered key label for an active preset slot, if visible."""
+
+    host = _OVERLAYS.get(preset_id)
+    if host is None:
+        return 0
+    return host.update_slot_key_label(_qualified_slot_id(preset_id, slot_id), key_label)
+
+
 def run_action(action_id: str, *, registry: ActionRegistry | None = None) -> Any:
     """Run a registered ActionRail action without requiring an overlay widget."""
 
