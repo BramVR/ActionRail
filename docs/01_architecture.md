@@ -58,7 +58,9 @@ The customization layer is planned after the declarative MVP, but the spec and a
 
 ### Qt Overlay
 
-- Transparent child widget over a Maya viewport/model panel.
+- Transparent child widget over Maya's inner viewport-area widget. Avoid
+  parenting to the outer model-panel container because it also owns toolbar UI
+  and can produce transient repaint artifacts over Viewport 2.0.
 - Empty space must pass through to Maya viewport interaction.
 - Controls receive mouse input only inside their bounds.
 - Reposition on resize, panel changes, workspace switches where possible.

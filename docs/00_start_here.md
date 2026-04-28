@@ -28,7 +28,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Phase 1 declarative MVP is in progress.
 - Phase 1B runtime-command/hotkey bridge is started; rendered key labels now update after ActionRail hotkey assignment.
 - Runtime-command sync helpers now prune stale ActionRail action and preset-slot commands when ids are renamed or removed.
-- Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time.
+- Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time using the overlay's resolved model panel for `active.panel` and `active.camera`.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order

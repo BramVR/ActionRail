@@ -28,7 +28,7 @@ Last updated: 2026-04-28
   - Maya module skeleton: `ActionRail.mod`, `scripts/actionrail`, `icons`, `presets`, `examples`.
   - Lazy PySide6/PySide2 import shim in `scripts/actionrail/qt.py`.
   - Runtime APIs: `actionrail.show_example("transform_stack")`, `actionrail.hide_all()`, `actionrail.reload()`.
-  - Viewport overlay host parented under the active Maya model panel.
+  - Viewport overlay host parented under the active Maya model panel's inner viewport-area widget when Maya exposes one.
   - Hard-coded `M/T/R/S + K` transform stack matching the research reference.
   - Maya action bindings for move/translate, rotate, scale, and set key.
   - Pure Python unit tests and allowlisted MayaSessiond smoke scripts.
@@ -56,6 +56,8 @@ Last updated: 2026-04-28
   - Overwrite rebinding clears the previously bound visible ActionRail slot label so stale shortcut badges are not left behind.
   - Explicit runtime-command sync helpers now publish the current default actions or preset slots and remove stale generated ActionRail commands for renamed/removed ids.
   - A safe predicate evaluator now drives initial `visible_when`, `enabled_when`, and `active_when` state from Maya selection/tool/panel/camera/playback state plus action, command, and plugin availability checks.
+  - Predicate state snapshots now receive the overlay's resolved model panel, so `active.panel` and `active.camera` match explicit `panel=` targets and model-panel fallback instead of whatever UI control currently has focus.
+  - Overlay parenting now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container, avoiding transient ghost copies of the rail when Maya toolbar controls repaint.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -87,10 +89,13 @@ Start here:
 2. First recommended coding slice: add live refresh for predicate-driven active/enabled state after overlay creation.
 3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the roadmap update:
+Checks already run for the latest viewport-parent fix:
 
-- `git diff --check` -> no whitespace errors; Git reported LF/CRLF warnings only.
-- No pytest, ruff, or MayaSessiond run was needed for the docs-only update.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 77 passed.
+- `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- MayaSessiond started on port `7217` with `--maya-module-path .`, absolute `--mcp-script-dirs`, and raw execution enabled for interactive inspection.
+- Live `actionrail.show_example("transform_stack")` check showed the overlay parented to the inner `QmayaLayoutWidget modelPanel4` at `[1, 22, 1957, 1086]`, with the rail at `[12, 445]`.
+- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`.
 
 ## Next
 
@@ -210,6 +215,16 @@ Checks already run for the roadmap update:
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_hotkey_bridge_smoke.py` passed through `script.execute`: action runtime command still switched to `RotateSuperContext`, slot runtime commands set 10 keyframes, 5 current slots were published by sync, 1 stale slot command was removed, and no overlays were active.
+- 2026-04-28 viewport-parent and predicate panel snapshot fix:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 77 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered only `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, widget size was `40x120`, panel was `modelPanel4`, and the widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_predicates_widget.png`.
+  - Live interactive inspection reproduced the outer model-panel repaint artifact, then verified `actionrail.show_example("transform_stack")` now parents to the inner `QmayaLayoutWidget modelPanel4` at `[1, 22, 1957, 1086]` with the rail at `[12, 445]`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - A fresh interactive `transform_stack` overlay was restored after the smoke run.
 
 ## Decisions
 

@@ -39,15 +39,17 @@ Add `--mcp-src ../GG_MayaMCP` only when the sibling MCP checkout matches the Ses
 Prefer Maya 2025 unless a task needs another version.
 The module path below points at the current checkout folder; product and API naming remain `ActionRail`/`actionrail`.
 Use a repo/tool-specific daemon port so other Maya sessions are not affected. For this repo, prefer `7217` unless it is already in use.
+Use an absolute `--mcp-script-dirs` path; relative paths may start Maya but leave `script.execute` without an allowlisted smoke-script directory.
 
 ```powershell
+$smokeScripts = (Resolve-Path "tests/maya_smoke").Path
 & ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli start `
   --state-dir .gg-maya-sessiond `
   --port 7217 `
   --maya-exe "../path/to/Maya2025/bin/maya.exe" `
   --mcp-python ../GG_MayaSessiond/.venv/Scripts/python.exe `
   --maya-module-path "." `
-  --mcp-script-dirs "tests/maya_smoke" `
+  --mcp-script-dirs $smokeScripts `
   --json
 ```
 

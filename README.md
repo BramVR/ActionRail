@@ -59,7 +59,7 @@ $env:MAYA_MODULE_PATH = "."
 
 ## What Works Now
 
-- Transparent Qt viewport overlay parented under a Maya model panel.
+- Transparent Qt viewport overlay parented under Maya's inner viewport area.
 - Built-in `transform_stack` and `horizontal_tools` JSON presets.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.

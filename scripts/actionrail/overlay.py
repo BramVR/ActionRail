@@ -48,7 +48,7 @@ def active_model_panel(cmds_module: Any | None = None) -> str:
 
 
 def model_panel_widget(panel: str, cmds_module: Any | None = None) -> Any:
-    """Wrap Maya's model panel/editor Qt pointer as a QWidget."""
+    """Wrap Maya's viewport-area widget for a model panel as a QWidget."""
 
     qt = load()
     cmds = _require_cmds(cmds_module)
@@ -81,7 +81,81 @@ def model_panel_widget(panel: str, cmds_module: Any | None = None) -> Any:
         msg = f"Unable to locate Qt widget for Maya model panel: {panel}"
         raise RuntimeError(msg)
 
-    return qt.wrap_instance(int(pointer), qt.QtWidgets.QWidget)
+    panel_widget = qt.wrap_instance(int(pointer), qt.QtWidgets.QWidget)
+    return _viewport_area_widget(panel_widget, panel, qt)
+
+
+def _viewport_area_widget(panel_widget: Any, panel: str, qt: Any) -> Any:
+    """Return the inner model-panel viewport widget when Maya exposes one.
+
+    Maya can expose an outer model-panel widget that also owns the model-panel
+    toolbar. Parenting a transparent overlay to that outer widget can leave
+    transient paint artifacts when Maya repaints toolbar controls. The large
+    inset child with the same object name is the viewport area used for stable
+    overlay parenting.
+    """
+
+    find_children = getattr(panel_widget, "findChildren", None)
+    if find_children is None:
+        return panel_widget
+
+    try:
+        children = find_children(qt.QtWidgets.QWidget, panel)
+    except Exception:
+        return panel_widget
+
+    candidates = [
+        child
+        for child in children or []
+        if child is not panel_widget
+        and _qt_widget_is_valid(child)
+        and _widget_dimension(child, "width") > 100
+        and _widget_dimension(child, "height") > 100
+    ]
+    if not candidates:
+        return panel_widget
+
+    parent_width = _widget_dimension(panel_widget, "width")
+    parent_height = _widget_dimension(panel_widget, "height")
+
+    def score(widget: Any) -> tuple[bool, int]:
+        inset = (
+            _widget_dimension(widget, "x") > 0
+            or _widget_dimension(widget, "y") > 0
+            or _widget_dimension(widget, "width") < parent_width
+            or _widget_dimension(widget, "height") < parent_height
+        )
+        area = _widget_dimension(widget, "width") * _widget_dimension(widget, "height")
+        return (inset, area)
+
+    selected = max(candidates, key=score)
+    selected._actionrail_outer_panel_widget = panel_widget
+    return selected
+
+
+def _widget_dimension(widget: Any, method_name: str) -> int:
+    method = getattr(widget, method_name, None)
+    if method is None:
+        return 0
+    try:
+        return int(method())
+    except Exception:
+        return 0
+
+
+def _qt_widget_is_valid(widget: Any) -> bool:
+    try:
+        from shiboken6 import isValid  # type: ignore[import-not-found]
+    except Exception:
+        try:
+            from shiboken2 import isValid  # type: ignore[import-not-found,no-redef]
+        except Exception:
+            return True
+
+    try:
+        return bool(isValid(widget))
+    except Exception:
+        return False
 
 
 class _ResizeEventFilter:
@@ -132,7 +206,7 @@ class ViewportOverlayHost:
         self.widget = build_transform_stack(
             spec,
             self.registry,
-            state_snapshot=snapshot(self.cmds),
+            state_snapshot=snapshot(self.cmds, active_panel=self.panel),
             cmds_module=self.cmds,
         )
         self.widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{spec.id}")

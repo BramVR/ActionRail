@@ -17,7 +17,9 @@ Goal: prove the reference transform stack can run in Maya as a clickable PySide6
 1. Create module skeleton.
 2. Create PySide compatibility shim.
 3. Locate Maya main window and active model panel.
-4. Create transparent overlay widget parented to the viewport/model panel.
+4. Create transparent overlay widget parented to the inner viewport-area widget,
+   falling back to the model panel only when Maya does not expose an inner
+   viewport child.
 5. Add hard-coded reference stack:
    - `M`, `T`, `R`, `S` grouped vertically.
    - `S` pink active/accent state.

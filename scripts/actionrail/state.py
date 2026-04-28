@@ -37,14 +37,14 @@ def selection_count(cmds_module: Any | None = None) -> int:
     return len(cmds.ls(selection=True) or [])
 
 
-def snapshot(cmds_module: Any | None = None) -> MayaStateSnapshot:
+def snapshot(cmds_module: Any | None = None, active_panel: str | None = None) -> MayaStateSnapshot:
     cmds = _require_cmds(cmds_module)
-    active_panel = _active_panel(cmds)
+    panel = active_panel if active_panel is not None else _active_panel(cmds)
     return MayaStateSnapshot(
         current_tool=current_tool(cmds),
         selection_count=selection_count(cmds),
-        active_panel=active_panel,
-        active_camera=_active_camera(cmds, active_panel),
+        active_panel=panel,
+        active_camera=_active_camera(cmds, panel),
         playback_playing=_playback_playing(cmds),
     )
 
