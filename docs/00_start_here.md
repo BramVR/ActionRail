@@ -29,6 +29,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Phase 1B runtime-command/hotkey bridge is started; rendered key labels now update after ActionRail hotkey assignment.
 - Runtime-command sync helpers now prune stale ActionRail action and preset-slot commands when ids are renamed or removed.
 - Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time using the overlay's resolved model panel for `active.panel` and `active.camera`.
+- `ViewportOverlayHost.refresh_state()` now updates predicate-driven enabled/active state after creation and rebuilds the rail when `visible_when` changes, without requiring `actionrail.reload()`.
 - The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
 - The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
@@ -62,10 +63,8 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Add live refresh for predicate-driven active/enabled state after overlay creation.
-   Start with the implementation brief in `docs/04_status.md` under
-   "Next Coding Slice: Live Predicate Refresh".
-2. Add shelf/menu toggle once reload cleanup stays stable.
+1. Add shelf/menu toggle now that reload cleanup and manual predicate refresh are stable.
+2. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules

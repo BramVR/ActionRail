@@ -316,13 +316,10 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Finish Phase 1B:
-   - hotkey label sync
-   - command cleanup for renamed/removed slots
-   - predicate evaluator
-   - live active/enabled state
-2. Add shelf/menu toggle, safe mode, diagnostics, and a reusable Maya smoke
+1. Add shelf/menu toggle, safe mode, diagnostics, and a reusable Maya smoke
    wrapper.
+2. Add automatic event/timer-driven predicate refresh now that the manual
+   `ViewportOverlayHost.refresh_state()` path exists.
 3. Refactor rendering around action/state objects so buttons can update without
    full rebuilds.
 4. Build the icon pipeline and first icon-backed rail.
@@ -335,4 +332,3 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
    override.
 10. Add marking-menu/hotbox export.
 11. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
-

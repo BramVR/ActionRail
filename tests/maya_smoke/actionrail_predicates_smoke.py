@@ -132,9 +132,67 @@ if command_button["active"] != "true" or command_button["enabled"] is not True:
 if not result["saved"]:
     raise AssertionError(f"Failed to save predicate screenshot: {result}")
 
+cmds.setToolTo("moveSuperContext")
+active_refresh = host.refresh_state()
+app.processEvents()
+move_button_state = {
+    str(button.property("actionRailSlotId")): {
+        "active": button.property("actionRailActive"),
+        "enabled": bool(button.isEnabled()),
+        "text": button.text(),
+    }
+    for button in host.widget.findChildren(QtWidgets.QPushButton)
+}
+
+if active_refresh.needs_rebuild:
+    raise AssertionError(f"Tool-only refresh unexpectedly required rebuild: {result}")
+if move_button_state["predicates.visible_selected_active_scale"]["active"] != "false":
+    raise AssertionError(f"Tool refresh did not clear scale active state: {move_button_state}")
+if move_button_state["predicates.enabled_existing_command"]["active"] != "false":
+    raise AssertionError(
+        f"Tool refresh did not clear current-tool active state: {move_button_state}"
+    )
+
+cmds.select(clear=True)
+visibility_refresh = host.refresh_state()
+app.processEvents()
+widget = host.widget
+visibility_buttons = widget.findChildren(QtWidgets.QPushButton)
+visibility_text = [button.text() for button in visibility_buttons]
+visibility_state = {
+    str(button.property("actionRailSlotId")): {
+        "active": button.property("actionRailActive"),
+        "enabled": bool(button.isEnabled()),
+        "text": button.text(),
+    }
+    for button in visibility_buttons
+}
+
+if not visibility_refresh.needs_rebuild:
+    raise AssertionError(f"Selection refresh did not request a visibility rebuild: {result}")
+if visibility_text != ["HE", "DK", "CK"]:
+    raise AssertionError(f"Selection refresh did not rebuild visible buttons: {visibility_state}")
+if visibility_state["predicates.disabled_missing_command"]["enabled"] is not False:
+    raise AssertionError(f"Rebuilt missing-command button was not disabled: {visibility_state}")
+if visibility_state["predicates.enabled_existing_command"]["enabled"] is not True:
+    raise AssertionError(f"Rebuilt existing-command button was not enabled: {visibility_state}")
+
+result["after_tool_refresh"] = {
+    "button_state": move_button_state,
+    "needs_rebuild": bool(active_refresh.needs_rebuild),
+    "refreshed": active_refresh.refreshed,
+}
+result["after_selection_refresh"] = {
+    "button_state": visibility_state,
+    "button_text": visibility_text,
+    "needs_rebuild": bool(visibility_refresh.needs_rebuild),
+    "refreshed": visibility_refresh.refreshed,
+    "size": [widget.width(), widget.height()],
+}
+
 actionrail._predicates_smoke_host = host
 
-if __args__.get("cleanup"):
+if __args__.get("cleanup", True):
     actionrail.hide_all()
     host.close()
     actionrail._predicates_smoke_host = None

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from contextlib import suppress
+from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
 from .predicates import PredicateContext, evaluate_predicate
@@ -17,6 +18,16 @@ FRAME_PADDING = DEFAULT_THEME.frame_padding
 FRAME_SPACING = DEFAULT_THEME.frame_spacing
 RAIL_WIDTH = DEFAULT_THEME.rail_width
 STYLE_SHEET = generate_style_sheet(DEFAULT_THEME)
+
+
+@dataclass(frozen=True)
+class PredicateRefreshResult:
+    """Result of applying fresh predicate state to an existing rail widget."""
+
+    refreshed: int
+    needs_rebuild: bool
+    visible_slot_ids: tuple[str, ...]
+    rendered_slot_ids: tuple[str, ...]
 
 
 class ActionRailRoot:
@@ -226,6 +237,61 @@ def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
     return updated
 
 
+def refresh_predicate_state(
+    root: object,
+    spec: StackSpec,
+    registry: ActionRegistry,
+    *,
+    state_snapshot: MayaStateSnapshot | None = None,
+    cmds_module: object | None = None,
+) -> PredicateRefreshResult:
+    """Apply fresh predicate-driven enabled/active state to rendered buttons.
+
+    If the predicate-visible slot set differs from the currently rendered
+    buttons, the caller should rebuild the rail so hidden slots can be inserted
+    or removed without leaving empty cluster frames.
+    """
+
+    context = PredicateContext(state=state_snapshot, registry=registry, cmds_module=cmds_module)
+    visible_items = tuple(_visible_action_items(spec, context))
+    visible_slot_ids = tuple(item.id for item in visible_items)
+    buttons = _slot_buttons(root)
+    rendered_slot_ids = tuple(buttons)
+    if visible_slot_ids != rendered_slot_ids:
+        return PredicateRefreshResult(
+            refreshed=0,
+            needs_rebuild=True,
+            visible_slot_ids=visible_slot_ids,
+            rendered_slot_ids=rendered_slot_ids,
+        )
+
+    refreshed = 0
+    for item in visible_items:
+        button = buttons.get(item.id)
+        if button is None:
+            continue
+
+        item_context = _item_context(item, registry, context)
+        enabled = evaluate_predicate(item.enabled_when, item_context)
+        active = "true" if _is_item_active(item, item_context) else "false"
+
+        if bool(button.isEnabled()) != enabled:
+            button.setEnabled(enabled)
+            refreshed += 1
+
+        if button.property("actionRailActive") != active:
+            button.setProperty("actionRailActive", active)
+            _refresh_button_style(button)
+            refreshed += 1
+
+    return PredicateRefreshResult(
+        refreshed=refreshed,
+        needs_rebuild=False,
+        visible_slot_ids=visible_slot_ids,
+        rendered_slot_ids=rendered_slot_ids,
+    )
+
+
 def _button_text(label: str, key_label: str) -> str:
     return label if not key_label else f"{label}\n{key_label}"
 
@@ -279,3 +345,33 @@ def _frame_main_axis_size(item_count: int, theme: ActionRailTheme) -> int:
     spacing = theme.frame_spacing * max(item_count - 1, 0)
     outer_padding = (theme.frame_padding + theme.cluster_border_width) * 2
     return (theme.button_outer_size * item_count) + spacing + outer_padding
+
+
+def _visible_action_items(
+    spec: StackSpec,
+    context: PredicateContext | None = None,
+) -> tuple[StackItem, ...]:
+    return tuple(
+        item
+        for item in spec.items
+        if item.type in {"button", "toolButton"} and _is_item_visible(item, context)
+    )
+
+
+def _slot_buttons(root: object) -> dict[str, object]:
+    qt = load()
+    buttons: dict[str, object] = {}
+    for button in root.findChildren(qt.QtWidgets.QPushButton):
+        slot_id = button.property("actionRailSlotId")
+        if isinstance(slot_id, str) and slot_id:
+            buttons[slot_id] = button
+    return buttons
+
+
+def _refresh_button_style(button: object) -> None:
+    with suppress(Exception):
+        style = button.style()
+        style.unpolish(button)
+        style.polish(button)
+    with suppress(Exception):
+        button.update()

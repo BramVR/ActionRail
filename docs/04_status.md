@@ -56,6 +56,7 @@ Last updated: 2026-04-28
   - Overwrite rebinding clears the previously bound visible ActionRail slot label so stale shortcut badges are not left behind.
   - Explicit runtime-command sync helpers now publish the current default actions or preset slots and remove stale generated ActionRail commands for renamed/removed ids.
   - A safe predicate evaluator now drives initial `visible_when`, `enabled_when`, and `active_when` state from Maya selection/tool/panel/camera/playback state plus action, command, and plugin availability checks.
+  - `ViewportOverlayHost.refresh_state()` now refreshes predicate-driven enabled/active button state from the current Maya state and rebuilds the rail when `visible_when` changes, preserving rendered key labels where possible.
   - Predicate state snapshots now receive the overlay's resolved model panel, so `active.panel` and `active.camera` match explicit `panel=` targets and model-panel fallback instead of whatever UI control currently has focus.
   - Overlay anchoring now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container.
   - Overlay creation now removes stale ActionRail Qt widgets for the same preset before creating a replacement rail, preventing duplicate rails after reload/show cycles or interrupted live development.
@@ -88,64 +89,59 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add live refresh for predicate-driven active/enabled state after overlay creation.
-3. Use the "Next Coding Slice: Live Predicate Refresh" brief below before editing code.
+2. First recommended coding slice: add a shelf/menu toggle entry point now that reload cleanup and manual predicate refresh are stable.
+3. Use the "Next Coding Slice: Shelf/Menu Toggle" brief below before editing code.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest rail inset fix:
+Checks already run for the latest live predicate refresh slice:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 78 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 80 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Live MayaSessiond metric inspection showed the old issue: a styled `34x34` button at `[6, 6]` inside a `40x40` frame landed on the frame edge.
-- After the fix, live MayaSessiond metric inspection showed the transform stack at `46x214`; buttons remain `34x34` and sit at `[6, 6]` inside `46`-wide framed slots, leaving matching inset on both sides.
-- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
-- `tests/maya_smoke/actionrail_horizontal_smoke.py` passed through `script.execute`: `horizontal_tools` rendered visible at `[172, 46]`, orientation `horizontal`, anchor `viewport.bottom.center`, opacity `0.92`, button labels `M/W`, `R/E`, `S/R`, `K/S`.
-- `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.execute`: one active overlay id, one visible `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, and rail geometry `[328, 612, 46, 214]` matched the expected global viewport anchor.
-- `tests/maya_smoke/actionrail_capture_smoke.py` passed through `script.execute`: direct widget screenshot saved to `.gg-maya-sessiond/actionrail_phase0_overlay.png`, pixmap/widget size `[46, 214]`, and button count `5`.
-- `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, and visible rail size was `[46, 46]`.
-- `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, and widget size was `[46, 138]`.
-- Follow-up live MayaSessiond user-visible check reloaded ActionRail in the existing Maya process and left `transform_stack` visible on `modelPanel4`; live geometry was `[328, 612, 46, 214]`, parent `MayaWindow`, active ids `["transform_stack"]`, and screenshot `.gg-maya-sessiond/screenshots/actionrail_visible_now.png`.
+- `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+- Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
+- Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+- `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: initial buttons were `VS/DK/CK`; tool-only `host.refresh_state()` did not rebuild and cleared `VS`/`CK` active state with `refreshed=2`; clearing selection requested a visibility rebuild and rendered `HE/DK/CK` at size `[46, 138]` with no empty cluster frames.
 
 ## Latest Handoff
 
-- Task goal completed: fix the rail/button inset so active and toned buttons sit fully inside the framed rail instead of touching the frame edge.
-- Files changed: `scripts/actionrail/theme.py`, `scripts/actionrail/widgets.py`, `tests/test_theme.py`, `docs/00_start_here.md`, and this status doc.
-- Checks run: local pytest and ruff passed; MayaSessiond phase0, horizontal, overlay cleanup, capture, hidden visibility, predicate, and live visible checks passed.
-- Current live state: MayaSessiond is running on port `7217`; `transform_stack` was intentionally left visible on `modelPanel4` for review.
-- Blockers/risks: none known for the inset fix. Historical `40x196` entries remain in Verification History as old results; current corrected transform-stack size is `46x214`.
-- Exact next step: continue Phase 1 by adding live refresh for predicate-driven `enabled_when` and `active_when` state after overlay creation, starting with the brief below.
+- Task goal completed: added manual live predicate refresh after overlay creation.
+- Files changed: `scripts/actionrail/widgets.py`, `scripts/actionrail/overlay.py`, `tests/test_widgets.py`, `tests/maya_smoke/actionrail_predicates_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and this status doc.
+- Checks run: local pytest and ruff passed; MayaSessiond predicate smoke passed through `script.execute`.
+- Current live state: MayaSessiond is running on port `7217`; the predicate smoke now closes its temporary host by default after verification.
+- Blockers/risks: automatic timer/scriptJob refresh is not implemented yet; the new path is manual via `ViewportOverlayHost.refresh_state()`.
+- Exact next step: continue Phase 1 by adding a shelf/menu toggle entry point.
 
 ## Next
 
-1. Add live refresh for predicate-driven active/enabled state after overlay creation.
-2. Add a shelf/menu toggle once reload cleanup stays stable.
+1. Add a shelf/menu toggle entry point.
+2. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
 3. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
-## Next Coding Slice: Live Predicate Refresh
+## Next Coding Slice: Shelf/Menu Toggle
 
-Goal: visible overlays should update predicate-driven button `visible_when`, `enabled_when`, and `active_when` state after creation when Maya state changes, without requiring `actionrail.reload()`.
+Goal: provide a Maya-native entry point to show/hide the default ActionRail preset without requiring users to run Python manually.
 
 Known current behavior:
 
-- Predicate state is evaluated once while building widgets in `scripts/actionrail/widgets.py`.
-- `scripts/actionrail/state.py::snapshot()` already captures current tool, selection count, active panel, active camera, and playback state.
-- `ViewportOverlayHost` already stores `spec`, `registry`, `cmds`, and resolved `panel`, so it has enough context to recompute predicates.
-- `tests/maya_smoke/actionrail_predicates_smoke.py` verifies initial predicate state only.
+- Runtime APIs exist: `actionrail.show_example("transform_stack")`, `actionrail.hide_all()`, and `actionrail.reload()`.
+- Reload cleanup and stale-widget cleanup are stable.
+- Manual `ViewportOverlayHost.refresh_state()` is covered by unit tests and Maya predicate smoke.
+- No shelf/menu installer currently exists.
 
 Suggested implementation shape:
 
-1. Add a widget refresh helper in `scripts/actionrail/widgets.py` that can update existing rendered buttons from a fresh `PredicateContext`.
-   Start with `enabled_when` and `active_when`; if `visible_when` changes, rebuilding the rail or hiding/showing existing slot widgets may be needed.
-2. Add `ViewportOverlayHost.refresh_state()` or similar in `scripts/actionrail/overlay.py` that calls `snapshot(self.cmds, active_panel=self.panel)` and applies the widget refresh helper.
-3. Add a small timer or Maya event/scriptJob bridge only after the manual refresh path is covered by tests. Keep callback cleanup centralized in `ViewportOverlayHost.close()`.
-4. Extend `tests/maya_smoke/actionrail_predicates_smoke.py` or add a focused new smoke script that changes selection/tool after `host.show()`, calls the refresh path, and verifies active/enabled/visible state updates.
+1. Add a small Maya UI integration module that can create/remove an ActionRail menu item or shelf button idempotently.
+2. Use existing runtime APIs rather than duplicating overlay lifecycle logic.
+3. Keep install/uninstall functions safe to call repeatedly during live reload.
+4. Add focused pure Python tests for idempotent command construction where feasible, plus a Maya smoke check if menu/shelf mutation is reliable through Sessiond.
 
 Acceptance criteria:
 
-- Changing Maya tool after overlay creation updates the active button state without rebuilding through `actionrail.reload()`.
-- Changing selection after overlay creation updates at least enabled/active predicate state; if visible predicates are implemented in the same slice, hidden/visible slots update without leaving empty clusters.
-- Refresh cleanup does not leave timers, scriptJobs, duplicate widgets, or stale overlay ids after `actionrail.hide_all()`.
+- A user can install a Maya-native ActionRail toggle entry point from Python.
+- Re-running install does not create duplicate menu items/shelf buttons.
+- The toggle shows the default `transform_stack` preset when hidden and hides it when visible.
+- Uninstall removes the created UI entry point without touching unrelated Maya UI.
 - Verification is recorded here with exact local and MayaSessiond commands/results.
 
 ## Blockers
@@ -288,6 +284,13 @@ Acceptance criteria:
   - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, and visible rail size was `[46, 46]`.
   - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, and widget size was `[46, 138]`.
   - Follow-up live MayaSessiond user-visible check reloaded ActionRail in the existing Maya process and left `transform_stack` visible on `modelPanel4`; live geometry was `[328, 612, 46, 214]`, parent `MayaWindow`, active ids `["transform_stack"]`, and screenshot `.gg-maya-sessiond/screenshots/actionrail_visible_now.png`.
+- 2026-04-28 live predicate refresh:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 80 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: initial buttons were `VS/DK/CK`; tool-only `host.refresh_state()` did not rebuild and cleared `VS`/`CK` active state with `refreshed=2`; clearing selection requested a visibility rebuild and rendered `HE/DK/CK` at size `[46, 138]` with no empty cluster frames.
 
 ## Decisions
 

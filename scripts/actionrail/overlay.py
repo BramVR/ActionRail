@@ -8,7 +8,12 @@ from .actions import ActionRegistry, create_default_registry
 from .qt import load
 from .spec import StackSpec
 from .state import snapshot
-from .widgets import build_transform_stack, set_slot_key_label
+from .widgets import (
+    PredicateRefreshResult,
+    build_transform_stack,
+    refresh_predicate_state,
+    set_slot_key_label,
+)
 
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
@@ -309,26 +314,30 @@ class ViewportOverlayHost:
         self.registry = registry or create_default_registry()
         self.margin = margin
         cleanup_overlay_widgets(self.parent, spec.id, self.qt)
-        self.widget = build_transform_stack(
-            spec,
-            self.registry,
-            state_snapshot=snapshot(self.cmds, active_panel=self.panel),
-            cmds_module=self.cmds,
-        )
-        self.widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{spec.id}")
         self._floating = self.window_parent is not None
-        if self._floating:
-            self.widget.setParent(self.window_parent)
-            self.widget.setWindowFlags(_floating_window_flags(self.qt))
-            self.widget.setAttribute(self.qt.QtCore.Qt.WA_ShowWithoutActivating, True)
-        else:
-            self.widget.setParent(self.parent)
-            self.widget.setWindowFlags(self.qt.QtCore.Qt.Widget)
+        self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
         self._filter_targets: list[Any] = []
         self._install_event_filter(self.parent)
         self._install_event_filter(self.window_parent)
+
+    def _build_widget(self, state_snapshot: object) -> Any:
+        widget = build_transform_stack(
+            self.spec,
+            self.registry,
+            state_snapshot=state_snapshot,
+            cmds_module=self.cmds,
+        )
+        widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{self.spec.id}")
+        if self._floating:
+            widget.setParent(self.window_parent)
+            widget.setWindowFlags(_floating_window_flags(self.qt))
+            widget.setAttribute(self.qt.QtCore.Qt.WA_ShowWithoutActivating, True)
+        else:
+            widget.setParent(self.parent)
+            widget.setWindowFlags(self.qt.QtCore.Qt.Widget)
+        return widget
 
     def _install_event_filter(self, target: Any | None) -> None:
         if target is None or not _qt_widget_is_valid(target):
@@ -387,6 +396,38 @@ class ViewportOverlayHost:
         self.window_parent = None
         self._filter_targets = []
         self._resize_filter = None
+
+    def refresh_state(self) -> PredicateRefreshResult:
+        """Refresh predicate-driven button state from current Maya state."""
+
+        state_snapshot = snapshot(self.cmds, active_panel=self.panel)
+        result = refresh_predicate_state(
+            self.widget,
+            self.spec,
+            self.registry,
+            state_snapshot=state_snapshot,
+            cmds_module=self.cmds,
+        )
+        if result.needs_rebuild:
+            self._rebuild_widget(state_snapshot)
+        return result
+
+    def _rebuild_widget(self, state_snapshot: object) -> None:
+        old_widget = self.widget
+        was_visible = bool(old_widget is not None and old_widget.isVisible())
+        key_labels = _rendered_key_labels(old_widget, self.qt)
+        self.widget = self._build_widget(state_snapshot)
+
+        for slot_id, key_label in key_labels.items():
+            set_slot_key_label(self.widget, slot_id, key_label)
+
+        if old_widget is not None and _qt_widget_is_valid(old_widget):
+            old_widget.hide()
+            old_widget.setParent(None)
+            old_widget.deleteLater()
+
+        if was_visible:
+            self.show()
 
     def update_slot_key_label(self, slot_id: str, key_label: str) -> int:
         """Update the key label for a rendered slot."""
@@ -453,6 +494,24 @@ def _map_to_global(parent: Any, x_pos: int, y_pos: int, qt: Any) -> Any:
         return map_to_global(point)
     except Exception:
         return point
+
+
+def _rendered_key_labels(widget: Any, qt: Any) -> dict[str, str]:
+    if widget is None or not _qt_widget_is_valid(widget):
+        return {}
+
+    key_labels: dict[str, str] = {}
+    try:
+        buttons = widget.findChildren(qt.QtWidgets.QPushButton)
+    except Exception:
+        return key_labels
+
+    for button in buttons:
+        slot_id = button.property("actionRailSlotId")
+        key_label = button.property("actionRailKeyLabel")
+        if isinstance(slot_id, str) and isinstance(key_label, str) and key_label:
+            key_labels[slot_id] = key_label
+    return key_labels
 
 
 def _flush_qt_deferred_deletes(qt: Any) -> None:
