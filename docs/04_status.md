@@ -61,6 +61,9 @@ Last updated: 2026-04-28
 - WoW-style customization direction documented:
   - `docs/06_wow_style_customization.md` defines Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, visibility rules, schema direction, and phased roadmap.
   - `docs/01_architecture.md` and `docs/02_implementation_plan.md` now reserve room for stable slot ids, runtime-command hotkeys, user/project/studio layers, and later radial/flyout controls.
+- Missing-features research documented:
+  - `docs/07_missing_features_research.md` captures current feature gaps, source-backed recommendations, and a prioritized roadmap for stateful predicates, hotkey label sync, Edit/Bind Mode, flyouts, command rings, icon pipeline, diagnostics, profiles, marking-menu export, and later Viewport 2.0 labels/guides.
+  - `docs/00_start_here.md` and `docs/02_implementation_plan.md` link to the new research backlog.
 
 ## In Progress
 
@@ -85,6 +88,7 @@ Checks already run for the roadmap update:
 2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
 3. Add a shelf/menu toggle once reload cleanup stays stable.
 4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+5. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
 ## Blockers
 
@@ -157,6 +161,8 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 52 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - MayaSessiond was not rerun; changes were limited to pure Python validation/runtime edge cases plus documentation.
+- 2026-04-28 missing-features research docs:
+  - Docs-only update; no pytest, ruff, or MayaSessiond run needed.
 
 ## Decisions
 

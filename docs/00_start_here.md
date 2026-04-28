@@ -36,7 +36,8 @@ The reference target is in `research/`:
 6. `docs/03_maya_sessiond_workflow.md`
 7. `docs/05_tech_stack.md`
 8. `docs/06_wow_style_customization.md` when planning Edit Mode, hotkeys, flyouts, rings, or profile layers.
-9. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
+9. `docs/07_missing_features_research.md` when planning missing features or prioritizing the next roadmap slice.
+10. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
 
 ## Product Decision
 
@@ -57,7 +58,7 @@ Continue Phase 1 declarative MVP:
 1. Continue the Phase 1B hotkey bridge by wiring assigned hotkeys back into rendered key labels.
 2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
 3. Add shelf/menu toggle once reload cleanup stays stable.
-4. Keep the WoW-style customization roadmap in mind, but do not start the full designer before the declarative MVP is stable.
+4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules
 

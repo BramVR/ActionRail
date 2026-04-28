@@ -182,3 +182,19 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 ## Current Priority
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
+
+## Research Backlog
+
+See `docs/07_missing_features_research.md` for the current feature-gap report.
+The highest-priority missing features are:
+
+1. Real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
+2. Live active/enabled button state driven by Maya state.
+3. Hotkey label sync after publish/assignment.
+4. Shelf/menu entry points and safe-mode diagnostics.
+5. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
+6. Bind Mode, then flyouts, then command rings.
+7. Icon import pipeline with license/source tracking.
+8. Broader workflow action library beyond transform/keyframe.
+9. Profile layers for built-in, studio, project, scene/asset, and user overrides.
+10. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
