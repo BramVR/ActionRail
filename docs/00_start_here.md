@@ -10,9 +10,11 @@ read_when:
 
 ## Goal
 
-ActionRail is a Maya framework for polished, user-created viewport UI: compact tool stacks, buttons, badges, and later authoring tools like Quick Create.
+ActionRail is a Maya framework for polished, user-created viewport UI: compact rails, action bars, buttons, hotkey badges, and later authoring tools like Quick Create.
 
-The reference target is in `research/`:
+The `M/T/R/S/K` transform stack is the first proof preset, not the product boundary. ActionRail should be able to recreate it, but the broader goal is to let users compose their own rails, slots, hotkey badges, flyouts, and command layouts without changing framework code.
+
+The visual reference for the proof preset is in `research/`:
 
 - `Move_translate_rotate_scale.png`: compact `M/T/R/S` stack.
 - `Move_translate_rotate_scale_key.png`: same stack plus separate `K` key button.
@@ -48,7 +50,7 @@ Build PySide6/Qt overlay first.
 - Spike Maya 2026 `moverlay` early, but only adopt it if it proves ActionRail's anchoring, hit testing, styling, and cleanup needs.
 - Viewport 2.0 is later, only for native scene/viewport drawing.
 - Web tools are for authoring/import only, not the core runtime.
-- Core UX is declarative presets plus reusable Maya actions.
+- Core UX is user-authored declarative presets plus reusable Maya actions.
 - Longer-term authoring UX borrows from WoW-style action bar customization: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and user/project/studio profiles.
 
 ## Current Priority

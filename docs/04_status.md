@@ -64,6 +64,9 @@ Last updated: 2026-04-28
 - Missing-features research documented:
   - `docs/07_missing_features_research.md` captures current feature gaps, source-backed recommendations, and a prioritized roadmap for stateful predicates, hotkey label sync, Edit/Bind Mode, flyouts, command rings, icon pipeline, diagnostics, profiles, marking-menu export, and later Viewport 2.0 labels/guides.
   - `docs/00_start_here.md` and `docs/02_implementation_plan.md` link to the new research backlog.
+- Product scope clarified:
+  - `M/T/R/S/K` is documented as the first proof preset and regression target, not the boundary of ActionRail.
+  - The docs now state that the product goal is user-authored rails, slots, hotkey badges, flyouts, and command layouts.
 
 ## In Progress
 
@@ -163,6 +166,9 @@ Checks already run for the roadmap update:
   - MayaSessiond was not rerun; changes were limited to pure Python validation/runtime edge cases plus documentation.
 - 2026-04-28 missing-features research docs:
   - Docs-only update; no pytest, ruff, or MayaSessiond run needed.
+- 2026-04-28 product-scope docs clarification:
+  - `git diff --check` -> no whitespace errors; Git reported LF/CRLF warnings only.
+  - No pytest, ruff, or MayaSessiond run needed for this docs-only wording update.
 
 ## Decisions
 
@@ -170,6 +176,7 @@ Checks already run for the roadmap update:
 - Viewport 2.0 is deferred until Qt overlay is stable.
 - Designer/Quick Create is deferred until Phase 0 and declarative MVP are stable.
 - WoW-style customization is the long-term authoring model: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and preset/profile layers.
+- Treat `M/T/R/S/K` as a proof preset and regression target; ActionRail's product goal is broader user-authored viewport UI.
 - Build the hotkey bridge through Maya runtime commands so bindings remain visible to Maya and not only to ActionRail.
 - Use `GG_MayaSessiond` for live Maya verification when feasible.
 - Use `ActionRail` for product/module naming and `actionrail` for Python package/API naming.

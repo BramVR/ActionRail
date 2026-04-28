@@ -111,7 +111,7 @@ Use polling if callbacks are too risky for Phase 0. Callback lifecycle must be c
 
 ### Spec
 
-Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in examples from JSON presets in `presets/`.
+Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in examples from JSON presets in `presets/`. The transform stack remains a regression target and demonstration preset; it should not be treated as the only rail shape ActionRail is designed to support.
 
 ```json
 {
@@ -137,7 +137,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. Later phases should evolve the public naming toward rail/slot data:
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. Later phases should evolve the public naming toward user-authored rail/slot data:
 
 ```json
 {
@@ -162,7 +162,7 @@ The schema is still named `StackSpec` in code for compatibility, but current pre
 }
 ```
 
-Stable ids are required for hotkey bindings, preset migration, and user overrides.
+Stable ids are required for hotkey bindings, preset migration, user overrides, and UI authoring tools that create rails instead of hand-editing JSON.
 
 ## Non-MVP
 

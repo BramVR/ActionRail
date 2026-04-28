@@ -21,6 +21,8 @@ ActionRail should eventually feel like a user-editable action bar system for May
 
 The useful reference is the workflow model from World of Warcraft UI customization, not its fantasy visual style. ActionRail should still look like a polished Maya viewport tool.
 
+The current `M/T/R/S/K` transform stack is only a seed example for this system. It should stay easy to recreate, but the authoring model must support arbitrary user-defined rails, slots, hotkey badges, layouts, and command groups.
+
 ## Research Signals
 
 WoW's Dragonflight Edit Mode made the base HUD movable, configurable, saveable, copyable, shareable, and specialization-aware. The ActionRail equivalent is named layouts that can change by Maya context: modeling, rigging, animation, shot, asset, or project.
@@ -247,7 +249,7 @@ Build the user-facing authoring workflow:
 - save as user preset
 - validate missing actions/icons/hotkeys
 
-Exit criteria: an artist can recreate the transform stack from Maya UI without editing JSON.
+Exit criteria: an artist can recreate the transform stack and create a distinct custom rail from Maya UI without editing JSON.
 
 ### Phase 3 - Bind Mode, Flyouts, And Command Rings
 

@@ -10,7 +10,7 @@ read_when:
 
 ## Phase 0: Viewport Overlay Prototype
 
-Goal: show the research UI in Maya as a clickable PySide6 overlay.
+Goal: prove the reference transform stack can run in Maya as a clickable PySide6 overlay.
 
 ### Tasks
 
@@ -47,7 +47,7 @@ Goal: show the research UI in Maya as a clickable PySide6 overlay.
 
 ## Phase 1: Declarative MVP
 
-Goal: make the prototype reusable.
+Goal: make the prototype reusable so examples and user-authored rails can be created from data instead of framework code.
 
 ### Tasks
 
@@ -62,7 +62,8 @@ Goal: make the prototype reusable.
 ### Acceptance Criteria
 
 - Reference stack can be created from JSON without editing framework code.
-- Built-in example loads from `examples/` or `presets/`.
+- At least one non-identical rail example can be created from JSON without widget-code changes.
+- Built-in examples load from `examples/` or `presets/`.
 - Reload cleanup is reliable.
 - Basic mayapy or MayaSessiond smoke test exists.
 
@@ -112,7 +113,7 @@ Current state: runtime command publishing, paired nameCommands, conflict-aware h
 
 ## Phase 2: Quick Create And Edit Mode
 
-Goal: let users create palettes without code.
+Goal: let users create rails, palettes, action bars, and hotkey-labeled button layouts without code.
 
 ### Tasks
 
@@ -129,6 +130,7 @@ Goal: let users create palettes without code.
 ### Acceptance Criteria
 
 - An artist can recreate the reference stack from Maya UI only.
+- An artist can also create a different rail layout from Maya UI only, proving the designer is not limited to `M/T/R/S/K`.
 - Edit Mode changes save to a user preset or user override, not to a locked built-in/studio preset.
 - Validation reports missing actions, missing icons, and hotkey conflicts.
 
