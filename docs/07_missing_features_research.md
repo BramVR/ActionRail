@@ -97,8 +97,8 @@ Source: [Autodesk workspace controls](https://help.autodesk.com/cloudhelp/2024/C
 
 The first artist-facing authoring workflow should stay narrow:
 
-1. Pick a template: vertical stack, horizontal strip, flyout, command ring,
-   status badge strip.
+1. Pick a template: vertical stack, horizontal strip, collapsible edge tab,
+   flyout, command ring, status badge strip.
 2. Pick workflow context: modeling, rigging, animation, layout, camera,
    display, project.
 3. Add actions from a searchable registry.
@@ -115,6 +115,7 @@ Edit Mode should add direct manipulation:
 - snap guides
 - safe margins
 - scale and opacity controls
+- collapsible side-tab controls
 - lock state
 - source layer badges
 
@@ -323,8 +324,8 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 3. Refactor rendering around action/state objects so buttons can update without
    full rebuilds.
 4. Build the icon pipeline and first icon-backed rail.
-5. Implement narrow Quick Create: template, action picker, preview, save user
-   preset.
+5. Implement narrow Quick Create: template, action picker, collapsible edge-tab
+   option, preview, save user preset.
 6. Add Bind Mode.
 7. Add flyouts.
 8. Add command rings.

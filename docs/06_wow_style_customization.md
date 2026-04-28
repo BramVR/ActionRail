@@ -1,9 +1,9 @@
 ---
-summary: Roadmap for WoW-style ActionRail customization: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and profiles.
+summary: Roadmap for WoW-style ActionRail customization: Edit Mode, action slots, collapsible rails, hover-to-bind hotkeys, flyouts, command rings, and profiles.
 read_when:
   - Planning ActionRail user authoring workflows.
   - Designing preset schema changes beyond the transform stack.
-  - Adding hotkeys, edit mode, flyouts, radial menus, or profile layers.
+  - Adding hotkeys, edit mode, collapsible rails, flyouts, radial menus, or profile layers.
 ---
 
 # WoW-Style Customization Roadmap
@@ -14,10 +14,11 @@ ActionRail should eventually feel like a user-editable action bar system for May
 
 1. Enter Edit Mode.
 2. Move, scale, lock, and configure viewport rails.
-3. Add scripts, tools, runtime commands, or presets to slots.
-4. Bind keys by hovering a slot and pressing a shortcut.
-5. Use compact bars for frequent actions and flyouts/rings for larger tool families.
-6. Save layouts as user, project, or studio profiles.
+3. Collapse infrequent rails into side tabs and reveal them with a small arrow/handle.
+4. Add scripts, tools, runtime commands, or presets to slots.
+5. Bind keys by hovering a slot and pressing a shortcut.
+6. Use compact bars for frequent actions and flyouts/rings for larger tool families.
+7. Save layouts as user, project, or studio profiles.
 
 The useful reference is the workflow model from World of Warcraft UI customization, not its fantasy visual style. ActionRail should still look like a polished Maya viewport tool.
 
@@ -50,6 +51,7 @@ Edit Mode should show:
 - spacing guides
 - safe margins
 - scale and opacity controls
+- collapse side, handle, reveal trigger, and default expanded/collapsed state
 - lock/unlock state
 - broken action and missing icon badges
 
@@ -58,6 +60,23 @@ Required commands:
 - `actionrail.edit_mode.toggle`
 - `actionrail.edit_mode.enter`
 - `actionrail.edit_mode.exit`
+
+### Collapsible Rails
+
+Collapsible rails let a bar fold against a viewport edge when it is not needed.
+The collapsed state should leave a small visible tab, arrow, or handle so the
+rail can be reopened without using a shelf/menu command.
+
+Initial behavior:
+
+- collapse to left, right, top, or bottom viewport edge
+- show a small handle with a directional chevron
+- reveal by click first; hover reveal can come later after Maya focus testing
+- optionally auto-collapse when the cursor leaves the expanded rail
+- keep hotkey/runtime-command bindings active while the rail is collapsed
+- preserve the rail's configured anchor, offset, scale, opacity, and lock state
+
+Edit Mode should expose collapse controls per rail, not as a global-only setting.
 
 ### Action Slots
 
@@ -185,6 +204,15 @@ Draft shape:
     "opacity": 1.0,
     "locked": false
   },
+  "collapse": {
+    "enabled": true,
+    "mode": "edge_tab",
+    "default_state": "expanded",
+    "edge": "left",
+    "trigger": "click",
+    "auto_collapse": false,
+    "handle_icon": "chevron-right"
+  },
   "profile": {
     "layer": "user",
     "context": "animation"
@@ -244,12 +272,13 @@ Build the user-facing authoring workflow:
 - global Edit Mode toggle
 - drag rail position
 - change scale, opacity, orientation, rows, columns, spacing
+- configure collapsible edge-tab behavior, including edge, handle, reveal trigger, and default state
 - add/remove/reorder slots
 - action browser
 - save as user preset
 - validate missing actions/icons/hotkeys
 
-Exit criteria: an artist can recreate the transform stack and create a distinct custom rail from Maya UI without editing JSON.
+Exit criteria: an artist can recreate the transform stack, create a distinct custom rail, and collapse that rail to an edge tab from Maya UI without editing JSON.
 
 ### Phase 3 - Bind Mode, Flyouts, And Command Rings
 
@@ -281,6 +310,7 @@ Exit criteria: a studio preset can be installed read-only, extended by a user pr
 - Do not build command rings on Viewport 2.0 first; Qt hit testing is the right first path.
 - Do not make arbitrary Python snippets the default authoring path for artists.
 - Keep runtime commands and hotkeys optional until the user publishes a preset or binding.
+- Collapsed handles must stay small and must not create viewport-sized transparent hit areas.
 - Always offer safe mode: users must be able to disable all ActionRail overlays if a bad preset causes trouble.
 - Do not let Edit Mode changes silently modify studio-locked presets; write user overrides instead.
 

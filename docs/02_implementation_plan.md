@@ -128,6 +128,7 @@ Goal: let users create rails, palettes, action bars, and hotkey-labeled button l
 - Global Edit Mode toggle.
 - Drag handles, anchors, snap guides, spacing guides, and safe margins.
 - Per-rail controls for orientation, rows/columns, scale, opacity, lock state, and visibility rules.
+- Collapsible edge-tab rails that can fold against a viewport side and leave a small arrow/handle for reveal.
 - Save/load user presets.
 - Publish to shelf/hotkey/runtime command where possible.
 
@@ -135,6 +136,7 @@ Goal: let users create rails, palettes, action bars, and hotkey-labeled button l
 
 - An artist can recreate the reference stack from Maya UI only.
 - An artist can also create a different rail layout from Maya UI only, proving the designer is not limited to `M/T/R/S/K`.
+- An artist can collapse a rail to a side handle and expand it again without losing its layout or bindings.
 - Edit Mode changes save to a user preset or user override, not to a locked built-in/studio preset.
 - Validation reports missing actions, missing icons, and hotkey conflicts.
 
@@ -200,7 +202,7 @@ The highest-priority missing features are:
 
 1. Automatic event/timer-driven predicate refresh.
 2. Safe-mode diagnostics.
-3. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
+3. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
 4. Bind Mode, then flyouts, then command rings.
 5. Icon import pipeline with license/source tracking.
 6. Broader workflow action library beyond transform/keyframe.
