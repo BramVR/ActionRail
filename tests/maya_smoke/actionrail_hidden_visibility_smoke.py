@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 __args__ = globals().get("__args__", {})
 
@@ -19,6 +20,15 @@ from actionrail.spec import parse_stack_spec  # noqa: E402
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
+
+output_path = Path(
+    __args__.get(
+        "output_path",
+        "C:/PROJECTS/GG/ScreenUI/.gg-maya-sessiond/screenshots/"
+        "actionrail_hidden_visibility_widget.png",
+    )
+)
+output_path.parent.mkdir(parents=True, exist_ok=True)
 
 previous_host = getattr(actionrail, "_hidden_visibility_smoke_host", None)
 if previous_host is not None:
@@ -76,6 +86,8 @@ app.processEvents()
 cmds.refresh(force=True)
 
 widget = host.widget
+pixmap = widget.grab()
+saved = pixmap.save(str(output_path), "PNG")
 buttons = widget.findChildren(QtWidgets.QPushButton)
 frames = [
     frame
@@ -89,8 +101,11 @@ result = {
     "empty_frame_count": frame_button_counts.count(0),
     "frame_button_counts": frame_button_counts,
     "frame_count": len(frames),
+    "output_path": str(output_path),
     "panel": host.panel,
+    "pixmap_size": [pixmap.width(), pixmap.height()],
     "position": [widget.x(), widget.y()],
+    "saved": bool(saved),
     "size": [widget.width(), widget.height()],
     "visible": bool(widget.isVisible()),
 }
@@ -101,6 +116,8 @@ if result["empty_frame_count"] != 0:
     raise AssertionError(f"Hidden items left empty frames: {result}")
 if result["frame_button_counts"] != [1]:
     raise AssertionError(f"Unexpected frame structure: {result}")
+if not result["saved"]:
+    raise AssertionError(f"Failed to save hidden visibility screenshot: {result}")
 
 actionrail._hidden_visibility_smoke_host = host
 

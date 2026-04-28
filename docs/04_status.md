@@ -133,8 +133,8 @@ Checks already run for the roadmap update:
 - 2026-04-28 hidden visibility regression:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 25 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-  - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, and visible rail size was `40x40`.
-  - MCP `viewport.capture format=png width=640 height=360 show_ornaments=false panel=modelPanel4` returned a `640x360` PNG with `size_bytes=2030`.
+  - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, visible rail size was `40x40`, and widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_widget.png`.
+  - MCP `viewport.capture format=png width=640 height=360 show_ornaments=false panel=modelPanel4` returned a `640x360` PNG with `size_bytes=2030`; the image was saved locally to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_viewport.png`.
 
 ## Decisions
 
