@@ -97,6 +97,7 @@ def parse_stack_spec(payload: Any, *, source: str = "<memory>") -> StackSpec:
         raise ValueError(msg)
 
     items = tuple(_parse_item(item, index, source, spec_id) for index, item in enumerate(raw_items))
+    _validate_unique_item_ids(items, source)
     return StackSpec(id=spec_id, layout=layout, items=items)
 
 
@@ -167,7 +168,7 @@ def _parse_item(payload: Any, index: int, source: str, spec_id: str) -> StackIte
     )
     if item_type == "spacer":
         size = payload.get("size")
-        if not isinstance(size, int) or size < 0:
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0:
             msg = f"ActionRail spacer item {index} requires a non-negative integer size: {source}"
             raise ValueError(msg)
         return StackItem(type=item_type, id=item_id, size=size)
@@ -208,6 +209,15 @@ def _default_item_id(spec_id: str, index: int, payload: dict[str, Any]) -> str:
     else:
         suffix = "item"
     return f"{spec_id}.{index}.{suffix}"
+
+
+def _validate_unique_item_ids(items: tuple[StackItem, ...], source: str) -> None:
+    seen: set[str] = set()
+    for item in items:
+        if item.id in seen:
+            msg = f"ActionRail preset item ids must be unique; duplicate id '{item.id}': {source}"
+            raise ValueError(msg)
+        seen.add(item.id)
 
 
 def _required_string(
@@ -263,7 +273,7 @@ def _optional_positive_int(
     source: str,
 ) -> int:
     value = payload.get(key, default)
-    if isinstance(value, int) and value >= 1:
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 1:
         return value
 
     msg = f"ActionRail preset layout field '{key}' must be a positive integer: {source}"

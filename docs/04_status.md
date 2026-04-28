@@ -46,6 +46,18 @@ Last updated: 2026-04-28
   - `presets/horizontal_tools.json` proves a horizontal rail can be defined without widget-code changes.
   - Overlay positioning now supports left/right/top/bottom/center anchors plus layout offsets.
   - Maya smoke coverage now includes a horizontal rail render check.
+- Phase 1B runtime-command bridge started:
+  - `actionrail.run_action(action_id)` runs registered actions without requiring an overlay.
+  - `actionrail.run_slot(preset_id, slot_id)` runs action-bearing preset slots by stable slot id.
+  - `actionrail.hotkeys` can publish default actions and preset slots as Maya runtime commands plus paired nameCommands for hotkey assignment.
+  - Hotkey assignment now has conflict-aware helpers that refuse to overwrite existing bindings unless explicitly requested.
+  - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
+- Test/docs hardening:
+  - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
+  - Runtime tests now cover unknown slots and slots without actions.
+  - Hotkey tests now cover idempotent publishing, same-binding assignment, release bindings, command modifiers, conflict text, and unpublish behavior.
+  - Overlay tests now cover active model-panel fallback behavior.
+  - Icon manifest tests now guard the expected metadata shape.
 - WoW-style customization direction documented:
   - `docs/06_wow_style_customization.md` defines Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, visibility rules, schema direction, and phased roadmap.
   - `docs/01_architecture.md` and `docs/02_implementation_plan.md` now reserve room for stable slot ids, runtime-command hotkeys, user/project/studio layers, and later radial/flyout controls.
@@ -59,7 +71,7 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add the Maya runtime-command and hotkey bridge before full Bind Mode.
+2. First recommended coding slice: wire assigned hotkeys back into rendered key labels.
 3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 Checks already run for the roadmap update:
@@ -69,7 +81,7 @@ Checks already run for the roadmap update:
 
 ## Next
 
-1. Add a Maya runtime-command and hotkey bridge before full Bind Mode so ActionRail actions can become native hotkey targets.
+1. Add key-label update wiring after hotkey assignment so rendered slots reflect published bindings.
 2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
 3. Add a shelf/menu toggle once reload cleanup stays stable.
 4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
@@ -135,6 +147,16 @@ Checks already run for the roadmap update:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, visible rail size was `40x40`, and widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_widget.png`.
   - MCP `viewport.capture format=png width=640 height=360 show_ornaments=false panel=modelPanel4` returned a `640x360` PNG with `size_bytes=2030`; the image was saved locally to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_viewport.png`.
+- 2026-04-28 runtime-command/hotkey bridge:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 34 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - `tests/maya_smoke/actionrail_hotkey_bridge_smoke.py` passed through `script.execute`: default action runtime command existed and switched Maya to `RotateSuperContext`, preset slot runtime command existed and set 10 keyframes, 5 action-bearing slots were published, and no overlay ids were active.
+- 2026-04-28 tests/docs hardening:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 52 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - MayaSessiond was not rerun; changes were limited to pure Python validation/runtime edge cases plus documentation.
 
 ## Decisions
 

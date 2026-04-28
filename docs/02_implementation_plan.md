@@ -94,6 +94,8 @@ Goal: make the declarative MVP compatible with later Edit Mode, Bind Mode, flyou
 
 Goal: make ActionRail actions bindable through Maya-native hotkeys.
 
+Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, and no-overlay action/slot execution are started. Remaining Phase 1B work is wiring assigned bindings back into rendered key labels and deciding how renamed/removed published commands are cleaned up in user scenes.
+
 ### Tasks
 
 - Publish selected ActionRail actions as Maya runtime commands.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .actions import ActionRegistry, create_default_registry
 from .spec import TRANSFORM_STACK_ID, get_example_spec
 
 _OVERLAYS: dict[str, Any] = {}
@@ -47,3 +48,30 @@ def active_overlay_ids() -> tuple[str, ...]:
     """Return ids for overlays currently tracked by the runtime registry."""
 
     return tuple(_OVERLAYS)
+
+
+def run_action(action_id: str, *, registry: ActionRegistry | None = None) -> Any:
+    """Run a registered ActionRail action without requiring an overlay widget."""
+
+    action_registry = registry or create_default_registry()
+    return action_registry.run(action_id)
+
+
+def run_slot(
+    preset_id: str,
+    slot_id: str,
+    *,
+    registry: ActionRegistry | None = None,
+) -> Any:
+    """Run the action attached to a slot in a built-in preset."""
+
+    spec = get_example_spec(preset_id)
+    for item in spec.items:
+        if item.id == slot_id:
+            if not item.action:
+                msg = f"ActionRail slot has no action: {preset_id}/{slot_id}"
+                raise ValueError(msg)
+            return run_action(item.action, registry=registry)
+
+    msg = f"Unknown ActionRail slot: {preset_id}/{slot_id}"
+    raise KeyError(msg)

@@ -115,12 +115,34 @@ def test_parse_stack_spec_rejects_bad_spacer_size() -> None:
         )
 
 
+def test_parse_stack_spec_rejects_bool_spacer_size() -> None:
+    with pytest.raises(ValueError, match="spacer"):
+        parse_stack_spec(
+            {
+                "id": "broken",
+                "anchor": "viewport.left.center",
+                "items": [{"type": "spacer", "size": True}],
+            }
+        )
+
+
 def test_parse_stack_spec_rejects_bad_layout_orientation() -> None:
     with pytest.raises(ValueError, match="orientation"):
         parse_stack_spec(
             {
                 "id": "broken",
                 "layout": {"anchor": "viewport.left.center", "orientation": "diagonal"},
+                "items": [{"type": "button", "label": "K", "action": "maya.anim.set_key"}],
+            }
+        )
+
+
+def test_parse_stack_spec_rejects_bool_layout_counts() -> None:
+    with pytest.raises(ValueError, match="rows"):
+        parse_stack_spec(
+            {
+                "id": "broken",
+                "layout": {"anchor": "viewport.left.center", "rows": True},
                 "items": [{"type": "button", "label": "K", "action": "maya.anim.set_key"}],
             }
         )
@@ -139,6 +161,30 @@ def test_parse_stack_spec_rejects_bad_predicate_type() -> None:
                         "action": "maya.anim.set_key",
                         "visible_when": {"bad": "shape"},
                     }
+                ],
+            }
+        )
+
+
+def test_parse_stack_spec_rejects_duplicate_item_ids() -> None:
+    with pytest.raises(ValueError, match="duplicate id 'duplicate.slot'"):
+        parse_stack_spec(
+            {
+                "id": "broken",
+                "anchor": "viewport.left.center",
+                "items": [
+                    {
+                        "type": "button",
+                        "id": "duplicate.slot",
+                        "label": "A",
+                        "action": "maya.tool.move",
+                    },
+                    {
+                        "type": "button",
+                        "id": "duplicate.slot",
+                        "label": "B",
+                        "action": "maya.tool.rotate",
+                    },
                 ],
             }
         )

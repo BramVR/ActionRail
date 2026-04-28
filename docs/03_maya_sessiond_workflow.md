@@ -109,7 +109,7 @@ Prefer native inspection tools over raw script execution. Use `script.execute` f
   --json
 ```
 
-## Verification Target For Phase 0
+## Smoke Verification Targets
 
 Record these in `docs/04_status.md`:
 
@@ -120,3 +120,13 @@ Record these in `docs/04_status.md`:
 - show/hide/reload result.
 - screenshot path, if capture works.
 - exact blocker, if any step fails.
+
+Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by the `--mcp-script-dirs` start flag above.
+
+- `actionrail_phase0_smoke.py`: import, reference stack, action buttons, hide/reload cleanup.
+- `actionrail_capture_smoke.py`: direct widget screenshot capture and reference widget metrics.
+- `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, anchor, and opacity.
+- `actionrail_hidden_visibility_smoke.py`: literal false visibility handling and empty-cluster regression.
+- `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
+
+After adding a new smoke script, update this list and add the exact result to `docs/04_status.md`.

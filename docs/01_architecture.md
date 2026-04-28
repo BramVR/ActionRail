@@ -24,10 +24,10 @@ ActionRail/
       overlay.py
       widgets.py
       actions.py
+      hotkeys.py
       state.py
       spec.py
-      themes/
-      examples/
+      theme.py
   icons/
   presets/
   examples/
@@ -53,7 +53,7 @@ The customization layer is planned after the declarative MVP, but the spec and a
 
 - Locate Maya main window and active model panel.
 - Create/recreate overlay safely.
-- Expose `actionrail.reload()`, `actionrail.show_example()`, `actionrail.hide_all()`.
+- Expose `actionrail.reload()`, `actionrail.show_example()`, `actionrail.hide_all()`, `actionrail.run_action()`, and `actionrail.run_slot()`.
 - Probe Maya 2026 `moverlay` as a possible helper/reference, but keep the MVP overlay host custom until the probe proves fit.
 
 ### Qt Overlay
@@ -97,7 +97,7 @@ MVP action ids:
 
 Use `maya.cmds`. No PyMEL by default.
 
-Future actions should be publishable as Maya runtime commands so users can bind ActionRail actions through Maya's Hotkey Editor or through ActionRail Bind Mode.
+ActionRail actions and action-bearing preset slots can be published as Maya runtime commands through `actionrail.hotkeys` so users can bind them through Maya's Hotkey Editor or through future ActionRail Bind Mode.
 
 ### State
 
@@ -111,26 +111,33 @@ Use polling if callbacks are too risky for Phase 0. Callback lifecycle must be c
 
 ### Spec
 
-Phase 0 can hard-code the reference stack.
-
-Phase 1 should add JSON/Python declarative specs:
+Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in examples from JSON presets in `presets/`.
 
 ```json
 {
   "id": "transform_stack",
-  "anchor": "viewport.left.center",
+  "layout": {
+    "anchor": "viewport.left.center",
+    "orientation": "vertical",
+    "rows": 5,
+    "columns": 1,
+    "offset": [0, 0],
+    "scale": 1.0,
+    "opacity": 1.0,
+    "locked": true
+  },
   "items": [
-    {"type": "toolButton", "label": "M", "action": "maya.tool.move"},
-    {"type": "toolButton", "label": "T", "action": "maya.tool.translate"},
-    {"type": "toolButton", "label": "R", "action": "maya.tool.rotate"},
-    {"type": "toolButton", "label": "S", "action": "maya.tool.scale", "tone": "pink"},
-    {"type": "spacer", "size": 14},
-    {"type": "button", "label": "K", "action": "maya.anim.set_key", "tone": "teal"}
+    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move"},
+    {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "action": "maya.tool.translate"},
+    {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate"},
+    {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "tone": "pink"},
+    {"type": "spacer", "id": "transform_stack.gap", "size": 14},
+    {"type": "button", "id": "transform_stack.set_key", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "key_label": "S"}
   ]
 }
 ```
 
-After Phase 1, specs should evolve from stack-only data to rail/slot data:
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. Later phases should evolve the public naming toward rail/slot data:
 
 ```json
 {

@@ -23,6 +23,7 @@ The reference target is in `research/`:
 - Local agent guidance exists: `AGENTS.MD`.
 - Phase 0 prototype exists and has been verified in MayaSessiond.
 - Phase 1 declarative MVP is in progress.
+- Phase 1B runtime-command/hotkey bridge is started; remaining work is key-label update wiring and deeper Bind Mode UX.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -53,9 +54,10 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Extend specs toward reusable rails without breaking `transform_stack`.
-2. Add shelf/menu toggle once reload cleanup stays stable.
-3. Keep the WoW-style customization roadmap in mind, but do not start the full designer before the declarative MVP is stable.
+1. Continue the Phase 1B hotkey bridge by wiring assigned hotkeys back into rendered key labels.
+2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
+3. Add shelf/menu toggle once reload cleanup stays stable.
+4. Keep the WoW-style customization roadmap in mind, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules
 

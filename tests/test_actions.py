@@ -10,6 +10,7 @@ from actionrail.actions import (
     ActionRegistry,
     create_default_registry,
 )
+from actionrail.runtime import run_action, run_slot
 
 
 class FakeCmds:
@@ -63,3 +64,36 @@ def test_registry_rejects_duplicate_action_ids() -> None:
 
     with pytest.raises(ValueError, match="same.id"):
         registry.register(Action("same.id", "Second", lambda: None))
+
+
+def test_runtime_run_action_uses_registry_without_overlay() -> None:
+    cmds = FakeCmds()
+    registry = create_default_registry(cmds)
+
+    assert run_action("maya.tool.rotate", registry=registry) == ROTATE_CONTEXT
+
+    assert cmds.calls == [("setToolTo", ROTATE_CONTEXT)]
+
+
+def test_runtime_run_slot_uses_preset_slot_action_without_overlay() -> None:
+    cmds = FakeCmds()
+    registry = create_default_registry(cmds)
+
+    result = run_slot("transform_stack", "transform_stack.set_key", registry=registry)
+
+    assert result == "setKeyframe"
+    assert cmds.calls == [("setKeyframe", None)]
+
+
+def test_runtime_run_slot_rejects_slot_without_action() -> None:
+    registry = create_default_registry(FakeCmds())
+
+    with pytest.raises(ValueError, match="has no action"):
+        run_slot("transform_stack", "transform_stack.gap", registry=registry)
+
+
+def test_runtime_run_slot_rejects_unknown_slot() -> None:
+    registry = create_default_registry(FakeCmds())
+
+    with pytest.raises(KeyError, match="missing.slot"):
+        run_slot("transform_stack", "missing.slot", registry=registry)
