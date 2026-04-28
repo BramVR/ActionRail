@@ -21,8 +21,9 @@ The reference target is in `research/`:
 
 - Research report exists: `MAYA_UI_FRAMEWORK_REPORT.md`.
 - Local agent guidance exists: `AGENTS.MD`.
-- No implementation exists yet.
-- Git repo initialized with the initial docs commit.
+- Phase 0 prototype exists and has been verified in MayaSessiond.
+- Phase 1 declarative MVP is in progress.
+- WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
 
@@ -33,7 +34,8 @@ The reference target is in `research/`:
 5. `docs/02_implementation_plan.md`
 6. `docs/03_maya_sessiond_workflow.md`
 7. `docs/05_tech_stack.md`
-8. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
+8. `docs/06_wow_style_customization.md` when planning Edit Mode, hotkeys, flyouts, rings, or profile layers.
+9. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
 
 ## Product Decision
 
@@ -45,23 +47,19 @@ Build PySide6/Qt overlay first.
 - Viewport 2.0 is later, only for native scene/viewport drawing.
 - Web tools are for authoring/import only, not the core runtime.
 - Core UX is declarative presets plus reusable Maya actions.
+- Longer-term authoring UX borrows from WoW-style action bar customization: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and user/project/studio profiles.
 
-## First Agent Task
+## Current Priority
 
-Implement Phase 0 prototype:
+Continue Phase 1 declarative MVP:
 
-1. Create Maya module/package skeleton.
-2. Add PySide import shim.
-3. Add a hard-coded viewport overlay host.
-4. Render the `M/T/R/S + K` reference stack.
-5. Bind buttons to move/translate/rotate/scale/set-key actions.
-6. Add reload/show/hide entry points.
-7. Verify in Maya via `GG_MayaSessiond` when feasible.
-8. Update `docs/04_status.md` with exact done/next/blocker state.
+1. Extend specs toward reusable rails without breaking `transform_stack`.
+2. Add shelf/menu toggle once reload cleanup stays stable.
+3. Keep the WoW-style customization roadmap in mind, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules
 
 - Keep docs current as work changes.
 - Prefer small implementation slices with visible Maya verification.
-- Do not start designer, icon importer, or Viewport 2.0 backend before Phase 0 works.
+- Do not start designer, icon importer, or Viewport 2.0 backend before the declarative MVP works.
 - If Maya verification is blocked, record the exact blocker in `docs/04_status.md`.

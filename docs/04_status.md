@@ -38,16 +38,34 @@ Last updated: 2026-04-28
   - Preset parsing validates required ids, anchors, item lists, supported item types, button action fields, and spacer sizes.
   - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
   - Widget screenshot smoke now captures the ActionRail widget directly instead of the foreground desktop.
+  - Theme tokens and generated QSS now live in `scripts/actionrail/theme.py`; the default theme preserves the reference `40x196` transform stack dimensions and colors.
+- WoW-style customization direction documented:
+  - `docs/06_wow_style_customization.md` defines Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, visibility rules, schema direction, and phased roadmap.
+  - `docs/01_architecture.md` and `docs/02_implementation_plan.md` now reserve room for stable slot ids, runtime-command hotkeys, user/project/studio layers, and later radial/flyout controls.
 
 ## In Progress
 
 - Phase 1 declarative MVP.
 
+## Next Agent Start
+
+Start here:
+
+1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
+2. First recommended coding slice: extend specs toward reusable rails with stable slot ids and layout metadata.
+3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
+
+Checks already run for the roadmap update:
+
+- `git diff --check` -> no whitespace errors; Git reported LF/CRLF warnings only.
+- No pytest, ruff, or MayaSessiond run was needed for the docs-only update.
+
 ## Next
 
-1. Add theme token/QSS generation.
-2. Add a shelf/menu toggle once reload cleanup stays stable.
-3. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+1. Extend the spec toward reusable rails with stable slot ids, layout metadata, key labels, and safe visibility/enabled/active predicates.
+2. Add a Maya runtime-command and hotkey bridge before full Bind Mode so ActionRail actions can become native hotkey targets.
+3. Add a shelf/menu toggle once reload cleanup stays stable.
+4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 
 ## Blockers
 
@@ -76,6 +94,9 @@ Last updated: 2026-04-28
 - 2026-04-28 local venv:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 16 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- 2026-04-28 local venv after theme token/QSS generation:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 19 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - 2026-04-28 MayaSessiond:
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
   - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
@@ -84,12 +105,21 @@ Last updated: 2026-04-28
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
   - `tests/maya_smoke/actionrail_capture_smoke.py` saved direct widget screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `40x196`, visible widget size `40x196`, button count `5`.
   - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
+- 2026-04-28 MayaSessiond after theme token/QSS generation:
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - `tests/maya_smoke/actionrail_capture_smoke.py` saved direct widget screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `40x196`, visible widget size `40x196`, button count `5`.
 
 ## Decisions
 
 - PySide6/Qt overlay is the MVP path.
 - Viewport 2.0 is deferred until Qt overlay is stable.
 - Designer/Quick Create is deferred until Phase 0 and declarative MVP are stable.
+- WoW-style customization is the long-term authoring model: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and preset/profile layers.
+- Build the hotkey bridge through Maya runtime commands so bindings remain visible to Maya and not only to ActionRail.
 - Use `GG_MayaSessiond` for live Maya verification when feasible.
 - Use `ActionRail` for product/module naming and `actionrail` for Python package/API naming.
 - Use Python 3.11 in Maya, PySide6/Qt Widgets, custom transparent overlay, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons, `.mod` packaging, and MayaSessiond verification.

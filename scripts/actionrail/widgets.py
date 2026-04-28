@@ -5,58 +5,13 @@ from __future__ import annotations
 from .actions import ActionRegistry
 from .qt import load
 from .spec import StackItem, StackSpec
+from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
-BUTTON_SIZE = 32
-FRAME_PADDING = 4
-FRAME_SPACING = 2
-RAIL_WIDTH = BUTTON_SIZE + (FRAME_PADDING * 2)
-
-STYLE_SHEET = """
-QWidget#ActionRailRoot {
-    background: transparent;
-}
-QFrame[actionRailRole="cluster"] {
-    background: #4a4a4f;
-    border: 2px solid #323238;
-    border-radius: 2px;
-}
-QPushButton[actionRailRole="button"] {
-    min-width: 32px;
-    max-width: 32px;
-    min-height: 32px;
-    max-height: 32px;
-    border: 1px solid #696972;
-    border-radius: 1px;
-    background: #666670;
-    color: #d9d9de;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0px;
-    padding: 0px;
-}
-QPushButton[actionRailRole="button"]:hover {
-    background: #74747e;
-    border-color: #888894;
-}
-QPushButton[actionRailRole="button"]:pressed {
-    background: #555560;
-}
-QPushButton[actionRailTone="pink"] {
-    background: #8b667f;
-    border-color: #a9839e;
-}
-QPushButton[actionRailTone="pink"]:hover {
-    background: #9c7390;
-}
-QPushButton[actionRailTone="teal"] {
-    background: #22a79b;
-    border-color: #45c6bb;
-    color: #e9fffb;
-}
-QPushButton[actionRailTone="teal"]:hover {
-    background: #29b9ad;
-}
-"""
+BUTTON_SIZE = DEFAULT_THEME.button_size
+FRAME_PADDING = DEFAULT_THEME.frame_padding
+FRAME_SPACING = DEFAULT_THEME.frame_spacing
+RAIL_WIDTH = DEFAULT_THEME.rail_width
+STYLE_SHEET = generate_style_sheet(DEFAULT_THEME)
 
 
 class ActionRailRoot:
@@ -93,12 +48,16 @@ class ActionRailRoot:
         return _ActionRailRoot()
 
 
-def build_transform_stack(spec: StackSpec, registry: ActionRegistry) -> object:
+def build_transform_stack(
+    spec: StackSpec,
+    registry: ActionRegistry,
+    theme: ActionRailTheme = DEFAULT_THEME,
+) -> object:
     """Build a vertical ActionRail widget from a stack spec."""
 
     qt = load()
     root = ActionRailRoot.create()
-    root.setStyleSheet(STYLE_SHEET)
+    root.setStyleSheet(generate_style_sheet(theme))
 
     layout = qt.QtWidgets.QVBoxLayout(root)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -111,63 +70,81 @@ def build_transform_stack(spec: StackSpec, registry: ActionRegistry) -> object:
             continue
 
         if pending_tools:
-            layout.addWidget(_build_cluster(tuple(pending_tools), registry))
+            layout.addWidget(_build_cluster(tuple(pending_tools), registry, theme))
             pending_tools.clear()
 
         if item.type == "spacer":
             layout.addSpacing(item.size)
             continue
 
-        layout.addWidget(_build_single_button(item, registry), 0, qt.QtCore.Qt.AlignLeft)
+        layout.addWidget(_build_single_button(item, registry, theme), 0, qt.QtCore.Qt.AlignLeft)
 
     if pending_tools:
-        layout.addWidget(_build_cluster(tuple(pending_tools), registry))
+        layout.addWidget(_build_cluster(tuple(pending_tools), registry, theme))
 
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
     return root
 
 
-def _build_cluster(items: tuple[StackItem, ...], registry: ActionRegistry) -> object:
+def _build_cluster(
+    items: tuple[StackItem, ...],
+    registry: ActionRegistry,
+    theme: ActionRailTheme,
+) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
     frame.setProperty("actionRailRole", "cluster")
-    frame.setFixedWidth(RAIL_WIDTH)
+    frame.setFixedWidth(theme.rail_width)
 
     layout = qt.QtWidgets.QVBoxLayout(frame)
-    layout.setContentsMargins(FRAME_PADDING, FRAME_PADDING, FRAME_PADDING, FRAME_PADDING)
-    layout.setSpacing(FRAME_SPACING)
+    layout.setContentsMargins(
+        theme.frame_padding,
+        theme.frame_padding,
+        theme.frame_padding,
+        theme.frame_padding,
+    )
+    layout.setSpacing(theme.frame_spacing)
 
     for item in items:
-        layout.addWidget(_build_button(item, registry))
+        layout.addWidget(_build_button(item, registry, theme))
 
     frame.adjustSize()
     frame.setFixedSize(frame.sizeHint())
     return frame
 
 
-def _build_single_button(item: StackItem, registry: ActionRegistry) -> object:
+def _build_single_button(
+    item: StackItem,
+    registry: ActionRegistry,
+    theme: ActionRailTheme,
+) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
     frame.setProperty("actionRailRole", "cluster")
-    frame.setFixedWidth(RAIL_WIDTH)
+    frame.setFixedWidth(theme.rail_width)
 
     layout = qt.QtWidgets.QVBoxLayout(frame)
-    layout.setContentsMargins(FRAME_PADDING, FRAME_PADDING, FRAME_PADDING, FRAME_PADDING)
+    layout.setContentsMargins(
+        theme.frame_padding,
+        theme.frame_padding,
+        theme.frame_padding,
+        theme.frame_padding,
+    )
     layout.setSpacing(0)
-    layout.addWidget(_build_button(item, registry))
+    layout.addWidget(_build_button(item, registry, theme))
 
     frame.adjustSize()
     frame.setFixedSize(frame.sizeHint())
     return frame
 
 
-def _build_button(item: StackItem, registry: ActionRegistry) -> object:
+def _build_button(item: StackItem, registry: ActionRegistry, theme: ActionRailTheme) -> object:
     qt = load()
     button = qt.QtWidgets.QPushButton(item.label)
     button.setProperty("actionRailRole", "button")
     button.setProperty("actionRailTone", item.tone)
-    button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
+    button.setFixedSize(theme.button_size, theme.button_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
     if item.tooltip:
