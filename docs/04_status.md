@@ -69,6 +69,12 @@ Last updated: 2026-04-28
   - `actionrail.install_menu_toggle()` and `actionrail.uninstall_menu_toggle()` manage an idempotent Maya menu item.
   - `actionrail.install_shelf_toggle()` and `actionrail.uninstall_shelf_toggle()` manage an idempotent Maya shelf button.
   - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
+- Reusable Maya smoke wrapper:
+  - `scripts/maya-smoke.ps1` wraps the stable MayaSessiond command shape for checked-in smoke scripts.
+  - The wrapper uses repo-local state, starts Sessiond only when needed, passes the repo module path and absolute smoke-script directory, discovers MCP tools before running, and fails on either MCP-call or script-payload failure.
+  - `tests/maya_smoke/actionrail_cleanup_state.py` runs before and after each wrapper-selected smoke to close runtime overlays, close smoke-owned hosts, remove stale ActionRail Qt widgets, and reset the Maya scene.
+  - The wrapper validates that `script.execute` returned a payload for the requested script and retries transient stale-payload or JSON transport failures.
+  - `-Script all` runs all `tests/maya_smoke/*_smoke.py`; individual script names can be passed with or without `.py`.
 - Test/docs hardening:
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
   - Runtime tests now cover unknown slots and slots without actions.
@@ -94,33 +100,30 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
-3. Use the exact command shapes from the latest verification history before wrapping them.
+2. First recommended coding slice: add automatic event/timer-driven predicate refresh after the manual `ViewportOverlayHost.refresh_state()` path has more runtime mileage.
+3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest Maya UI toggle slice:
+Checks already run for the latest smoke wrapper slice:
 
+- PowerShell syntax parse for `scripts/maya-smoke.ps1` passed.
+- `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` passed against the already-running MayaSessiond on port `7217`; it discovered 71 MCP tools, cleaned between scripts, and ran all 9 `*_smoke.py` scripts through `script.execute`.
 - `.\\.venv\\Scripts\\python.exe -m pytest` -> 88 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
-- Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`.
-- Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
-- `tests/maya_smoke/actionrail_maya_ui_smoke.py` passed through `script.execute`: menu and shelf entries installed idempotently, both command strings were `import actionrail; actionrail.toggle_default()`, toggle showed `transform_stack` at size `[46, 214]`, toggle hid it back to no active overlays, and uninstall removed both entries.
-- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
 
 ## Latest Handoff
 
-- Task goal completed: added Maya-native menu and shelf toggle entry points for the default ActionRail preset.
-- Files changed: `scripts/actionrail/maya_ui.py`, `scripts/actionrail/__init__.py`, `tests/test_maya_ui.py`, `tests/maya_smoke/actionrail_maya_ui_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/03_maya_sessiond_workflow.md`, and this status doc.
-- Checks run: local pytest and ruff passed; MayaSessiond Maya UI smoke and phase0 smoke passed through `script.execute`.
+- Task goal completed: fixed `scripts/maya-smoke.ps1 -Script all` so smoke scripts are isolated in the shared Maya process.
+- Files changed: `scripts/maya-smoke.ps1`, `tests/maya_smoke/actionrail_cleanup_state.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/03_maya_sessiond_workflow.md`, and this status doc.
+- Checks run: PowerShell syntax parse passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` passed through live MayaSessiond `script.execute`; local pytest and ruff passed.
 - Current live state: MayaSessiond is running on port `7217`; the phase0 smoke closed its overlay at the end.
-- Blockers/risks: automatic timer/scriptJob predicate refresh is not implemented yet; no shelf/menu implementation blocker known.
-- Exact next step: add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+- Blockers/risks: automatic timer/scriptJob predicate refresh is not implemented yet.
+- Exact next step: add automatic event/timer-driven predicate refresh after the manual `ViewportOverlayHost.refresh_state()` path has more runtime mileage.
 
 ## Next
 
-1. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
-2. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+1. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
 ## Blockers
@@ -278,6 +281,15 @@ Checks already run for the latest Maya UI toggle slice:
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `tests/maya_smoke/actionrail_maya_ui_smoke.py` passed through `script.execute`: menu and shelf entries installed idempotently, both command strings were `import actionrail; actionrail.toggle_default()`, toggle showed `transform_stack` at size `[46, 214]`, toggle hid it back to no active overlays, and uninstall removed both entries.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
+- 2026-04-28 reusable Maya smoke wrapper:
+  - PowerShell syntax parse passed: `$null = [scriptblock]::Create((Get-Content -Raw scripts\\maya-smoke.ps1))`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the already-running MayaSessiond on port `7217`: tool discovery succeeded, `script.execute` ran `actionrail_phase0_smoke.py`, buttons were `M/T/R/S/K`, current context became `scaleSuperContext`, `K` created 10 keyframes, reload returned one visible `transform_stack`, and size was `[46, 214]`.
+  - `git diff --check` passed with Git LF/CRLF warnings only.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 88 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- 2026-04-28 smoke wrapper all-mode isolation fix:
+  - PowerShell syntax parse passed for `scripts\\maya-smoke.ps1`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` passed against the already-running MayaSessiond on port `7217`: tool discovery succeeded, cleanup ran before and after each smoke, and all 9 `*_smoke.py` scripts passed through `script.execute`.
 
 ## Decisions
 

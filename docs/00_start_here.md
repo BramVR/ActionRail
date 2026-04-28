@@ -33,6 +33,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
 - The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - Maya-native menu and shelf toggle entry points now install idempotently and call `actionrail.toggle_default()` to show/hide the default `transform_stack` preset.
+- `scripts/maya-smoke.ps1` wraps the stable MayaSessiond `script.execute` command shape for checked-in smoke scripts.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -64,8 +65,8 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
-2. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+1. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules

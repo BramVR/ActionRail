@@ -125,6 +125,25 @@ Record these in `docs/04_status.md`:
 
 Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by the `--mcp-script-dirs` start flag above.
 
+The repo-local wrapper below uses the stable `script.execute` command shape,
+resolves the smoke-script directory to an absolute path, starts Sessiond only
+when needed, discovers tools before running scripts, cleans Maya smoke state
+before and after each selected script, validates that `script.execute` returned
+the requested script payload, and fails if either the MCP call or script payload
+reports failure.
+
+```powershell
+.\scripts\maya-smoke.ps1 -Script actionrail_phase0_smoke.py
+```
+
+Useful variants:
+
+```powershell
+.\scripts\maya-smoke.ps1 -NoStart -Script actionrail_maya_ui_smoke.py
+.\scripts\maya-smoke.ps1 -NoStart -Script all
+.\scripts\maya-smoke.ps1 -Port 7218 -Script actionrail_predicates_smoke.py
+```
+
 - `actionrail_phase0_smoke.py`: import, reference stack, action buttons, hide/reload cleanup.
 - `actionrail_capture_smoke.py`: direct widget screenshot capture and reference widget metrics.
 - `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, anchor, and opacity.
