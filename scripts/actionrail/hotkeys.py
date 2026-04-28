@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -42,6 +43,14 @@ class HotkeyBinding:
     release: bool = False
 
 
+@dataclass(frozen=True)
+class CommandSyncResult:
+    """Published and removed Maya commands from one ActionRail sync pass."""
+
+    published: tuple[PublishedCommand, ...]
+    unpublished: tuple[PublishedCommand, ...]
+
+
 class HotkeyConflictError(RuntimeError):
     """Raised when a hotkey chord already has a different command."""
 
@@ -58,6 +67,29 @@ def publish_default_actions(
         publish_action(action.id, label=action.label, cmds_module=cmds_module)
         for action in action_registry.actions()
     )
+
+
+def sync_default_actions(
+    *,
+    registry: ActionRegistry | None = None,
+    cmds_module: Any | None = None,
+) -> CommandSyncResult:
+    """Publish current actions and remove stale ActionRail action commands."""
+
+    action_registry = registry or create_default_registry()
+    published = publish_default_actions(registry=action_registry, cmds_module=cmds_module)
+    expected_runtime_commands = {command.runtime_command for command in published}
+    stale = tuple(
+        command
+        for command in list_published_commands(
+            target_kind="action",
+            cmds_module=cmds_module,
+        )
+        if command.runtime_command not in expected_runtime_commands
+    )
+    for command in stale:
+        unpublish(command, cmds_module=cmds_module)
+    return CommandSyncResult(published=published, unpublished=stale)
 
 
 def publish_action(
@@ -104,6 +136,31 @@ def publish_preset_slots(
     )
 
 
+def sync_preset_slots(
+    preset_id: str,
+    *,
+    spec: StackSpec | None = None,
+    cmds_module: Any | None = None,
+) -> CommandSyncResult:
+    """Publish current preset slots and remove stale slot runtime commands."""
+
+    stack_spec = spec or get_example_spec(preset_id)
+    published = publish_preset_slots(preset_id, spec=stack_spec, cmds_module=cmds_module)
+    expected_runtime_commands = {command.runtime_command for command in published}
+    stale = tuple(
+        command
+        for command in list_published_commands(
+            target_kind="slot",
+            preset_id=preset_id,
+            cmds_module=cmds_module,
+        )
+        if command.runtime_command not in expected_runtime_commands
+    )
+    for command in stale:
+        unpublish(command, cmds_module=cmds_module)
+    return CommandSyncResult(published=published, unpublished=stale)
+
+
 def publish_slot(
     preset_id: str,
     slot_id: str,
@@ -141,6 +198,35 @@ def unpublish(command: PublishedCommand | str, *, cmds_module: Any | None = None
     cmds = _require_cmds(cmds_module)
     if _runtime_command_exists(runtime_name, cmds):
         cmds.runTimeCommand(runtime_name, edit=True, delete=True)
+    if isinstance(command, PublishedCommand):
+        _forget_published(command)
+
+
+def list_published_commands(
+    *,
+    target_kind: TargetKind | None = None,
+    preset_id: str = "",
+    cmds_module: Any | None = None,
+) -> tuple[PublishedCommand, ...]:
+    """Return ActionRail runtime commands that can be safely identified."""
+
+    cmds = _require_cmds(cmds_module)
+    commands: list[PublishedCommand] = []
+    for runtime_name in _runtime_command_names(cmds):
+        if not runtime_name.startswith(f"{COMMAND_PREFIX}_"):
+            continue
+        published = _published_command_from_runtime(runtime_name, cmds)
+        if published is None:
+            continue
+        if target_kind is not None and published.target_kind != target_kind:
+            continue
+        if preset_id and (
+            published.target_kind != "slot"
+            or _split_slot_target_id(published.target_id)[0] != preset_id
+        ):
+            continue
+        commands.append(published)
+    return tuple(commands)
 
 
 def query_hotkey_binding(
@@ -414,6 +500,13 @@ def _remember_published(command: PublishedCommand) -> PublishedCommand:
     return command
 
 
+def _forget_published(command: PublishedCommand) -> None:
+    _PUBLISHED_BY_NAME_COMMAND.pop(command.name_command, None)
+    for cache_key, cached_command in tuple(_PUBLISHED_BY_HOTKEY.items()):
+        if cached_command.name_command == command.name_command:
+            _PUBLISHED_BY_HOTKEY.pop(cache_key, None)
+
+
 def _remember_hotkey_binding(command: PublishedCommand, binding: HotkeyBinding) -> None:
     _PUBLISHED_BY_HOTKEY[
         _hotkey_cache_key(
@@ -523,6 +616,68 @@ def _publish_name_command(
 
 def _runtime_command_exists(name: str, cmds: Any) -> bool:
     return bool(cmds.runTimeCommand(name, exists=True))
+
+
+def _runtime_command_names(cmds: Any) -> tuple[str, ...]:
+    names = cmds.runTimeCommand(query=True, userCommandArray=True) or ()
+    if isinstance(names, str):
+        return (names,)
+    return tuple(str(name) for name in names)
+
+
+def _published_command_from_runtime(runtime_name: str, cmds: Any) -> PublishedCommand | None:
+    try:
+        command_text = cmds.runTimeCommand(runtime_name, query=True, command=True)
+    except RuntimeError:
+        return None
+    if not command_text:
+        return None
+
+    parsed = _parse_published_command_text(str(command_text))
+    if parsed is None:
+        return None
+
+    target_kind, target_id = parsed
+    expected_name = runtime_command_name(target_kind, target_id)
+    if runtime_name != expected_name:
+        return None
+    return PublishedCommand(
+        target_kind,
+        target_id,
+        runtime_name,
+        name_command_name(runtime_name),
+    )
+
+
+def _parse_published_command_text(command_text: str) -> tuple[TargetKind, str] | None:
+    try:
+        module = ast.parse(command_text)
+    except SyntaxError:
+        return None
+
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if not isinstance(node.func.value, ast.Name) or node.func.value.id != "actionrail":
+            continue
+        if node.func.attr == "run_action" and len(node.args) == 1:
+            action_id = _literal_string(node.args[0])
+            if action_id:
+                return "action", action_id
+        if node.func.attr == "run_slot" and len(node.args) == 2:
+            preset_id = _literal_string(node.args[0])
+            slot_id = _literal_string(node.args[1])
+            if preset_id and slot_id:
+                return "slot", slot_target_id(preset_id, slot_id)
+    return None
+
+
+def _literal_string(node: ast.AST) -> str:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return ""
 
 
 def _is_duplicate_name_command_error(exc: RuntimeError) -> bool:

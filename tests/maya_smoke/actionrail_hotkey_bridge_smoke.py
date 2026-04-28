@@ -12,7 +12,12 @@ if repo_scripts and repo_scripts not in sys.path:
 from maya import cmds, mel  # noqa: E402
 
 import actionrail  # noqa: E402
-from actionrail.hotkeys import publish_action, publish_preset_slots, publish_slot  # noqa: E402
+from actionrail.hotkeys import (  # noqa: E402
+    publish_action,
+    publish_preset_slots,
+    publish_slot,
+    sync_preset_slots,
+)
 from actionrail.runtime import active_overlay_ids  # noqa: E402
 
 cmds.file(new=True, force=True)
@@ -27,6 +32,8 @@ set_key_command = next(
     command for command in slot_commands if command.target_id.endswith(".set_key")
 )
 unqualified_set_key_command = publish_slot("transform_stack", "set_key", label="Set Key")
+stale_slot_command = publish_slot("transform_stack", "removed_slot", label="Removed")
+sync_result = sync_preset_slots("transform_stack")
 
 mel.eval(f"{action_command.runtime_command};")
 context_after_runtime_command = cmds.currentCtx()
@@ -47,6 +54,12 @@ result = {
     "keyframe_count": keyframe_count,
     "slot_count": len(slot_commands),
     "slot_runtime_exists": cmds.runTimeCommand(set_key_command.runtime_command, exists=True),
+    "stale_slot_removed": not cmds.runTimeCommand(
+        stale_slot_command.runtime_command,
+        exists=True,
+    ),
+    "sync_published_count": len(sync_result.published),
+    "sync_unpublished_count": len(sync_result.unpublished),
     "unqualified_keyframe_count": unqualified_keyframe_count,
     "unqualified_slot_runtime_exists": cmds.runTimeCommand(
         unqualified_set_key_command.runtime_command,

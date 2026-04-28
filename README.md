@@ -67,6 +67,7 @@ $env:MAYA_MODULE_PATH = "."
 - Built-in Maya actions for move, translate, rotate, scale, and set key.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
+- Key-label sync and stale runtime-command cleanup helpers for published slots.
 - Theme tokens compiled to QSS.
 - Pure Python tests plus Maya smoke scripts.
 
@@ -74,9 +75,6 @@ $env:MAYA_MODULE_PATH = "."
 
 Near-term:
 
-- Sync assigned Maya hotkeys back into rendered key labels.
-- Evaluate `visible_when`, `enabled_when`, and `active_when` predicates against
-  Maya state.
 - Show live active/enabled button state without rebuilding the overlay.
 - Add shelf/menu toggles and safe-mode diagnostics.
 
