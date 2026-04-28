@@ -1,12 +1,21 @@
 {
   "id": "transform_stack",
-  "anchor": "viewport.left.center",
+  "layout": {
+    "anchor": "viewport.left.center",
+    "orientation": "vertical",
+    "rows": 5,
+    "columns": 1,
+    "offset": [0, 0],
+    "scale": 1.0,
+    "opacity": 1.0,
+    "locked": true
+  },
   "items": [
-    {"type": "toolButton", "label": "M", "action": "maya.tool.move", "tooltip": "Move tool"},
-    {"type": "toolButton", "label": "T", "action": "maya.tool.translate", "tooltip": "Translate tool"},
-    {"type": "toolButton", "label": "R", "action": "maya.tool.rotate", "tooltip": "Rotate tool"},
-    {"type": "toolButton", "label": "S", "action": "maya.tool.scale", "tone": "pink", "tooltip": "Scale tool"},
-    {"type": "spacer", "size": 14},
-    {"type": "button", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "tooltip": "Set keyframe"}
+    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move", "tooltip": "Move tool"},
+    {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "action": "maya.tool.translate", "tooltip": "Translate tool"},
+    {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate", "tooltip": "Rotate tool"},
+    {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "tone": "pink", "tooltip": "Scale tool", "active_when": "maya.tool == scale"},
+    {"type": "spacer", "id": "transform_stack.gap", "size": 14},
+    {"type": "button", "id": "transform_stack.set_key", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "tooltip": "Set keyframe", "key_label": "S"}
   ]
 }

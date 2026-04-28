@@ -150,8 +150,16 @@ class ViewportOverlayHost:
             size = self.widget.size()
 
         parent_rect = self.parent.rect()
-        x_pos = self.margin
-        y_pos = max(self.margin, int((parent_rect.height() - size.height()) / 2))
+        x_pos, y_pos = _anchored_position(
+            self.spec.anchor,
+            parent_rect.width(),
+            parent_rect.height(),
+            size.width(),
+            size.height(),
+            self.margin,
+        )
+        x_pos += self.spec.layout.offset[0]
+        y_pos += self.spec.layout.offset[1]
         self.widget.move(x_pos, y_pos)
 
     def close(self) -> None:
@@ -166,3 +174,42 @@ class ViewportOverlayHost:
         self.widget = None
         self.parent = None
         self._resize_filter = None
+
+
+def _anchored_position(
+    anchor: str,
+    parent_width: int,
+    parent_height: int,
+    widget_width: int,
+    widget_height: int,
+    margin: int,
+) -> tuple[int, int]:
+    horizontal = "center"
+    vertical = "center"
+
+    parts = anchor.split(".")
+    if "left" in parts:
+        horizontal = "left"
+    elif "right" in parts:
+        horizontal = "right"
+
+    if "top" in parts:
+        vertical = "top"
+    elif "bottom" in parts:
+        vertical = "bottom"
+
+    if horizontal == "left":
+        x_pos = margin
+    elif horizontal == "right":
+        x_pos = parent_width - widget_width - margin
+    else:
+        x_pos = int((parent_width - widget_width) / 2)
+
+    if vertical == "top":
+        y_pos = margin
+    elif vertical == "bottom":
+        y_pos = parent_height - widget_height - margin
+    else:
+        y_pos = int((parent_height - widget_height) / 2)
+
+    return max(margin, x_pos), max(margin, y_pos)

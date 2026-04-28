@@ -32,7 +32,7 @@ widget = host.widget
 buttons = widget.findChildren(QtWidgets.QPushButton)
 button_labels = [button.text() for button in buttons]
 
-buttons_by_label = {button.text(): button for button in buttons}
+buttons_by_label = {button.text().splitlines()[0]: button for button in buttons}
 for label in ("M", "R", "S", "K"):
     buttons_by_label[label].click()
     app.processEvents()
@@ -57,6 +57,7 @@ reload_buttons = reload_widget.findChildren(QtWidgets.QPushButton)
 result = {
     "active_ids_after_reload": active_overlay_ids(),
     "button_labels": button_labels,
+    "button_primary_labels": list(buttons_by_label),
     "current_context_after_clicks": cmds.currentCtx(),
     "ids_after_hide": ids_after_hide,
     "import_version": actionrail.__version__,

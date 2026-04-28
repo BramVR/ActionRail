@@ -39,6 +39,13 @@ Last updated: 2026-04-28
   - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
   - Widget screenshot smoke now captures the ActionRail widget directly instead of the foreground desktop.
   - Theme tokens and generated QSS now live in `scripts/actionrail/theme.py`; the default theme preserves the reference `40x196` transform stack dimensions and colors.
+- Phase 1A rail schema started:
+  - Presets now support `layout` metadata: orientation, rows, columns, anchor, offset, scale, opacity, and locked state.
+  - Items now support stable slot `id`, `key_label`, and safe declarative `visible_when`, `enabled_when`, and `active_when` predicate fields.
+  - `presets/transform_stack.json` has explicit stable slot ids and layout metadata while preserving the reference `40x196` render size.
+  - `presets/horizontal_tools.json` proves a horizontal rail can be defined without widget-code changes.
+  - Overlay positioning now supports left/right/top/bottom/center anchors plus layout offsets.
+  - Maya smoke coverage now includes a horizontal rail render check.
 - WoW-style customization direction documented:
   - `docs/06_wow_style_customization.md` defines Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, visibility rules, schema direction, and phased roadmap.
   - `docs/01_architecture.md` and `docs/02_implementation_plan.md` now reserve room for stable slot ids, runtime-command hotkeys, user/project/studio layers, and later radial/flyout controls.
@@ -52,7 +59,7 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: extend specs toward reusable rails with stable slot ids and layout metadata.
+2. First recommended coding slice: add the Maya runtime-command and hotkey bridge before full Bind Mode.
 3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 Checks already run for the roadmap update:
@@ -62,8 +69,8 @@ Checks already run for the roadmap update:
 
 ## Next
 
-1. Extend the spec toward reusable rails with stable slot ids, layout metadata, key labels, and safe visibility/enabled/active predicates.
-2. Add a Maya runtime-command and hotkey bridge before full Bind Mode so ActionRail actions can become native hotkey targets.
+1. Add a Maya runtime-command and hotkey bridge before full Bind Mode so ActionRail actions can become native hotkey targets.
+2. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
 3. Add a shelf/menu toggle once reload cleanup stays stable.
 4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 
@@ -112,6 +119,17 @@ Checks already run for the roadmap update:
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
   - `tests/maya_smoke/actionrail_capture_smoke.py` saved direct widget screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `40x196`, visible widget size `40x196`, button count `5`.
+- 2026-04-28 local venv after Phase 1A rail schema:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 24 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- 2026-04-28 MayaSessiond after Phase 1A rail schema:
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, modified after smoke setup, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - `tests/maya_smoke/actionrail_capture_smoke.py` saved direct widget screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `40x196`, visible widget size `40x196`, button count `5`.
+  - `tests/maya_smoke/actionrail_horizontal_smoke.py` passed through `script.execute`: `horizontal_tools` rendered visible at `156x40`, orientation `horizontal`, anchor `viewport.bottom.center`, opacity `0.92`, button labels `M/W`, `R/E`, `S/R`, `K/S`.
 
 ## Decisions
 
