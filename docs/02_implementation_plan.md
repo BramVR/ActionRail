@@ -1,5 +1,5 @@
 ---
-summary: Phase-based implementation plan with the immediate task list and acceptance criteria for the first agent.
+summary: Phase-based implementation roadmap from the verified prototype through declarative rails, Edit Mode, hotkeys, flyouts, rings, profiles, and later viewport-native backends.
 read_when:
   - Choosing what to implement next.
   - Checking whether a slice is complete.
@@ -66,7 +66,49 @@ Goal: make the prototype reusable.
 - Reload cleanup is reliable.
 - Basic mayapy or MayaSessiond smoke test exists.
 
-## Phase 2: Quick Create
+## Phase 1A: WoW-Ready Rail Schema
+
+Goal: make the declarative MVP compatible with later Edit Mode, Bind Mode, flyouts, and profiles.
+
+### Tasks
+
+- Add stable slot ids.
+- Add rail layout metadata:
+  - orientation
+  - rows/columns
+  - anchor/offset
+  - scale
+  - opacity
+  - locked state
+- Add optional key label field for displayed hotkeys.
+- Add declarative `visible_when`, `enabled_when`, and `active_when` fields.
+- Keep the current `transform_stack` preset compatible or provide a migration path.
+
+### Acceptance Criteria
+
+- The reference stack still loads from JSON.
+- A horizontal rail can be defined from JSON without changing widget code.
+- Pure Python tests cover rail/slot parsing and invalid schema errors.
+
+## Phase 1B: Runtime Commands And Hotkey Bridge
+
+Goal: make ActionRail actions bindable through Maya-native hotkeys.
+
+### Tasks
+
+- Publish selected ActionRail actions as Maya runtime commands.
+- Publish preset slots as runtime command targets.
+- Add hotkey conflict detection.
+- Add key labels to rendered slots.
+- Add safe unpublish/update behavior for renamed or removed slots.
+
+### Acceptance Criteria
+
+- A preset action can be triggered from a Maya hotkey without the overlay being visible.
+- Key labels render on buttons without changing button size.
+- Hotkey assignment warns before overwriting an existing binding.
+
+## Phase 2: Quick Create And Edit Mode
 
 Goal: let users create palettes without code.
 
@@ -76,10 +118,55 @@ Goal: let users create palettes without code.
 - Template picker.
 - Action picker.
 - Live preview.
+- Global Edit Mode toggle.
+- Drag handles, anchors, snap guides, spacing guides, and safe margins.
+- Per-rail controls for orientation, rows/columns, scale, opacity, lock state, and visibility rules.
 - Save/load user presets.
 - Publish to shelf/hotkey/runtime command where possible.
 
-## Phase 3: Advanced Backends
+### Acceptance Criteria
+
+- An artist can recreate the reference stack from Maya UI only.
+- Edit Mode changes save to a user preset or user override, not to a locked built-in/studio preset.
+- Validation reports missing actions, missing icons, and hotkey conflicts.
+
+## Phase 3: Bind Mode, Flyouts, And Command Rings
+
+Goal: add high-leverage command access patterns inspired by action bar and radial menu addons.
+
+### Tasks
+
+- Hover-to-bind Bind Mode.
+- Slot conflict warnings and clear-binding command.
+- Flyout widget for grouped related actions.
+- Command ring widget for radial press/hold/release workflows.
+- Press/release hotkey behavior with Maya focus handling verification.
+
+### Acceptance Criteria
+
+- A user can enter Bind Mode, hover a slot, press a shortcut, and see the key label update.
+- A flyout can hold multiple related actions and execute them.
+- A command ring can open from a hotkey and execute one selected action.
+
+## Phase 4: Studio Profiles And Sharing
+
+Goal: support production-scale sharing and locked defaults.
+
+### Tasks
+
+- Built-in, studio, project, scene/asset, and user preset layers.
+- Locked preset indicators.
+- Profile copy/import/export.
+- Migration for renamed action ids and slot ids.
+- Diagnostics for missing plugins/scripts and orphaned hotkeys.
+
+### Acceptance Criteria
+
+- A studio preset can be installed read-only and extended by user overrides.
+- Edit Mode shows each rail's source layer and lock state.
+- A missing command/plugin is visible as a broken action badge instead of failing silently.
+
+## Phase 5: Advanced Backends
 
 Goal: add native viewport drawing only after Qt overlay is stable.
 
@@ -92,4 +179,4 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Only Phase 0 is in scope for the first implementation agent.
+Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.

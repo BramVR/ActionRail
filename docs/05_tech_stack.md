@@ -2,8 +2,8 @@
 summary: Current ActionRail tech stack decision and what to avoid for the Maya viewport UI framework.
 read_when:
   - Choosing libraries or implementation patterns.
-  - Starting Phase 0 implementation.
-  - Considering web, Viewport 2.0, or overlay alternatives.
+  - Starting implementation.
+  - Considering web, Viewport 2.0, hotkey, or overlay alternatives.
 ---
 
 # Tech Stack
@@ -18,6 +18,7 @@ Python 3.11 in Maya
 + custom transparent viewport overlay
 + maya.cmds / OpenMayaUI / shiboken6
 + JSON specs and Python builder API
++ Maya runtime commands for publishable hotkey targets
 + SVG icons with PNG fallbacks
 + Maya .mod packaging
 + MayaSessiond verification
@@ -29,6 +30,7 @@ Python 3.11 in Maya
 - Use `QApplication.instance()`. Never create a new `QApplication`.
 - Parent widgets under Maya widgets and keep stable `objectName()` values.
 - Use `maya.cmds` first. Use Maya API 2.0 only where `cmds` is not enough.
+- Use Maya runtime commands as the bridge for ActionRail actions and slots that should be bindable through Maya's Hotkey Editor.
 - Avoid PyMEL unless explicitly requested.
 
 ## UI Layer
@@ -39,6 +41,7 @@ Python 3.11 in Maya
 - Use `QAction` concepts internally for reusable commands, even if widgets are custom-painted.
 - Use QSS/theme tokens for consistent colors, spacing, radius, and states.
 - Design for Qt6 High DPI from the first prototype.
+- Build flyouts and command rings in Qt first. Do not move radial/menu hit testing to Viewport 2.0 unless Qt proves insufficient.
 
 ## Maya Overlay Spike
 

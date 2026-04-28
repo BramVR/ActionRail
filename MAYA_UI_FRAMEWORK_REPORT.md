@@ -140,6 +140,8 @@ What not to copy:
 
 The main UX update is to make ActionRail feel like a visual authoring layer for Maya's existing command ecosystem, not a separate UI universe.
 
+For the focused WoW-style customization roadmap, including Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, and schema direction, see `docs/06_wow_style_customization.md`.
+
 Research signals:
 
 - Maya's marking menus are designed for speed once users learn item positions, and can be assigned to hotkeys or hotbox zones. Source: [Marking Menus](https://help.autodesk.com/cloudhelp/2024/ENU/Maya-KeyboardShortcuts/files/GUID-8BA1A3AA-4C44-4779-8B22-0AAE3627E8EB.htm), [Marking Menu Editor](https://help.autodesk.com/cloudhelp/2026/ENU/Maya-Customizing/files/GUID-9C43FD30-D92F-4035-9820-4C3FFDD8E211.htm).
@@ -149,6 +151,9 @@ Research signals:
 - Workspace controls need restore-safe `uiScript` behavior. The designer should be a workspace control, while viewport overlays should be toggleable runtime UI. Source: [Writing Workspace controls](https://help.autodesk.com/cloudhelp/2022/ENU/Maya-SDK/Maya-Python-API/Writing-Workspace-controls.html).
 - Qt's `QToolButton`, `QAction`, and `QIcon` map well to tool/action UI, including active/disabled icon states and high-DPI image handling. Sources: [QToolButton](https://doc.qt.io/qt-6/qtoolbutton.html), [QIcon for PySide6](https://doc.qt.io/qtforpython-6.8/PySide6/QtGui/QIcon.html).
 - mGear's Synoptic/Anim Picker pattern validates the broader idea that visual pickers help animators interact with rigs faster, including selection, keying, mirroring, and space switching. Source: [mGear Synoptic](https://mgear4.readthedocs.io/en/master/synopticModules.html), [mGear anim_picker package](https://mgear4.readthedocs.io/en/latest/mgear/mgear.anim_picker.html).
+- WoW's Edit Mode validates direct manipulation of HUD/layout components with named, saved, copied, and shared layouts. Source: [Blizzard HUD/UI revamp](https://news.blizzard.com/en-us/article/23841481/hud).
+- WoW action bar addons validate configurable bars, visibility rules, profiles, and hover-to-bind workflows. Sources: [Bartender4](https://www.curseforge.com/wow/addons/bartender4), [Dominos](https://www.curseforge.com/wow/addons/dominos).
+- Radial/flyout addons validate compact command access for large action sets. Sources: [OPie](https://www.curseforge.com/wow/addons/opie), [Mage Teleporter](https://www.curseforge.com/wow/addons/mage-teleporter).
 
 ### Product UX Changes
 
@@ -176,6 +181,18 @@ Add a **Live Edit Mode** separate from normal use:
 - Edit mode: show anchors, hit boxes, spacing guides, safe margins, and drag handles.
 - Test mode: controls execute in a temporary preset without writing user prefs.
 - Publish mode: validates actions, icons, hotkeys, DPI assets, and missing dependencies before saving.
+
+Add a **Bind Mode** for hotkeys:
+
+- User enters Bind Mode from a shelf button, designer command, or hotkey.
+- User hovers or selects an ActionRail slot and presses a shortcut.
+- ActionRail detects conflicts, creates or updates a Maya runtime command/hotkey, and displays the key label on the slot.
+
+Add **flyouts and command rings** for compact action groups:
+
+- Flyout: a button opens a contextual list of related actions, such as keying tools, selection tools, camera bookmarks, or project scripts.
+- Command ring: a radial menu opens from a click or press-and-hold hotkey and executes a wedge on release.
+- Both reuse the same action registry and preset schema as normal bars.
 
 Add **Maya-native launch targets**:
 
