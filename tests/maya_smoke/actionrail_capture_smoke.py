@@ -38,11 +38,7 @@ QtCore.QThread.msleep(250)
 app.processEvents()
 
 widget = host.widget
-screen = widget.screen() or app.primaryScreen()
-if screen is None:
-    raise RuntimeError("No Qt screen is available for screenshot capture.")
-
-pixmap = screen.grabWindow(0)
+pixmap = widget.grab()
 saved = pixmap.save(str(output_path), "PNG")
 
 result = {

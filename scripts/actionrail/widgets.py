@@ -1,4 +1,4 @@
-"""Qt widgets for the Phase 0 ActionRail transform stack."""
+"""Qt widgets for ActionRail stack specs."""
 
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ class ActionRailRoot:
 
 
 def build_transform_stack(spec: StackSpec, registry: ActionRegistry) -> object:
-    """Build the hard-coded Phase 0 transform stack widget."""
+    """Build a vertical ActionRail widget from a stack spec."""
 
     qt = load()
     root = ActionRailRoot.create()
@@ -104,19 +104,31 @@ def build_transform_stack(spec: StackSpec, registry: ActionRegistry) -> object:
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(0)
 
-    cluster = _build_cluster(spec, registry)
-    layout.addWidget(cluster)
+    pending_tools: list[StackItem] = []
+    for item in spec.items:
+        if item.type == "toolButton":
+            pending_tools.append(item)
+            continue
 
-    spacer_size = _spacer_size(spec)
-    layout.addSpacing(spacer_size)
-    layout.addWidget(_build_single_button(_key_item(spec), registry), 0, qt.QtCore.Qt.AlignLeft)
+        if pending_tools:
+            layout.addWidget(_build_cluster(tuple(pending_tools), registry))
+            pending_tools.clear()
+
+        if item.type == "spacer":
+            layout.addSpacing(item.size)
+            continue
+
+        layout.addWidget(_build_single_button(item, registry), 0, qt.QtCore.Qt.AlignLeft)
+
+    if pending_tools:
+        layout.addWidget(_build_cluster(tuple(pending_tools), registry))
 
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
     return root
 
 
-def _build_cluster(spec: StackSpec, registry: ActionRegistry) -> object:
+def _build_cluster(items: tuple[StackItem, ...], registry: ActionRegistry) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
     frame.setProperty("actionRailRole", "cluster")
@@ -126,9 +138,7 @@ def _build_cluster(spec: StackSpec, registry: ActionRegistry) -> object:
     layout.setContentsMargins(FRAME_PADDING, FRAME_PADDING, FRAME_PADDING, FRAME_PADDING)
     layout.setSpacing(FRAME_SPACING)
 
-    for item in spec.items:
-        if item.type != "toolButton":
-            continue
+    for item in items:
         layout.addWidget(_build_button(item, registry))
 
     frame.adjustSize()
@@ -164,18 +174,3 @@ def _build_button(item: StackItem, registry: ActionRegistry) -> object:
         button.setToolTip(item.tooltip)
     button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
-
-
-def _spacer_size(spec: StackSpec) -> int:
-    for item in spec.items:
-        if item.type == "spacer":
-            return item.size
-    return 0
-
-
-def _key_item(spec: StackSpec) -> StackItem:
-    for item in spec.items:
-        if item.type == "button" and item.label == "K":
-            return item
-    msg = "Transform stack spec does not contain the K action button."
-    raise ValueError(msg)

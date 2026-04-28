@@ -2,11 +2,11 @@
   "id": "transform_stack",
   "anchor": "viewport.left.center",
   "items": [
-    {"type": "toolButton", "label": "M", "action": "maya.tool.move"},
-    {"type": "toolButton", "label": "T", "action": "maya.tool.translate"},
-    {"type": "toolButton", "label": "R", "action": "maya.tool.rotate"},
-    {"type": "toolButton", "label": "S", "action": "maya.tool.scale", "tone": "pink"},
+    {"type": "toolButton", "label": "M", "action": "maya.tool.move", "tooltip": "Move tool"},
+    {"type": "toolButton", "label": "T", "action": "maya.tool.translate", "tooltip": "Translate tool"},
+    {"type": "toolButton", "label": "R", "action": "maya.tool.rotate", "tooltip": "Rotate tool"},
+    {"type": "toolButton", "label": "S", "action": "maya.tool.scale", "tone": "pink", "tooltip": "Scale tool"},
     {"type": "spacer", "size": 14},
-    {"type": "button", "label": "K", "action": "maya.anim.set_key", "tone": "teal"}
+    {"type": "button", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "tooltip": "Set keyframe"}
   ]
 }

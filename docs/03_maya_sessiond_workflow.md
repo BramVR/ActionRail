@@ -29,9 +29,10 @@ Use repo-local state:
 ```powershell
 & ../GG_MayaSessiond/.venv/Scripts/python.exe -m gg_maya_sessiond.cli doctor `
   --state-dir .gg-maya-sessiond `
-  --mcp-src ../GG_MayaMCP `
   --json
 ```
+
+Add `--mcp-src ../GG_MayaMCP` only when the sibling MCP checkout matches the Sessiond compatibility lock. As of 2026-04-28, the verified path omits `--mcp-src` and uses the MCP package installed in the Sessiond venv.
 
 ## Start
 
@@ -45,8 +46,8 @@ Use a repo/tool-specific daemon port so other Maya sessions are not affected. Fo
   --port 7217 `
   --maya-exe "C:/Program Files/Autodesk/Maya2025/bin/maya.exe" `
   --mcp-python C:/PROJECTS/GG/GG_MayaSessiond/.venv/Scripts/python.exe `
-  --mcp-src C:/PROJECTS/GG/GG_MayaMCP `
   --maya-module-path "C:/PROJECTS/GG/ScreenUI" `
+  --mcp-script-dirs "C:/PROJECTS/GG/ScreenUI/tests/maya_smoke" `
   --json
 ```
 
@@ -98,7 +99,7 @@ For a specific tool:
   --json
 ```
 
-Prefer native inspection tools over raw script execution. Use raw script execution only when needed to import/run ActionRail APIs.
+Prefer native inspection tools over raw script execution. Use `script.execute` for checked-in smoke scripts under `tests/maya_smoke`; start sessiond with `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke` so file execution is allowlisted. Use raw script execution only when needed to import/run ActionRail APIs.
 
 ## Stop
 

@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-04-27
+Last updated: 2026-04-28
 
 ## Done
 
@@ -32,17 +32,22 @@ Last updated: 2026-04-27
   - Maya action bindings for move/translate, rotate, scale, and set key.
   - Pure Python unit tests and allowlisted MayaSessiond smoke scripts.
 - `docs/03_maya_sessiond_workflow.md` now documents the repo-specific MayaSessiond port rule. Use port `7217` for ActionRail unless it is already in use.
+- Phase 1 declarative MVP started:
+  - Built-in examples now load from JSON presets in `presets/`.
+  - `presets/transform_stack.json` is the source of truth for the reference stack labels, actions, tones, tooltips, spacer, and anchor.
+  - Preset parsing validates required ids, anchors, item lists, supported item types, button action fields, and spacer sizes.
+  - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
+  - Widget screenshot smoke now captures the ActionRail widget directly instead of the foreground desktop.
 
 ## In Progress
 
-- Phase 0 is implemented and verified.
+- Phase 1 declarative MVP.
 
 ## Next
 
-1. Start Phase 1 declarative MVP: load the transform stack from JSON instead of hard-coded widget construction.
-2. Add theme token/QSS generation.
-3. Add a shelf/menu toggle once reload cleanup stays stable.
-4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
+1. Add theme token/QSS generation.
+2. Add a shelf/menu toggle once reload cleanup stays stable.
+3. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 
 ## Blockers
 
@@ -68,6 +73,17 @@ Last updated: 2026-04-27
   - `tests/maya_smoke/actionrail_capture_smoke.py` saved overlay screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `2560x1440`, visible widget size `40x196`, button count `5`.
   - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
   - Session stopped cleanly after verification.
+- 2026-04-28 local venv:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 16 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- 2026-04-28 MayaSessiond:
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: import version `0.1.0`, buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - `tests/maya_smoke/actionrail_capture_smoke.py` saved direct widget screenshot to `.gg-maya-sessiond/actionrail_phase0_overlay.png`; screenshot size `40x196`, visible widget size `40x196`, button count `5`.
+  - Native `viewport.capture format=png width=640 height=360 show_ornaments=false` returned `size_bytes=2030` for `modelPanel4`.
 
 ## Decisions
 
