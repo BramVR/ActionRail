@@ -127,6 +127,7 @@ Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by t
 - `actionrail_capture_smoke.py`: direct widget screenshot capture and reference widget metrics.
 - `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, anchor, and opacity.
 - `actionrail_hidden_visibility_smoke.py`: literal false visibility handling and empty-cluster regression.
+- `actionrail_predicates_smoke.py`: selection/tool/action/command predicates driving initial visible, enabled, and active button state.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
 - `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
 

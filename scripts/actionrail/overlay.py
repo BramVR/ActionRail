@@ -7,6 +7,7 @@ from typing import Any
 from .actions import ActionRegistry, create_default_registry
 from .qt import load
 from .spec import StackSpec
+from .state import snapshot
 from .widgets import build_transform_stack, set_slot_key_label
 
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
@@ -122,12 +123,18 @@ class ViewportOverlayHost:
         margin: int = DEFAULT_MARGIN,
     ) -> None:
         self.qt = load()
+        self.cmds = _require_cmds(cmds_module)
         self.spec = spec
-        self.panel = panel or active_model_panel(cmds_module)
-        self.parent = parent or model_panel_widget(self.panel, cmds_module)
+        self.panel = panel or active_model_panel(self.cmds)
+        self.parent = parent or model_panel_widget(self.panel, self.cmds)
         self.registry = registry or create_default_registry()
         self.margin = margin
-        self.widget = build_transform_stack(spec, self.registry)
+        self.widget = build_transform_stack(
+            spec,
+            self.registry,
+            state_snapshot=snapshot(self.cmds),
+            cmds_module=self.cmds,
+        )
         self.widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{spec.id}")
         self.widget.setParent(self.parent)
         self.widget.setWindowFlags(self.qt.QtCore.Qt.Widget)

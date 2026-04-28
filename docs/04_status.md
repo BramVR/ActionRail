@@ -54,6 +54,7 @@ Last updated: 2026-04-28
   - Hotkey assignment now has conflict-aware helpers that refuse to overwrite existing bindings unless explicitly requested.
   - Slot-aware hotkey assignment now updates visible rendered key labels through the runtime overlay registry.
   - Overwrite rebinding clears the previously bound visible ActionRail slot label so stale shortcut badges are not left behind.
+  - A safe predicate evaluator now drives initial `visible_when`, `enabled_when`, and `active_when` state from Maya selection/tool/panel/camera/playback state plus action, command, and plugin availability checks.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -82,7 +83,7 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
+2. First recommended coding slice: add safe unpublish/update behavior for renamed or removed published hotkey commands.
 3. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 Checks already run for the roadmap update:
@@ -92,8 +93,8 @@ Checks already run for the roadmap update:
 
 ## Next
 
-1. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`; current support is parsed metadata plus literal `false` visibility/enabled handling.
-2. Add safe unpublish/update behavior for renamed or removed published hotkey commands.
+1. Add safe unpublish/update behavior for renamed or removed published hotkey commands.
+2. Add live refresh for predicate-driven active/enabled state after overlay creation.
 3. Add a shelf/menu toggle once reload cleanup stays stable.
 4. Add a reusable smoke command wrapper if the MayaSessiond command shape remains stable.
 5. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
@@ -189,6 +190,16 @@ Checks already run for the roadmap update:
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_hotkey_label_sync_smoke.py` passed through `script.execute`: after rebinding `F12` from `transform_stack.move` to `transform_stack.set_key`, Move changed from `M\nF12` back to `M`, Set Key changed to `K\nF12`, and Set Key kept its fixed `34x34` size.
+- 2026-04-28 predicate evaluation:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 70 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered only `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, widget size was `40x120`, and the widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_predicates_widget.png`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
+  - `tests/maya_smoke/actionrail_horizontal_smoke.py` passed through `script.execute`: `horizontal_tools` rendered visible at `156x40`, orientation `horizontal`, anchor `viewport.bottom.center`, opacity `0.92`, button labels `M/W`, `R/E`, `S/R`, `K/S`.
 
 ## Decisions
 

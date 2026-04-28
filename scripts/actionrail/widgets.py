@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import replace
 
 from .actions import ActionRegistry
+from .predicates import PredicateContext, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
+from .state import MayaStateSnapshot
 from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
@@ -54,11 +56,14 @@ def build_transform_stack(
     spec: StackSpec,
     registry: ActionRegistry,
     theme: ActionRailTheme = DEFAULT_THEME,
+    state_snapshot: MayaStateSnapshot | None = None,
+    cmds_module: object | None = None,
 ) -> object:
     """Build an ActionRail widget from a stack spec."""
 
     qt = load()
     theme = _scaled_theme(theme, spec.layout.scale)
+    context = PredicateContext(state=state_snapshot, registry=registry, cmds_module=cmds_module)
     root = ActionRailRoot.create()
     root.setStyleSheet(generate_style_sheet(theme))
     root.setWindowOpacity(spec.layout.opacity)
@@ -74,7 +79,7 @@ def build_transform_stack(
 
     pending_tools: list[StackItem] = []
     for item in spec.items:
-        if not _is_item_visible(item):
+        if not _is_item_visible(item, context):
             continue
 
         if item.type == "toolButton":
@@ -83,7 +88,13 @@ def build_transform_stack(
 
         if pending_tools:
             layout.addWidget(
-                _build_cluster(tuple(pending_tools), registry, theme, spec.layout.orientation)
+                _build_cluster(
+                    tuple(pending_tools),
+                    registry,
+                    theme,
+                    spec.layout.orientation,
+                    context,
+                )
             )
             pending_tools.clear()
 
@@ -92,14 +103,14 @@ def build_transform_stack(
             continue
 
         layout.addWidget(
-            _build_single_button(item, registry, theme, spec.layout.orientation),
+            _build_single_button(item, registry, theme, spec.layout.orientation, context),
             0,
             qt.QtCore.Qt.AlignLeft,
         )
 
     if pending_tools:
         layout.addWidget(
-            _build_cluster(tuple(pending_tools), registry, theme, spec.layout.orientation)
+            _build_cluster(tuple(pending_tools), registry, theme, spec.layout.orientation, context)
         )
 
     root.adjustSize()
@@ -112,6 +123,7 @@ def _build_cluster(
     registry: ActionRegistry,
     theme: ActionRailTheme,
     orientation: str,
+    context: PredicateContext | None = None,
 ) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
@@ -134,7 +146,7 @@ def _build_cluster(
     layout.setSpacing(theme.frame_spacing)
 
     for item in items:
-        layout.addWidget(_build_button(item, registry, theme))
+        layout.addWidget(_build_button(item, registry, theme, context))
 
     frame.adjustSize()
     frame.setFixedSize(frame.sizeHint())
@@ -146,6 +158,7 @@ def _build_single_button(
     registry: ActionRegistry,
     theme: ActionRailTheme,
     orientation: str,
+    context: PredicateContext | None = None,
 ) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
@@ -161,27 +174,38 @@ def _build_single_button(
         theme.frame_padding,
     )
     layout.setSpacing(0)
-    layout.addWidget(_build_button(item, registry, theme))
+    layout.addWidget(_build_button(item, registry, theme, context))
 
     frame.adjustSize()
     frame.setFixedSize(frame.sizeHint())
     return frame
 
 
-def _build_button(item: StackItem, registry: ActionRegistry, theme: ActionRailTheme) -> object:
+def _build_button(
+    item: StackItem,
+    registry: ActionRegistry,
+    theme: ActionRailTheme,
+    context: PredicateContext | None = None,
+) -> object:
     qt = load()
+    item_context = _item_context(item, registry, context)
     button = qt.QtWidgets.QPushButton(_button_text(item.label, item.key_label))
     button.setProperty("actionRailRole", "button")
     button.setProperty("actionRailLabel", item.label)
     button.setProperty("actionRailKeyLabel", item.key_label)
     button.setProperty("actionRailSlotId", item.id)
     button.setProperty("actionRailTone", item.tone)
+    is_active = _is_item_active(item, item_context)
+    button.setProperty(
+        "actionRailActive",
+        "true" if is_active else "false",
+    )
     button.setFixedSize(theme.button_size, theme.button_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
     if item.tooltip:
         button.setToolTip(item.tooltip)
-    button.setEnabled(item.enabled_when != "false")
+    button.setEnabled(evaluate_predicate(item.enabled_when, item_context))
     button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
 
@@ -209,8 +233,29 @@ def _button_text(label: str, key_label: str) -> str:
     return label if not key_label else f"{label}\n{key_label}"
 
 
-def _is_item_visible(item: StackItem) -> bool:
-    return item.visible_when != "false"
+def _is_item_visible(item: StackItem, context: PredicateContext | None = None) -> bool:
+    return evaluate_predicate(item.visible_when, _item_context(item, context=context))
+
+
+def _is_item_active(item: StackItem, context: PredicateContext | None = None) -> bool:
+    return bool(item.active_when.strip()) and evaluate_predicate(
+        item.active_when,
+        _item_context(item, context=context),
+    )
+
+
+def _item_context(
+    item: StackItem,
+    registry: ActionRegistry | None = None,
+    context: PredicateContext | None = None,
+) -> PredicateContext:
+    context = context or PredicateContext()
+    return PredicateContext(
+        state=context.state,
+        registry=registry or context.registry,
+        item=item,
+        cmds_module=context.cmds_module,
+    )
 
 
 def _scaled_theme(theme: ActionRailTheme, scale: float) -> ActionRailTheme:

@@ -95,7 +95,7 @@ Goal: make the declarative MVP compatible with later Edit Mode, Bind Mode, flyou
 
 Goal: make ActionRail actions bindable through Maya-native hotkeys.
 
-Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, no-overlay action/slot execution, and visible key-label sync after ActionRail slot hotkey assignment are started. Remaining Phase 1B work is deciding how renamed/removed published commands are cleaned up in user scenes.
+Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, no-overlay action/slot execution, visible key-label sync after ActionRail slot hotkey assignment, and initial predicate-driven slot state are started. Remaining Phase 1B work is deciding how renamed/removed published commands are cleaned up in user scenes.
 
 ### Tasks
 
@@ -190,13 +190,12 @@ Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in m
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
-2. Live active/enabled button state driven by Maya state.
+1. Live active/enabled button state driven by Maya state after overlay creation.
+2. Safe cleanup for renamed or removed published hotkey commands.
 3. Shelf/menu entry points and safe-mode diagnostics.
-4. Safe cleanup for renamed or removed published hotkey commands.
-5. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
-6. Bind Mode, then flyouts, then command rings.
-7. Icon import pipeline with license/source tracking.
-8. Broader workflow action library beyond transform/keyframe.
-9. Profile layers for built-in, studio, project, scene/asset, and user overrides.
-10. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+4. Narrow Quick Create and Edit Mode after the declarative MVP is stable.
+5. Bind Mode, then flyouts, then command rings.
+6. Icon import pipeline with license/source tracking.
+7. Broader workflow action library beyond transform/keyframe.
+8. Profile layers for built-in, studio, project, scene/asset, and user overrides.
+9. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.

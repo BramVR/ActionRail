@@ -27,6 +27,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Phase 0 prototype exists and has been verified in MayaSessiond.
 - Phase 1 declarative MVP is in progress.
 - Phase 1B runtime-command/hotkey bridge is started; rendered key labels now update after ActionRail hotkey assignment.
+- Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -58,10 +59,9 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Add real predicate evaluation for `visible_when`, `enabled_when`, and `active_when`.
-2. Add safe unpublish/update behavior for renamed or removed published hotkey commands.
-3. Add shelf/menu toggle once reload cleanup stays stable.
-4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
+1. Add safe unpublish/update behavior for renamed or removed published hotkey commands.
+2. Add shelf/menu toggle once reload cleanup stays stable.
+3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules
 
