@@ -74,6 +74,9 @@ def build_transform_stack(
 
     pending_tools: list[StackItem] = []
     for item in spec.items:
+        if not _is_item_visible(item):
+            continue
+
         if item.type == "toolButton":
             pending_tools.append(item)
             continue
@@ -177,10 +180,13 @@ def _build_button(item: StackItem, registry: ActionRegistry, theme: ActionRailTh
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
     if item.tooltip:
         button.setToolTip(item.tooltip)
-    button.setVisible(item.visible_when != "false")
     button.setEnabled(item.enabled_when != "false")
     button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
+
+
+def _is_item_visible(item: StackItem) -> bool:
+    return item.visible_when != "false"
 
 
 def _scaled_theme(theme: ActionRailTheme, scale: float) -> ActionRailTheme:
