@@ -11,8 +11,12 @@ from .spec import StackSpec, get_example_spec
 
 COMMAND_PREFIX = "ActionRail"
 COMMAND_CATEGORY = "ActionRail"
+NAME_COMMAND_SUFFIX = "_NameCommand"
 
 TargetKind = Literal["action", "slot"]
+
+_PUBLISHED_BY_NAME_COMMAND: dict[str, PublishedCommand] = {}
+_PUBLISHED_BY_HOTKEY: dict[tuple[str, bool, bool, bool, bool, bool], PublishedCommand] = {}
 
 
 @dataclass(frozen=True)
@@ -81,7 +85,7 @@ def publish_action(
         annotation=annotation,
         cmds_module=cmds_module,
     )
-    return PublishedCommand("action", action_id, runtime_name, name_command)
+    return _remember_published(PublishedCommand("action", action_id, runtime_name, name_command))
 
 
 def publish_preset_slots(
@@ -127,7 +131,7 @@ def publish_slot(
         annotation=annotation,
         cmds_module=cmds_module,
     )
-    return PublishedCommand("slot", target_id, runtime_name, name_command)
+    return _remember_published(PublishedCommand("slot", target_id, runtime_name, name_command))
 
 
 def unpublish(command: PublishedCommand | str, *, cmds_module: Any | None = None) -> None:
@@ -223,6 +227,25 @@ def assign_published_hotkey(
 ) -> HotkeyBinding:
     """Assign a hotkey to a published command and refresh visible slot labels."""
 
+    previous = query_hotkey_binding(
+        key,
+        ctrl=ctrl,
+        alt=alt,
+        shift=shift,
+        command=command,
+        release=release,
+        cmds_module=cmds_module,
+    )
+    previous_published = _PUBLISHED_BY_HOTKEY.get(
+        _hotkey_cache_key(
+            key,
+            ctrl=ctrl,
+            alt=alt,
+            shift=shift,
+            command=command,
+            release=release,
+        )
+    )
     binding = assign_hotkey(
         published.name_command,
         key,
@@ -234,7 +257,15 @@ def assign_published_hotkey(
         overwrite=overwrite,
         cmds_module=cmds_module,
     )
+    _remember_hotkey_binding(published, binding)
     if sync_visible:
+        if (
+            previous_published is not None
+            and previous_published.name_command != published.name_command
+        ):
+            clear_visible_published_key_label(previous_published)
+        elif previous is not None and previous.name != published.name_command:
+            clear_visible_key_label(previous.name)
         sync_visible_key_label(published, binding)
     return binding
 
@@ -289,6 +320,30 @@ def sync_visible_key_label(
     return update_slot_key_label(preset_id, slot_id, _binding_label(binding))
 
 
+def clear_visible_key_label(name_command: str) -> int:
+    """Clear visible overlay key labels for a previously bound ActionRail slot."""
+
+    published = _published_command_from_name_command(name_command)
+    if published is None:
+        return 0
+    return clear_visible_published_key_label(published)
+
+
+def clear_visible_published_key_label(published: PublishedCommand) -> int:
+    """Clear visible overlay key labels for a published ActionRail slot."""
+
+    if published is None or published.target_kind != "slot":
+        return 0
+
+    preset_id, slot_id = _split_slot_target_id(published.target_id)
+    if not preset_id or not slot_id:
+        return 0
+
+    from .runtime import update_slot_key_label
+
+    return update_slot_key_label(preset_id, slot_id, "")
+
+
 def runtime_command_name(kind: TargetKind, target_id: str) -> str:
     """Return the stable Maya runtime command name for an ActionRail target."""
 
@@ -299,7 +354,7 @@ def runtime_command_name(kind: TargetKind, target_id: str) -> str:
 def name_command_name(runtime_name: str) -> str:
     """Return the paired Maya nameCommand used for direct hotkey assignment."""
 
-    return f"{runtime_name}_NameCommand"
+    return f"{runtime_name}{NAME_COMMAND_SUFFIX}"
 
 
 def slot_target_id(preset_id: str, slot_id: str) -> str:
@@ -352,6 +407,79 @@ def _split_slot_target_id(target_id: str) -> tuple[str, str]:
     if not separator:
         return "", ""
     return preset_id, slot_suffix
+
+
+def _remember_published(command: PublishedCommand) -> PublishedCommand:
+    _PUBLISHED_BY_NAME_COMMAND[command.name_command] = command
+    return command
+
+
+def _remember_hotkey_binding(command: PublishedCommand, binding: HotkeyBinding) -> None:
+    _PUBLISHED_BY_HOTKEY[
+        _hotkey_cache_key(
+            binding.key,
+            ctrl=binding.ctrl,
+            alt=binding.alt,
+            shift=binding.shift,
+            command=binding.command,
+            release=binding.release,
+        )
+    ] = command
+
+
+def _hotkey_cache_key(
+    key: str,
+    *,
+    ctrl: bool = False,
+    alt: bool = False,
+    shift: bool = False,
+    command: bool = False,
+    release: bool = False,
+) -> tuple[str, bool, bool, bool, bool, bool]:
+    return (key, ctrl, alt, shift, command, release)
+
+
+def _published_command_from_name_command(name_command: str) -> PublishedCommand | None:
+    if name_command in _PUBLISHED_BY_NAME_COMMAND:
+        return _PUBLISHED_BY_NAME_COMMAND[name_command]
+
+    if not name_command.endswith(NAME_COMMAND_SUFFIX):
+        return None
+
+    runtime_name = name_command[: -len(NAME_COMMAND_SUFFIX)]
+    slot_prefix = f"{COMMAND_PREFIX}_slot_"
+    if not runtime_name.startswith(slot_prefix):
+        return None
+
+    return _published_slot_from_runtime_fallback(runtime_name, name_command, slot_prefix)
+
+
+def _published_slot_from_runtime_fallback(
+    runtime_name: str,
+    name_command: str,
+    slot_prefix: str,
+) -> PublishedCommand | None:
+    # Fallback for persisted generated commands when the current Python session
+    # did not publish them first. Try all underscore splits against built-in specs.
+    target_parts = runtime_name.removeprefix(slot_prefix).split("_")
+    for split_index in range(1, len(target_parts)):
+        preset_id = "_".join(target_parts[:split_index])
+        slot_id = "_".join(target_parts[split_index:])
+        target_id = slot_target_id(preset_id, slot_id)
+        try:
+            spec = get_example_spec(preset_id)
+        except KeyError:
+            continue
+        if any(item.id == target_id for item in spec.items):
+            return PublishedCommand("slot", target_id, runtime_name, name_command)
+    return None
+
+
+def _clear_published_cache() -> None:
+    """Clear published command memory for tests."""
+
+    _PUBLISHED_BY_NAME_COMMAND.clear()
+    _PUBLISHED_BY_HOTKEY.clear()
 
 
 def _publish_runtime_command(

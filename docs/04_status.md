@@ -53,6 +53,7 @@ Last updated: 2026-04-28
   - `actionrail.hotkeys` can publish default actions and preset slots as Maya runtime commands plus paired nameCommands for hotkey assignment.
   - Hotkey assignment now has conflict-aware helpers that refuse to overwrite existing bindings unless explicitly requested.
   - Slot-aware hotkey assignment now updates visible rendered key labels through the runtime overlay registry.
+  - Overwrite rebinding clears the previously bound visible ActionRail slot label so stale shortcut badges are not left behind.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -181,6 +182,13 @@ Checks already run for the roadmap update:
   - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
   - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
   - `tests/maya_smoke/actionrail_hotkey_label_sync_smoke.py` passed through `script.execute`: visible `transform_stack.set_key` button changed from `K\nS` to `K\nF12`, `actionRailKeyLabel` became `F12`, and the button kept its fixed `34x34` size.
+- 2026-04-28 hotkey overwrite label cleanup:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 62 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - Started MayaSessiond on port `7217` with `--maya-module-path .` and absolute `--mcp-script-dirs tests/maya_smoke`.
+  - Tool discovery found 71 MCP tools, including `script.execute` and `viewport.capture`.
+  - `scene.info` returned untitled scene, unmodified, fps `24.0`, frame range `1.0-120.0`, up axis `y`.
+  - `tests/maya_smoke/actionrail_hotkey_label_sync_smoke.py` passed through `script.execute`: after rebinding `F12` from `transform_stack.move` to `transform_stack.set_key`, Move changed from `M\nF12` back to `M`, Set Key changed to `K\nF12`, and Set Key kept its fixed `34x34` size.
 
 ## Decisions
 

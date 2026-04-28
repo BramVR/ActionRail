@@ -4,9 +4,11 @@ import pytest
 
 from actionrail.hotkeys import (
     HotkeyConflictError,
+    _clear_published_cache,
     assign_hotkey,
     assign_published_hotkey,
     assign_slot_hotkey,
+    clear_visible_key_label,
     format_hotkey,
     name_command_name,
     publish_action,
@@ -20,11 +22,17 @@ from actionrail.hotkeys import (
 )
 
 
+@pytest.fixture(autouse=True)
+def clear_published_cache() -> None:
+    _clear_published_cache()
+
+
 class FakeCmds:
     def __init__(self) -> None:
         self.runtime_commands: dict[str, dict[str, object]] = {}
         self.name_commands: dict[str, dict[str, object]] = {}
         self.hotkeys: dict[tuple[str, bool, bool, bool, bool, bool], str] = {}
+        self.query_hotkeys = True
         self.reject_duplicate_name_commands = False
 
     def runTimeCommand(self, name: str, **kwargs: object) -> object:  # noqa: N802
@@ -55,6 +63,8 @@ class FakeCmds:
             "releaseName" in kwargs,
         )
         if kwargs.get("query"):
+            if not self.query_hotkeys:
+                return None
             return self.hotkeys.get(key)
 
         value = kwargs.get("releaseName", kwargs.get("name"))
@@ -201,6 +211,72 @@ def test_assign_published_hotkey_syncs_slot_label(
 
     assert binding.name == published.name_command
     assert updates == [("transform_stack", "set_key", "Ctrl+K")]
+
+
+def test_assign_published_hotkey_clears_overwritten_slot_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    move = publish_slot("transform_stack", "move", label="Move", cmds_module=cmds)
+    set_key = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assign_published_hotkey(move, "S", cmds_module=cmds)
+    assign_published_hotkey(set_key, "S", overwrite=True, cmds_module=cmds)
+
+    assert updates == [
+        ("transform_stack", "move", "S"),
+        ("transform_stack", "move", ""),
+        ("transform_stack", "set_key", "S"),
+    ]
+
+
+def test_assign_published_hotkey_clears_cached_slot_when_query_misses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    cmds.query_hotkeys = False
+    move = publish_slot("transform_stack", "move", label="Move", cmds_module=cmds)
+    set_key = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assign_published_hotkey(move, "F12", cmds_module=cmds)
+    assign_published_hotkey(set_key, "F12", overwrite=True, cmds_module=cmds)
+
+    assert updates == [
+        ("transform_stack", "move", "F12"),
+        ("transform_stack", "move", ""),
+        ("transform_stack", "set_key", "F12"),
+    ]
+
+
+def test_clear_visible_key_label_resolves_persisted_builtin_slot_name_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    cleared = clear_visible_key_label("ActionRail_slot_transform_stack_set_key_NameCommand")
+
+    assert cleared == 1
+    assert updates == [("transform_stack", "set_key", "")]
 
 
 def test_assign_slot_hotkey_publishes_assigns_and_syncs_label(
