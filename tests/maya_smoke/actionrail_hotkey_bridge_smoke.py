@@ -12,7 +12,7 @@ if repo_scripts and repo_scripts not in sys.path:
 from maya import cmds, mel  # noqa: E402
 
 import actionrail  # noqa: E402
-from actionrail.hotkeys import publish_action, publish_preset_slots  # noqa: E402
+from actionrail.hotkeys import publish_action, publish_preset_slots, publish_slot  # noqa: E402
 from actionrail.runtime import active_overlay_ids  # noqa: E402
 
 cmds.file(new=True, force=True)
@@ -21,24 +21,37 @@ cmds.select(cube, replace=True)
 cmds.currentTime(1)
 
 action_command = publish_action("maya.tool.rotate", label="Rotate")
+action_command_after_republish = publish_action("maya.tool.rotate", label="Rotate")
 slot_commands = publish_preset_slots("transform_stack")
 set_key_command = next(
     command for command in slot_commands if command.target_id.endswith(".set_key")
 )
+unqualified_set_key_command = publish_slot("transform_stack", "set_key", label="Set Key")
 
 mel.eval(f"{action_command.runtime_command};")
 context_after_runtime_command = cmds.currentCtx()
 
 mel.eval(f"{set_key_command.runtime_command};")
 keyframe_count = cmds.keyframe(cube, query=True, keyframeCount=True) or 0
+cmds.cutKey(cube, clear=True)
+
+mel.eval(f"{unqualified_set_key_command.runtime_command};")
+unqualified_keyframe_count = cmds.keyframe(cube, query=True, keyframeCount=True) or 0
 
 result = {
     "active_overlay_ids": active_overlay_ids(),
+    "action_republish_same_name": action_command.runtime_command
+    == action_command_after_republish.runtime_command,
     "action_runtime_exists": cmds.runTimeCommand(action_command.runtime_command, exists=True),
     "context_after_runtime_command": context_after_runtime_command,
     "keyframe_count": keyframe_count,
     "slot_count": len(slot_commands),
     "slot_runtime_exists": cmds.runTimeCommand(set_key_command.runtime_command, exists=True),
+    "unqualified_keyframe_count": unqualified_keyframe_count,
+    "unqualified_slot_runtime_exists": cmds.runTimeCommand(
+        unqualified_set_key_command.runtime_command,
+        exists=True,
+    ),
 }
 
 actionrail.hide_all()

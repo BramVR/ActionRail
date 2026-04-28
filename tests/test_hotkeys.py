@@ -22,6 +22,7 @@ class FakeCmds:
         self.runtime_commands: dict[str, dict[str, object]] = {}
         self.name_commands: dict[str, dict[str, object]] = {}
         self.hotkeys: dict[tuple[str, bool, bool, bool, bool, bool], str] = {}
+        self.reject_duplicate_name_commands = False
 
     def runTimeCommand(self, name: str, **kwargs: object) -> object:  # noqa: N802
         if kwargs.get("exists"):
@@ -35,6 +36,8 @@ class FakeCmds:
         return name
 
     def nameCommand(self, name: str, **kwargs: object) -> str:  # noqa: N802
+        if self.reject_duplicate_name_commands and name in self.name_commands:
+            raise RuntimeError(f"nameCommand already exists: {name}")
         self.name_commands[name] = dict(kwargs)
         return name
 
@@ -96,6 +99,17 @@ def test_publish_action_updates_existing_runtime_command() -> None:
     assert command["annotation"] == "Move Updated"
 
 
+def test_publish_action_ignores_existing_name_command() -> None:
+    cmds = FakeCmds()
+    cmds.reject_duplicate_name_commands = True
+
+    first = publish_action("maya.tool.move", label="Move", cmds_module=cmds)
+    second = publish_action("maya.tool.move", label="Move Updated", cmds_module=cmds)
+
+    assert first.name_command == second.name_command
+    assert cmds.runtime_commands[second.runtime_command]["label"] == "Move Updated"
+
+
 def test_publish_default_actions_creates_one_command_per_registered_action() -> None:
     cmds = FakeCmds()
 
@@ -123,6 +137,17 @@ def test_publish_preset_slots_skips_spacers() -> None:
         "transform_stack.set_key",
     ]
     assert "gap" not in " ".join(cmds.runtime_commands)
+
+
+def test_publish_slot_command_uses_normalized_slot_id() -> None:
+    cmds = FakeCmds()
+
+    published = publish_preset_slots("transform_stack", cmds_module=cmds)
+    set_key = next(command for command in published if command.target_id.endswith(".set_key"))
+
+    assert cmds.runtime_commands[set_key.runtime_command]["command"] == (
+        "import actionrail; actionrail.run_slot('transform_stack', 'transform_stack.set_key')"
+    )
 
 
 def test_assign_hotkey_rejects_existing_binding_without_overwrite() -> None:

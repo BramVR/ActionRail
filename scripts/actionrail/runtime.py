@@ -66,12 +66,20 @@ def run_slot(
     """Run the action attached to a slot in a built-in preset."""
 
     spec = get_example_spec(preset_id)
+    qualified_slot_id = _qualified_slot_id(preset_id, slot_id)
     for item in spec.items:
-        if item.id == slot_id:
+        if item.id == qualified_slot_id:
             if not item.action:
-                msg = f"ActionRail slot has no action: {preset_id}/{slot_id}"
+                msg = f"ActionRail slot has no action: {preset_id}/{qualified_slot_id}"
                 raise ValueError(msg)
             return run_action(item.action, registry=registry)
 
-    msg = f"Unknown ActionRail slot: {preset_id}/{slot_id}"
+    msg = f"Unknown ActionRail slot: {preset_id}/{qualified_slot_id}"
     raise KeyError(msg)
+
+
+def _qualified_slot_id(preset_id: str, slot_id: str) -> str:
+    prefix = f"{preset_id}."
+    if slot_id.startswith(prefix):
+        return slot_id
+    return f"{preset_id}.{slot_id}"

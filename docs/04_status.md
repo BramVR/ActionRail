@@ -148,11 +148,11 @@ Checks already run for the roadmap update:
   - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, visible rail size was `40x40`, and widget screenshot artifact was saved to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_widget.png`.
   - MCP `viewport.capture format=png width=640 height=360 show_ornaments=false panel=modelPanel4` returned a `640x360` PNG with `size_bytes=2030`; the image was saved locally to `.gg-maya-sessiond/screenshots/actionrail_hidden_visibility_viewport.png`.
 - 2026-04-28 runtime-command/hotkey bridge:
-  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 34 passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 55 passed after review fixes.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `doctor --state-dir .gg-maya-sessiond --json` passed when `--mcp-src` was omitted.
   - Started MayaSessiond on port `7217` with `--maya-module-path C:/PROJECTS/GG/ScreenUI` and `--mcp-script-dirs C:/PROJECTS/GG/ScreenUI/tests/maya_smoke`.
-  - `tests/maya_smoke/actionrail_hotkey_bridge_smoke.py` passed through `script.execute`: default action runtime command existed and switched Maya to `RotateSuperContext`, preset slot runtime command existed and set 10 keyframes, 5 action-bearing slots were published, and no overlay ids were active.
+  - `tests/maya_smoke/actionrail_hotkey_bridge_smoke.py` passed through `script.execute`: default action runtime command existed and switched Maya to `RotateSuperContext`, repeated action publish reused the same runtime command name, preset slot runtime command existed and set 10 keyframes, unqualified slot publishing also set 10 keyframes, 5 action-bearing slots were published, and no overlay ids were active.
 - 2026-04-28 tests/docs hardening:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 52 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.

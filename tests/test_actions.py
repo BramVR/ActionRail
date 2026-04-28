@@ -85,6 +85,16 @@ def test_runtime_run_slot_uses_preset_slot_action_without_overlay() -> None:
     assert cmds.calls == [("setKeyframe", None)]
 
 
+def test_runtime_run_slot_accepts_unqualified_slot_id() -> None:
+    cmds = FakeCmds()
+    registry = create_default_registry(cmds)
+
+    result = run_slot("transform_stack", "set_key", registry=registry)
+
+    assert result == "setKeyframe"
+    assert cmds.calls == [("setKeyframe", None)]
+
+
 def test_runtime_run_slot_rejects_slot_without_action() -> None:
     registry = create_default_registry(FakeCmds())
 

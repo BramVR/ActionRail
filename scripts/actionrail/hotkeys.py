@@ -113,7 +113,7 @@ def publish_slot(
     runtime_name = runtime_command_name("slot", target_id)
     name_command = name_command_name(runtime_name)
     annotation = label or f"Run ActionRail slot {preset_id}/{slot_id}"
-    command = f"import actionrail; actionrail.run_slot({preset_id!r}, {slot_id!r})"
+    command = f"import actionrail; actionrail.run_slot({preset_id!r}, {target_id!r})"
     _publish_runtime_command(
         runtime_name,
         command=command,
@@ -284,11 +284,23 @@ def _publish_name_command(
     cmds_module: Any | None,
 ) -> None:
     cmds = _require_cmds(cmds_module)
-    cmds.nameCommand(name, annotation=annotation, command=command, sourceType="mel")
+    try:
+        cmds.nameCommand(name, annotation=annotation, command=command, sourceType="mel")
+    except RuntimeError as exc:
+        if _is_duplicate_name_command_error(exc):
+            return
+        raise
 
 
 def _runtime_command_exists(name: str, cmds: Any) -> bool:
     return bool(cmds.runTimeCommand(name, exists=True))
+
+
+def _is_duplicate_name_command_error(exc: RuntimeError) -> bool:
+    error_text = str(exc).lower()
+    return "namecommand" in error_text and (
+        "already" in error_text or "exists" in error_text or "duplicate" in error_text
+    )
 
 
 def _require_cmds(cmds_module: Any | None = None) -> Any:
