@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 from actionrail.theme import DEFAULT_THEME, ActionRailTheme, ToneStyle, generate_style_sheet
-from actionrail.widgets import BUTTON_SIZE, FRAME_PADDING, FRAME_SPACING, RAIL_WIDTH, STYLE_SHEET
+from actionrail.widgets import (
+    BUTTON_OUTER_SIZE,
+    BUTTON_SIZE,
+    FRAME_PADDING,
+    FRAME_SPACING,
+    RAIL_WIDTH,
+    STYLE_SHEET,
+)
 
 
-def test_default_theme_preserves_phase_zero_metrics() -> None:
+def test_default_theme_accounts_for_styled_borders() -> None:
     assert DEFAULT_THEME.button_size == 32
+    assert DEFAULT_THEME.button_outer_size == 34
     assert DEFAULT_THEME.frame_padding == 4
     assert DEFAULT_THEME.frame_spacing == 2
-    assert DEFAULT_THEME.rail_width == 40
+    assert DEFAULT_THEME.rail_width == 46
     assert BUTTON_SIZE == 32
+    assert BUTTON_OUTER_SIZE == 34
     assert FRAME_PADDING == 4
     assert FRAME_SPACING == 2
-    assert RAIL_WIDTH == 40
+    assert RAIL_WIDTH == 46
 
 
 def test_default_qss_preserves_reference_tones() -> None:
@@ -48,7 +57,8 @@ def test_custom_theme_generates_metrics_and_tones() -> None:
 
     qss = generate_style_sheet(theme)
 
-    assert theme.rail_width == 30
+    assert theme.button_outer_size == 26
+    assert theme.rail_width == 36
     assert "min-width: 24px;" in qss
     assert "background: #111111;" in qss
     assert 'QPushButton[actionRailTone="gold"]' in qss

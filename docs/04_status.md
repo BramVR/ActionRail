@@ -39,11 +39,11 @@ Last updated: 2026-04-28
   - Preset parsing validates required ids, anchors, item lists, supported item types, button action fields, and spacer sizes.
   - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
   - Widget screenshot smoke now captures the ActionRail widget directly instead of the foreground desktop.
-  - Theme tokens and generated QSS now live in `scripts/actionrail/theme.py`; the default theme preserves the reference `40x196` transform stack dimensions and colors.
+  - Theme tokens and generated QSS now live in `scripts/actionrail/theme.py`; the default theme accounts for Qt style-sheet button/frame borders so buttons keep a visible inset inside framed slots.
 - Phase 1A rail schema started:
   - Presets now support `layout` metadata: orientation, rows, columns, anchor, offset, scale, opacity, and locked state.
   - Items now support stable slot `id`, `key_label`, and safe declarative `visible_when`, `enabled_when`, and `active_when` predicate fields.
-  - `presets/transform_stack.json` has explicit stable slot ids and layout metadata while preserving the reference `40x196` render size.
+  - `presets/transform_stack.json` has explicit stable slot ids and layout metadata; the current corrected transform-stack render size is `46x214`.
   - `presets/horizontal_tools.json` proves a horizontal rail can be defined without widget-code changes.
   - Overlay positioning now supports left/right/top/bottom/center anchors plus layout offsets.
   - Maya smoke coverage now includes a horizontal rail render check.
@@ -92,14 +92,28 @@ Start here:
 3. Use the "Next Coding Slice: Live Predicate Refresh" brief below before editing code.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest overlay host fix:
+Checks already run for the latest rail inset fix:
 
 - `.\\.venv\\Scripts\\python.exe -m pytest` -> 78 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- MayaSessiond started on port `7217` with `--maya-module-path .`, absolute `--mcp-script-dirs`, and raw execution enabled for interactive inspection.
-- Live `actionrail.show_example("transform_stack")` check showed the overlay anchored from the inner `QmayaLayoutWidget modelPanel4`; the visible rail is a small `MayaWindow`-owned tool window, so viewport repaint does not duplicate it at local origin.
-- `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.run` raw execution: one active overlay id, one visible `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, and rail geometry matched the expected global viewport anchor.
-- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.run` raw execution: buttons still triggered Maya actions through the floating rail host.
+- Live MayaSessiond metric inspection showed the old issue: a styled `34x34` button at `[6, 6]` inside a `40x40` frame landed on the frame edge.
+- After the fix, live MayaSessiond metric inspection showed the transform stack at `46x214`; buttons remain `34x34` and sit at `[6, 6]` inside `46`-wide framed slots, leaving matching inset on both sides.
+- `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
+- `tests/maya_smoke/actionrail_horizontal_smoke.py` passed through `script.execute`: `horizontal_tools` rendered visible at `[172, 46]`, orientation `horizontal`, anchor `viewport.bottom.center`, opacity `0.92`, button labels `M/W`, `R/E`, `S/R`, `K/S`.
+- `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.execute`: one active overlay id, one visible `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, and rail geometry `[328, 612, 46, 214]` matched the expected global viewport anchor.
+- `tests/maya_smoke/actionrail_capture_smoke.py` passed through `script.execute`: direct widget screenshot saved to `.gg-maya-sessiond/actionrail_phase0_overlay.png`, pixmap/widget size `[46, 214]`, and button count `5`.
+- `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, and visible rail size was `[46, 46]`.
+- `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, and widget size was `[46, 138]`.
+- Follow-up live MayaSessiond user-visible check reloaded ActionRail in the existing Maya process and left `transform_stack` visible on `modelPanel4`; live geometry was `[328, 612, 46, 214]`, parent `MayaWindow`, active ids `["transform_stack"]`, and screenshot `.gg-maya-sessiond/screenshots/actionrail_visible_now.png`.
+
+## Latest Handoff
+
+- Task goal completed: fix the rail/button inset so active and toned buttons sit fully inside the framed rail instead of touching the frame edge.
+- Files changed: `scripts/actionrail/theme.py`, `scripts/actionrail/widgets.py`, `tests/test_theme.py`, `docs/00_start_here.md`, and this status doc.
+- Checks run: local pytest and ruff passed; MayaSessiond phase0, horizontal, overlay cleanup, capture, hidden visibility, predicate, and live visible checks passed.
+- Current live state: MayaSessiond is running on port `7217`; `transform_stack` was intentionally left visible on `modelPanel4` for review.
+- Blockers/risks: none known for the inset fix. Historical `40x196` entries remain in Verification History as old results; current corrected transform-stack size is `46x214`.
+- Exact next step: continue Phase 1 by adding live refresh for predicate-driven `enabled_when` and `active_when` state after overlay creation, starting with the brief below.
 
 ## Next
 
@@ -262,6 +276,18 @@ Acceptance criteria:
   - `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.run` raw execution after `script.execute` returned stale structured payloads in this daemon run: repeated `show_example("transform_stack")` left one active overlay id, one `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, rail geometry `[328, 621, 40, 196]`, and expected global anchor `[328, 621]`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.run` raw execution: buttons still clicked through the floating rail host, current context became `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, and reload returned one visible `transform_stack`.
   - Restored a fresh interactive `transform_stack` overlay after smoke verification; live inspection showed parent `MayaWindow`, geometry `[328, 621, 40, 196]`, and visible `true`.
+- 2026-04-28 rail inset fix:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 78 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - Live MayaSessiond metric inspection showed the old issue: a styled `34x34` button at `[6, 6]` inside a `40x40` frame landed on the frame edge.
+  - After the fix, live MayaSessiond metric inspection showed the transform stack at `46x214`; buttons remain `34x34` and sit at `[6, 6]` inside `46`-wide framed slots, leaving matching inset on both sides.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, current context `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`, and size was `[46, 214]`.
+  - `tests/maya_smoke/actionrail_horizontal_smoke.py` passed through `script.execute`: `horizontal_tools` rendered visible at `[172, 46]`, orientation `horizontal`, anchor `viewport.bottom.center`, opacity `0.92`, button labels `M/W`, `R/E`, `S/R`, `K/S`.
+  - `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.execute`: one active overlay id, one visible `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, and rail geometry `[328, 612, 46, 214]` matched the expected global viewport anchor.
+  - `tests/maya_smoke/actionrail_capture_smoke.py` passed through `script.execute`: direct widget screenshot saved to `.gg-maya-sessiond/actionrail_phase0_overlay.png`, pixmap/widget size `[46, 214]`, and button count `5`.
+  - `tests/maya_smoke/actionrail_hidden_visibility_smoke.py` passed through `script.execute`: hidden buttons were absent, only visible button `VK` remained, no empty cluster frames were created, and visible rail size was `[46, 46]`.
+  - `tests/maya_smoke/actionrail_predicates_smoke.py` passed through `script.execute`: selection and scale-tool predicates rendered `VS/DK/CK`, active predicates marked `VS` and `CK`, missing command disabled `DK`, existing command enabled `CK`, and widget size was `[46, 138]`.
+  - Follow-up live MayaSessiond user-visible check reloaded ActionRail in the existing Maya process and left `transform_stack` visible on `modelPanel4`; live geometry was `[328, 612, 46, 214]`, parent `MayaWindow`, active ids `["transform_stack"]`, and screenshot `.gg-maya-sessiond/screenshots/actionrail_visible_now.png`.
 
 ## Decisions
 

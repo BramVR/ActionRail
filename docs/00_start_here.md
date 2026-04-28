@@ -30,6 +30,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Runtime-command sync helpers now prune stale ActionRail action and preset-slot commands when ids are renamed or removed.
 - Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time using the overlay's resolved model panel for `active.panel` and `active.camera`.
 - The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
+- The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order

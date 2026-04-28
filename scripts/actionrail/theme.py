@@ -27,6 +27,7 @@ class ActionRailTheme:
     cluster_border: str = "#323238"
     cluster_border_width: int = 2
     cluster_border_radius: int = 2
+    button_border_width: int = 1
     button_border_radius: int = 1
     button_background: str = "#666670"
     button_border: str = "#696972"
@@ -52,10 +53,22 @@ class ActionRailTheme:
     )
 
     @property
-    def rail_width(self) -> int:
-        """Total width of a single ActionRail column including frame padding."""
+    def button_outer_size(self) -> int:
+        """Total rendered button size including the QSS border."""
 
-        return self.button_size + (self.frame_padding * 2)
+        return self.button_size + (self.button_border_width * 2)
+
+    @property
+    def slot_extent(self) -> int:
+        """Total extent of a single framed slot including borders and padding."""
+
+        return self.button_outer_size + ((self.frame_padding + self.cluster_border_width) * 2)
+
+    @property
+    def rail_width(self) -> int:
+        """Cross-axis extent of a single ActionRail column or row."""
+
+        return self.slot_extent
 
 
 DEFAULT_THEME = ActionRailTheme()
@@ -78,7 +91,7 @@ QPushButton[actionRailRole="button"] {{
     max-width: {theme.button_size}px;
     min-height: {theme.button_size}px;
     max-height: {theme.button_size}px;
-    border: 1px solid {theme.button_border};
+    border: {theme.button_border_width}px solid {theme.button_border};
     border-radius: {theme.button_border_radius}px;
     background: {theme.button_background};
     color: {theme.button_color};

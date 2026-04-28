@@ -12,6 +12,7 @@ from .state import MayaStateSnapshot
 from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
+BUTTON_OUTER_SIZE = DEFAULT_THEME.button_outer_size
 FRAME_PADDING = DEFAULT_THEME.frame_padding
 FRAME_SPACING = DEFAULT_THEME.frame_spacing
 RAIL_WIDTH = DEFAULT_THEME.rail_width
@@ -128,9 +129,6 @@ def _build_cluster(
     qt = load()
     frame = qt.QtWidgets.QFrame()
     frame.setProperty("actionRailRole", "cluster")
-    if orientation == "vertical":
-        frame.setFixedWidth(theme.rail_width)
-
     layout_class = (
         qt.QtWidgets.QHBoxLayout
         if orientation == "horizontal"
@@ -148,8 +146,11 @@ def _build_cluster(
     for item in items:
         layout.addWidget(_build_button(item, registry, theme, context))
 
-    frame.adjustSize()
-    frame.setFixedSize(frame.sizeHint())
+    main_axis_size = _frame_main_axis_size(len(items), theme)
+    if orientation == "horizontal":
+        frame.setFixedSize(main_axis_size, theme.rail_width)
+    else:
+        frame.setFixedSize(theme.rail_width, main_axis_size)
     return frame
 
 
@@ -163,9 +164,6 @@ def _build_single_button(
     qt = load()
     frame = qt.QtWidgets.QFrame()
     frame.setProperty("actionRailRole", "cluster")
-    if orientation == "vertical":
-        frame.setFixedWidth(theme.rail_width)
-
     layout = qt.QtWidgets.QVBoxLayout(frame)
     layout.setContentsMargins(
         theme.frame_padding,
@@ -176,8 +174,7 @@ def _build_single_button(
     layout.setSpacing(0)
     layout.addWidget(_build_button(item, registry, theme, context))
 
-    frame.adjustSize()
-    frame.setFixedSize(frame.sizeHint())
+    frame.setFixedSize(theme.rail_width, theme.rail_width)
     return frame
 
 
@@ -200,7 +197,7 @@ def _build_button(
         "actionRailActive",
         "true" if is_active else "false",
     )
-    button.setFixedSize(theme.button_size, theme.button_size)
+    button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
     if item.tooltip:
@@ -272,6 +269,13 @@ def _scaled_theme(theme: ActionRailTheme, scale: float) -> ActionRailTheme:
         frame_spacing=scaled(theme.frame_spacing, minimum=0),
         cluster_border_width=scaled(theme.cluster_border_width),
         cluster_border_radius=scaled(theme.cluster_border_radius, minimum=0),
+        button_border_width=scaled(theme.button_border_width),
         button_border_radius=scaled(theme.button_border_radius, minimum=0),
         button_font_size=scaled(theme.button_font_size),
     )
+
+
+def _frame_main_axis_size(item_count: int, theme: ActionRailTheme) -> int:
+    spacing = theme.frame_spacing * max(item_count - 1, 0)
+    outer_padding = (theme.frame_padding + theme.cluster_border_width) * 2
+    return (theme.button_outer_size * item_count) + spacing + outer_padding
