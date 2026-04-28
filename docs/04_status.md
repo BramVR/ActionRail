@@ -58,6 +58,8 @@ Last updated: 2026-04-28
   - A safe predicate evaluator now drives initial `visible_when`, `enabled_when`, and `active_when` state from Maya selection/tool/panel/camera/playback state plus action, command, and plugin availability checks.
   - Predicate state snapshots now receive the overlay's resolved model panel, so `active.panel` and `active.camera` match explicit `panel=` targets and model-panel fallback instead of whatever UI control currently has focus.
   - Overlay parenting now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container, avoiding transient ghost copies of the rail when Maya toolbar controls repaint.
+  - Overlay creation now removes stale ActionRail Qt widgets for the same preset before creating a replacement rail, preventing duplicate rails after reload/show cycles or interrupted live development.
+  - The visible rail now uses a small frameless Maya-owned tool window positioned from the resolved viewport geometry instead of being parented directly under the OpenGL viewport widget, avoiding model-panel toolbar repaint ghosts without covering the viewport.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -94,7 +96,7 @@ Checks already run for the latest viewport-parent fix:
 - `.\\.venv\\Scripts\\python.exe -m pytest` -> 77 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - MayaSessiond started on port `7217` with `--maya-module-path .`, absolute `--mcp-script-dirs`, and raw execution enabled for interactive inspection.
-- Live `actionrail.show_example("transform_stack")` check showed the overlay parented to the inner `QmayaLayoutWidget modelPanel4` at `[1, 22, 1957, 1086]`, with the rail at `[12, 445]`.
+- Live `actionrail.show_example("transform_stack")` check showed the overlay anchored from the inner `QmayaLayoutWidget modelPanel4`; the visible rail is a small `MayaWindow`-owned tool window, so viewport repaint does not duplicate it at local origin.
 - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`.
 
 ## Next
@@ -225,6 +227,13 @@ Checks already run for the latest viewport-parent fix:
   - Live interactive inspection reproduced the outer model-panel repaint artifact, then verified `actionrail.show_example("transform_stack")` now parents to the inner `QmayaLayoutWidget modelPanel4` at `[1, 22, 1957, 1086]` with the rail at `[12, 445]`.
   - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.execute`: buttons `M/T/R/S/K`, widget size `40x196`, `K` created 10 keyframes, hide left no active overlays, reload returned one visible `transform_stack`.
   - A fresh interactive `transform_stack` overlay was restored after the smoke run.
+- 2026-04-28 stale overlay cleanup and floating rail host:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 78 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - Restarted MayaSessiond on port `7217` with `--maya-module-path .`, absolute `--mcp-script-dirs C:\\PROJECTS\\GG\\ScreenUI\\tests\\maya_smoke`, and raw execution enabled.
+  - `tests/maya_smoke/actionrail_overlay_cleanup_smoke.py` passed through `script.run` raw execution after `script.execute` returned stale structured payloads in this daemon run: repeated `show_example("transform_stack")` left one active overlay id, one `ActionRailViewportOverlay_transform_stack`, parent `MayaWindow`, rail geometry `[328, 621, 40, 196]`, and expected global anchor `[328, 621]`.
+  - `tests/maya_smoke/actionrail_phase0_smoke.py` passed through `script.run` raw execution: buttons still clicked through the floating rail host, current context became `scaleSuperContext`, `K` created 10 keyframes, hide left no active overlays, and reload returned one visible `transform_stack`.
+  - Restored a fresh interactive `transform_stack` overlay after smoke verification; live inspection showed parent `MayaWindow`, geometry `[328, 621, 40, 196]`, and visible `true`.
 
 ## Decisions
 

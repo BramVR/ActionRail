@@ -147,6 +147,89 @@ def test_overlay_snapshot_uses_resolved_panel(monkeypatch: pytest.MonkeyPatch) -
     assert captured["snapshot_cmds"] is cmds
     assert captured["snapshot_active_panel"] == "modelPanel2"
     assert captured["build_cmds"] is cmds
+    assert captured["parent"] is parent
+
+
+def test_overlay_uses_floating_maya_window_parent(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeQt:
+        class QtCore:
+            class Qt:
+                Widget = 0
+                Tool = 1
+                FramelessWindowHint = 2
+                NoDropShadowWindowHint = 4
+                WindowDoesNotAcceptFocus = 8
+                WA_ShowWithoutActivating = 16
+
+    class FakeWidget:
+        def setObjectName(self, name: str) -> None:  # noqa: N802
+            captured["object_name"] = name
+
+        def setParent(self, parent: object) -> None:  # noqa: N802
+            captured["widget_parent"] = parent
+
+        def setWindowFlags(self, flags: object) -> None:  # noqa: N802
+            captured["window_flags"] = flags
+
+        def setAttribute(self, attribute: object, enabled: bool) -> None:  # noqa: N802
+            captured["show_without_activating"] = (attribute, enabled)
+
+        def hide(self) -> None:
+            captured["hidden"] = True
+
+    class FakeEventTarget:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            captured.setdefault("event_targets", []).append((self.name, event_filter))
+
+    class FakeResizeEventFilter:
+        object = object()
+
+        def __init__(self, host: object) -> None:
+            captured["resize_host"] = host
+
+    def fake_build_transform_stack(
+        spec: StackSpec,
+        registry: object,
+        *,
+        state_snapshot: object | None = None,
+        cmds_module: object | None = None,
+    ) -> FakeWidget:
+        return FakeWidget()
+
+    monkeypatch.setattr(overlay, "load", lambda: FakeQt)
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: object())
+    monkeypatch.setattr(overlay, "build_transform_stack", fake_build_transform_stack)
+    monkeypatch.setattr(overlay, "_ResizeEventFilter", FakeResizeEventFilter)
+
+    cmds = FakeCmds(
+        focused="modelPanel2",
+        visible_panels=["modelPanel2"],
+        model_panels=["modelPanel2"],
+    )
+    parent = FakeEventTarget("viewport")
+    window_parent = FakeEventTarget("maya_window")
+    monkeypatch.setattr(overlay, "maya_main_window", lambda _qt: window_parent)
+    spec = StackSpec(
+        id="floating_parent_regression",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(),
+    )
+
+    host = overlay.ViewportOverlayHost(spec, parent=parent, registry=object(), cmds_module=cmds)
+
+    assert host.window_parent is window_parent
+    assert captured["widget_parent"] is window_parent
+    assert captured["window_flags"] == 15
+    assert captured["show_without_activating"] == (16, True)
+    assert captured["event_targets"] == [
+        ("viewport", FakeResizeEventFilter.object),
+        ("maya_window", FakeResizeEventFilter.object),
+    ]
 
 
 def test_viewport_area_widget_prefers_large_inset_panel_child() -> None:

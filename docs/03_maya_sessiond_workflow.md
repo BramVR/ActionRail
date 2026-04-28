@@ -132,5 +132,6 @@ Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by t
 - `actionrail_predicates_smoke.py`: selection/tool/action/command predicates driving initial visible, enabled, and active button state.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
 - `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
+- `actionrail_overlay_cleanup_smoke.py`: repeated show/reload cleanup for stale ActionRail viewport widgets and origin-placement regression coverage.
 
 After adding a new smoke script, update this list and add the exact result to `docs/04_status.md`.

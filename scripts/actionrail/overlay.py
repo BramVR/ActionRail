@@ -11,6 +11,7 @@ from .state import snapshot
 from .widgets import build_transform_stack, set_slot_key_label
 
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
+CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
 DEFAULT_MARGIN = 12
 
 
@@ -83,6 +84,24 @@ def model_panel_widget(panel: str, cmds_module: Any | None = None) -> Any:
 
     panel_widget = qt.wrap_instance(int(pointer), qt.QtWidgets.QWidget)
     return _viewport_area_widget(panel_widget, panel, qt)
+
+
+def maya_main_window(qt: Any | None = None) -> Any | None:
+    """Return Maya's main Qt window when running inside Maya."""
+
+    qt = qt or load()
+    try:
+        from maya import OpenMayaUI as omui  # type: ignore[import-not-found]
+    except Exception:
+        return None
+
+    try:
+        pointer = omui.MQtUtil.mainWindow()
+    except Exception:
+        return None
+    if not pointer:
+        return None
+    return qt.wrap_instance(int(pointer), qt.QtWidgets.QWidget)
 
 
 def _viewport_area_widget(panel_widget: Any, panel: str, qt: Any) -> Any:
@@ -158,6 +177,21 @@ def _qt_widget_is_valid(widget: Any) -> bool:
         return False
 
 
+def _qt_widget_identity(widget: Any) -> int:
+    try:
+        from shiboken6 import getCppPointer  # type: ignore[import-not-found]
+    except Exception:
+        try:
+            from shiboken2 import getCppPointer  # type: ignore[import-not-found,no-redef]
+        except Exception:
+            return id(widget)
+
+    try:
+        return int(getCppPointer(widget)[0])
+    except Exception:
+        return id(widget)
+
+
 class _ResizeEventFilter:
     """Qt event filter that keeps the rail positioned as the panel resizes."""
 
@@ -169,9 +203,11 @@ class _ResizeEventFilter:
             def eventFilter(self, watched: Any, event: Any) -> bool:  # noqa: N802
                 event_type = event.type()
                 if event_type in {
+                    qt.QtCore.QEvent.Move,
                     qt.QtCore.QEvent.Resize,
                     qt.QtCore.QEvent.Show,
                     qt.QtCore.QEvent.LayoutRequest,
+                    qt.QtCore.QEvent.WindowStateChange,
                 }:
                     host_ref.position()
                 return False
@@ -181,6 +217,74 @@ class _ResizeEventFilter:
     @property
     def object(self) -> Any:
         return self._object
+
+
+def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) -> int:
+    """Hide/delete stale ActionRail widgets under a Maya panel widget."""
+
+    qt = qt or load()
+    qt_widgets = getattr(qt, "QtWidgets", None)
+    object_names = {
+        f"{OBJECT_NAME_PREFIX}_{spec_id}",
+        f"{CONTAINER_OBJECT_NAME_PREFIX}_{spec_id}",
+    }
+    search_roots = [parent]
+    outer_panel = getattr(parent, "_actionrail_outer_panel_widget", None)
+    if outer_panel is not None and outer_panel is not parent:
+        search_roots.append(outer_panel)
+
+    stale_widgets: list[Any] = []
+    seen: set[int] = set()
+
+    app = getattr(qt_widgets, "QApplication", None)
+    if app is not None:
+        try:
+            instance = app.instance()
+            if instance is not None:
+                search_roots.extend(instance.allWidgets())
+        except Exception:
+            pass
+
+    for root in search_roots:
+        if root is None or not _qt_widget_is_valid(root):
+            continue
+        candidates = [root]
+        find_children = getattr(root, "findChildren", None)
+        if find_children is not None and qt_widgets is not None:
+            try:
+                children = find_children(qt_widgets.QWidget) or []
+            except Exception:
+                children = []
+            candidates.extend(children)
+        for widget in candidates:
+            if not _qt_widget_is_valid(widget):
+                continue
+            try:
+                object_name = widget.objectName()
+            except Exception:
+                continue
+            if object_name not in object_names:
+                continue
+            identifier = _qt_widget_identity(widget)
+            if identifier in seen:
+                continue
+            stale_widgets.append(widget)
+            seen.add(identifier)
+
+    removed = 0
+    for widget in stale_widgets:
+        if not _qt_widget_is_valid(widget):
+            continue
+        try:
+            widget.hide()
+            widget.setParent(None)
+            widget.deleteLater()
+            removed += 1
+        except Exception:
+            continue
+    if removed:
+        _flush_qt_deferred_deletes(qt)
+    return removed
 
 
 class ViewportOverlayHost:
@@ -201,8 +305,10 @@ class ViewportOverlayHost:
         self.spec = spec
         self.panel = panel or active_model_panel(self.cmds)
         self.parent = parent or model_panel_widget(self.panel, self.cmds)
+        self.window_parent = maya_main_window(self.qt)
         self.registry = registry or create_default_registry()
         self.margin = margin
+        cleanup_overlay_widgets(self.parent, spec.id, self.qt)
         self.widget = build_transform_stack(
             spec,
             self.registry,
@@ -210,27 +316,46 @@ class ViewportOverlayHost:
             cmds_module=self.cmds,
         )
         self.widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{spec.id}")
-        self.widget.setParent(self.parent)
-        self.widget.setWindowFlags(self.qt.QtCore.Qt.Widget)
+        self._floating = self.window_parent is not None
+        if self._floating:
+            self.widget.setParent(self.window_parent)
+            self.widget.setWindowFlags(_floating_window_flags(self.qt))
+            self.widget.setAttribute(self.qt.QtCore.Qt.WA_ShowWithoutActivating, True)
+        else:
+            self.widget.setParent(self.parent)
+            self.widget.setWindowFlags(self.qt.QtCore.Qt.Widget)
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
-        self.parent.installEventFilter(self._resize_filter.object)
+        self._filter_targets: list[Any] = []
+        self._install_event_filter(self.parent)
+        self._install_event_filter(self.window_parent)
+
+    def _install_event_filter(self, target: Any | None) -> None:
+        if target is None or not _qt_widget_is_valid(target):
+            return
+        try:
+            target.installEventFilter(self._resize_filter.object)
+        except Exception:
+            return
+        self._filter_targets.append(target)
 
     def show(self) -> None:
         self.position()
         self.widget.show()
         self.widget.raise_()
+        self.position()
 
     def position(self) -> None:
         if self.widget is None or self.parent is None:
             return
+
+        parent_rect = self.parent.rect()
 
         size = self.widget.sizeHint()
         if size.width() <= 0 or size.height() <= 0:
             self.widget.adjustSize()
             size = self.widget.size()
 
-        parent_rect = self.parent.rect()
         x_pos, y_pos = _anchored_position(
             self.spec.anchor,
             parent_rect.width(),
@@ -241,19 +366,26 @@ class ViewportOverlayHost:
         )
         x_pos += self.spec.layout.offset[0]
         y_pos += self.spec.layout.offset[1]
-        self.widget.move(x_pos, y_pos)
+        if self._floating:
+            self.widget.move(_map_to_global(self.parent, x_pos, y_pos, self.qt))
+        else:
+            self.widget.move(x_pos, y_pos)
 
     def close(self) -> None:
-        if self.parent is not None and self._resize_filter is not None:
-            self.parent.removeEventFilter(self._resize_filter.object)
+        if self._resize_filter is not None:
+            for target in self._filter_targets:
+                if target is not None and _qt_widget_is_valid(target):
+                    target.removeEventFilter(self._resize_filter.object)
 
-        if self.widget is not None:
+        if self.widget is not None and _qt_widget_is_valid(self.widget):
             self.widget.hide()
             self.widget.setParent(None)
             self.widget.deleteLater()
 
         self.widget = None
         self.parent = None
+        self.window_parent = None
+        self._filter_targets = []
         self._resize_filter = None
 
     def update_slot_key_label(self, slot_id: str, key_label: str) -> int:
@@ -301,3 +433,36 @@ def _anchored_position(
         y_pos = int((parent_height - widget_height) / 2)
 
     return max(margin, x_pos), max(margin, y_pos)
+
+
+def _floating_window_flags(qt: Any) -> Any:
+    flags = qt.QtCore.Qt.Tool | qt.QtCore.Qt.FramelessWindowHint
+    for flag_name in ("NoDropShadowWindowHint", "WindowDoesNotAcceptFocus"):
+        flag = getattr(qt.QtCore.Qt, flag_name, None)
+        if flag is not None:
+            flags |= flag
+    return flags
+
+
+def _map_to_global(parent: Any, x_pos: int, y_pos: int, qt: Any) -> Any:
+    point = qt.QtCore.QPoint(x_pos, y_pos)
+    map_to_global = getattr(parent, "mapToGlobal", None)
+    if map_to_global is None:
+        return point
+    try:
+        return map_to_global(point)
+    except Exception:
+        return point
+
+
+def _flush_qt_deferred_deletes(qt: Any) -> None:
+    try:
+        app = qt.QtWidgets.QApplication.instance()
+    except Exception:
+        app = None
+    if app is None:
+        return
+    try:
+        app.sendPostedEvents(None, qt.QtCore.QEvent.DeferredDelete)
+    except Exception:
+        return
