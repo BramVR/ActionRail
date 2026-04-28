@@ -153,5 +153,4 @@ progress. It is not yet a finished designer or production preset manager.
 
 ## License
 
-No license file is currently included. Treat this repository as all rights
-reserved until a license is added.
+Apache License 2.0. See [LICENSE](LICENSE).
