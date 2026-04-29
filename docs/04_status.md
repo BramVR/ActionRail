@@ -73,10 +73,15 @@ Last updated: 2026-04-29
 - Reusable Maya smoke wrapper:
   - `scripts/maya-smoke.ps1` wraps the stable MayaSessiond command shape for checked-in smoke scripts.
   - The wrapper uses repo-local state, starts Sessiond only when needed, passes the repo module path and absolute smoke-script directory, discovers MCP tools before running, and fails on either MCP-call or script-payload failure.
-  - `tests/maya_smoke/actionrail_cleanup_state.py` runs before and after each wrapper-selected smoke to close runtime overlays, close smoke-owned hosts, remove stale ActionRail Qt widgets, and reset the Maya scene.
+  - `tests/maya_smoke/actionrail_cleanup_state.py` runs before and after each wrapper-selected smoke to close runtime overlays, close smoke-owned hosts, remove stale ActionRail Qt widgets, reset the Maya scene, and purge cached `actionrail` modules so live daemon runs load current files.
   - The wrapper validates that `script.execute` returned a payload for the requested script and retries transient stale-payload or JSON transport failures.
   - The wrapper now treats a stopped Sessiond status response as a valid startable state instead of aborting before launch.
   - `-Script all` runs all `tests/maya_smoke/*_smoke.py`; individual script names can be passed with or without `.py`.
+- Safe-mode diagnostics:
+  - `actionrail.collect_diagnostics()` validates bundled presets without showing an overlay.
+  - `actionrail.diagnose_spec()` reports missing actions, invalid predicates, and missing command/plugin predicate targets for parsed specs.
+  - `actionrail.safe_start()` validates first, starts the overlay only when there are no diagnostic errors, and returns recoverable overlay startup failures as report issues.
+  - `tests/maya_smoke/actionrail_diagnostics_smoke.py` verifies diagnostics and `safe_start()` inside Maya.
 - Test/docs hardening:
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
   - Runtime tests now cover unknown slots and slots without actions.
@@ -102,7 +107,7 @@ Last updated: 2026-04-29
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
+2. First recommended coding slice: refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -115,16 +120,16 @@ Checks already run for the latest smoke wrapper slice:
 
 ## Latest Handoff
 
-- Task goal completed: added timer-driven automatic predicate refresh for visible overlay hosts and updated the predicate Maya smoke to verify automatic tool/selection refresh.
-- Files changed: `scripts/actionrail/overlay.py`, `scripts/maya-smoke.ps1`, `tests/test_overlay.py`, `tests/maya_smoke/actionrail_predicates_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/07_missing_features_research.md`, and this status doc.
-- Checks run: PowerShell syntax parse passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` started MayaSessiond on port `7217` and passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live daemon after the predicate-only timer refinement; local pytest and ruff passed.
-- Current live state: MayaSessiond is running on port `7217`; the predicate smoke cleanup closed its overlay at the end.
-- Blockers/risks: no current implementation blocker known; next diagnostics work should define how broken presets and missing command/plugin state are surfaced.
-- Exact next step: add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
+- Task goal completed: added safe-mode diagnostics for broken presets/actions, missing command/plugin predicate targets, and recoverable overlay startup failures.
+- Files changed: `scripts/actionrail/diagnostics.py`, `scripts/actionrail/spec.py`, `scripts/actionrail/runtime.py`, `scripts/actionrail/__init__.py`, `tests/test_diagnostics.py`, `tests/test_package.py`, `tests/maya_smoke/actionrail_diagnostics_smoke.py`, `tests/maya_smoke/actionrail_cleanup_state.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and this status doc.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` passed with 97 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the diagnostics overlay and purged cached `actionrail` modules after the run.
+- Blockers/risks: no current implementation blocker known; diagnostics are API/report-level only and are not yet rendered as visible broken-action or missing-icon badges.
+- Exact next step: refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
 
 ## Next
 
-1. Add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
+1. Refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -301,6 +306,13 @@ Checks already run for the latest smoke wrapper slice:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` started MayaSessiond on port `7217`, discovered MCP tools, and passed through `script.execute`: initial buttons were `VS/DK/CK`; automatic timer refresh cleared active state after switching from scale to move; automatic timer refresh rebuilt visible buttons to `HE/DK/CK` after clearing selection; widget size stayed `[46, 138]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live daemon after refining the timer to start only for specs with predicate fields.
+- 2026-04-29 safe-mode diagnostics:
+  - `scripts/actionrail/diagnostics.py` adds `DiagnosticIssue`, `DiagnosticReport`, `collect_diagnostics()`, `diagnose_spec()`, and `safe_start()`.
+  - `scripts/actionrail/spec.py` now exposes `builtin_preset_ids()` for diagnostics and future preset listing.
+  - `tests/maya_smoke/actionrail_cleanup_state.py` now purges cached `actionrail` modules after cleanup so live-daemon smoke runs load current source files.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 97 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`: built-in `transform_stack` diagnostics had zero issues, synthetic missing command/plugin predicates reported `missing_command` and `missing_plugin`, synthetic missing action reported `missing_action`, and `safe_start("transform_stack")` showed one active overlay at size `[46, 214]`.
 
 ## Decisions
 

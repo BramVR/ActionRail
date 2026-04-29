@@ -63,6 +63,15 @@ def _delete_actionrail_widgets(app: QtWidgets.QApplication) -> int:
     return deleted
 
 
+def _purge_actionrail_modules() -> int:
+    module_names = [
+        name for name in sys.modules if name == "actionrail" or name.startswith("actionrail.")
+    ]
+    for name in module_names:
+        sys.modules.pop(name, None)
+    return len(module_names)
+
+
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
@@ -73,12 +82,14 @@ deleted_widgets = _delete_actionrail_widgets(app)
 cmds.file(new=True, force=True)
 cmds.select(clear=True)
 app.processEvents()
+purged_modules = _purge_actionrail_modules()
 
 print(
     json.dumps(
         {
             "closed_smoke_hosts": closed_hosts,
             "deleted_widgets": deleted_widgets,
+            "purged_modules": purged_modules,
             "scene": cmds.file(query=True, sceneName=True) or None,
         },
         sort_keys=True,

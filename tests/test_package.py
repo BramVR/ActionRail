@@ -8,3 +8,5 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert callable(actionrail.show_example)
     assert callable(actionrail.hide_all)
     assert callable(actionrail.reload)
+    assert callable(actionrail.collect_diagnostics)
+    assert callable(actionrail.safe_start)

@@ -34,6 +34,10 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - Maya-native menu and shelf toggle entry points now install idempotently and call `actionrail.toggle_default()` to show/hide the default `transform_stack` preset.
 - `scripts/maya-smoke.ps1` wraps the stable MayaSessiond `script.execute` command shape for checked-in smoke scripts.
+- Safe-mode diagnostics now expose `actionrail.collect_diagnostics()`,
+  `actionrail.diagnose_spec()`, and `actionrail.safe_start()` for broken
+  presets, missing actions, missing command/plugin predicates, and recoverable
+  overlay startup failures.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -65,7 +69,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Add safe-mode diagnostics for broken presets/actions and missing commands/plugins before starting broad authoring UI.
+1. Refactor rendering toward reusable action/state objects so enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

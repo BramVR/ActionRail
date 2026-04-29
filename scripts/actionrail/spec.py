@@ -68,6 +68,12 @@ def load_builtin_preset(preset_id: str) -> StackSpec:
     return load_preset(preset_path)
 
 
+def builtin_preset_ids() -> tuple[str, ...]:
+    """Return bundled preset ids discovered from the preset directory."""
+
+    return tuple(sorted(path.stem for path in _PRESET_DIR.glob("*.json") if path.is_file()))
+
+
 def load_preset(path: str | Path) -> StackSpec:
     """Load and validate an ActionRail stack spec from a JSON preset file."""
 

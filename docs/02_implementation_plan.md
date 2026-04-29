@@ -62,6 +62,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
 - Shelf/menu toggle. Done for the default `transform_stack` preset through idempotent menu and shelf installers.
 - Basic validation for missing actions and bad preset shape.
 - `scripts/maya-smoke.ps1` wrapper for stable MayaSessiond smoke execution. Done for checked-in scripts under `tests/maya_smoke`.
+- Safe-mode diagnostics for broken presets/actions, missing command/plugin
+  predicates, and recoverable overlay startup failures. First pass done through
+  `actionrail.collect_diagnostics()`, `actionrail.diagnose_spec()`, and
+  `actionrail.safe_start()`.
 
 ### Acceptance Criteria
 
@@ -191,18 +195,19 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: add safe-mode diagnostics for broken presets,
-missing actions, missing commands/plugins, and recoverable overlay startup
-failures. Use `docs/04_status.md` as the detailed handoff.
+Next implementation slice: refactor rendering toward reusable action/state
+objects so frequently changing enabled, active, icon, tooltip, and badge state
+can update without rebuilding whole rails where possible. Use
+`docs/04_status.md` as the detailed handoff.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Safe-mode diagnostics.
+1. Refactor rendering around action/state objects so frequently changing state can update without full rebuilds.
 2. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
-3. Refactor rendering around action/state objects so frequently changing state can update without full rebuilds.
+3. Continue diagnostics toward visible broken-action/missing-icon badges and last-error UI.
 4. Bind Mode, then flyouts, then command rings.
 5. Icon import pipeline with license/source tracking.
 6. Broader workflow action library beyond transform/keyframe.

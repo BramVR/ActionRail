@@ -10,7 +10,12 @@ from .spec import TRANSFORM_STACK_ID, get_example_spec
 _OVERLAYS: dict[str, Any] = {}
 
 
-def show_example(example_id: str = TRANSFORM_STACK_ID, *, panel: str | None = None) -> Any:
+def show_example(
+    example_id: str = TRANSFORM_STACK_ID,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+) -> Any:
     """Show a built-in ActionRail example overlay."""
 
     spec = get_example_spec(example_id)
@@ -18,7 +23,7 @@ def show_example(example_id: str = TRANSFORM_STACK_ID, *, panel: str | None = No
 
     from .overlay import ViewportOverlayHost
 
-    host = ViewportOverlayHost(spec, panel=panel)
+    host = ViewportOverlayHost(spec, panel=panel, registry=registry)
     host.show()
     _OVERLAYS[example_id] = host
     return host
