@@ -62,6 +62,7 @@ Last updated: 2026-04-29
   - Overlay creation now removes stale ActionRail Qt widgets for the same preset before creating a replacement rail, preventing duplicate rails after reload/show cycles or interrupted live development.
   - The visible rail now uses a small frameless Maya-owned tool window positioned from the resolved viewport geometry instead of being parented directly under the OpenGL viewport widget, avoiding model-panel toolbar repaint ghosts without covering the viewport.
   - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
+  - Action-bearing buttons now resolve through reusable `SlotRenderState` objects and a shared apply path for label, hotkey badge, tone, tooltip, enabled, and active state. Predicate refresh preserves runtime hotkey badge overrides while updating state in place when visibility is unchanged.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -107,28 +108,29 @@ Last updated: 2026-04-29
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
+2. First recommended coding slice: extend reusable slot render state toward icon and diagnostic badge inputs so missing actions, missing icons, and richer badge state can update without rebuilding whole rails where possible.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest safe-start diagnostics fix:
+Checks already run for the latest slot render-state refactor:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 98 passed.
-- `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py` -> all checks passed.
-- `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py` passed against the already-running MayaSessiond on port `7217`; safe-start diagnostics still reported missing command/plugin warnings and started the `transform_stack` overlay.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 100 passed.
+- `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` passed against the already-running MayaSessiond on port `7217`; automatic predicate refresh still updated active/enabled state and rebuilt only when visibility changed.
+- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond; the transform stack rendered at `[46,214]`, buttons remained `M/T/R/S/K`, and actions still executed.
 
 ## Latest Handoff
 
-- Task goal completed: fixed the default `actionrail.safe_start()` diagnostics path so importable `maya.cmds` is used for command/plugin availability checks when callers do not inject `cmds_module`.
-- Files changed: `scripts/actionrail/diagnostics.py`, `tests/test_diagnostics.py`, `docs/00_start_here.md`, and this status doc.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` passed with 98 tests; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the diagnostics overlay and purged cached `actionrail` modules after the run.
-- Blockers/risks: no current implementation blocker known; diagnostics are API/report-level only and are not yet rendered as visible broken-action or missing-icon badges.
-- Exact next step: refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
+- Task goal completed: refactored action-bearing widget rendering through reusable `SlotRenderState` objects and a shared apply path for label, runtime hotkey badge, tone, tooltip, enabled, and active state.
+- Files changed: `scripts/actionrail/widgets.py`, `tests/test_widgets.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and this status doc.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` passed with 100 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the tested overlays and purged cached `actionrail` modules after each run.
+- Blockers/risks: no current implementation blocker known; icon state and visible diagnostic/broken-action badges are not implemented yet.
+- Exact next step: extend `SlotRenderState` with icon and diagnostic badge inputs, then render missing-action/missing-icon states without requiring a rail rebuild when visibility is unchanged.
 
 ## Next
 
-1. Refactor rendering toward reusable action/state objects so frequently changing enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
+1. Extend reusable slot render state toward icon and diagnostic badge updates so missing actions, missing icons, and richer badge state can update without rebuilding whole rails where possible.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -318,6 +320,13 @@ Checks already run for the latest safe-start diagnostics fix:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 98 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py` -> all checks passed.
   - `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`: `availability_warning_codes` were `["missing_command","missing_plugin"]`, synthetic missing action reported `missing_action`, and `safe_start("transform_stack")` showed one active overlay at size `[46,214]`.
+- 2026-04-29 slot render-state refactor:
+  - `scripts/actionrail/widgets.py` now resolves action-bearing button display through `SlotRenderState` and `_apply_slot_render_state()`, centralizing label, hotkey badge, tone, tooltip, enabled, and active updates.
+  - Predicate refresh preserves runtime key-label overrides from visible buttons while still applying fresh enabled/active state and action tooltip fallbacks.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 100 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`: automatic tool refresh updated active state in place, clearing selection rebuilt visible buttons to `HE/DK/CK`, and widget size stayed `[46,138]`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond on port `7217`: buttons were `M/T/R/S/K`, current context became `scaleSuperContext`, `K` created 10 keyframes, reload returned one visible `transform_stack`, and size was `[46,214]`.
 
 ## Decisions
 

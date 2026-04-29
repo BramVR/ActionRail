@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import actionrail.widgets as widgets
+from actionrail.actions import create_default_registry
 from actionrail.predicates import PredicateContext
 from actionrail.spec import RailLayout, StackItem, StackSpec
 from actionrail.state import MayaStateSnapshot
@@ -8,6 +9,7 @@ from actionrail.widgets import (
     _button_text,
     _is_item_active,
     _is_item_visible,
+    _slot_render_state,
     refresh_predicate_state,
 )
 
@@ -25,14 +27,29 @@ class FakeStyle:
 
 
 class FakeButton:
-    def __init__(self, slot_id: str, *, active: str = "false", enabled: bool = True) -> None:
+    def __init__(
+        self,
+        slot_id: str,
+        *,
+        label: str = "S",
+        key_label: str = "",
+        tone: str = "neutral",
+        active: str = "false",
+        enabled: bool = True,
+        tooltip: str = "",
+    ) -> None:
         self.properties = {
             "actionRailSlotId": slot_id,
+            "actionRailLabel": label,
+            "actionRailKeyLabel": key_label,
+            "actionRailTone": tone,
             "actionRailActive": active,
         }
         self.enabled = enabled
         self.style_object = FakeStyle()
         self.updated = 0
+        self.text_value = _button_text(label, key_label)
+        self.tooltip_value = tooltip
 
     def property(self, name: str) -> object:
         return self.properties.get(name)
@@ -45,6 +62,18 @@ class FakeButton:
 
     def setEnabled(self, enabled: bool) -> None:  # noqa: N802
         self.enabled = enabled
+
+    def text(self) -> str:
+        return self.text_value
+
+    def setText(self, text: str) -> None:  # noqa: N802
+        self.text_value = text
+
+    def toolTip(self) -> str:  # noqa: N802
+        return self.tooltip_value
+
+    def setToolTip(self, tooltip: str) -> None:  # noqa: N802
+        self.tooltip_value = tooltip
 
     def style(self) -> FakeStyle:
         return self.style_object
@@ -95,6 +124,20 @@ def test_button_text_adds_key_label_on_second_line() -> None:
     assert _button_text("K", "Ctrl+S") == "K\nCtrl+S"
 
 
+def test_slot_render_state_uses_action_tooltip_fallback() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="tooltip_test.set_key",
+        label="K",
+        action="maya.anim.set_key",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.tooltip == "Set keyframe"
+
+
 def test_refresh_predicate_state_updates_enabled_and_active(
     monkeypatch,
 ) -> None:
@@ -129,6 +172,34 @@ def test_refresh_predicate_state_updates_enabled_and_active(
     assert button.property("actionRailActive") == "true"
     assert button.style_object.polished == 1
     assert button.updated == 1
+
+
+def test_refresh_predicate_state_preserves_runtime_key_label(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(widgets, "load", lambda: FakeQt)
+    spec = StackSpec(
+        id="refresh_test",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="refresh_test.set_key",
+                label="K",
+                action="maya.anim.set_key",
+                key_label="S",
+            ),
+        ),
+    )
+    button = FakeButton("refresh_test.set_key", label="K", key_label="F12")
+    root = FakeRoot([button])
+
+    result = refresh_predicate_state(root, spec, registry=object())
+
+    assert result.needs_rebuild is False
+    assert result.refreshed == 0
+    assert button.property("actionRailKeyLabel") == "F12"
+    assert button.text() == "K\nF12"
 
 
 def test_refresh_predicate_state_requests_rebuild_when_visibility_changes(

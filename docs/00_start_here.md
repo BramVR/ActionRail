@@ -40,6 +40,11 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   overlay startup failures. In Maya, the default diagnostics path resolves
   `maya.cmds` automatically, so callers do not need to pass `cmds_module` for
   command/plugin availability warnings.
+- Widget rendering now resolves each action-bearing slot through a reusable
+  `SlotRenderState` and shared apply path, so label, key badge, tone, tooltip,
+  enabled, and active state can update in place without rebuilding the rail when
+  visibility is unchanged. Runtime hotkey badge overrides are preserved during
+  predicate refresh.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -71,7 +76,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Refactor rendering toward reusable action/state objects so enabled, active, icon, tooltip, and badge state can update without rebuilding whole rails where possible.
+1. Continue extending `SlotRenderState` toward icon and diagnostic badge state so broken actions, missing icons, and richer badges can update without rebuilding whole rails where possible.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

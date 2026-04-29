@@ -66,6 +66,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   predicates, and recoverable overlay startup failures. First pass done through
   `actionrail.collect_diagnostics()`, `actionrail.diagnose_spec()`, and
   `actionrail.safe_start()`.
+- Reusable per-slot render state. First pass done through `SlotRenderState`,
+  which centralizes label, hotkey badge, tone, tooltip, enabled, and active
+  updates for action-bearing buttons without rebuilding the rail when
+  visibility is unchanged.
 
 ### Acceptance Criteria
 
@@ -195,9 +199,9 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: refactor rendering toward reusable action/state
-objects so frequently changing enabled, active, icon, tooltip, and badge state
-can update without rebuilding whole rails where possible. Use
+Next implementation slice: extend reusable slot render state toward icon and
+diagnostic badge inputs so missing actions, missing icons, and richer badge
+state can update without rebuilding whole rails where possible. Use
 `docs/04_status.md` as the detailed handoff.
 
 ## Research Backlog
@@ -205,7 +209,7 @@ can update without rebuilding whole rails where possible. Use
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Refactor rendering around action/state objects so frequently changing state can update without full rebuilds.
+1. Extend reusable slot render state toward icon and diagnostic badge updates so frequently changing state can update without full rebuilds.
 2. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
 3. Continue diagnostics toward visible broken-action/missing-icon badges and last-error UI.
 4. Bind Mode, then flyouts, then command rings.

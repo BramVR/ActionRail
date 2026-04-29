@@ -30,6 +30,26 @@ class PredicateRefreshResult:
     rendered_slot_ids: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class SlotRenderState:
+    """Resolved, mutable-at-runtime state for one rendered action slot."""
+
+    label: str
+    key_label: str
+    tone: str
+    tooltip: str
+    enabled: bool
+    active: bool
+
+    @property
+    def text(self) -> str:
+        return _button_text(self.label, self.key_label)
+
+    @property
+    def active_property(self) -> str:
+        return "true" if self.active else "false"
+
+
 class ActionRailRoot:
     """Factory wrapper for the root widget class.
 
@@ -196,24 +216,14 @@ def _build_button(
     context: PredicateContext | None = None,
 ) -> object:
     qt = load()
-    item_context = _item_context(item, registry, context)
-    button = qt.QtWidgets.QPushButton(_button_text(item.label, item.key_label))
+    state = _slot_render_state(item, registry, context)
+    button = qt.QtWidgets.QPushButton(state.text)
     button.setProperty("actionRailRole", "button")
-    button.setProperty("actionRailLabel", item.label)
-    button.setProperty("actionRailKeyLabel", item.key_label)
     button.setProperty("actionRailSlotId", item.id)
-    button.setProperty("actionRailTone", item.tone)
-    is_active = _is_item_active(item, item_context)
-    button.setProperty(
-        "actionRailActive",
-        "true" if is_active else "false",
-    )
+    _apply_slot_render_state(button, state)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
-    if item.tooltip:
-        button.setToolTip(item.tooltip)
-    button.setEnabled(evaluate_predicate(item.enabled_when, item_context))
     button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
 
@@ -271,18 +281,14 @@ def refresh_predicate_state(
         if button is None:
             continue
 
-        item_context = _item_context(item, registry, context)
-        enabled = evaluate_predicate(item.enabled_when, item_context)
-        active = "true" if _is_item_active(item, item_context) else "false"
-
-        if bool(button.isEnabled()) != enabled:
-            button.setEnabled(enabled)
-            refreshed += 1
-
-        if button.property("actionRailActive") != active:
-            button.setProperty("actionRailActive", active)
-            _refresh_button_style(button)
-            refreshed += 1
+        key_label = button.property("actionRailKeyLabel")
+        state = _slot_render_state(
+            item,
+            registry,
+            context,
+            key_label=key_label if isinstance(key_label, str) else None,
+        )
+        refreshed += _apply_slot_render_state(button, state)
 
     return PredicateRefreshResult(
         refreshed=refreshed,
@@ -294,6 +300,111 @@ def refresh_predicate_state(
 
 def _button_text(label: str, key_label: str) -> str:
     return label if not key_label else f"{label}\n{key_label}"
+
+
+def _slot_render_state(
+    item: StackItem,
+    registry: ActionRegistry,
+    context: PredicateContext | None = None,
+    *,
+    key_label: str | None = None,
+) -> SlotRenderState:
+    item_context = _item_context(item, registry, context)
+    return SlotRenderState(
+        label=item.label,
+        key_label=item.key_label if key_label is None else key_label,
+        tone=item.tone,
+        tooltip=_item_tooltip(item, registry),
+        enabled=evaluate_predicate(item.enabled_when, item_context),
+        active=_is_item_active(item, item_context),
+    )
+
+
+def _item_tooltip(item: StackItem, registry: ActionRegistry | None = None) -> str:
+    if item.tooltip:
+        return item.tooltip
+
+    get_action = getattr(registry, "get", None)
+    if get_action is None:
+        return ""
+
+    try:
+        action = get_action(item.action)
+    except Exception:
+        return ""
+
+    tooltip = getattr(action, "tooltip", "")
+    return tooltip if isinstance(tooltip, str) else ""
+
+
+def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
+    refreshed = 0
+    style_needs_refresh = False
+
+    refreshed += _set_button_property(button, "actionRailLabel", state.label)
+    refreshed += _set_button_property(button, "actionRailKeyLabel", state.key_label)
+    tone_changed = _set_button_property(button, "actionRailTone", state.tone)
+    active_changed = _set_button_property(
+        button,
+        "actionRailActive",
+        state.active_property,
+    )
+    refreshed += tone_changed + active_changed
+    style_needs_refresh = bool(tone_changed or active_changed)
+
+    text = getattr(button, "text", None)
+    set_text = getattr(button, "setText", None)
+    if callable(text) and callable(set_text):
+        try:
+            if text() != state.text:
+                set_text(state.text)
+                refreshed += 1
+        except Exception:
+            pass
+
+    tool_tip = getattr(button, "toolTip", None)
+    set_tool_tip = getattr(button, "setToolTip", None)
+    if callable(tool_tip) and callable(set_tool_tip):
+        try:
+            if tool_tip() != state.tooltip:
+                set_tool_tip(state.tooltip)
+                refreshed += 1
+        except Exception:
+            pass
+    elif state.tooltip:
+        with suppress(Exception):
+            button.setToolTip(state.tooltip)
+
+    is_enabled = getattr(button, "isEnabled", None)
+    set_enabled = getattr(button, "setEnabled", None)
+    if callable(is_enabled) and callable(set_enabled):
+        try:
+            if bool(is_enabled()) != state.enabled:
+                set_enabled(state.enabled)
+                refreshed += 1
+        except Exception:
+            pass
+
+    if style_needs_refresh:
+        _refresh_button_style(button)
+
+    return refreshed
+
+
+def _set_button_property(button: object, name: str, value: object) -> int:
+    try:
+        current = button.property(name)
+    except Exception:
+        current = None
+
+    if current == value:
+        return 0
+
+    try:
+        button.setProperty(name, value)
+    except Exception:
+        return 0
+    return 1
 
 
 def _is_item_visible(item: StackItem, context: PredicateContext | None = None) -> bool:
