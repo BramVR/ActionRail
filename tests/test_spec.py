@@ -42,9 +42,11 @@ def test_transform_stack_spec_matches_phase_zero_reference() -> None:
     assert spec.items[3].tone == "neutral"
     assert spec.items[5].tone == "teal"
     assert spec.items[0].tooltip == "Move tool"
+    assert spec.items[1].action == ""
+    assert spec.items[1].tooltip == "Unassigned slot"
     assert spec.items[5].key_label == "S"
     assert spec.items[0].active_when == ""
-    assert spec.items[1].active_when == "maya.tool == move"
+    assert spec.items[1].active_when == ""
     assert spec.items[2].active_when == "maya.tool == rotate"
     assert spec.items[3].active_when == "maya.tool == scale"
 
@@ -52,6 +54,12 @@ def test_transform_stack_spec_matches_phase_zero_reference() -> None:
 def test_transform_stack_actions_are_registered() -> None:
     spec = get_example_spec()
 
+    assert action_ids(spec) == (
+        "maya.tool.move",
+        "maya.tool.rotate",
+        "maya.tool.scale",
+        "maya.anim.set_key",
+    )
     validate_action_ids(action_ids(spec), create_default_registry())
 
 
@@ -119,6 +127,19 @@ def test_parse_stack_spec_supports_optional_icon_id() -> None:
     )
 
     assert spec.items[0].icon == "lucide.key"
+
+
+def test_parse_stack_spec_allows_unassigned_placeholder_slot() -> None:
+    spec = parse_stack_spec(
+        {
+            "id": "placeholder",
+            "anchor": "viewport.left.center",
+            "items": [{"type": "button", "label": "T", "tooltip": "Unassigned slot"}],
+        }
+    )
+
+    assert spec.items[0].action == ""
+    assert action_ids(spec) == ()
 
 
 def test_stack_item_preserves_legacy_positional_tone_argument() -> None:

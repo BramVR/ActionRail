@@ -38,6 +38,9 @@ class ActionRailTheme:
     button_active_border: str = "#a9839e"
     button_active_background: str = "#8b667f"
     button_active_hover_background: str = "#9c7390"
+    button_disabled_background: str = "#54545b"
+    button_disabled_border: str = "#5d5d65"
+    button_disabled_color: str = "#8e8e98"
     button_font_size: int = 13
     button_font_weight: int = 700
     tones: tuple[tuple[str, ToneStyle], ...] = (
@@ -107,6 +110,11 @@ QPushButton[actionRailRole="button"]:hover {{
 }}
 QPushButton[actionRailRole="button"]:pressed {{
     background: {theme.button_pressed_background};
+}}
+QPushButton[actionRailRole="button"]:disabled {{
+    background: {theme.button_disabled_background};
+    border-color: {theme.button_disabled_border};
+    color: {theme.button_disabled_color};
 }}
 """
 

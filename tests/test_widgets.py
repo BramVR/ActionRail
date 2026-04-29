@@ -46,6 +46,7 @@ class FakeButton:
             "actionRailIconPath": "",
             "actionRailTone": tone,
             "actionRailActive": active,
+            "actionRailLocked": "false",
             "actionRailDiagnosticCode": "",
             "actionRailDiagnosticSeverity": "",
             "actionRailDiagnosticBadge": "",
@@ -225,6 +226,26 @@ def test_slot_render_state_marks_missing_action_as_error() -> None:
     assert state.diagnostic_severity == "error"
     assert state.text == "X\n!"
     assert "maya.missing.action" in state.tooltip
+
+
+def test_slot_render_state_locks_unassigned_slot_without_error() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="placeholder.empty",
+        label="T",
+        tooltip="Unassigned slot",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.locked is True
+    assert state.enabled is False
+    assert state.active is False
+    assert state.diagnostic_code == ""
+    assert state.diagnostic_severity == ""
+    assert state.text == "T"
+    assert state.tooltip == "Unassigned slot"
 
 
 def test_slot_render_state_marks_missing_icon_as_warning() -> None:

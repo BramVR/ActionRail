@@ -31,6 +31,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - `ViewportOverlayHost.refresh_state()` now updates predicate-driven enabled/active state after creation and rebuilds the rail when `visible_when` changes, without requiring `actionrail.reload()`.
 - Visible overlay hosts now run a host-owned Qt timer that automatically calls the predicate refresh path, so tool and selection state changes update the rail without manual refresh calls.
 - Active slot color is now generic theme state, not a hard-coded `tone` on the demo `S` button. Built-in tool slots declare `active_when`; one-shot macro buttons such as Set Key stay clickable without persistent active state.
+- Slots may intentionally omit `action`; these placeholder slots render disabled/locked, are not clickable, and are skipped by slot hotkey publishing.
 - The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
 - The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - Maya-native menu and shelf toggle entry points now install idempotently and call `actionrail.toggle_default()` to show/hide the default `transform_stack` preset.

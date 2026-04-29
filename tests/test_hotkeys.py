@@ -151,7 +151,6 @@ def test_publish_preset_slots_skips_spacers() -> None:
 
     assert [command.target_id for command in published] == [
         "transform_stack.move",
-        "transform_stack.translate",
         "transform_stack.rotate",
         "transform_stack.scale",
         "transform_stack.set_key",

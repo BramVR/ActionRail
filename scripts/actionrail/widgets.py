@@ -43,6 +43,7 @@ class SlotRenderState:
     tooltip: str
     enabled: bool
     active: bool
+    locked: bool = False
     diagnostic_code: str = ""
     diagnostic_severity: str = ""
     diagnostic_badge: str = ""
@@ -229,8 +230,11 @@ def _build_button(
     _apply_slot_render_state(button, state)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
-    button.setCursor(qt.QtCore.Qt.PointingHandCursor)
-    button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
+    button.setCursor(
+        qt.QtCore.Qt.PointingHandCursor if item.action else qt.QtCore.Qt.ArrowCursor
+    )
+    if item.action:
+        button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
     return button
 
 
@@ -331,6 +335,7 @@ def _slot_render_state(
 ) -> SlotRenderState:
     item_context = _item_context(item, registry, context)
     diagnostic = _slot_diagnostic(item, registry, item_context)
+    locked = not bool(item.action)
     return SlotRenderState(
         label=item.label,
         key_label=item.key_label if key_label is None else key_label,
@@ -338,9 +343,11 @@ def _slot_render_state(
         icon_path=str(resolve_icon_path(item.icon) or "") if item.icon else "",
         tone=item.tone,
         tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
-        enabled=evaluate_predicate(item.enabled_when, item_context)
+        enabled=not locked
+        and evaluate_predicate(item.enabled_when, item_context)
         and not _diagnostic_blocks_enabled(diagnostic),
-        active=_is_item_active(item, item_context),
+        active=not locked and _is_item_active(item, item_context),
+        locked=locked,
         diagnostic_code=diagnostic[0],
         diagnostic_severity=diagnostic[1],
         diagnostic_badge=diagnostic[2],
@@ -453,6 +460,11 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
         "actionRailActive",
         state.active_property,
     )
+    locked_changed = _set_button_property(
+        button,
+        "actionRailLocked",
+        "true" if state.locked else "false",
+    )
     diagnostic_code_changed = _set_button_property(
         button,
         "actionRailDiagnosticCode",
@@ -468,11 +480,12 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
         "actionRailDiagnosticBadge",
         state.diagnostic_badge,
     )
-    refreshed += tone_changed + active_changed
+    refreshed += tone_changed + active_changed + locked_changed
     refreshed += diagnostic_code_changed + diagnostic_severity_changed
     style_needs_refresh = bool(
         tone_changed
         or active_changed
+        or locked_changed
         or diagnostic_code_changed
         or diagnostic_severity_changed
     )
