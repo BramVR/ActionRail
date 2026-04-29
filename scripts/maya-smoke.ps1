@@ -111,7 +111,7 @@ function Resolve-SmokeScripts {
 }
 
 function Get-SessionStatus {
-    return Invoke-SessiondJson @("status", "--state-dir", $StateDir, "--json")
+    return Invoke-SessiondJson @("status", "--state-dir", $StateDir, "--json") -AllowNonZeroExit
 }
 
 function Start-SessionIfNeeded {

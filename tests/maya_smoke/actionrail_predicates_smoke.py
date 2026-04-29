@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 __args__ = globals().get("__args__", {})
@@ -20,6 +21,31 @@ from actionrail.spec import parse_stack_spec  # noqa: E402
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
+
+
+def process_until(predicate, *, timeout: float = 2.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        app.processEvents()
+        cmds.refresh(force=True)
+        if predicate():
+            return True
+        time.sleep(0.05)
+    app.processEvents()
+    cmds.refresh(force=True)
+    return bool(predicate())
+
+
+def current_button_state(widget):
+    buttons = widget.findChildren(QtWidgets.QPushButton)
+    return buttons, {
+        str(button.property("actionRailSlotId")): {
+            "active": button.property("actionRailActive"),
+            "enabled": bool(button.isEnabled()),
+            "text": button.text(),
+        }
+        for button in buttons
+    }
 
 output_path = Path(
     __args__.get(
@@ -93,15 +119,7 @@ cmds.refresh(force=True)
 widget = host.widget
 pixmap = widget.grab()
 saved = pixmap.save(str(output_path), "PNG")
-buttons = widget.findChildren(QtWidgets.QPushButton)
-button_state = {
-    str(button.property("actionRailSlotId")): {
-        "active": button.property("actionRailActive"),
-        "enabled": bool(button.isEnabled()),
-        "text": button.text(),
-    }
-    for button in buttons
-}
+buttons, button_state = current_button_state(widget)
 
 result = {
     "button_state": button_state,
@@ -133,19 +151,16 @@ if not result["saved"]:
     raise AssertionError(f"Failed to save predicate screenshot: {result}")
 
 cmds.setToolTo("moveSuperContext")
-active_refresh = host.refresh_state()
-app.processEvents()
-move_button_state = {
-    str(button.property("actionRailSlotId")): {
-        "active": button.property("actionRailActive"),
-        "enabled": bool(button.isEnabled()),
-        "text": button.text(),
-    }
-    for button in host.widget.findChildren(QtWidgets.QPushButton)
-}
 
-if active_refresh.needs_rebuild:
-    raise AssertionError(f"Tool-only refresh unexpectedly required rebuild: {result}")
+if not process_until(
+    lambda: current_button_state(host.widget)[1][
+        "predicates.visible_selected_active_scale"
+    ]["active"]
+    == "false",
+):
+    raise AssertionError("Timer refresh did not clear scale active state.")
+
+_, move_button_state = current_button_state(host.widget)
 if move_button_state["predicates.visible_selected_active_scale"]["active"] != "false":
     raise AssertionError(f"Tool refresh did not clear scale active state: {move_button_state}")
 if move_button_state["predicates.enabled_existing_command"]["active"] != "false":
@@ -154,22 +169,18 @@ if move_button_state["predicates.enabled_existing_command"]["active"] != "false"
     )
 
 cmds.select(clear=True)
-visibility_refresh = host.refresh_state()
-app.processEvents()
-widget = host.widget
-visibility_buttons = widget.findChildren(QtWidgets.QPushButton)
-visibility_text = [button.text() for button in visibility_buttons]
-visibility_state = {
-    str(button.property("actionRailSlotId")): {
-        "active": button.property("actionRailActive"),
-        "enabled": bool(button.isEnabled()),
-        "text": button.text(),
-    }
-    for button in visibility_buttons
-}
+if not process_until(
+    lambda: [
+        button.text() for button in host.widget.findChildren(QtWidgets.QPushButton)
+    ]
+    == ["HE", "DK", "CK"],
+):
+    raise AssertionError("Timer refresh did not rebuild visible buttons after selection changed.")
 
-if not visibility_refresh.needs_rebuild:
-    raise AssertionError(f"Selection refresh did not request a visibility rebuild: {result}")
+widget = host.widget
+visibility_buttons, visibility_state = current_button_state(widget)
+visibility_text = [button.text() for button in visibility_buttons]
+
 if visibility_text != ["HE", "DK", "CK"]:
     raise AssertionError(f"Selection refresh did not rebuild visible buttons: {visibility_state}")
 if visibility_state["predicates.disabled_missing_command"]["enabled"] is not False:
@@ -179,14 +190,12 @@ if visibility_state["predicates.enabled_existing_command"]["enabled"] is not Tru
 
 result["after_tool_refresh"] = {
     "button_state": move_button_state,
-    "needs_rebuild": bool(active_refresh.needs_rebuild),
-    "refreshed": active_refresh.refreshed,
+    "automatic": True,
 }
 result["after_selection_refresh"] = {
     "button_state": visibility_state,
     "button_text": visibility_text,
-    "needs_rebuild": bool(visibility_refresh.needs_rebuild),
-    "refreshed": visibility_refresh.refreshed,
+    "automatic": True,
     "size": [widget.width(), widget.height()],
 }
 

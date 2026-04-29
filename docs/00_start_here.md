@@ -22,7 +22,6 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 
 ## Current State
 
-- Research report exists: `MAYA_UI_FRAMEWORK_REPORT.md`.
 - Local agent guidance exists: `AGENTS.MD`.
 - Phase 0 prototype exists and has been verified in MayaSessiond.
 - Phase 1 declarative MVP is in progress.
@@ -30,6 +29,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Runtime-command sync helpers now prune stale ActionRail action and preset-slot commands when ids are renamed or removed.
 - Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time using the overlay's resolved model panel for `active.panel` and `active.camera`.
 - `ViewportOverlayHost.refresh_state()` now updates predicate-driven enabled/active state after creation and rebuilds the rail when `visible_when` changes, without requiring `actionrail.reload()`.
+- Visible overlay hosts now run a host-owned Qt timer that automatically calls the predicate refresh path, so tool and selection state changes update the rail without manual refresh calls.
 - The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
 - The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
 - Maya-native menu and shelf toggle entry points now install idempotently and call `actionrail.toggle_default()` to show/hide the default `transform_stack` preset.
@@ -47,7 +47,7 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 7. `docs/05_tech_stack.md`
 8. `docs/06_wow_style_customization.md` when planning Edit Mode, hotkeys, flyouts, rings, or profile layers.
 9. `docs/07_missing_features_research.md` when planning missing features or prioritizing the next roadmap slice.
-10. `MAYA_UI_FRAMEWORK_REPORT.md` when deeper context is needed.
+10. `docs/01_architecture.md` and `docs/05_tech_stack.md` when deeper runtime or stack context is needed.
 
 ## Product Decision
 
@@ -65,7 +65,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+1. Add safe-mode diagnostics for broken presets/actions and missing commands/plugins before starting broad authoring UI.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

@@ -6,7 +6,7 @@ import pytest
 
 import actionrail.overlay as overlay
 from actionrail.overlay import _anchored_position, _viewport_area_widget, active_model_panel
-from actionrail.spec import RailLayout, StackSpec
+from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
 class FakeCmds:
@@ -230,6 +230,185 @@ def test_overlay_uses_floating_maya_window_parent(monkeypatch: pytest.MonkeyPatc
         ("viewport", FakeResizeEventFilter.object),
         ("maya_window", FakeResizeEventFilter.object),
     ]
+
+
+def test_overlay_starts_predicate_refresh_timer_and_stops_on_close(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {"refreshes": 0}
+
+    class FakeSize:
+        def __init__(self, width: int, height: int) -> None:
+            self._width = width
+            self._height = height
+
+        def width(self) -> int:
+            return self._width
+
+        def height(self) -> int:
+            return self._height
+
+    class FakeRect(FakeSize):
+        pass
+
+    class FakeSignal:
+        def __init__(self) -> None:
+            self.callback = None
+
+        def connect(self, callback: object) -> None:
+            self.callback = callback
+
+        def emit(self) -> None:
+            assert self.callback is not None
+            self.callback()
+
+    class FakeTimer:
+        instances: list[FakeTimer] = []
+
+        def __init__(self) -> None:
+            self.timeout = FakeSignal()
+            self.interval = 0
+            self.timer_type = None
+            self.started = False
+            self.stopped = False
+            self.deleted = False
+            FakeTimer.instances.append(self)
+
+        def setInterval(self, interval: int) -> None:  # noqa: N802
+            self.interval = interval
+
+        def setTimerType(self, timer_type: object) -> None:  # noqa: N802
+            self.timer_type = timer_type
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            self.stopped = True
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeQt:
+        class QtCore:
+            class Qt:
+                Widget = 0
+                CoarseTimer = 1
+
+            QTimer = FakeTimer
+
+        class QtWidgets:
+            QWidget = object
+
+    class FakeWidget:
+        def __init__(self) -> None:
+            self.visible = False
+            self.deleted = False
+
+        def setObjectName(self, name: str) -> None:  # noqa: N802
+            captured["object_name"] = name
+
+        def setParent(self, parent: object | None) -> None:  # noqa: N802
+            captured["parent"] = parent
+
+        def setWindowFlags(self, flags: object) -> None:  # noqa: N802
+            captured["window_flags"] = flags
+
+        def hide(self) -> None:
+            self.visible = False
+
+        def show(self) -> None:
+            self.visible = True
+
+        def raise_(self) -> None:
+            captured["raised"] = True
+
+        def isVisible(self) -> bool:  # noqa: N802
+            return self.visible
+
+        def sizeHint(self) -> FakeSize:  # noqa: N802
+            return FakeSize(46, 138)
+
+        def move(self, x_pos: int, y_pos: int) -> None:
+            captured["move"] = (x_pos, y_pos)
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeParent:
+        def rect(self) -> FakeRect:
+            return FakeRect(800, 600)
+
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            captured["installed_filter"] = event_filter
+
+        def removeEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            captured["removed_filter"] = event_filter
+
+        def objectName(self) -> str:  # noqa: N802
+            return ""
+
+        def findChildren(self, _widget_type: object) -> list[object]:  # noqa: N802
+            return []
+
+    class FakeResizeEventFilter:
+        object = object()
+
+        def __init__(self, host: object) -> None:
+            captured["resize_host"] = host
+
+    def fake_refresh_predicate_state(*_args: object, **_kwargs: object) -> object:
+        captured["refreshes"] = int(captured["refreshes"]) + 1
+        return overlay.PredicateRefreshResult(
+            refreshed=1,
+            needs_rebuild=False,
+            visible_slot_ids=(),
+            rendered_slot_ids=(),
+        )
+
+    monkeypatch.setattr(overlay, "load", lambda: FakeQt)
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: object())
+    monkeypatch.setattr(overlay, "build_transform_stack", lambda *_args, **_kwargs: FakeWidget())
+    monkeypatch.setattr(overlay, "refresh_predicate_state", fake_refresh_predicate_state)
+    monkeypatch.setattr(overlay, "_ResizeEventFilter", FakeResizeEventFilter)
+
+    cmds = FakeCmds(
+        focused="modelPanel2",
+        visible_panels=["modelPanel2"],
+        model_panels=["modelPanel2"],
+    )
+    spec = StackSpec(
+        id="timer_refresh_regression",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="timer_refresh.button",
+                label="TR",
+                enabled_when="selection.count > 0",
+            ),
+        ),
+    )
+
+    host = overlay.ViewportOverlayHost(
+        spec,
+        parent=FakeParent(),
+        registry=object(),
+        cmds_module=cmds,
+        predicate_refresh_interval_ms=500,
+    )
+
+    host.show()
+    timer = FakeTimer.instances[-1]
+    timer.timeout.emit()
+    host.close()
+
+    assert timer.interval == 500
+    assert timer.timer_type == 1
+    assert timer.started is True
+    assert captured["refreshes"] == 1
+    assert timer.stopped is True
+    assert timer.deleted is True
 
 
 def test_viewport_area_widget_prefers_large_inset_panel_child() -> None:

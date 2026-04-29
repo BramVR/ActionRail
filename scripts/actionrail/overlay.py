@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Any
 
 from .actions import ActionRegistry, create_default_registry
@@ -18,6 +19,7 @@ from .widgets import (
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
 DEFAULT_MARGIN = 12
+PREDICATE_REFRESH_INTERVAL_MS = 250
 
 
 def _require_cmds(cmds_module: Any | None = None) -> Any:
@@ -304,6 +306,7 @@ class ViewportOverlayHost:
         registry: ActionRegistry | None = None,
         cmds_module: Any | None = None,
         margin: int = DEFAULT_MARGIN,
+        predicate_refresh_interval_ms: int = PREDICATE_REFRESH_INTERVAL_MS,
     ) -> None:
         self.qt = load()
         self.cmds = _require_cmds(cmds_module)
@@ -313,12 +316,14 @@ class ViewportOverlayHost:
         self.window_parent = maya_main_window(self.qt)
         self.registry = registry or create_default_registry()
         self.margin = margin
+        self.predicate_refresh_interval_ms = predicate_refresh_interval_ms
         cleanup_overlay_widgets(self.parent, spec.id, self.qt)
         self._floating = self.window_parent is not None
         self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
         self._filter_targets: list[Any] = []
+        self._predicate_refresh_timer: Any | None = None
         self._install_event_filter(self.parent)
         self._install_event_filter(self.window_parent)
 
@@ -349,6 +354,7 @@ class ViewportOverlayHost:
         self._filter_targets.append(target)
 
     def show(self) -> None:
+        self._start_predicate_refresh_timer()
         self.position()
         self.widget.show()
         self.widget.raise_()
@@ -381,6 +387,8 @@ class ViewportOverlayHost:
             self.widget.move(x_pos, y_pos)
 
     def close(self) -> None:
+        self._stop_predicate_refresh_timer()
+
         if self._resize_filter is not None:
             for target in self._filter_targets:
                 if target is not None and _qt_widget_is_valid(target):
@@ -396,6 +404,7 @@ class ViewportOverlayHost:
         self.window_parent = None
         self._filter_targets = []
         self._resize_filter = None
+        self._predicate_refresh_timer = None
 
     def refresh_state(self) -> PredicateRefreshResult:
         """Refresh predicate-driven button state from current Maya state."""
@@ -435,6 +444,56 @@ class ViewportOverlayHost:
         if self.widget is None:
             return 0
         return set_slot_key_label(self.widget, slot_id, key_label)
+
+    def _start_predicate_refresh_timer(self) -> None:
+        if self.predicate_refresh_interval_ms <= 0 or self._predicate_refresh_timer is not None:
+            return
+        if not _spec_uses_predicates(self.spec):
+            return
+
+        timer_class = getattr(self.qt.QtCore, "QTimer", None)
+        if timer_class is None:
+            return
+
+        timer = timer_class()
+        timer.setInterval(self.predicate_refresh_interval_ms)
+        coarse_timer = getattr(self.qt.QtCore.Qt, "CoarseTimer", None)
+        if coarse_timer is not None and hasattr(timer, "setTimerType"):
+            timer.setTimerType(coarse_timer)
+        timer.timeout.connect(self._refresh_predicates_from_timer)
+        timer.start()
+        self._predicate_refresh_timer = timer
+
+    def _stop_predicate_refresh_timer(self) -> None:
+        timer = self._predicate_refresh_timer
+        if timer is None:
+            return
+
+        with suppress(Exception):
+            timer.stop()
+        with suppress(Exception):
+            timer.deleteLater()
+        self._predicate_refresh_timer = None
+
+    def _refresh_predicates_from_timer(self) -> None:
+        if self.widget is None or not _qt_widget_is_valid(self.widget):
+            self._stop_predicate_refresh_timer()
+            return
+
+        try:
+            if not self.widget.isVisible():
+                return
+            self.refresh_state()
+        except Exception:
+            # A failed Maya/Qt callback should not keep firing indefinitely.
+            self._stop_predicate_refresh_timer()
+
+
+def _spec_uses_predicates(spec: StackSpec) -> bool:
+    return any(
+        bool(item.visible_when.strip() or item.enabled_when.strip() or item.active_when.strip())
+        for item in spec.items
+    )
 
 
 def _anchored_position(

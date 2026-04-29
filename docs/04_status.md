@@ -8,13 +8,13 @@ read_when:
 
 # Status
 
-Last updated: 2026-04-28
+Last updated: 2026-04-29
 
 ## Done
 
 - Reference images were collected in local `research/`; that folder is now ignored by Git.
 - README/documentation images live in `docs/assets/`.
-- Architecture/report written in `MAYA_UI_FRAMEWORK_REPORT.md`.
+- Architecture is documented in `docs/01_architecture.md` and the stack decision in `docs/05_tech_stack.md`.
 - Local `AGENTS.MD` updated with ActionRail rules and MayaSessiond workflow.
 - Product name selected and docs renamed to ActionRail.
 - Agent onboarding docs created:
@@ -61,6 +61,7 @@ Last updated: 2026-04-28
   - Overlay anchoring now prefers the inner `modelPanel` viewport-area widget instead of the outer model-panel container.
   - Overlay creation now removes stale ActionRail Qt widgets for the same preset before creating a replacement rail, preventing duplicate rails after reload/show cycles or interrupted live development.
   - The visible rail now uses a small frameless Maya-owned tool window positioned from the resolved viewport geometry instead of being parented directly under the OpenGL viewport widget, avoiding model-panel toolbar repaint ghosts without covering the viewport.
+  - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -74,6 +75,7 @@ Last updated: 2026-04-28
   - The wrapper uses repo-local state, starts Sessiond only when needed, passes the repo module path and absolute smoke-script directory, discovers MCP tools before running, and fails on either MCP-call or script-payload failure.
   - `tests/maya_smoke/actionrail_cleanup_state.py` runs before and after each wrapper-selected smoke to close runtime overlays, close smoke-owned hosts, remove stale ActionRail Qt widgets, and reset the Maya scene.
   - The wrapper validates that `script.execute` returned a payload for the requested script and retries transient stale-payload or JSON transport failures.
+  - The wrapper now treats a stopped Sessiond status response as a valid startable state instead of aborting before launch.
   - `-Script all` runs all `tests/maya_smoke/*_smoke.py`; individual script names can be passed with or without `.py`.
 - Test/docs hardening:
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
@@ -100,7 +102,7 @@ Last updated: 2026-04-28
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: add automatic event/timer-driven predicate refresh after the manual `ViewportOverlayHost.refresh_state()` path has more runtime mileage.
+2. First recommended coding slice: add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -113,18 +115,18 @@ Checks already run for the latest smoke wrapper slice:
 
 ## Latest Handoff
 
-- Task goal completed: fixed `scripts/maya-smoke.ps1 -Script all` so smoke scripts are isolated in the shared Maya process.
-- Files changed: `scripts/maya-smoke.ps1`, `tests/maya_smoke/actionrail_cleanup_state.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/03_maya_sessiond_workflow.md`, and this status doc.
-- Checks run: PowerShell syntax parse passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` passed through live MayaSessiond `script.execute`; local pytest and ruff passed.
-- Current live state: MayaSessiond is running on port `7217`; the phase0 smoke closed its overlay at the end.
-- Blockers/risks: automatic timer/scriptJob predicate refresh is not implemented yet.
-- Exact next step: add automatic event/timer-driven predicate refresh after the manual `ViewportOverlayHost.refresh_state()` path has more runtime mileage.
+- Task goal completed: added timer-driven automatic predicate refresh for visible overlay hosts and updated the predicate Maya smoke to verify automatic tool/selection refresh.
+- Files changed: `scripts/actionrail/overlay.py`, `scripts/maya-smoke.ps1`, `tests/test_overlay.py`, `tests/maya_smoke/actionrail_predicates_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, `docs/07_missing_features_research.md`, and this status doc.
+- Checks run: PowerShell syntax parse passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` started MayaSessiond on port `7217` and passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live daemon after the predicate-only timer refinement; local pytest and ruff passed.
+- Current live state: MayaSessiond is running on port `7217`; the predicate smoke cleanup closed its overlay at the end.
+- Blockers/risks: no current implementation blocker known; next diagnostics work should define how broken presets and missing command/plugin state are surfaced.
+- Exact next step: add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
 
 ## Next
 
-1. Add automatic event/timer-driven predicate refresh after the manual path has more runtime mileage.
+1. Add safe-mode diagnostics for broken presets/actions, missing commands/plugins, and recoverable overlay startup failures.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
-3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, diagnostics, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
+3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
 ## Blockers
 
@@ -290,6 +292,15 @@ Checks already run for the latest smoke wrapper slice:
 - 2026-04-28 smoke wrapper all-mode isolation fix:
   - PowerShell syntax parse passed for `scripts\\maya-smoke.ps1`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` passed against the already-running MayaSessiond on port `7217`: tool discovery succeeded, cleanup ran before and after each smoke, and all 9 `*_smoke.py` scripts passed through `script.execute`.
+- 2026-04-29 automatic predicate refresh:
+  - `scripts/actionrail/overlay.py` now starts a host-owned Qt timer when an overlay is shown, calls the existing `ViewportOverlayHost.refresh_state()` path while the widget is visible, and stops/deletes the timer during host cleanup.
+  - `tests/maya_smoke/actionrail_predicates_smoke.py` now waits for automatic timer refresh after tool and selection changes instead of calling `host.refresh_state()` manually.
+  - `scripts/maya-smoke.ps1` now accepts nonzero stopped-status output as a startable state, allowing the wrapper to launch MayaSessiond from a stopped repo state.
+  - PowerShell syntax parse passed for `scripts\\maya-smoke.ps1`.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 89 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_predicates_smoke.py` started MayaSessiond on port `7217`, discovered MCP tools, and passed through `script.execute`: initial buttons were `VS/DK/CK`; automatic timer refresh cleared active state after switching from scale to move; automatic timer refresh rebuilt visible buttons to `HE/DK/CK` after clearing selection; widget size stayed `[46, 138]`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live daemon after refining the timer to start only for specs with predicate fields.
 
 ## Decisions
 

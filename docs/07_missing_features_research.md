@@ -21,11 +21,19 @@ ActionRail has a solid MVP base:
 - Built-in transform and keyframe actions.
 - Runtime-command and nameCommand publishing for Maya hotkeys.
 - Conflict-aware hotkey assignment helpers.
+- Safe predicate evaluation and automatic timer-driven refresh for visible
+  overlay hosts.
 - Pure Python tests and MayaSessiond smoke coverage.
 
-The main gap is that the UI is still mostly static. The next work should make
-rails stateful, bindable, authorable, recoverable, and useful for more Maya
-workflows than the current transform stack.
+The main gap is that the UI is still not authorable or diagnostic enough for
+artists. The next work should make rails recoverable, explain broken presets or
+missing commands clearly, then add narrow authoring workflows beyond the current
+transform stack.
+
+2026-04-29 status note: safe predicate evaluation, live predicate refresh,
+hotkey label sync, shelf/menu toggles, and the reusable smoke wrapper are now
+implemented. The sections below remain useful research context; the active
+backlog starts with safe mode and diagnostics.
 
 ## Highest Priority Gaps
 
@@ -317,19 +325,17 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Add shelf/menu toggle, safe mode, diagnostics, and a reusable Maya smoke
-   wrapper.
-2. Add automatic event/timer-driven predicate refresh now that the manual
-   `ViewportOverlayHost.refresh_state()` path exists.
-3. Refactor rendering around action/state objects so buttons can update without
+1. Add safe mode and diagnostics for broken presets, missing actions, missing
+   commands/plugins, and recoverable overlay startup failures.
+2. Refactor rendering around action/state objects so buttons can update without
    full rebuilds.
-4. Build the icon pipeline and first icon-backed rail.
-5. Implement narrow Quick Create: template, action picker, collapsible edge-tab
+3. Build the icon pipeline and first icon-backed rail.
+4. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.
-6. Add Bind Mode.
-7. Add flyouts.
-8. Add command rings.
-9. Add profile layers: built-in, studio locked, project, scene/asset, user
+5. Add Bind Mode.
+6. Add flyouts.
+7. Add command rings.
+8. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-10. Add marking-menu/hotbox export.
-11. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+9. Add marking-menu/hotbox export.
+10. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
