@@ -39,10 +39,13 @@ def test_transform_stack_spec_matches_phase_zero_reference() -> None:
         "spacer",
         "button",
     ]
-    assert spec.items[3].tone == "pink"
+    assert spec.items[3].tone == "neutral"
     assert spec.items[5].tone == "teal"
     assert spec.items[0].tooltip == "Move tool"
     assert spec.items[5].key_label == "S"
+    assert spec.items[0].active_when == "maya.tool == move"
+    assert spec.items[1].active_when == "maya.tool == move"
+    assert spec.items[2].active_when == "maya.tool == rotate"
     assert spec.items[3].active_when == "maya.tool == scale"
 
 
@@ -72,6 +75,11 @@ def test_horizontal_rail_loads_from_json() -> None:
     assert spec.layout.offset == (0, -24)
     assert spec.layout.opacity == 0.92
     assert [item.key_label for item in spec.items if item.key_label] == ["W", "E", "R", "S"]
+    assert [item.active_when for item in spec.items if item.type == "toolButton"] == [
+        "maya.tool == move",
+        "maya.tool == rotate",
+        "maya.tool == scale",
+    ]
     assert action_ids(spec) == (
         "maya.tool.move",
         "maya.tool.rotate",

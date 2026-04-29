@@ -85,6 +85,8 @@ MVP widgets:
 
 Widgets must have stable dimensions. Hover/active/disabled states must not shift layout.
 
+State belongs to slots, not to a specific built-in button. A user-authored slot may be a persistent tool, a one-shot macro, a disabled-until-valid command, a locked studio control, a flyout, or a command ring. Presets declare state predicates such as `active_when`, `enabled_when`, and `visible_when`; themes decide how those states render. For example, a scale slot can declare `active_when: "maya.tool == scale"`, while a Set Key macro has no `active_when` because clicking it performs one immediate action.
+
 Planned widgets after the reusable rail schema:
 
 - `Rail`: configurable bar with rows, columns, orientation, scale, opacity, and lock state.
@@ -137,17 +139,19 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
     "locked": true
   },
   "items": [
-    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move"},
-    {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "action": "maya.tool.translate"},
-    {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate"},
-    {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "tone": "pink"},
+    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move", "active_when": "maya.tool == move"},
+    {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "action": "maya.tool.translate", "active_when": "maya.tool == move"},
+    {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate", "active_when": "maya.tool == rotate"},
+    {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "active_when": "maya.tool == scale"},
     {"type": "spacer", "id": "transform_stack.gap", "size": 14},
     {"type": "button", "id": "transform_stack.set_key", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "key_label": "S"}
   ]
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Later phases should evolve the public naming toward user-authored rail/slot data:
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true.
+
+Later phases should evolve the public naming toward user-authored rail/slot data:
 
 ```json
 {
@@ -167,6 +171,14 @@ The schema is still named `StackSpec` in code for compatibility, but current pre
       "label": "K",
       "action": "maya.anim.set_key",
       "hotkey": "S"
+    },
+    {
+      "id": "scale_tool",
+      "type": "button",
+      "label": "S",
+      "action": "maya.tool.scale",
+      "hotkey": "R",
+      "active_when": "maya.tool == scale"
     }
   ]
 }

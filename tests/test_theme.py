@@ -29,8 +29,11 @@ def test_default_qss_preserves_reference_tones() -> None:
 
     assert "min-width: 32px;" in qss
     assert "background: #666670;" in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss
+    assert qss.index('[actionRailTone="pink"]') < qss.index('[actionRailActive="true"]')
     assert 'QPushButton[actionRailTone="pink"]' in qss
     assert "background: #8b667f;" in qss
+    assert "background: #9c7390;" in qss
     assert 'QPushButton[actionRailTone="teal"]' in qss
     assert "color: #e9fffb;" in qss
     assert qss == STYLE_SHEET

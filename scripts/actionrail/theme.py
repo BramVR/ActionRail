@@ -35,8 +35,9 @@ class ActionRailTheme:
     button_hover_background: str = "#74747e"
     button_hover_border: str = "#888894"
     button_pressed_background: str = "#555560"
-    button_active_border: str = "#d8d8df"
-    button_active_background: str = "#767680"
+    button_active_border: str = "#a9839e"
+    button_active_background: str = "#8b667f"
+    button_active_hover_background: str = "#9c7390"
     button_font_size: int = 13
     button_font_weight: int = 700
     tones: tuple[tuple[str, ToneStyle], ...] = (
@@ -107,10 +108,6 @@ QPushButton[actionRailRole="button"]:hover {{
 QPushButton[actionRailRole="button"]:pressed {{
     background: {theme.button_pressed_background};
 }}
-QPushButton[actionRailRole="button"][actionRailActive="true"] {{
-    background: {theme.button_active_background};
-    border-color: {theme.button_active_border};
-}}
 """
 
     for tone_name, tone in theme.tones:
@@ -124,14 +121,21 @@ QPushButton[actionRailTone="{tone_name}"]:hover {{
 }}
 """
 
-    qss += """QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="warning"] {
+    qss += f"""QPushButton[actionRailRole="button"][actionRailActive="true"] {{
+    background: {theme.button_active_background};
+    border-color: {theme.button_active_border};
+}}
+QPushButton[actionRailRole="button"][actionRailActive="true"]:hover {{
+    background: {theme.button_active_hover_background};
+}}
+QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="warning"] {{
     border-color: #f0c45c;
-}
-QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="error"] {
+}}
+QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="error"] {{
     background: #724c52;
     border-color: #f06f78;
     color: #fff1f2;
-}
+}}
 """
 
     return qss

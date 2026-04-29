@@ -23,7 +23,7 @@ Goal: prove the reference transform stack can run in Maya as a clickable PySide6
    resolved.
 5. Add hard-coded reference stack:
    - `M`, `T`, `R`, `S` grouped vertically.
-   - `S` pink active/accent state.
+   - active tool buttons use the generic active/accent theme state.
    - separate teal `K` button below.
 6. Bind actions:
    - move/translate tool
@@ -70,6 +70,8 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   which centralizes label, hotkey badge, tone, tooltip, enabled, and active
   updates for action-bearing buttons without rebuilding the rail when
   visibility is unchanged.
+- Active color is generic theme state. Presets should use `active_when` for
+  persistent buttons; one-shot macro buttons should omit it.
 - Icon and diagnostic badge inputs for `SlotRenderState`. First pass done for
   optional `icon` ids, manifest path lookup, visible missing-action error
   badges, visible missing-icon warning badges, and matching diagnostics.

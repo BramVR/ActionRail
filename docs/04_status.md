@@ -35,7 +35,7 @@ Last updated: 2026-04-29
 - `docs/03_maya_sessiond_workflow.md` now documents the repo-specific MayaSessiond port rule. Use port `7217` for ActionRail unless it is already in use.
 - Phase 1 declarative MVP started:
   - Built-in examples now load from JSON presets in `presets/`.
-  - `presets/transform_stack.json` is the source of truth for the reference stack labels, actions, tones, tooltips, spacer, and anchor.
+  - `presets/transform_stack.json` is the source of truth for the reference stack labels, actions, active predicates, tooltips, spacer, and anchor.
   - Preset parsing validates required ids, anchors, item lists, supported item types, button action fields, and spacer sizes.
   - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
   - Widget screenshot smoke now captures the ActionRail widget directly instead of the foreground desktop.
@@ -63,6 +63,7 @@ Last updated: 2026-04-29
   - The visible rail now uses a small frameless Maya-owned tool window positioned from the resolved viewport geometry instead of being parented directly under the OpenGL viewport widget, avoiding model-panel toolbar repaint ghosts without covering the viewport.
   - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
   - Action-bearing buttons now resolve through reusable `SlotRenderState` objects and a shared apply path for label, hotkey badge, tone, tooltip, enabled, and active state. Predicate refresh preserves runtime hotkey badge overrides while updating state in place when visibility is unchanged.
+  - Active color is now a generic theme state applied through `actionRailActive="true"` after `active_when` evaluates true. Built-in tool slots declare active predicates; one-shot macro buttons such as Set Key do not.
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.

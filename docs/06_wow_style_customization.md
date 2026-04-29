@@ -94,6 +94,33 @@ Buttons should become slots that can contain an action payload. The payload can 
 
 Slots need stable ids so hotkeys, user overrides, and profile migrations do not depend on label text or list order.
 
+Slots also own interaction state. A slot can be active, disabled, hidden, warning/error badged, or later locked depending on declarative predicates and diagnostics. The theme owns how those states look; the preset owns when they apply.
+
+Examples:
+
+```json
+{
+  "id": "scale_tool",
+  "type": "button",
+  "label": "S",
+  "action": "maya.tool.scale",
+  "active_when": "maya.tool == scale"
+}
+```
+
+This is a persistent stateful tool slot. It receives the generic active visual whenever Maya's current tool is scale.
+
+```json
+{
+  "id": "set_key",
+  "type": "button",
+  "label": "KS",
+  "action": "maya.anim.set_key"
+}
+```
+
+This is a one-shot macro slot. It stays clickable but has no persistent active state unless the user deliberately adds one.
+
 ### Bind Mode
 
 Bind Mode mirrors action-bar addon workflows:
@@ -251,6 +278,7 @@ Extend the current stack spec into a rail spec:
 - scale/opacity/locked fields
 - key label field
 - visibility/enabled/active predicates as strings parsed by a small safe evaluator
+- generic theme rendering for active state; demo presets must not rely on a hard-coded pink tone to signal active
 
 Exit criteria: the current transform stack still loads, and a horizontal rail can be defined without changing widget code.
 
