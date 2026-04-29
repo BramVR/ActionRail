@@ -16,14 +16,13 @@ Maya instead of a large docked tool window.
 
 ## Why
 
-Maya has shelves, hotkeys, hotbox zones, marking menus, and many dockable
-editors. ActionRail fills a different slot: tiny viewport-adjacent controls that
-artists and TDs can define as data, share as presets, and bind through Maya's
-native command system.
+Maya has shelves, hotkeys, hotbox zones, marking menus, and dockable editors.
+ActionRail fills a different slot: tiny viewport-adjacent controls that artists
+and TDs can define as data, share as presets, and bind through Maya's native
+command system.
 
-The first proof preset is the compact transform stack: `M/T/R/S` plus a
-separate `K` key button. Local reference images can live in `research/`, which
-is intentionally ignored by Git.
+The included examples are a compact transform stack, `M/T/R/S` plus a separate
+`K` key button, and a horizontal tool rail.
 
 ## Quick Start
 
@@ -42,7 +41,7 @@ Try the horizontal rail:
 actionrail.show_example("horizontal_tools")
 ```
 
-Useful during iteration:
+Useful commands:
 
 ```python
 actionrail.reload()
@@ -51,7 +50,7 @@ actionrail.run_action("maya.tool.rotate")
 actionrail.run_slot("transform_stack", "set_key")
 ```
 
-During local development this repo is verified as a Maya module with:
+For a local checkout, set the module path before launching Maya:
 
 ```powershell
 $env:MAYA_MODULE_PATH = "."
@@ -64,7 +63,7 @@ $env:MAYA_MODULE_PATH = "."
 - Built-in `transform_stack` and `horizontal_tools` JSON presets.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.
-- Stable slot ids for future hotkeys, user overrides, and migrations.
+- Stable slot ids for hotkeys, user overrides, and preset migrations.
 - Built-in Maya actions for move, translate, rotate, scale, and set key.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
@@ -75,7 +74,6 @@ $env:MAYA_MODULE_PATH = "."
 - Visible diagnostic badges for missing actions and missing icons.
 - Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
-- Pure Python tests plus Maya smoke scripts.
 
 ## Roadmap
 
@@ -84,7 +82,7 @@ Near-term:
 - Continue visible diagnostics for command/plugin predicate availability and
   last-error UI.
 - Build toward real icon-backed presets and import tooling.
-- Harden the declarative MVP before starting broad authoring UI.
+- Improve preset validation and recovery before broad authoring UI.
 
 Next:
 
@@ -100,19 +98,15 @@ Later:
 - Maya marking-menu and hotbox export.
 - Viewport 2.0 labels/guides for non-clickable viewport-native drawing.
 
-See [docs/07_missing_features_research.md](docs/07_missing_features_research.md)
-for the current feature-gap report.
-
 ## Project Layout
 
 ```text
 ActionRail.mod              Maya module descriptor
 scripts/actionrail/         Runtime package
 presets/                    Built-in JSON rail presets
-icons/                      Icon manifest and future imported assets
-docs/assets/                README and documentation images
+icons/                      Local icon assets and manifest
 tests/                      Pure Python and Maya smoke tests
-docs/                       Architecture, workflow, roadmap, status
+docs/                       Architecture, workflow, roadmap, and status
 ```
 
 ## Development
@@ -127,7 +121,7 @@ Run local tests:
 For Maya-facing changes, run the relevant smoke scripts from `tests/maya_smoke/`
 in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 
-## Docs
+## Contributor Docs
 
 - [Start here](docs/00_start_here.md) - current goal, state, and read order.
 - [Architecture](docs/01_architecture.md) - runtime boundaries and planned
@@ -154,9 +148,9 @@ in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 
 ## Status
 
-ActionRail is an early MVP. The transform-stack prototype is verified, the
-declarative rail schema is started, and the runtime-command hotkey bridge is in
-progress. It is not yet a finished designer or production preset manager.
+ActionRail is an early MVP. JSON presets, viewport rails, Maya actions,
+runtime-command hotkey publishing, predicate refresh, and safe diagnostics are
+working. It is not yet a finished designer or production preset manager.
 
 ## License
 
