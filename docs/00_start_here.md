@@ -49,6 +49,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   carries icon path plus diagnostic code/severity/badge state. Missing actions
   render disabled with an error badge, and missing icons render a warning badge
   while leaving the action enabled.
+- Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now
+  render visible warning badges on affected slots; dependency-gated slots are
+  kept visible and disabled so broken command/plugin requirements are not silent.
 - The Python `StackItem(...)` constructor preserves the original positional
   argument order through `tone`; newer optional fields such as `icon` are
   keyword-friendly and appended after the legacy fields.
@@ -83,7 +86,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Continue diagnostic badge work toward command/plugin predicate availability, last-error UI, and the future icon-backed preset/import pipeline.
+1. Continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

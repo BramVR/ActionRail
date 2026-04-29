@@ -23,7 +23,8 @@ ActionRail has a solid MVP base:
 - Conflict-aware hotkey assignment helpers.
 - Safe predicate evaluation and automatic timer-driven refresh for visible
   overlay hosts.
-- Safe-mode diagnostics and visible missing-action/missing-icon badges.
+- Safe-mode diagnostics and visible missing-action, missing-icon, missing-command,
+  and missing-plugin badges.
 - Pure Python tests and MayaSessiond smoke coverage.
 
 The main gap is that the UI is still not authorable or diagnostic enough for
@@ -33,10 +34,9 @@ transform stack.
 
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
 hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
-diagnostics, and visible missing-action/missing-icon badges are now implemented.
+diagnostics, and visible missing-action/missing-icon/command/plugin badges are now implemented.
 The sections below remain useful research context; the active backlog starts
-with command/plugin predicate visibility, last-error UI, and icon-backed
-presets/import tooling.
+with last-error UI and icon-backed presets/import tooling.
 
 ## Highest Priority Gaps
 
@@ -289,9 +289,9 @@ Sources:
 ### 13. Diagnostics And Safe Mode
 
 Status: first pass implemented through `actionrail.collect_diagnostics()`,
-`actionrail.diagnose_spec()`, `actionrail.safe_start()`, and visible
-missing-action/missing-icon badges. Command/plugin predicate badges and
-last-error UI remain open.
+`actionrail.diagnose_spec()`, `actionrail.safe_start()`, visible
+missing-action/missing-icon badges, and missing command/plugin predicate
+badges. Last-error UI remains open.
 
 Viewport overlays can break trust if they get stuck, steal input, or fail on
 startup. Add diagnostics before complex authoring.
@@ -349,8 +349,7 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue visible diagnostics for command/plugin predicate availability and
-   last-error UI.
+1. Continue visible diagnostics for last-error UI.
 2. Build the icon pipeline and first icon-backed rail.
 3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.

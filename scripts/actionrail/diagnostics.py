@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import Any, Literal
@@ -11,10 +10,8 @@ from .actions import ActionRegistry, create_default_registry
 from .icons import resolve_icon_path
 from .predicates import (
     PredicateContext,
-    _command_exists,
-    _dotted_name,
-    _plugin_exists,
     evaluate_predicate,
+    missing_availability_targets,
 )
 from .spec import StackItem, StackSpec, builtin_preset_ids, load_builtin_preset
 
@@ -273,8 +270,8 @@ def _predicate_diagnostics(
         if cmds_module is None:
             continue
 
-        for kind, target in _availability_targets(predicate):
-            if kind == "command" and not _command_exists(cmds_module, target):
+        for kind, target in missing_availability_targets(predicate, cmds_module):
+            if kind == "command":
                 issues.append(
                     _availability_issue(
                         "missing_command",
@@ -286,7 +283,7 @@ def _predicate_diagnostics(
                         target,
                     )
                 )
-            elif kind == "plugin" and not _plugin_exists(cmds_module, target):
+            elif kind == "plugin":
                 issues.append(
                     _availability_issue(
                         "missing_plugin",
@@ -321,29 +318,6 @@ def _availability_issue(
         predicate=predicate,
         target=target,
     )
-
-
-def _availability_targets(predicate: str) -> tuple[tuple[str, str], ...]:
-    try:
-        parsed = ast.parse(predicate, mode="eval")
-    except SyntaxError:
-        return ()
-
-    targets: list[tuple[str, str]] = []
-    for node in ast.walk(parsed):
-        if not isinstance(node, ast.Call) or len(node.args) != 1:
-            continue
-        try:
-            name = _dotted_name(node.func)
-        except ValueError:
-            continue
-        if name not in {"command.exists", "plugin.exists"}:
-            continue
-
-        arg = node.args[0]
-        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-            targets.append(("command" if name == "command.exists" else "plugin", arg.value))
-    return tuple(targets)
 
 
 def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:

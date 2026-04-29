@@ -73,6 +73,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
 - Icon and diagnostic badge inputs for `SlotRenderState`. First pass done for
   optional `icon` ids, manifest path lookup, visible missing-action error
   badges, visible missing-icon warning badges, and matching diagnostics.
+- Command/plugin predicate availability badges. First pass done for missing
+  `command.exists(...)` and `plugin.exists(...)` targets, including visible
+  disabled warning slots when a missing dependency would otherwise hide the slot.
 
 ### Acceptance Criteria
 
@@ -202,16 +205,16 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: continue diagnostic badge work toward command/plugin
-predicate availability, last-error UI, and the future icon-backed preset/import
-pipeline. Use `docs/04_status.md` as the detailed handoff.
+Next implementation slice: continue diagnostic work toward last-error UI and
+the future icon-backed preset/import pipeline. Use `docs/04_status.md` as the
+detailed handoff.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Continue visible diagnostics after the missing-action/missing-icon badge pass, especially command/plugin predicate availability and last-error UI.
+1. Continue visible diagnostics after the predicate availability badge pass, especially last-error UI.
 2. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
 3. Build toward real icon-backed presets and an import pipeline with source/license tracking.
 4. Bind Mode, then flyouts, then command rings.

@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
 from .icons import resolve_icon_path
-from .predicates import PredicateContext, evaluate_predicate
+from .predicates import PredicateContext, evaluate_predicate, missing_availability_targets
 from .qt import load
 from .spec import StackItem, StackSpec
 from .state import MayaStateSnapshot
@@ -330,7 +330,7 @@ def _slot_render_state(
     key_label: str | None = None,
 ) -> SlotRenderState:
     item_context = _item_context(item, registry, context)
-    diagnostic = _slot_diagnostic(item, registry)
+    diagnostic = _slot_diagnostic(item, registry, item_context)
     return SlotRenderState(
         label=item.label,
         key_label=item.key_label if key_label is None else key_label,
@@ -339,7 +339,7 @@ def _slot_render_state(
         tone=item.tone,
         tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
         enabled=evaluate_predicate(item.enabled_when, item_context)
-        and diagnostic[1] != "error",
+        and not _diagnostic_blocks_enabled(diagnostic),
         active=_is_item_active(item, item_context),
         diagnostic_code=diagnostic[0],
         diagnostic_severity=diagnostic[1],
@@ -367,6 +367,7 @@ def _item_tooltip(item: StackItem, registry: ActionRegistry | None = None) -> st
 def _slot_diagnostic(
     item: StackItem,
     registry: ActionRegistry | None = None,
+    context: PredicateContext | None = None,
 ) -> tuple[str, str, str, str]:
     get_action = getattr(registry, "get", None)
     if item.action and get_action is not None:
@@ -380,6 +381,10 @@ def _slot_diagnostic(
                 f"Missing ActionRail action: {item.action}",
             )
 
+    availability_diagnostic = _availability_diagnostic(item, context)
+    if availability_diagnostic[0]:
+        return availability_diagnostic
+
     if item.icon and resolve_icon_path(item.icon) is None:
         return (
             "missing_icon",
@@ -389,6 +394,40 @@ def _slot_diagnostic(
         )
 
     return ("", "", "", "")
+
+
+def _availability_diagnostic(
+    item: StackItem,
+    context: PredicateContext | None,
+) -> tuple[str, str, str, str]:
+    if context is None:
+        return ("", "", "", "")
+
+    for field_name in ("enabled_when", "visible_when", "active_when"):
+        predicate = getattr(item, field_name)
+        if not predicate.strip():
+            continue
+        for kind, target in missing_availability_targets(predicate, context.cmds_module):
+            if kind == "command":
+                return (
+                    "missing_command",
+                    "warning",
+                    "?",
+                    f"Unavailable Maya command in {field_name}: {target}",
+                )
+            if kind == "plugin":
+                return (
+                    "missing_plugin",
+                    "warning",
+                    "?",
+                    f"Unavailable Maya plugin in {field_name}: {target}",
+                )
+
+    return ("", "", "", "")
+
+
+def _diagnostic_blocks_enabled(diagnostic: tuple[str, str, str, str]) -> bool:
+    return diagnostic[1] == "error" or diagnostic[0] in {"missing_command", "missing_plugin"}
 
 
 def _diagnostic_tooltip(base_tooltip: str, diagnostic: tuple[str, str, str, str]) -> str:
@@ -520,7 +559,10 @@ def _set_button_property(button: object, name: str, value: object) -> int:
 
 
 def _is_item_visible(item: StackItem, context: PredicateContext | None = None) -> bool:
-    return evaluate_predicate(item.visible_when, _item_context(item, context=context))
+    item_context = _item_context(item, context=context)
+    if missing_availability_targets(item.visible_when, item_context.cmds_module):
+        return True
+    return evaluate_predicate(item.visible_when, item_context)
 
 
 def _is_item_active(item: StackItem, context: PredicateContext | None = None) -> bool:

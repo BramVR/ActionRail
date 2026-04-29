@@ -49,6 +49,20 @@ spec = parse_stack_spec(
                 "action": "maya.anim.set_key",
                 "icon": "missing.icon",
             },
+            {
+                "type": "button",
+                "id": "diagnostic_badges.missing_command",
+                "label": "C",
+                "action": "maya.anim.set_key",
+                "enabled_when": "command.exists('definitelyMissingActionRailCommand')",
+            },
+            {
+                "type": "button",
+                "id": "diagnostic_badges.missing_plugin",
+                "label": "P",
+                "action": "maya.anim.set_key",
+                "visible_when": "plugin.exists('definitelyMissingActionRailPlugin')",
+            },
         ],
     }
 )
@@ -72,6 +86,8 @@ button_state = {
 
 missing_action = button_state["diagnostic_badges.missing_action"]
 missing_icon = button_state["diagnostic_badges.missing_icon"]
+missing_command = button_state["diagnostic_badges.missing_command"]
+missing_plugin = button_state["diagnostic_badges.missing_plugin"]
 
 if missing_action != {
     "diagnostic_code": "missing_action",
@@ -88,6 +104,22 @@ if missing_icon != {
     "text": "I\n?",
 }:
     raise AssertionError(f"Missing icon badge failed: {button_state}")
+
+if missing_command != {
+    "diagnostic_code": "missing_command",
+    "diagnostic_severity": "warning",
+    "enabled": False,
+    "text": "C\n?",
+}:
+    raise AssertionError(f"Missing command badge failed: {button_state}")
+
+if missing_plugin != {
+    "diagnostic_code": "missing_plugin",
+    "diagnostic_severity": "warning",
+    "enabled": False,
+    "text": "P\n?",
+}:
+    raise AssertionError(f"Missing plugin badge failed: {button_state}")
 
 result = {
     "button_state": button_state,

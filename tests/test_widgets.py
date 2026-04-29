@@ -100,6 +100,14 @@ class FakeQt:
         QPushButton = FakeButton
 
 
+class AvailabilityCmds:
+    def commandInfo(self, command_name: str, *, exists: bool = False) -> bool:  # noqa: N802
+        return command_name == "availableCommand" and exists
+
+    def pluginInfo(self, plugin_name: str, *, query: bool = False, loaded: bool = False) -> bool:  # noqa: N802
+        return plugin_name == "loadedPlugin" and query and loaded
+
+
 def test_literal_false_visibility_skips_item_before_frame_building() -> None:
     assert _is_item_visible(StackItem(type="button", visible_when="")) is True
     assert _is_item_visible(StackItem(type="button", visible_when="true")) is True
@@ -114,6 +122,21 @@ def test_state_visibility_skips_item_before_frame_building() -> None:
         _is_item_visible(
             item,
             PredicateContext(state=MayaStateSnapshot(current_tool="", selection_count=1)),
+        )
+        is True
+    )
+
+
+def test_missing_visible_dependency_keeps_item_visible_for_badge() -> None:
+    item = StackItem(
+        type="button",
+        visible_when="plugin.exists('missingPlugin')",
+    )
+
+    assert (
+        _is_item_visible(
+            item,
+            PredicateContext(cmds_module=AvailabilityCmds()),
         )
         is True
     )
@@ -179,6 +202,52 @@ def test_slot_render_state_marks_missing_icon_as_warning() -> None:
     assert state.diagnostic_code == "missing_icon"
     assert state.diagnostic_severity == "warning"
     assert state.text == "I\n?"
+
+
+def test_slot_render_state_marks_missing_command_predicate_as_warning() -> None:
+    registry = create_default_registry(AvailabilityCmds())
+    item = StackItem(
+        type="button",
+        id="broken.command",
+        label="C",
+        action="maya.anim.set_key",
+        enabled_when="command.exists('missingCommand')",
+    )
+
+    state = _slot_render_state(
+        item,
+        registry,
+        PredicateContext(cmds_module=AvailabilityCmds()),
+    )
+
+    assert state.enabled is False
+    assert state.diagnostic_code == "missing_command"
+    assert state.diagnostic_severity == "warning"
+    assert state.text == "C\n?"
+    assert "missingCommand" in state.tooltip
+
+
+def test_slot_render_state_marks_missing_visible_plugin_as_warning() -> None:
+    registry = create_default_registry(AvailabilityCmds())
+    item = StackItem(
+        type="button",
+        id="broken.plugin",
+        label="P",
+        action="maya.anim.set_key",
+        visible_when="plugin.exists('missingPlugin')",
+    )
+
+    state = _slot_render_state(
+        item,
+        registry,
+        PredicateContext(cmds_module=AvailabilityCmds()),
+    )
+
+    assert state.enabled is False
+    assert state.diagnostic_code == "missing_plugin"
+    assert state.diagnostic_severity == "warning"
+    assert state.text == "P\n?"
+    assert "missingPlugin" in state.tooltip
 
 
 def test_refresh_predicate_state_updates_enabled_and_active(

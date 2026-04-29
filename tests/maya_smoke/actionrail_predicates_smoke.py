@@ -134,7 +134,7 @@ result = {
     "visible": bool(widget.isVisible()),
 }
 
-if result["button_text"] != ["VS", "DK", "CK"]:
+if result["button_text"] != ["VS", "DK\n?", "CK"]:
     raise AssertionError(f"Unexpected predicate-visible buttons: {result}")
 
 visible_button = button_state["predicates.visible_selected_active_scale"]
@@ -173,7 +173,7 @@ if not process_until(
     lambda: [
         button.text() for button in host.widget.findChildren(QtWidgets.QPushButton)
     ]
-    == ["HE", "DK", "CK"],
+    == ["HE", "DK\n?", "CK"],
 ):
     raise AssertionError("Timer refresh did not rebuild visible buttons after selection changed.")
 
@@ -181,7 +181,7 @@ widget = host.widget
 visibility_buttons, visibility_state = current_button_state(widget)
 visibility_text = [button.text() for button in visibility_buttons]
 
-if visibility_text != ["HE", "DK", "CK"]:
+if visibility_text != ["HE", "DK\n?", "CK"]:
     raise AssertionError(f"Selection refresh did not rebuild visible buttons: {visibility_state}")
 if visibility_state["predicates.disabled_missing_command"]["enabled"] is not False:
     raise AssertionError(f"Rebuilt missing-command button was not disabled: {visibility_state}")

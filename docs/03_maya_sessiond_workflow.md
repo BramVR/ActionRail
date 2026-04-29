@@ -154,6 +154,6 @@ Useful variants:
 - `actionrail_overlay_cleanup_smoke.py`: repeated show/reload cleanup for stale ActionRail viewport widgets and origin-placement regression coverage.
 - `actionrail_maya_ui_smoke.py`: Maya menu/shelf toggle install, idempotency, command text, show/hide behavior, and uninstall cleanup.
 - `actionrail_diagnostics_smoke.py`: safe-mode diagnostics, missing command/plugin/action/icon reporting, and `safe_start()` startup behavior.
-- `actionrail_diagnostic_badges_smoke.py`: visible missing-action and missing-icon badge rendering.
+- `actionrail_diagnostic_badges_smoke.py`: visible missing-action, missing-icon, missing-command, and missing-plugin badge rendering.
 
 After adding a new smoke script, update this list and add the exact result to `docs/04_status.md`.

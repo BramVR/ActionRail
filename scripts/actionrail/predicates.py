@@ -48,6 +48,52 @@ def evaluate_predicate(predicate: str, context: PredicateContext | None = None) 
     return bool(evaluator.visit(parsed.body))
 
 
+def availability_targets(predicate: str) -> tuple[tuple[str, str], ...]:
+    """Return command/plugin availability targets referenced by a predicate."""
+
+    try:
+        parsed = ast.parse(predicate, mode="eval")
+    except SyntaxError:
+        return ()
+
+    targets: list[tuple[str, str]] = []
+    for node in ast.walk(parsed):
+        if not isinstance(node, ast.Call) or len(node.args) != 1:
+            continue
+        try:
+            name = _dotted_name(node.func)
+        except ValueError:
+            continue
+        if name not in {"command.exists", "plugin.exists"}:
+            continue
+
+        arg = node.args[0]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            targets.append(("command" if name == "command.exists" else "plugin", arg.value))
+    return tuple(targets)
+
+
+def missing_availability_targets(
+    predicate: str,
+    cmds_module: Any | None,
+) -> tuple[tuple[str, str], ...]:
+    """Return unavailable command/plugin targets referenced by a predicate."""
+
+    if cmds_module is None:
+        return ()
+
+    missing: list[tuple[str, str]] = []
+    for kind, target in availability_targets(predicate):
+        if (
+            kind == "command"
+            and not _command_exists(cmds_module, target)
+            or kind == "plugin"
+            and not _plugin_exists(cmds_module, target)
+        ):
+            missing.append((kind, target))
+    return tuple(missing)
+
+
 class _PredicateEvaluator(ast.NodeVisitor):
     def __init__(self, context: PredicateContext, source: str) -> None:
         self.context = context

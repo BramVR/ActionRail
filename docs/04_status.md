@@ -64,6 +64,7 @@ Last updated: 2026-04-29
   - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
   - Action-bearing buttons now resolve through reusable `SlotRenderState` objects and a shared apply path for label, hotkey badge, tone, tooltip, enabled, and active state. Predicate refresh preserves runtime hotkey badge overrides while updating state in place when visibility is unchanged.
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
+  - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
@@ -110,29 +111,30 @@ Last updated: 2026-04-29
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: continue visible diagnostics after the missing-action/missing-icon badge pass, especially command/plugin predicate availability, last-error UI, and the future icon-backed preset/import pipeline.
+2. First recommended coding slice: continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest compatibility fix:
+Checks already run for the latest diagnostic badge fix:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` -> 15 passed.
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 106 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` -> 24 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 109 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_stackitem_abi_smoke.py` passed against the live MayaSessiond on port `7217`; the legacy positional item rendered with `actionRailTone="teal"` and no icon.
+- `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`; missing action/icon/command/plugin slots rendered expected badges.
+- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`; the missing-command predicate slot rendered `DK\n?` through automatic refresh.
 
 ## Latest Handoff
 
-- Task goal completed: preserved the documented `StackItem(...)` positional constructor ABI after optional slot icon support.
-- Files changed: `scripts/actionrail/spec.py`, `tests/test_spec.py`, `tests/maya_smoke/actionrail_stackitem_abi_smoke.py`, `docs/00_start_here.md`, `docs/01_architecture.md`, and this status doc.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` passed with 15 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 106 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_stackitem_abi_smoke.py` passed against the live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the tested ABI widget and purged cached `actionrail` modules after the run.
-- Blockers/risks: no current implementation blocker known; command/plugin predicate availability is diagnosed but does not yet produce a visible per-slot badge.
-- Exact next step: continue visible diagnostics for command/plugin predicate availability and last-error UI, then move toward real icon-backed presets/import tooling.
+- Task goal completed: added visible warning badges for missing command/plugin predicate availability.
+- Files changed: `scripts/actionrail/predicates.py`, `scripts/actionrail/diagnostics.py`, `scripts/actionrail/widgets.py`, widget/smoke tests, and docs.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` passed with 24 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 109 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` and `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed tested widgets and purged cached `actionrail` modules after each run.
+- Blockers/risks: no current implementation blocker known; last-error UI is still open.
+- Exact next step: continue diagnostic work toward last-error UI, then move toward real icon-backed presets/import tooling.
 
 ## Next
 
-1. Continue visible diagnostics after the missing-action/missing-icon badge pass, especially command/plugin predicate availability and last-error UI.
+1. Continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -339,6 +341,14 @@ Checks already run for the latest compatibility fix:
   - `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`: missing action rendered `X\n!` disabled, missing icon rendered `I\n?` enabled, and the rail size was `[46,92]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`: missing icon diagnostics reported `missing_icon`, and `safe_start("transform_stack")` still showed `[46,214]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond on port `7217`: buttons were `M/T/R/S/K`, current context became `scaleSuperContext`, `K` created 10 keyframes, reload returned one visible `transform_stack`, and size was `[46,214]`.
+- 2026-04-29 command/plugin predicate badges:
+  - `scripts/actionrail/predicates.py` now exposes shared availability target helpers, and diagnostics/widget rendering use the same missing command/plugin checks.
+  - `scripts/actionrail/widgets.py` now renders `missing_command` and `missing_plugin` warning badges as `?`, disables affected slots, and keeps slots visible when a missing availability predicate would otherwise hide them.
+  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` -> 24 passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 109 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`: missing action rendered `X\n!`, missing icon rendered `I\n?`, missing command rendered `C\n?`, missing plugin rendered `P\n?`, and the rail size was `[46,184]`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`: automatic refresh preserved the missing-command warning badge as `DK\n?` while visible/enabled/active predicates updated.
 
 ## Decisions
 
