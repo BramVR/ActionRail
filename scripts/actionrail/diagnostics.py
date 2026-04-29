@@ -111,7 +111,8 @@ def collect_diagnostics(
 ) -> DiagnosticReport:
     """Collect diagnostics for bundled presets without showing an overlay."""
 
-    action_registry = registry or create_default_registry(cmds_module)
+    resolved_cmds = _resolve_cmds_module(cmds_module)
+    action_registry = registry or create_default_registry(resolved_cmds)
     issues: list[DiagnosticIssue] = []
     for preset_id in tuple(preset_ids) if preset_ids is not None else builtin_preset_ids():
         try:
@@ -132,7 +133,7 @@ def collect_diagnostics(
             diagnose_spec(
                 spec,
                 registry=action_registry,
-                cmds_module=cmds_module,
+                cmds_module=resolved_cmds,
             ).issues
         )
     return DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
@@ -146,7 +147,8 @@ def diagnose_spec(
 ) -> DiagnosticReport:
     """Collect diagnostics for an already parsed preset spec."""
 
-    action_registry = registry or create_default_registry(cmds_module)
+    resolved_cmds = _resolve_cmds_module(cmds_module)
+    action_registry = registry or create_default_registry(resolved_cmds)
     issues: list[DiagnosticIssue] = []
     action_ids = set(action_registry.ids())
     for item in spec.items:
@@ -170,7 +172,7 @@ def diagnose_spec(
                 spec.id,
                 item,
                 registry=action_registry,
-                cmds_module=cmds_module,
+                cmds_module=resolved_cmds,
             )
         )
     return DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
@@ -327,6 +329,17 @@ def _availability_targets(predicate: str) -> tuple[tuple[str, str], ...]:
         if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
             targets.append(("command" if name == "command.exists" else "plugin", arg.value))
     return tuple(targets)
+
+
+def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:
+    if cmds_module is not None:
+        return cmds_module
+
+    try:
+        import maya.cmds as cmds  # type: ignore[import-not-found]
+    except Exception:
+        return None
+    return cmds
 
 
 def _show_overlay(

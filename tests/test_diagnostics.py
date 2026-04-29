@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sys
+import types
+
 import pytest
 
 import actionrail.diagnostics as diagnostics
@@ -113,6 +116,57 @@ def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     assert report.has_errors is True
     assert report.errors[0].code == "broken_preset"
     assert report.errors[0].preset_id == "missing_preset"
+
+
+def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_maya = types.ModuleType("maya")
+    fake_maya.__path__ = []
+    fake_cmds = types.ModuleType("maya.cmds")
+    fake_cmds.commandInfo = AvailabilityCmds().commandInfo
+    fake_cmds.pluginInfo = AvailabilityCmds().pluginInfo
+    fake_maya.cmds = fake_cmds
+    monkeypatch.setitem(sys.modules, "maya", fake_maya)
+    monkeypatch.setitem(sys.modules, "maya.cmds", fake_cmds)
+
+    spec = StackSpec(
+        id="availability",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="availability.command",
+                label="C",
+                action="maya.anim.set_key",
+                enabled_when="command.exists('missingCommand')",
+            ),
+            StackItem(
+                type="button",
+                id="availability.plugin",
+                label="P",
+                action="maya.anim.set_key",
+                visible_when="plugin.exists('missingPlugin')",
+            ),
+        ),
+    )
+    started: list[str] = []
+    monkeypatch.setattr(diagnostics, "load_builtin_preset", lambda _preset_id: spec)
+    monkeypatch.setattr(
+        diagnostics,
+        "_show_overlay",
+        lambda preset_id, *, panel, registry: started.append(preset_id),
+    )
+
+    report = safe_start("availability")
+
+    assert report.has_errors is False
+    assert report.overlay_started is True
+    assert started == ["availability"]
+    assert [(issue.code, issue.target) for issue in report.warnings] == [
+        ("missing_command", "missingCommand"),
+        ("missing_plugin", "missingPlugin"),
+    ]
 
 
 def test_safe_start_skips_overlay_when_diagnostics_have_errors(

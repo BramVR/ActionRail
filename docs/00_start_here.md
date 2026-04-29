@@ -37,7 +37,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Safe-mode diagnostics now expose `actionrail.collect_diagnostics()`,
   `actionrail.diagnose_spec()`, and `actionrail.safe_start()` for broken
   presets, missing actions, missing command/plugin predicates, and recoverable
-  overlay startup failures.
+  overlay startup failures. In Maya, the default diagnostics path resolves
+  `maya.cmds` automatically, so callers do not need to pass `cmds_module` for
+  command/plugin availability warnings.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
