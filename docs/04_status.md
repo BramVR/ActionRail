@@ -64,7 +64,7 @@ Last updated: 2026-04-29
   - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
   - Action-bearing buttons now resolve through reusable `SlotRenderState` objects and a shared apply path for label, hotkey badge, tone, tooltip, enabled, and active state. Predicate refresh preserves runtime hotkey badge overrides while updating state in place when visibility is unchanged.
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
-  - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent.
+  - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
@@ -342,12 +342,13 @@ Checks already run for the latest diagnostic badge fix:
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond on port `7217`: missing icon diagnostics reported `missing_icon`, and `safe_start("transform_stack")` still showed `[46,214]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond on port `7217`: buttons were `M/T/R/S/K`, current context became `scaleSuperContext`, `K` created 10 keyframes, reload returned one visible `transform_stack`, and size was `[46,214]`.
 - 2026-04-29 command/plugin predicate badges:
-  - `scripts/actionrail/predicates.py` now exposes shared availability target helpers, and diagnostics/widget rendering use the same missing command/plugin checks.
+  - `scripts/actionrail/predicates.py` now exposes shared availability target helpers; diagnostics report missing command/plugin references, and widget rendering uses semantic blocking checks for runtime badges.
   - `scripts/actionrail/widgets.py` now renders `missing_command` and `missing_plugin` warning badges as `?`, disables affected slots, and keeps slots visible when a missing availability predicate would otherwise hide them.
-  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` -> 24 passed.
-  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 109 passed.
+  - Badge rendering now only treats a missing command/plugin as blocking when re-evaluating the predicate with the missing availability call repaired would make the predicate pass. This preserves non-availability visibility clauses such as `selection.count > 0 and plugin.exists(...)` and avoids badges/disabled state for intentional fallbacks such as `not command.exists(...)`.
+  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_predicates.py` -> 23 passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 112 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`: missing action rendered `X\n!`, missing icon rendered `I\n?`, missing command rendered `C\n?`, missing plugin rendered `P\n?`, and the rail size was `[46,184]`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`: missing action rendered `X\n!`, missing icon rendered `I\n?`, missing command rendered `C\n?`, missing plugin rendered `P\n?`, negated fallback rendered `F` enabled with no badge, the compound context-gated missing plugin slot stayed hidden, and the rail size was `[46,230]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`: automatic refresh preserved the missing-command warning badge as `DK\n?` while visible/enabled/active predicates updated.
 
 ## Decisions

@@ -75,7 +75,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   badges, visible missing-icon warning badges, and matching diagnostics.
 - Command/plugin predicate availability badges. First pass done for missing
   `command.exists(...)` and `plugin.exists(...)` targets, including visible
-  disabled warning slots when a missing dependency would otherwise hide the slot.
+  disabled warning slots when a missing dependency would otherwise hide the
+  slot. Runtime badge rendering now preserves the rest of the predicate
+  semantics, including compound context clauses and negated availability checks.
 
 ### Acceptance Criteria
 

@@ -51,7 +51,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   while leaving the action enabled.
 - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now
   render visible warning badges on affected slots; dependency-gated slots are
-  kept visible and disabled so broken command/plugin requirements are not silent.
+  kept visible and disabled only when the missing availability check is what
+  makes the predicate fail, so compound context gates and intentional
+  `not ...exists(...)` fallback slots keep their declared behavior.
 - The Python `StackItem(...)` constructor preserves the original positional
   argument order through `tone`; newer optional fields such as `icon` are
   keyword-friendly and appended after the legacy fields.

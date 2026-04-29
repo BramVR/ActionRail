@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -19,6 +20,7 @@ class PredicateContext:
     registry: ActionRegistry | None = None
     item: StackItem | None = None
     cmds_module: Any | None = None
+    availability_overrides: Mapping[tuple[str, str], bool] | None = None
 
 
 def evaluate_predicate(predicate: str, context: PredicateContext | None = None) -> bool:
@@ -94,6 +96,29 @@ def missing_availability_targets(
     return tuple(missing)
 
 
+def availability_blocking_targets(
+    predicate: str,
+    context: PredicateContext | None = None,
+) -> tuple[tuple[str, str], ...]:
+    """Return missing availability targets that make a predicate fail."""
+
+    predicate_context = context or PredicateContext()
+    missing = missing_availability_targets(predicate, predicate_context.cmds_module)
+    if not missing or evaluate_predicate(predicate, predicate_context):
+        return ()
+
+    repaired_context = PredicateContext(
+        state=predicate_context.state,
+        registry=predicate_context.registry,
+        item=predicate_context.item,
+        cmds_module=predicate_context.cmds_module,
+        availability_overrides=dict.fromkeys(missing, True),
+    )
+    if not evaluate_predicate(predicate, repaired_context):
+        return ()
+    return missing
+
+
 class _PredicateEvaluator(ast.NodeVisitor):
     def __init__(self, context: PredicateContext, source: str) -> None:
         self.context = context
@@ -128,8 +153,14 @@ class _PredicateEvaluator(ast.NodeVisitor):
         name = _dotted_name(node.func)
         args = [self.visit(arg) for arg in node.args]
         if name == "command.exists" and len(args) == 1:
+            override = self._availability_override("command", str(args[0]))
+            if override is not None:
+                return override
             return _command_exists(self.context.cmds_module, str(args[0]))
         if name == "plugin.exists" and len(args) == 1:
+            override = self._availability_override("plugin", str(args[0]))
+            if override is not None:
+                return override
             return _plugin_exists(self.context.cmds_module, str(args[0]))
         if name == "action.exists" and not args:
             return _action_exists(self.context.registry, self.context.item)
@@ -176,6 +207,12 @@ class _PredicateEvaluator(ast.NodeVisitor):
     def _unsupported(self, node: ast.AST) -> None:
         msg = f"Unsupported ActionRail predicate syntax in '{self.source}': {type(node).__name__}"
         raise ValueError(msg)
+
+    def _availability_override(self, kind: str, target: str) -> bool | None:
+        overrides = self.context.availability_overrides
+        if overrides is None:
+            return None
+        return overrides.get((kind, target))
 
 
 def _dotted_name(node: ast.AST) -> str:

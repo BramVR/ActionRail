@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
 from .icons import resolve_icon_path
-from .predicates import PredicateContext, evaluate_predicate, missing_availability_targets
+from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
 from .state import MayaStateSnapshot
@@ -407,7 +407,7 @@ def _availability_diagnostic(
         predicate = getattr(item, field_name)
         if not predicate.strip():
             continue
-        for kind, target in missing_availability_targets(predicate, context.cmds_module):
+        for kind, target in availability_blocking_targets(predicate, context):
             if kind == "command":
                 return (
                     "missing_command",
@@ -560,9 +560,9 @@ def _set_button_property(button: object, name: str, value: object) -> int:
 
 def _is_item_visible(item: StackItem, context: PredicateContext | None = None) -> bool:
     item_context = _item_context(item, context=context)
-    if missing_availability_targets(item.visible_when, item_context.cmds_module):
+    if evaluate_predicate(item.visible_when, item_context):
         return True
-    return evaluate_predicate(item.visible_when, item_context)
+    return bool(availability_blocking_targets(item.visible_when, item_context))
 
 
 def _is_item_active(item: StackItem, context: PredicateContext | None = None) -> bool:

@@ -63,6 +63,23 @@ spec = parse_stack_spec(
                 "action": "maya.anim.set_key",
                 "visible_when": "plugin.exists('definitelyMissingActionRailPlugin')",
             },
+            {
+                "type": "button",
+                "id": "diagnostic_badges.compound_hidden",
+                "label": "H",
+                "action": "maya.anim.set_key",
+                "visible_when": (
+                    "selection.count > 0 and "
+                    "plugin.exists('definitelyMissingActionRailPlugin')"
+                ),
+            },
+            {
+                "type": "button",
+                "id": "diagnostic_badges.negated_fallback",
+                "label": "F",
+                "action": "maya.anim.set_key",
+                "enabled_when": "not command.exists('definitelyMissingActionRailCommand')",
+            },
         ],
     }
 )
@@ -88,6 +105,7 @@ missing_action = button_state["diagnostic_badges.missing_action"]
 missing_icon = button_state["diagnostic_badges.missing_icon"]
 missing_command = button_state["diagnostic_badges.missing_command"]
 missing_plugin = button_state["diagnostic_badges.missing_plugin"]
+negated_fallback = button_state["diagnostic_badges.negated_fallback"]
 
 if missing_action != {
     "diagnostic_code": "missing_action",
@@ -120,6 +138,17 @@ if missing_plugin != {
     "text": "P\n?",
 }:
     raise AssertionError(f"Missing plugin badge failed: {button_state}")
+
+if "diagnostic_badges.compound_hidden" in button_state:
+    raise AssertionError(f"Compound-gated missing plugin should stay hidden: {button_state}")
+
+if negated_fallback != {
+    "diagnostic_code": "",
+    "diagnostic_severity": "",
+    "enabled": True,
+    "text": "F",
+}:
+    raise AssertionError(f"Negated fallback badge failed: {button_state}")
 
 result = {
     "button_state": button_state,

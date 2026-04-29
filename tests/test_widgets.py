@@ -142,6 +142,49 @@ def test_missing_visible_dependency_keeps_item_visible_for_badge() -> None:
     )
 
 
+def test_missing_visible_dependency_preserves_other_visibility_clauses() -> None:
+    item = StackItem(
+        type="button",
+        visible_when="selection.count > 0 and plugin.exists('missingPlugin')",
+    )
+
+    assert (
+        _is_item_visible(
+            item,
+            PredicateContext(
+                state=MayaStateSnapshot(current_tool="", selection_count=0),
+                cmds_module=AvailabilityCmds(),
+            ),
+        )
+        is False
+    )
+    assert (
+        _is_item_visible(
+            item,
+            PredicateContext(
+                state=MayaStateSnapshot(current_tool="", selection_count=1),
+                cmds_module=AvailabilityCmds(),
+            ),
+        )
+        is True
+    )
+
+
+def test_negated_missing_visible_dependency_does_not_get_forced_badge_state() -> None:
+    item = StackItem(
+        type="button",
+        visible_when="not plugin.exists('missingPlugin')",
+    )
+
+    assert (
+        _is_item_visible(
+            item,
+            PredicateContext(cmds_module=AvailabilityCmds()),
+        )
+        is True
+    )
+
+
 def test_empty_active_predicate_is_inactive_by_default() -> None:
     assert _is_item_active(StackItem(type="button", active_when="")) is False
     assert _is_item_active(StackItem(type="button", active_when="true")) is True
@@ -248,6 +291,28 @@ def test_slot_render_state_marks_missing_visible_plugin_as_warning() -> None:
     assert state.diagnostic_severity == "warning"
     assert state.text == "P\n?"
     assert "missingPlugin" in state.tooltip
+
+
+def test_slot_render_state_ignores_negated_missing_availability_predicates() -> None:
+    registry = create_default_registry(AvailabilityCmds())
+    item = StackItem(
+        type="button",
+        id="fallback.command",
+        label="F",
+        action="maya.anim.set_key",
+        enabled_when="not command.exists('missingCommand')",
+    )
+
+    state = _slot_render_state(
+        item,
+        registry,
+        PredicateContext(cmds_module=AvailabilityCmds()),
+    )
+
+    assert state.enabled is True
+    assert state.diagnostic_code == ""
+    assert state.diagnostic_severity == ""
+    assert state.text == "F"
 
 
 def test_refresh_predicate_state_updates_enabled_and_active(
