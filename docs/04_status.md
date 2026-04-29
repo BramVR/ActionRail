@@ -64,6 +64,7 @@ Last updated: 2026-04-29
   - Visible overlay hosts now start a host-owned Qt timer that automatically calls `ViewportOverlayHost.refresh_state()` while the rail is visible, so predicate-driven active/enabled/visible state updates after Maya tool or selection changes without manual refresh calls.
   - Action-bearing buttons now resolve through reusable `SlotRenderState` objects and a shared apply path for label, hotkey badge, tone, tooltip, enabled, and active state. Predicate refresh preserves runtime hotkey badge overrides while updating state in place when visibility is unchanged.
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
+  - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -113,20 +114,18 @@ Start here:
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest diagnostic badge pass:
+Checks already run for the latest compatibility fix:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 105 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` -> 15 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 106 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`; missing action rendered `X\n!` disabled and missing icon rendered `I\n?` enabled at size `[46,92]`.
-- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against the live MayaSessiond; diagnostics reported `missing_icon` warnings alongside existing missing command/plugin/action checks.
-- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond; the transform stack rendered at `[46,214]`, buttons remained `M/T/R/S/K`, and actions still executed.
 
 ## Latest Handoff
 
-- Task goal completed: extended slot render state with icon and visible diagnostic badge inputs.
-- Files changed: `scripts/actionrail/spec.py`, `scripts/actionrail/icons.py`, `scripts/actionrail/widgets.py`, `scripts/actionrail/diagnostics.py`, `scripts/actionrail/theme.py`, `tests/test_spec.py`, `tests/test_widgets.py`, `tests/test_diagnostics.py`, `tests/maya_smoke/actionrail_diagnostic_badges_smoke.py`, `tests/maya_smoke/actionrail_diagnostics_smoke.py`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and this status doc.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` passed with 105 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_phase0_smoke.py` passed against the live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the tested overlays and purged cached `actionrail` modules after each run.
+- Task goal completed: preserved the documented `StackItem(...)` positional constructor ABI after optional slot icon support.
+- Files changed: `scripts/actionrail/spec.py`, `tests/test_spec.py`, `docs/00_start_here.md`, `docs/01_architecture.md`, and this status doc.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` passed with 15 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 106 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed.
+- Current live state: MayaSessiond was not needed for this pure spec/API compatibility fix.
 - Blockers/risks: no current implementation blocker known; command/plugin predicate availability is diagnosed but does not yet produce a visible per-slot badge.
 - Exact next step: continue visible diagnostics for command/plugin predicate availability and last-error UI, then move toward real icon-backed presets/import tooling.
 

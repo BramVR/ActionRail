@@ -5,6 +5,7 @@ import pytest
 from actionrail.actions import create_default_registry, validate_action_ids
 from actionrail.spec import (
     TRANSFORM_STACK_ID,
+    StackItem,
     action_ids,
     get_example_spec,
     load_builtin_preset,
@@ -110,6 +111,13 @@ def test_parse_stack_spec_supports_optional_icon_id() -> None:
     )
 
     assert spec.items[0].icon == "lucide.key"
+
+
+def test_stack_item_preserves_legacy_positional_tone_argument() -> None:
+    item = StackItem("button", "id", "K", "maya.anim.set_key", "teal")
+
+    assert item.tone == "teal"
+    assert item.icon == ""
 
 
 def test_parse_stack_spec_rejects_unknown_item_type() -> None:

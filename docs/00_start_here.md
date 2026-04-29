@@ -49,6 +49,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   carries icon path plus diagnostic code/severity/badge state. Missing actions
   render disabled with an error badge, and missing icons render a warning badge
   while leaving the action enabled.
+- The Python `StackItem(...)` constructor preserves the original positional
+  argument order through `tone`; newer optional fields such as `icon` are
+  keyword-friendly and appended after the legacy fields.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order

@@ -147,7 +147,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. Later phases should evolve the public naming toward user-authored rail/slot data:
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Later phases should evolve the public naming toward user-authored rail/slot data:
 
 ```json
 {

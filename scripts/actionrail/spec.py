@@ -18,7 +18,6 @@ class StackItem:
     id: str = ""
     label: str = ""
     action: str = ""
-    icon: str = ""
     tone: str = "neutral"
     tooltip: str = ""
     size: int = 0
@@ -26,6 +25,7 @@ class StackItem:
     visible_when: str = ""
     enabled_when: str = ""
     active_when: str = ""
+    icon: str = ""
 
 
 @dataclass(frozen=True)
