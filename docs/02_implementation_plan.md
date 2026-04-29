@@ -82,10 +82,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   `actionrail.clear_last_report()`, `actionrail.format_report()`, and
   `actionrail.show_last_report()`, plus a Maya menu item that opens the latest
   report.
-- Polished diagnostics window. Next slice: replace the simple Maya
-  `confirmDialog` with an ActionRail-themed Qt dialog/window that lists
-  warnings/errors, shows the full report in a selectable text area, and provides
-  copy actions for selected issues and the full report.
+- Polished diagnostics window. Done: `actionrail.show_last_report()` now opens
+  an ActionRail-themed Qt dialog/window that lists warnings/errors, shows the
+  full report in a selectable text area, and provides `Copy Selected`,
+  `Copy Full Report`, `Clear`, and `Close` actions.
 
 ### Acceptance Criteria
 
@@ -215,22 +215,18 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: make the last diagnostic report UI user-friendly.
-Replace the `confirmDialog` with a themed, copyable Qt diagnostics window before
-continuing icon-backed preset/import diagnostics. Use `docs/04_status.md` as
-the detailed handoff.
+Next implementation slice: continue visible diagnostics toward the future
+icon-backed preset/import path. Use `docs/04_status.md` as the detailed handoff.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Replace the first-pass last-report `confirmDialog` with a polished,
-   ActionRail-themed, copyable diagnostics window.
-2. Continue visible diagnostics after that, especially icon-backed preset/import checks.
-3. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
-4. Build toward real icon-backed presets and an import pipeline with source/license tracking.
-5. Bind Mode, then flyouts, then command rings.
-6. Broader workflow action library beyond transform/keyframe.
-7. Profile layers for built-in, studio, project, scene/asset, and user overrides.
-8. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+1. Continue visible diagnostics, especially icon-backed preset/import checks.
+2. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
+3. Build toward real icon-backed presets and an import pipeline with source/license tracking.
+4. Bind Mode, then flyouts, then command rings.
+5. Broader workflow action library beyond transform/keyframe.
+6. Profile layers for built-in, studio, project, scene/asset, and user overrides.
+7. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.

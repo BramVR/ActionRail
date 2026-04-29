@@ -27,15 +27,6 @@ class AvailabilityCmds:
         return plugin_name == "loadedPlugin" and query and loaded
 
 
-class DialogCmds:
-    def __init__(self) -> None:
-        self.dialogs: list[dict[str, object]] = []
-
-    def confirmDialog(self, **kwargs: object) -> str:  # noqa: N802
-        self.dialogs.append(dict(kwargs))
-        return "OK"
-
-
 def test_builtin_preset_ids_are_discovered_from_presets_directory() -> None:
     assert builtin_preset_ids() == ("horizontal_tools", "transform_stack")
 
@@ -192,22 +183,21 @@ def test_last_report_can_be_cleared_and_formatted() -> None:
     assert "missing_action [broken_actions.missing]" in text
 
 
-def test_show_last_report_opens_maya_dialog_with_formatted_report() -> None:
-    cmds = DialogCmds()
+def test_show_last_report_opens_qt_window_with_formatted_report(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shown: list[tuple[object, str]] = []
     collect_diagnostics(("missing_preset",), cmds_module=AvailabilityCmds())
+    monkeypatch.setattr(
+        diagnostics,
+        "_show_report_window",
+        lambda report, message: shown.append((report, message)),
+    )
 
-    text = show_last_report(cmds_module=cmds)
+    text = show_last_report(cmds_module=object())
 
     assert "broken_preset [missing_preset]" in text
-    assert cmds.dialogs == [
-        {
-            "title": "ActionRail Diagnostics",
-            "message": text,
-            "button": ("OK",),
-            "defaultButton": "OK",
-            "icon": "information",
-        }
-    ]
+    assert shown == [(last_report(), text)]
 
 
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(

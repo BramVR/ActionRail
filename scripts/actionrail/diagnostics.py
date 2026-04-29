@@ -152,17 +152,12 @@ def format_report(report: DiagnosticReport | None = None) -> str:
 
 
 def show_last_report(*, cmds_module: Any | None = None) -> str:
-    """Show the latest diagnostic report in a simple Maya dialog."""
+    """Show the latest diagnostic report in the ActionRail Qt diagnostics window."""
 
+    _ = cmds_module
+    report = last_report()
     message = format_report()
-    cmds = _require_cmds_module(cmds_module)
-    cmds.confirmDialog(
-        title="ActionRail Diagnostics",
-        message=message,
-        button=("OK",),
-        defaultButton="OK",
-        icon="information",
-    )
+    _show_report_window(report, message)
     return message
 
 
@@ -402,6 +397,12 @@ def _record_report(report: DiagnosticReport) -> DiagnosticReport:
     global _LAST_REPORT
     _LAST_REPORT = report
     return report
+
+
+def _show_report_window(report: DiagnosticReport | None, message: str) -> Any:
+    from .diagnostics_ui import show_report_window
+
+    return show_report_window(report, message, on_clear=clear_last_report)
 
 
 def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:

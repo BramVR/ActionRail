@@ -70,6 +70,9 @@ Last updated: 2026-04-29
     `actionrail.last_report()`, `actionrail.clear_last_report()`,
     `actionrail.format_report()`, and `actionrail.show_last_report()`, and add a
     Maya menu item for showing the latest report.
+  - `actionrail.show_last_report()` now opens a themed ActionRail Qt diagnostics
+    window with a summary, warning/error issue list, selectable full report text,
+    and `Copy Selected`, `Copy Full Report`, `Clear`, and `Close` actions.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -115,9 +118,8 @@ Last updated: 2026-04-29
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: replace the first-pass last-report
-   `confirmDialog` with a polished ActionRail-themed Qt diagnostics window that
-   supports copyable selected/full report text.
+2. First recommended coding slice: continue visible diagnostics toward the
+   future icon-backed preset/import path.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -131,29 +133,41 @@ Checks already run for the latest diagnostic badge fix:
 
 ## Latest Handoff
 
-- Task goal completed: reviewed the first-pass last diagnostic report UI in live
-  Maya. User feedback: the current `confirmDialog` is not user friendly or
-  visually aligned with ActionRail, and errors must be easy to copy/paste.
-- Files changed in this handoff update: `docs/00_start_here.md`,
-  `docs/02_implementation_plan.md`, `docs/04_status.md`, and
+- Task goal completed: replaced `actionrail.show_last_report()`'s Maya
+  `confirmDialog` with a themed ActionRail Qt diagnostics window.
+- Files changed in this handoff update:
+  `scripts/actionrail/diagnostics.py`,
+  `scripts/actionrail/diagnostics_ui.py`,
+  `tests/test_diagnostics.py`,
+  `tests/maya_smoke/actionrail_diagnostics_smoke.py`,
+  `docs/00_start_here.md`,
+  `docs/02_implementation_plan.md`,
+  `docs/04_status.md`, and
   `docs/07_missing_features_research.md`.
-- Checks run for this docs-only handoff update: not run.
-- Relevant prior checks for the current implementation: `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_package.py` passed with 21 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 114 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` and `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_ui_smoke.py` passed against live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`; the default rail
-  and diagnostics menu entry were shown during review. Raw execution was
-  disabled in this session, so direct ad hoc UI calls used checked-in
-  allowlisted smoke-script paths.
+- Behavior added: the diagnostics window shows a summary, issue list,
+  selectable full report text, and `Copy Selected`, `Copy Full Report`,
+  `Clear`, and `Close` actions. The existing Maya menu command remains
+  `import actionrail; actionrail.show_last_report()`.
+- Checks run:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_package.py` -> 13 passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 114 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` -> passed against live MayaSessiond on port `7217`.
+- Maya verification saved a window screenshot at
+  `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png` with size
+  `720x520`. The smoke verified issue-list rendering, selected/full report copy
+  actions, clear behavior, and `safe_start("transform_stack")` after closing the
+  diagnostics window.
+- Current live state: MayaSessiond is running on port `7217`. Raw execution was
+  not required; verification used checked-in allowlisted smoke-script paths.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: replace `actionrail.show_last_report()`'s Maya
-  `confirmDialog` with a themed Qt diagnostics window. Use the rail theme as
-  the visual source, show a summary plus issue list, include a read-only
-  selectable full report, and add `Copy Selected`, `Copy Full Report`, `Clear`,
-  and `Close` actions. Keep the existing menu item command stable.
+- Exact next step: continue visible diagnostics toward the future icon-backed
+  preset/import path.
 
 ## Next
 
-1. Build the polished, themed, copyable diagnostics report window.
-2. Continue diagnostic work toward the future icon-backed preset/import pipeline.
+1. Continue diagnostic work toward the future icon-backed preset/import pipeline.
+2. Use the new diagnostics Qt window as the support/error-report surface for those checks.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -383,6 +397,17 @@ Checks already run for the latest diagnostic badge fix:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against live MayaSessiond on port `7217`: `safe_start("transform_stack")` recorded an ok last report with active overlay `transform_stack`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_ui_smoke.py` passed against live MayaSessiond on port `7217`: the diagnostics menu item installed idempotently, used `import actionrail; actionrail.show_last_report()`, and uninstalled cleanly.
+- 2026-04-29 themed diagnostics report window:
+  - `scripts/actionrail/diagnostics_ui.py` adds a themed non-modal Qt
+    diagnostics dialog with summary text, warning/error issue list, read-only
+    selectable full report text, and `Copy Selected`, `Copy Full Report`,
+    `Clear`, and `Close` actions.
+  - `actionrail.show_last_report()` now routes to the Qt diagnostics window
+    while keeping the formatted string return value and stable Maya menu command.
+  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_package.py` -> 13 passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 114 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against live MayaSessiond on port `7217`: the diagnostics window showed the missing-action issue, copied selected and full report text to the clipboard, cleared the stored report, saved screenshot `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png` at `720x520`, and `safe_start("transform_stack")` still showed `[46,214]`.
 
 ## Decisions
 
