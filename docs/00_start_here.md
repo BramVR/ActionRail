@@ -57,6 +57,10 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 - Diagnostic calls now record the latest `DiagnosticReport`; public helpers
   expose, clear, format, and show that report, and the ActionRail Maya menu has
   a "Show Last Diagnostic Report" entry for a simple last-error UI.
+- The next diagnostic slice is to replace the simple Maya `confirmDialog` with
+  a themed ActionRail Qt diagnostics window. It should use rail theme tokens,
+  present errors/warnings in a readable list, and make selected or full report
+  text easy to copy/paste for support.
 - The Python `StackItem(...)` constructor preserves the original positional
   argument order through `tone`; newer optional fields such as `icon` are
   keyword-friendly and appended after the legacy fields.
@@ -91,9 +95,12 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Continue diagnostic work toward the future icon-backed preset/import pipeline.
-2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
-3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
+1. Replace `actionrail.show_last_report()`'s `confirmDialog` with a polished,
+   themed Qt diagnostics window that supports copyable reports.
+2. After that, continue diagnostic work toward the future icon-backed
+   preset/import pipeline.
+3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
+4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
 ## Working Rules
 

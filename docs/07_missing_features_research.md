@@ -298,6 +298,16 @@ and a simple Maya menu item for showing the latest diagnostic report.
 Viewport overlays can break trust if they get stuck, steal input, or fail on
 startup. Add diagnostics before complex authoring.
 
+User feedback on the first report UI: a raw Maya `confirmDialog` is not
+friendly enough and is not visually aligned with the rail. Error details must
+be easy to select and copy/paste for support or issue reports.
+
+Reference direction from WoW add-on tooling: do not copy the visual style, but
+borrow the workflow. BugSack/BugGrabber-style tools collect errors, show a
+navigable error frame, include full debug text, and make the error text
+copy/pasteable. ActionRail should use the same pattern: a quiet diagnostics
+viewer, not repeated blocking popups.
+
 Required features:
 
 - `actionrail.safe_start()`
@@ -309,6 +319,8 @@ Required features:
 - orphaned hotkey/runtime-command cleanup
 - last error report
 - broken-action and missing-icon badges
+- themed diagnostics window with summary, issue list, selectable full report,
+  and copy actions for selected issues and the full report
 
 ### 14. High DPI And Visual Regression
 
@@ -351,14 +363,16 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Build the icon pipeline and first icon-backed rail.
-2. Continue visible diagnostics as the icon/preset import path appears.
-3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
+1. Replace the simple last-report `confirmDialog` with a polished,
+   ActionRail-themed, copyable diagnostics window.
+2. Build the icon pipeline and first icon-backed rail.
+3. Continue visible diagnostics as the icon/preset import path appears.
+4. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.
-4. Add Bind Mode.
-5. Add flyouts.
-6. Add command rings.
-7. Add profile layers: built-in, studio locked, project, scene/asset, user
+5. Add Bind Mode.
+6. Add flyouts.
+7. Add command rings.
+8. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-8. Add marking-menu/hotbox export.
-9. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+9. Add marking-menu/hotbox export.
+10. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
