@@ -43,7 +43,7 @@ def test_transform_stack_spec_matches_phase_zero_reference() -> None:
     assert spec.items[5].tone == "teal"
     assert spec.items[0].tooltip == "Move tool"
     assert spec.items[5].key_label == "S"
-    assert spec.items[0].active_when == "maya.tool == move"
+    assert spec.items[0].active_when == ""
     assert spec.items[1].active_when == "maya.tool == move"
     assert spec.items[2].active_when == "maya.tool == rotate"
     assert spec.items[3].active_when == "maya.tool == scale"

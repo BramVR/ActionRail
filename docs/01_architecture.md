@@ -139,7 +139,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
     "locked": true
   },
   "items": [
-    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move", "active_when": "maya.tool == move"},
+    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move"},
     {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "action": "maya.tool.translate", "active_when": "maya.tool == move"},
     {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate", "active_when": "maya.tool == rotate"},
     {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "active_when": "maya.tool == scale"},
@@ -149,7 +149,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true.
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. If multiple buttons trigger the same underlying Maya state, only one should declare that persistent active predicate unless the slot has another distinct state source.
 
 Later phases should evolve the public naming toward user-authored rail/slot data:
 
