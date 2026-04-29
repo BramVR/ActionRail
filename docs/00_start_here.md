@@ -54,6 +54,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   kept visible and disabled only when the missing availability check is what
   makes the predicate fail, so compound context gates and intentional
   `not ...exists(...)` fallback slots keep their declared behavior.
+- Diagnostic calls now record the latest `DiagnosticReport`; public helpers
+  expose, clear, format, and show that report, and the ActionRail Maya menu has
+  a "Show Last Diagnostic Report" entry for a simple last-error UI.
 - The Python `StackItem(...)` constructor preserves the original positional
   argument order through `tone`; newer optional fields such as `icon` are
   keyword-friendly and appended after the legacy fields.
@@ -88,7 +91,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
+1. Continue diagnostic work toward the future icon-backed preset/import pipeline.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

@@ -109,9 +109,18 @@ def test_install_menu_toggle_is_idempotent() -> None:
 
     assert first == second == maya_ui.MENU_ITEM_NAME
     assert tuple(cmds.menus) == (maya_ui.MENU_NAME,)
-    assert tuple(cmds.menu_items) == (maya_ui.MENU_ITEM_NAME,)
+    assert tuple(cmds.menu_items) == (
+        maya_ui.MENU_ITEM_NAME,
+        maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
+    )
     assert cmds.menu_items[maya_ui.MENU_ITEM_NAME]["command"] == maya_ui.toggle_command()
-    assert cmds.deleted == [(maya_ui.MENU_ITEM_NAME, {"menuItem": True})]
+    assert cmds.menu_items[maya_ui.MENU_DIAGNOSTICS_ITEM_NAME]["command"] == (
+        "import actionrail; actionrail.show_last_report()"
+    )
+    assert cmds.deleted == [
+        (maya_ui.MENU_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
+    ]
 
 
 def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
@@ -123,6 +132,7 @@ def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
     assert cmds.menu_items == {}
     assert cmds.menus == {}
     assert (maya_ui.MENU_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_NAME, {"menu": True}) in cmds.deleted
 
 

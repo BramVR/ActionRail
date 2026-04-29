@@ -35,8 +35,9 @@ transform stack.
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
 hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
 diagnostics, and visible missing-action/missing-icon/command/plugin badges are now implemented.
-The sections below remain useful research context; the active backlog starts
-with last-error UI and icon-backed presets/import tooling.
+First-pass last diagnostic report API/UI is also implemented. The sections
+below remain useful research context; the active backlog starts with
+icon-backed presets/import tooling.
 
 ## Highest Priority Gaps
 
@@ -289,9 +290,10 @@ Sources:
 ### 13. Diagnostics And Safe Mode
 
 Status: first pass implemented through `actionrail.collect_diagnostics()`,
-`actionrail.diagnose_spec()`, `actionrail.safe_start()`, visible
-missing-action/missing-icon badges, and missing command/plugin predicate
-badges. Last-error UI remains open.
+`actionrail.diagnose_spec()`, `actionrail.safe_start()`,
+`actionrail.last_report()`, `actionrail.format_report()`, visible
+missing-action/missing-icon badges, missing command/plugin predicate badges,
+and a simple Maya menu item for showing the latest diagnostic report.
 
 Viewport overlays can break trust if they get stuck, steal input, or fail on
 startup. Add diagnostics before complex authoring.
@@ -349,8 +351,8 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue visible diagnostics for last-error UI.
-2. Build the icon pipeline and first icon-backed rail.
+1. Build the icon pipeline and first icon-backed rail.
+2. Continue visible diagnostics as the icon/preset import path appears.
 3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.
 4. Add Bind Mode.

@@ -66,6 +66,10 @@ Last updated: 2026-04-29
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
+  - Diagnostic entry points now remember the latest `DiagnosticReport`, expose
+    `actionrail.last_report()`, `actionrail.clear_last_report()`,
+    `actionrail.format_report()`, and `actionrail.show_last_report()`, and add a
+    Maya menu item for showing the latest report.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -111,7 +115,7 @@ Last updated: 2026-04-29
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
+2. First recommended coding slice: continue diagnostic work toward the future icon-backed preset/import pipeline.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -125,16 +129,16 @@ Checks already run for the latest diagnostic badge fix:
 
 ## Latest Handoff
 
-- Task goal completed: added visible warning badges for missing command/plugin predicate availability.
-- Files changed: `scripts/actionrail/predicates.py`, `scripts/actionrail/diagnostics.py`, `scripts/actionrail/widgets.py`, widget/smoke tests, and docs.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` passed with 24 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 109 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` and `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against live MayaSessiond on port `7217`.
+- Task goal completed: added first-pass last diagnostic report API/UI.
+- Files changed: `scripts/actionrail/diagnostics.py`, `scripts/actionrail/maya_ui.py`, public package exports, diagnostics/UI tests, Maya smoke tests, and docs.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_package.py` passed with 21 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 114 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` and `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_ui_smoke.py` passed against live MayaSessiond on port `7217`.
 - Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed tested widgets and purged cached `actionrail` modules after each run.
-- Blockers/risks: no current implementation blocker known; last-error UI is still open.
-- Exact next step: continue diagnostic work toward last-error UI, then move toward real icon-backed presets/import tooling.
+- Blockers/risks: no current implementation blocker known.
+- Exact next step: continue diagnostic work toward real icon-backed presets/import tooling.
 
 ## Next
 
-1. Continue diagnostic work toward last-error UI and the future icon-backed preset/import pipeline.
+1. Continue diagnostic work toward the future icon-backed preset/import pipeline.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 3. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -350,6 +354,20 @@ Checks already run for the latest diagnostic badge fix:
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`: missing action rendered `X\n!`, missing icon rendered `I\n?`, missing command rendered `C\n?`, missing plugin rendered `P\n?`, negated fallback rendered `F` enabled with no badge, the compound context-gated missing plugin slot stayed hidden, and the rail size was `[46,230]`.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`: automatic refresh preserved the missing-command warning badge as `DK\n?` while visible/enabled/active predicates updated.
+- 2026-04-29 last diagnostic report UI:
+  - `scripts/actionrail/diagnostics.py` now records the most recent diagnostic
+    report from `collect_diagnostics()`, `diagnose_spec()`, and `safe_start()`.
+  - Public helpers now expose `actionrail.last_report()`,
+    `actionrail.clear_last_report()`, `actionrail.format_report()`, and
+    `actionrail.show_last_report()`.
+  - `scripts/actionrail/maya_ui.py` installs a "Show Last Diagnostic Report"
+    menu item alongside the default rail toggle; the command opens the latest
+    report through Maya `confirmDialog`.
+  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_package.py` -> 21 passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 114 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against live MayaSessiond on port `7217`: `safe_start("transform_stack")` recorded an ok last report with active overlay `transform_stack`.
+  - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_ui_smoke.py` passed against live MayaSessiond on port `7217`: the diagnostics menu item installed idempotently, used `import actionrail; actionrail.show_last_report()`, and uninstalled cleanly.
 
 ## Decisions
 

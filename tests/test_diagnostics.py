@@ -7,7 +7,15 @@ import pytest
 
 import actionrail.diagnostics as diagnostics
 from actionrail.actions import Action, ActionRegistry, create_default_registry
-from actionrail.diagnostics import collect_diagnostics, diagnose_spec, safe_start
+from actionrail.diagnostics import (
+    clear_last_report,
+    collect_diagnostics,
+    diagnose_spec,
+    format_report,
+    last_report,
+    safe_start,
+    show_last_report,
+)
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -17,6 +25,15 @@ class AvailabilityCmds:
 
     def pluginInfo(self, plugin_name: str, *, query: bool = False, loaded: bool = False) -> bool:  # noqa: N802
         return plugin_name == "loadedPlugin" and query and loaded
+
+
+class DialogCmds:
+    def __init__(self) -> None:
+        self.dialogs: list[dict[str, object]] = []
+
+    def confirmDialog(self, **kwargs: object) -> str:  # noqa: N802
+        self.dialogs.append(dict(kwargs))
+        return "OK"
 
 
 def test_builtin_preset_ids_are_discovered_from_presets_directory() -> None:
@@ -143,6 +160,54 @@ def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     assert report.has_errors is True
     assert report.errors[0].code == "broken_preset"
     assert report.errors[0].preset_id == "missing_preset"
+    assert last_report() == report
+
+
+def test_last_report_can_be_cleared_and_formatted() -> None:
+    clear_last_report()
+
+    assert last_report() is None
+    assert format_report() == "No ActionRail diagnostic report has been recorded."
+
+    report = diagnose_spec(
+        StackSpec(
+            id="broken_actions",
+            layout=RailLayout(anchor="viewport.left.center"),
+            items=(
+                StackItem(
+                    type="button",
+                    id="broken_actions.missing",
+                    label="X",
+                    action="maya.missing.action",
+                ),
+            ),
+        ),
+        registry=create_default_registry(AvailabilityCmds()),
+    )
+
+    text = format_report()
+
+    assert last_report() == report
+    assert "Status: errors" in text
+    assert "missing_action [broken_actions.missing]" in text
+
+
+def test_show_last_report_opens_maya_dialog_with_formatted_report() -> None:
+    cmds = DialogCmds()
+    collect_diagnostics(("missing_preset",), cmds_module=AvailabilityCmds())
+
+    text = show_last_report(cmds_module=cmds)
+
+    assert "broken_preset [missing_preset]" in text
+    assert cmds.dialogs == [
+        {
+            "title": "ActionRail Diagnostics",
+            "message": text,
+            "button": ("OK",),
+            "defaultButton": "OK",
+            "icon": "information",
+        }
+    ]
 
 
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
@@ -218,6 +283,7 @@ def test_safe_start_skips_overlay_when_diagnostics_have_errors(
     assert report.has_errors is True
     assert started == []
     assert {issue.code for issue in report.errors} == {"missing_action"}
+    assert last_report() == report
 
 
 def test_safe_start_reports_recoverable_overlay_startup_failure(

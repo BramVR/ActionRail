@@ -101,6 +101,71 @@ class DiagnosticReport:
         )
 
 
+_LAST_REPORT: DiagnosticReport | None = None
+
+
+def last_report() -> DiagnosticReport | None:
+    """Return the most recently recorded ActionRail diagnostic report."""
+
+    return _LAST_REPORT
+
+
+def clear_last_report() -> None:
+    """Clear the most recently recorded diagnostic report."""
+
+    global _LAST_REPORT
+    _LAST_REPORT = None
+
+
+def format_report(report: DiagnosticReport | None = None) -> str:
+    """Return a compact plain-text report for Maya dialogs and logs."""
+
+    diagnostic_report = report if report is not None else last_report()
+    if diagnostic_report is None:
+        return "No ActionRail diagnostic report has been recorded."
+
+    status = "errors" if diagnostic_report.has_errors else "ok"
+    lines = [
+        f"Status: {status}",
+        f"Overlay started: {diagnostic_report.overlay_started}",
+    ]
+    if diagnostic_report.overlay_id:
+        lines.append(f"Overlay id: {diagnostic_report.overlay_id}")
+    if diagnostic_report.active_overlay_ids:
+        lines.append(
+            "Active overlays: " + ", ".join(diagnostic_report.active_overlay_ids)
+        )
+
+    if not diagnostic_report.issues:
+        lines.append("Issues: none")
+        return "\n".join(lines)
+
+    lines.append("Issues:")
+    for issue in diagnostic_report.issues:
+        label = issue.code
+        if issue.slot_id:
+            label = f"{label} [{issue.slot_id}]"
+        elif issue.preset_id:
+            label = f"{label} [{issue.preset_id}]"
+        lines.append(f"- {issue.severity}: {label}: {issue.message}")
+    return "\n".join(lines)
+
+
+def show_last_report(*, cmds_module: Any | None = None) -> str:
+    """Show the latest diagnostic report in a simple Maya dialog."""
+
+    message = format_report()
+    cmds = _require_cmds_module(cmds_module)
+    cmds.confirmDialog(
+        title="ActionRail Diagnostics",
+        message=message,
+        button=("OK",),
+        defaultButton="OK",
+        icon="information",
+    )
+    return message
+
+
 def collect_diagnostics(
     preset_ids: Iterable[str] | None = None,
     *,
@@ -132,9 +197,12 @@ def collect_diagnostics(
                 spec,
                 registry=action_registry,
                 cmds_module=resolved_cmds,
+                record=False,
             ).issues
         )
-    return DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+    return _record_report(
+        DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+    )
 
 
 def diagnose_spec(
@@ -142,6 +210,7 @@ def diagnose_spec(
     *,
     registry: ActionRegistry | None = None,
     cmds_module: Any | None = None,
+    record: bool = True,
 ) -> DiagnosticReport:
     """Collect diagnostics for an already parsed preset spec."""
 
@@ -187,7 +256,10 @@ def diagnose_spec(
                 cmds_module=resolved_cmds,
             )
         )
-    return DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+    report = DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+    if not record:
+        return report
+    return _record_report(report)
 
 
 def safe_start(
@@ -205,9 +277,11 @@ def safe_start(
         cmds_module=cmds_module,
     )
     if report.has_errors:
-        return report.with_runtime(
-            overlay_started=False,
-            active_overlay_ids=_safe_active_overlay_ids(),
+        return _record_report(
+            report.with_runtime(
+                overlay_started=False,
+                active_overlay_ids=_safe_active_overlay_ids(),
+            )
         )
 
     try:
@@ -221,15 +295,19 @@ def safe_start(
             preset_id=preset_id,
             exception_type=type(exc).__name__,
         )
-        return report.with_issues((issue,)).with_runtime(
-            overlay_started=False,
-            active_overlay_ids=_safe_active_overlay_ids(),
+        return _record_report(
+            report.with_issues((issue,)).with_runtime(
+                overlay_started=False,
+                active_overlay_ids=_safe_active_overlay_ids(),
+            )
         )
 
-    return report.with_runtime(
-        overlay_started=True,
-        overlay_id=preset_id,
-        active_overlay_ids=_safe_active_overlay_ids(),
+    return _record_report(
+        report.with_runtime(
+            overlay_started=True,
+            overlay_id=preset_id,
+            active_overlay_ids=_safe_active_overlay_ids(),
+        )
     )
 
 
@@ -320,6 +398,12 @@ def _availability_issue(
     )
 
 
+def _record_report(report: DiagnosticReport) -> DiagnosticReport:
+    global _LAST_REPORT
+    _LAST_REPORT = report
+    return report
+
+
 def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:
     if cmds_module is not None:
         return cmds_module
@@ -328,6 +412,14 @@ def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:
         import maya.cmds as cmds  # type: ignore[import-not-found]
     except Exception:
         return None
+    return cmds
+
+
+def _require_cmds_module(cmds_module: Any | None) -> Any:
+    cmds = _resolve_cmds_module(cmds_module)
+    if cmds is None:
+        msg = "ActionRail diagnostic UI requires maya.cmds inside Maya."
+        raise RuntimeError(msg)
     return cmds
 
 

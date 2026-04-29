@@ -40,8 +40,17 @@ shelf_first = actionrail.install_shelf_toggle()
 shelf_second = actionrail.install_shelf_toggle()
 
 menu_exists_after_install = _exists(maya_ui.MENU_ITEM_NAME, cmds.menuItem)
+diagnostics_menu_exists_after_install = _exists(
+    maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
+    cmds.menuItem,
+)
 shelf_exists_after_install = _exists(maya_ui.SHELF_BUTTON_NAME, cmds.shelfButton)
 menu_command = cmds.menuItem(maya_ui.MENU_ITEM_NAME, query=True, command=True)
+diagnostics_menu_command = cmds.menuItem(
+    maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
+    query=True,
+    command=True,
+)
 shelf_command = cmds.shelfButton(maya_ui.SHELF_BUTTON_NAME, query=True, command=True)
 
 toggle_show = actionrail.toggle_default()
@@ -61,6 +70,12 @@ maya_ui.uninstall_menu_toggle()
 maya_ui.uninstall_shelf_toggle()
 
 result = {
+    "diagnostics_menu_command": diagnostics_menu_command,
+    "diagnostics_menu_exists_after_install": diagnostics_menu_exists_after_install,
+    "diagnostics_menu_exists_after_uninstall": _exists(
+        maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
+        cmds.menuItem,
+    ),
     "ids_after_hide": ids_after_hide,
     "ids_after_show": ids_after_show,
     "menu_command": menu_command,

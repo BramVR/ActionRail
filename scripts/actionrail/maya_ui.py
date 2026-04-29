@@ -9,6 +9,7 @@ from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
+MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
 
@@ -44,8 +45,10 @@ def install_menu_toggle(
 
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
 
-    return str(
+    toggle_item = str(
         cmds.menuItem(
             MENU_ITEM_NAME,
             label=_toggle_label(preset_id),
@@ -55,12 +58,23 @@ def install_menu_toggle(
             sourceType="python",
         )
     )
+    cmds.menuItem(
+        MENU_DIAGNOSTICS_ITEM_NAME,
+        label="Show Last Diagnostic Report",
+        annotation="Show the latest ActionRail diagnostic report.",
+        command="import actionrail; actionrail.show_last_report()",
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    return toggle_item
 
 
 def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
     """Remove the ActionRail menu toggle created by :func:`install_menu_toggle`."""
 
     cmds = _require_cmds(cmds_module)
+    if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
 

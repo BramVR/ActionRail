@@ -90,6 +90,12 @@ app.processEvents()
 cmds.refresh(force=True)
 if start_report.has_errors or not start_report.overlay_started:
     raise AssertionError(f"Safe start did not show transform_stack: {start_report.as_dict()}")
+last_report = actionrail.last_report()
+if last_report != start_report:
+    raise AssertionError(f"Last report did not track safe_start: {last_report!r}")
+last_report_text = actionrail.format_report()
+if "Status: ok" not in last_report_text or "Overlay id: transform_stack" not in last_report_text:
+    raise AssertionError(f"Last report text missing safe_start state: {last_report_text}")
 if active_overlay_ids() != ("transform_stack",):
     raise AssertionError(f"Unexpected active overlays after safe start: {active_overlay_ids()}")
 
@@ -105,6 +111,7 @@ result = {
     "missing_icon_warning_codes": [issue.code for issue in missing_icon_report.warnings],
     "safe_start_active_ids": active_overlay_ids(),
     "safe_start_overlay_started": start_report.overlay_started,
+    "last_report_text": last_report_text,
     "widget_size": widget_size,
 }
 
