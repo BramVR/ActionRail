@@ -70,6 +70,9 @@ $env:MAYA_MODULE_PATH = "."
 - Conflict-aware hotkey assignment helpers.
 - Key-label sync and stale runtime-command cleanup helpers for published slots.
 - Automatic predicate refresh for visible overlays.
+- Safe-mode diagnostics through `actionrail.collect_diagnostics()`,
+  `actionrail.diagnose_spec()`, and `actionrail.safe_start()`.
+- Visible diagnostic badges for missing actions and missing icons.
 - Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
 - Pure Python tests plus Maya smoke scripts.
@@ -78,7 +81,9 @@ $env:MAYA_MODULE_PATH = "."
 
 Near-term:
 
-- Add safe-mode diagnostics for broken presets/actions and missing commands/plugins.
+- Continue visible diagnostics for command/plugin predicate availability and
+  last-error UI.
+- Build toward real icon-backed presets and import tooling.
 - Harden the declarative MVP before starting broad authoring UI.
 
 Next:

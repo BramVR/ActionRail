@@ -23,6 +23,7 @@ ActionRail has a solid MVP base:
 - Conflict-aware hotkey assignment helpers.
 - Safe predicate evaluation and automatic timer-driven refresh for visible
   overlay hosts.
+- Safe-mode diagnostics and visible missing-action/missing-icon badges.
 - Pure Python tests and MayaSessiond smoke coverage.
 
 The main gap is that the UI is still not authorable or diagnostic enough for
@@ -31,17 +32,24 @@ missing commands clearly, then add narrow authoring workflows beyond the current
 transform stack.
 
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
-hotkey label sync, shelf/menu toggles, and the reusable smoke wrapper are now
-implemented. The sections below remain useful research context; the active
-backlog starts with safe mode and diagnostics.
+hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
+diagnostics, and visible missing-action/missing-icon badges are now implemented.
+The sections below remain useful research context; the active backlog starts
+with command/plugin predicate visibility, last-error UI, and icon-backed
+presets/import tooling.
 
 ## Highest Priority Gaps
 
 ### 1. Real Predicate Evaluation
 
-`visible_when`, `enabled_when`, and `active_when` are parsed, but the widget
-builder currently only handles literal `false` for visibility/enabled state.
-`active_when` is not reflected in button state.
+Status: implemented for the Phase 1 predicate set; keep this section as source
+context for future predicate expansion.
+
+Earlier Phase 1 code parsed `visible_when`, `enabled_when`, and `active_when`
+before fully applying them to rendered slot state. The current implementation
+evaluates these predicates through a safe evaluator and refreshes visible
+overlays automatically; future work should broaden predicate coverage only as
+needed.
 
 Build a small safe evaluator before adding the designer:
 
@@ -59,6 +67,10 @@ Do not make arbitrary Python snippets the default predicate path for artists.
 
 ### 2. Live Active And Enabled State
 
+Status: implemented for rendered action slots through predicate refresh and
+`SlotRenderState`; continue expanding it for diagnostic badges and future icon
+states.
+
 Transform buttons should show the active Maya tool without requiring reload.
 Disabled actions should be visually disabled when missing commands, missing
 plugins, empty selection, playback state, or unsupported contexts make an action
@@ -72,8 +84,12 @@ Source: [Qt QToolButton](https://doc.qt.io/qt-6/qtoolbutton.html)
 
 ### 3. Hotkey Label Sync
 
-Key labels render from static preset data today. After publishing or assigning
-a hotkey, ActionRail should query Maya and update the rendered badge.
+Status: implemented for ActionRail hotkey assignment and visible slot refresh;
+Bind Mode remains future work.
+
+Key labels originally rendered only from static preset data. Current ActionRail
+assignment helpers update visible slot badges after binding; future Bind Mode
+should reuse the same runtime-command bridge and conflict checks.
 
 Required behavior:
 
@@ -90,7 +106,10 @@ Source: [Autodesk runtime commands](https://help.autodesk.com/cloudhelp/2026/ENU
 
 ### 4. Shelf And Menu Entry Points
 
-Add user-visible Maya entry points:
+Status: implemented for the default rail toggle through idempotent Maya menu and
+shelf installers; Edit Mode and Bind Mode commands remain future work.
+
+Keep expanding user-visible Maya entry points:
 
 - Shelf button to toggle the current/default rail.
 - Main menu item for ActionRail.
@@ -269,6 +288,11 @@ Sources:
 
 ### 13. Diagnostics And Safe Mode
 
+Status: first pass implemented through `actionrail.collect_diagnostics()`,
+`actionrail.diagnose_spec()`, `actionrail.safe_start()`, and visible
+missing-action/missing-icon badges. Command/plugin predicate badges and
+last-error UI remain open.
+
 Viewport overlays can break trust if they get stuck, steal input, or fail on
 startup. Add diagnostics before complex authoring.
 
@@ -325,17 +349,15 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Add safe mode and diagnostics for broken presets, missing actions, missing
-   commands/plugins, and recoverable overlay startup failures.
-2. Refactor rendering around action/state objects so buttons can update without
-   full rebuilds.
-3. Build the icon pipeline and first icon-backed rail.
-4. Implement narrow Quick Create: template, action picker, collapsible edge-tab
+1. Continue visible diagnostics for command/plugin predicate availability and
+   last-error UI.
+2. Build the icon pipeline and first icon-backed rail.
+3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.
-5. Add Bind Mode.
-6. Add flyouts.
-7. Add command rings.
-8. Add profile layers: built-in, studio locked, project, scene/asset, user
+4. Add Bind Mode.
+5. Add flyouts.
+6. Add command rings.
+7. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-9. Add marking-menu/hotbox export.
-10. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+8. Add marking-menu/hotbox export.
+9. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.

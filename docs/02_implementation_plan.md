@@ -213,9 +213,8 @@ The highest-priority missing features are:
 
 1. Continue visible diagnostics after the missing-action/missing-icon badge pass, especially command/plugin predicate availability and last-error UI.
 2. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
-3. Continue diagnostics toward visible broken-action/missing-icon badges and last-error UI.
+3. Build toward real icon-backed presets and an import pipeline with source/license tracking.
 4. Bind Mode, then flyouts, then command rings.
-5. Icon import pipeline with license/source tracking.
-6. Broader workflow action library beyond transform/keyframe.
-7. Profile layers for built-in, studio, project, scene/asset, and user overrides.
-8. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+5. Broader workflow action library beyond transform/keyframe.
+6. Profile layers for built-in, studio, project, scene/asset, and user overrides.
+7. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
