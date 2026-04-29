@@ -42,8 +42,13 @@ class FakeButton:
             "actionRailSlotId": slot_id,
             "actionRailLabel": label,
             "actionRailKeyLabel": key_label,
+            "actionRailIcon": "",
+            "actionRailIconPath": "",
             "actionRailTone": tone,
             "actionRailActive": active,
+            "actionRailDiagnosticCode": "",
+            "actionRailDiagnosticSeverity": "",
+            "actionRailDiagnosticBadge": "",
         }
         self.enabled = enabled
         self.style_object = FakeStyle()
@@ -138,6 +143,44 @@ def test_slot_render_state_uses_action_tooltip_fallback() -> None:
     assert state.tooltip == "Set keyframe"
 
 
+def test_slot_render_state_marks_missing_action_as_error() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="broken.missing",
+        label="X",
+        action="maya.missing.action",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.enabled is False
+    assert state.diagnostic_code == "missing_action"
+    assert state.diagnostic_severity == "error"
+    assert state.text == "X\n!"
+    assert "maya.missing.action" in state.tooltip
+
+
+def test_slot_render_state_marks_missing_icon_as_warning() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="broken.icon",
+        label="I",
+        action="maya.anim.set_key",
+        icon="missing.icon",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.enabled is True
+    assert state.icon == "missing.icon"
+    assert state.icon_path == ""
+    assert state.diagnostic_code == "missing_icon"
+    assert state.diagnostic_severity == "warning"
+    assert state.text == "I\n?"
+
+
 def test_refresh_predicate_state_updates_enabled_and_active(
     monkeypatch,
 ) -> None:
@@ -200,6 +243,35 @@ def test_refresh_predicate_state_preserves_runtime_key_label(
     assert result.refreshed == 0
     assert button.property("actionRailKeyLabel") == "F12"
     assert button.text() == "K\nF12"
+
+
+def test_refresh_predicate_state_updates_diagnostic_badge(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(widgets, "load", lambda: FakeQt)
+    spec = StackSpec(
+        id="refresh_test",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="refresh_test.missing",
+                label="X",
+                action="maya.missing.action",
+            ),
+        ),
+    )
+    button = FakeButton("refresh_test.missing")
+    root = FakeRoot([button])
+
+    result = refresh_predicate_state(root, spec, registry=create_default_registry(object()))
+
+    assert result.needs_rebuild is False
+    assert button.isEnabled() is False
+    assert button.property("actionRailDiagnosticCode") == "missing_action"
+    assert button.property("actionRailDiagnosticSeverity") == "error"
+    assert button.text() == "X\n!"
+    assert button.style_object.polished == 1
 
 
 def test_refresh_predicate_state_requests_rebuild_when_visibility_changes(

@@ -18,6 +18,7 @@ class StackItem:
     id: str = ""
     label: str = ""
     action: str = ""
+    icon: str = ""
     tone: str = "neutral"
     tooltip: str = ""
     size: int = 0
@@ -185,6 +186,7 @@ def _parse_item(payload: Any, index: int, source: str, spec_id: str) -> StackIte
 
     label = _required_string(payload, "label", source, index=index)
     action = _required_string(payload, "action", source, index=index)
+    icon = _optional_string(payload, "icon", "", source, index=index)
     tone = _optional_string(payload, "tone", "neutral", source, index=index)
     tooltip = _optional_string(payload, "tooltip", "", source, index=index)
     key_label = _optional_string(payload, "key_label", "", source, index=index)
@@ -196,6 +198,7 @@ def _parse_item(payload: Any, index: int, source: str, spec_id: str) -> StackIte
         id=item_id,
         label=label,
         action=action,
+        icon=icon,
         tone=tone,
         tooltip=tooltip,
         key_label=key_label,

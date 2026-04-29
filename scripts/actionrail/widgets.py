@@ -6,6 +6,7 @@ from contextlib import suppress
 from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
+from .icons import resolve_icon_path
 from .predicates import PredicateContext, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
@@ -36,14 +37,19 @@ class SlotRenderState:
 
     label: str
     key_label: str
+    icon: str
+    icon_path: str
     tone: str
     tooltip: str
     enabled: bool
     active: bool
+    diagnostic_code: str = ""
+    diagnostic_severity: str = ""
+    diagnostic_badge: str = ""
 
     @property
     def text(self) -> str:
-        return _button_text(self.label, self.key_label)
+        return _button_text(self.label, self.key_label, self.diagnostic_badge)
 
     @property
     def active_property(self) -> str:
@@ -240,8 +246,15 @@ def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
         label = button.property("actionRailLabel")
         if not isinstance(label, str) or not label:
             label = button.text().split("\n", 1)[0]
+        diagnostic_badge = button.property("actionRailDiagnosticBadge")
         button.setProperty("actionRailKeyLabel", key_label)
-        button.setText(_button_text(label, key_label))
+        button.setText(
+            _button_text(
+                label,
+                key_label,
+                diagnostic_badge if isinstance(diagnostic_badge, str) else "",
+            )
+        )
         updated += 1
 
     return updated
@@ -298,8 +311,15 @@ def refresh_predicate_state(
     )
 
 
-def _button_text(label: str, key_label: str) -> str:
-    return label if not key_label else f"{label}\n{key_label}"
+def _button_text(label: str, key_label: str, diagnostic_badge: str = "") -> str:
+    secondary = _button_secondary_text(key_label, diagnostic_badge)
+    return label if not secondary else f"{label}\n{secondary}"
+
+
+def _button_secondary_text(key_label: str, diagnostic_badge: str = "") -> str:
+    if key_label and diagnostic_badge:
+        return f"{key_label}{diagnostic_badge}"
+    return key_label or diagnostic_badge
 
 
 def _slot_render_state(
@@ -310,13 +330,20 @@ def _slot_render_state(
     key_label: str | None = None,
 ) -> SlotRenderState:
     item_context = _item_context(item, registry, context)
+    diagnostic = _slot_diagnostic(item, registry)
     return SlotRenderState(
         label=item.label,
         key_label=item.key_label if key_label is None else key_label,
+        icon=item.icon,
+        icon_path=str(resolve_icon_path(item.icon) or "") if item.icon else "",
         tone=item.tone,
-        tooltip=_item_tooltip(item, registry),
-        enabled=evaluate_predicate(item.enabled_when, item_context),
+        tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
+        enabled=evaluate_predicate(item.enabled_when, item_context)
+        and diagnostic[1] != "error",
         active=_is_item_active(item, item_context),
+        diagnostic_code=diagnostic[0],
+        diagnostic_severity=diagnostic[1],
+        diagnostic_badge=diagnostic[2],
     )
 
 
@@ -337,20 +364,80 @@ def _item_tooltip(item: StackItem, registry: ActionRegistry | None = None) -> st
     return tooltip if isinstance(tooltip, str) else ""
 
 
+def _slot_diagnostic(
+    item: StackItem,
+    registry: ActionRegistry | None = None,
+) -> tuple[str, str, str, str]:
+    get_action = getattr(registry, "get", None)
+    if item.action and get_action is not None:
+        try:
+            get_action(item.action)
+        except Exception:
+            return (
+                "missing_action",
+                "error",
+                "!",
+                f"Missing ActionRail action: {item.action}",
+            )
+
+    if item.icon and resolve_icon_path(item.icon) is None:
+        return (
+            "missing_icon",
+            "warning",
+            "?",
+            f"Missing ActionRail icon: {item.icon}",
+        )
+
+    return ("", "", "", "")
+
+
+def _diagnostic_tooltip(base_tooltip: str, diagnostic: tuple[str, str, str, str]) -> str:
+    message = diagnostic[3]
+    if not message:
+        return base_tooltip
+    if not base_tooltip:
+        return message
+    return f"{base_tooltip}\n{message}"
+
+
 def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
     refreshed = 0
     style_needs_refresh = False
 
     refreshed += _set_button_property(button, "actionRailLabel", state.label)
     refreshed += _set_button_property(button, "actionRailKeyLabel", state.key_label)
+    refreshed += _set_button_property(button, "actionRailIcon", state.icon)
+    refreshed += _set_button_property(button, "actionRailIconPath", state.icon_path)
     tone_changed = _set_button_property(button, "actionRailTone", state.tone)
     active_changed = _set_button_property(
         button,
         "actionRailActive",
         state.active_property,
     )
+    diagnostic_code_changed = _set_button_property(
+        button,
+        "actionRailDiagnosticCode",
+        state.diagnostic_code,
+    )
+    diagnostic_severity_changed = _set_button_property(
+        button,
+        "actionRailDiagnosticSeverity",
+        state.diagnostic_severity,
+    )
+    refreshed += _set_button_property(
+        button,
+        "actionRailDiagnosticBadge",
+        state.diagnostic_badge,
+    )
     refreshed += tone_changed + active_changed
-    style_needs_refresh = bool(tone_changed or active_changed)
+    refreshed += diagnostic_code_changed + diagnostic_severity_changed
+    style_needs_refresh = bool(
+        tone_changed
+        or active_changed
+        or diagnostic_code_changed
+        or diagnostic_severity_changed
+    )
+    refreshed += _apply_button_icon(button, state.icon_path)
 
     text = getattr(button, "text", None)
     set_text = getattr(button, "setText", None)
@@ -389,6 +476,31 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
         _refresh_button_style(button)
 
     return refreshed
+
+
+def _apply_button_icon(button: object, icon_path: str) -> int:
+    set_icon = getattr(button, "setIcon", None)
+    if not callable(set_icon):
+        return 0
+
+    try:
+        current = button.property("actionRailAppliedIconPath")
+    except Exception:
+        current = None
+
+    if current == icon_path:
+        return 0
+
+    try:
+        qt = load()
+        set_icon(qt.QtGui.QIcon(icon_path) if icon_path else qt.QtGui.QIcon())
+        set_icon_size = getattr(button, "setIconSize", None)
+        if callable(set_icon_size) and icon_path:
+            set_icon_size(qt.QtCore.QSize(18, 18))
+        button.setProperty("actionRailAppliedIconPath", icon_path)
+    except Exception:
+        return 0
+    return 1
 
 
 def _set_button_property(button: object, name: str, value: object) -> int:

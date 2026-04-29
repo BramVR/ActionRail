@@ -45,6 +45,10 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   enabled, and active state can update in place without rebuilding the rail when
   visibility is unchanged. Runtime hotkey badge overrides are preserved during
   predicate refresh.
+- Slot specs now accept optional `icon` ids, and rendered `SlotRenderState`
+  carries icon path plus diagnostic code/severity/badge state. Missing actions
+  render disabled with an error badge, and missing icons render a warning badge
+  while leaving the action enabled.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -76,7 +80,7 @@ Build PySide6/Qt overlay first.
 
 Continue Phase 1 declarative MVP:
 
-1. Continue extending `SlotRenderState` toward icon and diagnostic badge state so broken actions, missing icons, and richer badges can update without rebuilding whole rails where possible.
+1. Continue diagnostic badge work toward command/plugin predicate availability, last-error UI, and the future icon-backed preset/import pipeline.
 2. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 3. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

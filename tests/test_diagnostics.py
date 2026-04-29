@@ -110,6 +110,33 @@ def test_diagnose_spec_reports_missing_command_and_plugin_predicates() -> None:
     ]
 
 
+def test_diagnose_spec_reports_missing_icon_warning() -> None:
+    spec = StackSpec(
+        id="missing_icon",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="missing_icon.slot",
+                label="I",
+                action="maya.anim.set_key",
+                icon="missing.icon",
+            ),
+        ),
+    )
+
+    report = diagnose_spec(
+        spec,
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+    )
+
+    assert report.has_errors is False
+    assert [(issue.code, issue.target) for issue in report.warnings] == [
+        ("missing_icon", "missing.icon")
+    ]
+
+
 def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     report = collect_diagnostics(("missing_preset",), cmds_module=AvailabilityCmds())
 

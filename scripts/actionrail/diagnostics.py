@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
+from .icons import resolve_icon_path
 from .predicates import (
     PredicateContext,
     _command_exists,
@@ -164,6 +165,20 @@ def diagnose_spec(
                     preset_id=spec.id,
                     slot_id=item.id,
                     action_id=item.action,
+                )
+            )
+        if item.icon and resolve_icon_path(item.icon) is None:
+            issues.append(
+                DiagnosticIssue(
+                    code="missing_icon",
+                    severity="warning",
+                    message=(
+                        f"Preset '{spec.id}' slot '{item.id}' references missing "
+                        f"ActionRail icon '{item.icon}'."
+                    ),
+                    preset_id=spec.id,
+                    slot_id=item.id,
+                    target=item.icon,
                 )
             )
 

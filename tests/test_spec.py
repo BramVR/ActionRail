@@ -93,6 +93,25 @@ def test_legacy_top_level_anchor_remains_supported() -> None:
     assert spec.items[0].id == "legacy.0.maya_anim_set_key"
 
 
+def test_parse_stack_spec_supports_optional_icon_id() -> None:
+    spec = parse_stack_spec(
+        {
+            "id": "with_icon",
+            "anchor": "viewport.left.center",
+            "items": [
+                {
+                    "type": "button",
+                    "label": "K",
+                    "action": "maya.anim.set_key",
+                    "icon": "lucide.key",
+                }
+            ],
+        }
+    )
+
+    assert spec.items[0].icon == "lucide.key"
+
+
 def test_parse_stack_spec_rejects_unknown_item_type() -> None:
     with pytest.raises(ValueError, match="Unsupported ActionRail item type"):
         parse_stack_spec(

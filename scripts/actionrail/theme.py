@@ -124,4 +124,14 @@ QPushButton[actionRailTone="{tone_name}"]:hover {{
 }}
 """
 
+    qss += """QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="warning"] {
+    border-color: #f0c45c;
+}
+QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="error"] {
+    background: #724c52;
+    border-color: #f06f78;
+    color: #fff1f2;
+}
+"""
+
     return qss

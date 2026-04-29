@@ -68,6 +68,23 @@ broken_report = diagnose_spec(broken_spec, cmds_module=cmds)
 if [issue.code for issue in broken_report.errors] != ["missing_action"]:
     raise AssertionError(f"Missing action diagnostic failed: {broken_report.as_dict()}")
 
+missing_icon_spec = StackSpec(
+    id="diagnostics_missing_icon",
+    layout=RailLayout(anchor="viewport.left.center"),
+    items=(
+        StackItem(
+            type="button",
+            id="diagnostics_missing_icon.slot",
+            label="I",
+            action="maya.anim.set_key",
+            icon="missing.icon",
+        ),
+    ),
+)
+missing_icon_report = diagnose_spec(missing_icon_spec, cmds_module=cmds)
+if [issue.code for issue in missing_icon_report.warnings] != ["missing_icon"]:
+    raise AssertionError(f"Missing icon diagnostic failed: {missing_icon_report.as_dict()}")
+
 start_report = actionrail.safe_start("transform_stack")
 app.processEvents()
 cmds.refresh(force=True)
@@ -85,6 +102,7 @@ result = {
     "availability_warning_codes": availability_codes,
     "broken_error_codes": [issue.code for issue in broken_report.errors],
     "builtin_issue_count": len(builtin_report.issues),
+    "missing_icon_warning_codes": [issue.code for issue in missing_icon_report.warnings],
     "safe_start_active_ids": active_overlay_ids(),
     "safe_start_overlay_started": start_report.overlay_started,
     "widget_size": widget_size,
