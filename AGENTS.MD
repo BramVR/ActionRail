@@ -4,7 +4,7 @@ read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 
 ## Context
 - Goal: ActionRail for Maya; polished viewport UI like `research/`.
-- Start docs: `docs/00_start_here.md`; deep reference: `MAYA_UI_FRAMEWORK_REPORT.md`.
+- Start docs: `docs/00_start_here.md`; deep reference: `docs/01_architecture.md`.
 - PySide6/Qt overlay first. Viewport 2.0 only for scene/native drawing.
 
 ## Workflow

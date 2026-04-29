@@ -69,6 +69,8 @@ $env:MAYA_MODULE_PATH = "."
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
 - Key-label sync and stale runtime-command cleanup helpers for published slots.
+- Automatic predicate refresh for visible overlays.
+- Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
 - Pure Python tests plus Maya smoke scripts.
 
@@ -76,8 +78,8 @@ $env:MAYA_MODULE_PATH = "."
 
 Near-term:
 
-- Show live active/enabled button state without rebuilding the overlay.
-- Add shelf/menu toggles and safe-mode diagnostics.
+- Add safe-mode diagnostics for broken presets/actions and missing commands/plugins.
+- Harden the declarative MVP before starting broad authoring UI.
 
 Next:
 
