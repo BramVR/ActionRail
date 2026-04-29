@@ -119,13 +119,14 @@ Checks already run for the latest compatibility fix:
 - `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` -> 15 passed.
 - `.\\.venv\\Scripts\\python.exe -m pytest` -> 106 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_stackitem_abi_smoke.py` passed against the live MayaSessiond on port `7217`; the legacy positional item rendered with `actionRailTone="teal"` and no icon.
 
 ## Latest Handoff
 
 - Task goal completed: preserved the documented `StackItem(...)` positional constructor ABI after optional slot icon support.
-- Files changed: `scripts/actionrail/spec.py`, `tests/test_spec.py`, `docs/00_start_here.md`, `docs/01_architecture.md`, and this status doc.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` passed with 15 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 106 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed.
-- Current live state: MayaSessiond was not needed for this pure spec/API compatibility fix.
+- Files changed: `scripts/actionrail/spec.py`, `tests/test_spec.py`, `tests/maya_smoke/actionrail_stackitem_abi_smoke.py`, `docs/00_start_here.md`, `docs/01_architecture.md`, and this status doc.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest tests/test_spec.py` passed with 15 tests; `.\\.venv\\Scripts\\python.exe -m pytest` passed with 106 tests; `.\\.venv\\Scripts\\python.exe -m ruff check .` passed; `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_stackitem_abi_smoke.py` passed against the live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`; smoke cleanup closed the tested ABI widget and purged cached `actionrail` modules after the run.
 - Blockers/risks: no current implementation blocker known; command/plugin predicate availability is diagnosed but does not yet produce a visible per-slot badge.
 - Exact next step: continue visible diagnostics for command/plugin predicate availability and last-error UI, then move toward real icon-backed presets/import tooling.
 
