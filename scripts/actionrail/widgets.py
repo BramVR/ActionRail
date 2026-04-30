@@ -1,4 +1,10 @@
-"""Qt widgets for ActionRail stack specs."""
+"""Qt widgets for ActionRail stack specs.
+
+Purpose: turn validated preset data into compact Qt rail widgets.
+Owns: button layout, slot render state, diagnostic badges, predicate refresh.
+Used by: the viewport overlay host; imports Qt only when building widgets.
+Tests: `tests/test_widgets.py` and widget-focused Maya smoke scripts.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +25,21 @@ FRAME_PADDING = DEFAULT_THEME.frame_padding
 FRAME_SPACING = DEFAULT_THEME.frame_spacing
 RAIL_WIDTH = DEFAULT_THEME.rail_width
 STYLE_SHEET = generate_style_sheet(DEFAULT_THEME)
+
+__all__ = [
+    "BUTTON_OUTER_SIZE",
+    "BUTTON_SIZE",
+    "FRAME_PADDING",
+    "FRAME_SPACING",
+    "RAIL_WIDTH",
+    "STYLE_SHEET",
+    "ActionRailRoot",
+    "PredicateRefreshResult",
+    "SlotRenderState",
+    "build_transform_stack",
+    "refresh_predicate_state",
+    "set_slot_key_label",
+]
 
 
 @dataclass(frozen=True)

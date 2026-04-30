@@ -11,6 +11,19 @@ TRANSFORM_STACK_ID = "transform_stack"
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _PRESET_DIR = _PACKAGE_ROOT / "presets"
 
+__all__ = [
+    "TRANSFORM_STACK_ID",
+    "RailLayout",
+    "StackItem",
+    "StackSpec",
+    "action_ids",
+    "builtin_preset_ids",
+    "get_example_spec",
+    "load_builtin_preset",
+    "load_preset",
+    "parse_stack_spec",
+]
+
 
 @dataclass(frozen=True)
 class StackItem:

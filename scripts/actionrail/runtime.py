@@ -9,6 +9,17 @@ from .spec import TRANSFORM_STACK_ID, get_example_spec
 
 _OVERLAYS: dict[str, Any] = {}
 
+__all__ = [
+    "active_overlay_ids",
+    "hide_all",
+    "hide_example",
+    "reload",
+    "run_action",
+    "run_slot",
+    "show_example",
+    "update_slot_key_label",
+]
+
 
 def show_example(
     example_id: str = TRANSFORM_STACK_ID,

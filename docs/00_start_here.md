@@ -1,5 +1,5 @@
 ---
-summary: First doc to read before working on ActionRail; explains the goal, current state, read order, and first implementation slice.
+summary: First doc to read before working on ActionRail; routes agents to current status, architecture, workflow, and deeper backlog docs.
 read_when:
   - Starting a new agent session.
   - Picking up ActionRail implementation work.
@@ -22,58 +22,29 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 
 ## Current State
 
-- Local agent guidance exists: `AGENTS.MD`.
-- Phase 0 prototype exists and has been verified in MayaSessiond.
-- Phase 1 declarative MVP is in progress.
-- Phase 1B runtime-command/hotkey bridge is started; rendered key labels now update after ActionRail hotkey assignment.
-- Runtime-command sync helpers now prune stale ActionRail action and preset-slot commands when ids are renamed or removed.
-- Safe predicate evaluation now drives initial `visible_when`, `enabled_when`, and `active_when` state at overlay build time using the overlay's resolved model panel for `active.panel` and `active.camera`.
-- `ViewportOverlayHost.refresh_state()` now updates predicate-driven enabled/active state after creation and rebuilds the rail when `visible_when` changes, without requiring `actionrail.reload()`.
-- Visible overlay hosts now run a host-owned Qt timer that automatically calls the predicate refresh path, so tool and selection state changes update the rail without manual refresh calls.
-- Active slot color is now generic theme state, not a hard-coded `tone` on the demo `S` button. Built-in tool slots declare `active_when`; one-shot macro buttons such as Set Key stay clickable without persistent active state.
-- Slots may intentionally omit `action`; these placeholder slots render disabled/locked, are not clickable, and are skipped by slot hotkey publishing.
-- The Qt rail host now anchors from the resolved model panel but shows the visible rail as a small frameless Maya-owned tool window, avoiding viewport toolbar repaint ghosts without covering the viewport.
-- The rail box model now accounts for Qt style-sheet button/frame borders, so active and toned buttons stay visibly inset inside the rail. Current corrected `transform_stack` render size is `46x214`.
-- Maya-native menu and shelf toggle entry points now install idempotently and call `actionrail.toggle_default()` to show/hide the default `transform_stack` preset.
-- `scripts/maya-smoke.ps1` wraps the stable MayaSessiond `script.execute` command shape for checked-in smoke scripts.
-- Safe-mode diagnostics now expose `actionrail.collect_diagnostics()`,
-  `actionrail.diagnose_spec()`, and `actionrail.safe_start()` for broken
-  presets, missing actions, missing command/plugin predicates, and recoverable
-  overlay startup failures. In Maya, the default diagnostics path resolves
-  `maya.cmds` automatically, so callers do not need to pass `cmds_module` for
-  command/plugin availability warnings.
-- Widget rendering now resolves each action-bearing slot through a reusable
-  `SlotRenderState` and shared apply path, so label, key badge, tone, tooltip,
-  enabled, and active state can update in place without rebuilding the rail when
-  visibility is unchanged. Runtime hotkey badge overrides are preserved during
-  predicate refresh.
-- Slot specs now accept optional `icon` ids, and rendered `SlotRenderState`
-  carries icon path plus diagnostic code/severity/badge state. Missing actions
-  render disabled with an error badge, and missing icons render a warning badge
-  while leaving the action enabled.
-- Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now
-  render visible warning badges on affected slots; dependency-gated slots are
-  kept visible and disabled only when the missing availability check is what
-  makes the predicate fail, so compound context gates and intentional
-  `not ...exists(...)` fallback slots keep their declared behavior.
-- Diagnostic calls now record the latest `DiagnosticReport`; public helpers
-  expose, clear, format, and show that report, and the ActionRail Maya menu has
-  a "Show Last Diagnostic Report" entry for a simple last-error UI.
-- `actionrail.show_last_report()` now opens a themed ActionRail Qt diagnostics
-  window instead of Maya `confirmDialog`. It uses rail theme tokens, presents
-  errors/warnings in a readable list, shows the full report in selectable text,
-  and supports `Copy Selected`, `Copy Full Report`, `Clear`, and `Close`.
-- The Python `StackItem(...)` constructor preserves the original positional
-  argument order through `tone`; newer optional fields such as `icon` are
-  keyword-friendly and appended after the legacy fields.
-- The first icon-backed built-in rail is now checked in: `horizontal_tools`
-  references first-party SVG icons through `icons/manifest.json`, and icon
-  diagnostics validate required metadata, invalid local paths, missing files,
-  unsafe SVG content, and unknown icon ids before resolving paths for rendering.
-- `actionrail.icons.import_svg_icon()` now provides the first checked-in SVG
-  import helper: it validates local SVG safety, copies assets under `icons/`,
-  and records source, license, URL, import date, and manifest path metadata.
-- WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
+Live detail belongs in `docs/04_status.md`; keep this page as a routing
+document.
+
+Snapshot:
+
+- Phase 0 prototype is verified; Phase 1 declarative MVP is in progress.
+- Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
+  runtime-command hotkey publishing, predicate refresh, diagnostic badges,
+  safe-mode diagnostics, menu/shelf toggles, the diagnostics Qt window, and the
+  first SVG import helper.
+- Built-in preset ids currently include `transform_stack` and
+  `horizontal_tools`.
+- Current next implementation slice: PNG fallback generation for imported SVG
+  icons plus diagnostics for missing or stale fallback assets.
+- Long verification history is archived in
+  `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
+  snapshot, blockers, latest handoff, and latest verification summary.
+- For a machine-readable map, run:
+
+```powershell
+$env:PYTHONPATH = "scripts"
+.\.venv\Scripts\python.exe -m actionrail --json
+```
 
 ## Read Order
 
@@ -86,7 +57,8 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
 7. `docs/05_tech_stack.md`
 8. `docs/06_wow_style_customization.md` when planning Edit Mode, hotkeys, flyouts, rings, or profile layers.
 9. `docs/07_missing_features_research.md` when planning missing features or prioritizing the next roadmap slice.
-10. `docs/01_architecture.md` and `docs/05_tech_stack.md` when deeper runtime or stack context is needed.
+10. `docs/history/verification_log.md` only when auditing older verification runs.
+11. `docs/01_architecture.md` and `docs/05_tech_stack.md` when deeper runtime or stack context is needed.
 
 ## Product Decision
 

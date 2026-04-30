@@ -1,4 +1,11 @@
-"""Maya runtime-command and hotkey bridge for ActionRail actions and slots."""
+"""Maya runtime-command and hotkey bridge for ActionRail actions and slots.
+
+Purpose: make ActionRail actions and preset slots visible to Maya's hotkey
+system without requiring an overlay to be open.
+Owns: runtime-command names, nameCommands, conflict checks, visible key labels.
+Used by: future Bind Mode, user hotkey publishing, Maya smoke verification.
+Tests: `tests/test_hotkeys.py` and hotkey smoke scripts.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +22,36 @@ COMMAND_CATEGORY = "ActionRail"
 NAME_COMMAND_SUFFIX = "_NameCommand"
 
 TargetKind = Literal["action", "slot"]
+
+__all__ = [
+    "COMMAND_CATEGORY",
+    "COMMAND_PREFIX",
+    "NAME_COMMAND_SUFFIX",
+    "CommandSyncResult",
+    "HotkeyBinding",
+    "HotkeyConflictError",
+    "PublishedCommand",
+    "TargetKind",
+    "assign_hotkey",
+    "assign_published_hotkey",
+    "assign_slot_hotkey",
+    "clear_visible_key_label",
+    "clear_visible_published_key_label",
+    "format_hotkey",
+    "list_published_commands",
+    "name_command_name",
+    "publish_action",
+    "publish_default_actions",
+    "publish_preset_slots",
+    "publish_slot",
+    "query_hotkey_binding",
+    "runtime_command_name",
+    "slot_target_id",
+    "sync_default_actions",
+    "sync_preset_slots",
+    "sync_visible_key_label",
+    "unpublish",
+]
 
 _PUBLISHED_BY_NAME_COMMAND: dict[str, PublishedCommand] = {}
 _PUBLISHED_BY_HOTKEY: dict[tuple[str, bool, bool, bool, bool, bool], PublishedCommand] = {}

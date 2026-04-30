@@ -1,4 +1,10 @@
-"""Safe-mode diagnostics for ActionRail presets and overlay startup."""
+"""Safe-mode diagnostics for ActionRail presets and overlay startup.
+
+Purpose: validate presets and dependencies before showing user-facing UI.
+Owns: report data classes, latest-report state, safe startup, report formatting.
+Used by: public package helpers, Maya menu diagnostics, diagnostics Qt window.
+Tests: `tests/test_diagnostics.py` and `actionrail_diagnostics_smoke.py`.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +22,19 @@ from .predicates import (
 from .spec import StackItem, StackSpec, builtin_preset_ids, load_builtin_preset
 
 DiagnosticSeverity = Literal["info", "warning", "error"]
+
+__all__ = [
+    "DiagnosticIssue",
+    "DiagnosticReport",
+    "DiagnosticSeverity",
+    "clear_last_report",
+    "collect_diagnostics",
+    "diagnose_spec",
+    "format_report",
+    "last_report",
+    "safe_start",
+    "show_last_report",
+]
 
 
 @dataclass(frozen=True)

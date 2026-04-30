@@ -20,12 +20,14 @@ from .maya_ui import (
     uninstall_menu_toggle,
     uninstall_shelf_toggle,
 )
+from .project import about
 from .runtime import hide_all, reload, run_action, run_slot, show_example, update_slot_key_label
 
 __all__ = [
     "DiagnosticIssue",
     "DiagnosticReport",
     "__version__",
+    "about",
     "clear_last_report",
     "collect_diagnostics",
     "diagnose_spec",

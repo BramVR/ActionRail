@@ -113,7 +113,8 @@ Prefer native inspection tools over raw script execution. Use `script.execute` f
 
 ## Smoke Verification Targets
 
-Record these in `docs/04_status.md`:
+Record the latest summary in `docs/04_status.md`; put long-form historical
+results in `docs/history/verification_log.md`:
 
 - `doctor` result.
 - `start/status` result.
@@ -158,4 +159,6 @@ Useful variants:
 - `actionrail_diagnostics_smoke.py`: safe-mode diagnostics, missing command/plugin/action/icon reporting, and `safe_start()` startup behavior.
 - `actionrail_diagnostic_badges_smoke.py`: visible missing-action, missing-icon, missing-command, and missing-plugin badge rendering.
 
-After adding a new smoke script, update this list and add the exact result to `docs/04_status.md`.
+After adding a new smoke script, update this list, summarize the latest result
+in `docs/04_status.md`, and archive detailed history in
+`docs/history/verification_log.md`.

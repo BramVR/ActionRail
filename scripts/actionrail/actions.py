@@ -12,6 +12,19 @@ MOVE_CONTEXT = "moveSuperContext"
 ROTATE_CONTEXT = "RotateSuperContext"
 SCALE_CONTEXT = "scaleSuperContext"
 
+__all__ = [
+    "MOVE_CONTEXT",
+    "ROTATE_CONTEXT",
+    "SCALE_CONTEXT",
+    "Action",
+    "ActionCallback",
+    "ActionRegistry",
+    "create_default_registry",
+    "set_keyframe",
+    "set_tool_context",
+    "validate_action_ids",
+]
+
 
 @dataclass(frozen=True)
 class Action:

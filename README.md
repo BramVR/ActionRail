@@ -77,11 +77,15 @@ $env:MAYA_MODULE_PATH = "."
   paths, missing files, invalid SVG files, unsafe SVG content, and unknown icon
   ids.
 - Local SVG import helper that validates source SVG safety, copies the asset
-  into `icons/`, and records source/license/url/import-date metadata.
+  into `icons/`, normalizes manifest path conflicts, and records
+  source/license/url/import-date metadata.
 - Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
 
 ## Roadmap
+
+For the current handoff, blockers, and latest verification summary, see
+[`docs/04_status.md`](docs/04_status.md).
 
 Near-term:
 
@@ -124,6 +128,13 @@ Run local tests:
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
+Show the compact agent/project map:
+
+```powershell
+$env:PYTHONPATH = "scripts"
+.\.venv\Scripts\python.exe -m actionrail --json
+```
+
 For Maya-facing changes, run the relevant smoke scripts from `tests/maya_smoke/`
 in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 
@@ -133,7 +144,9 @@ in a Maya Python environment with this checkout on `MAYA_MODULE_PATH`.
 - [Architecture](docs/01_architecture.md) - runtime boundaries and planned
   layers.
 - [Implementation plan](docs/02_implementation_plan.md) - phase roadmap.
-- [Status](docs/04_status.md) - done state, blockers, verification history.
+- [Status](docs/04_status.md) - live state, blockers, latest handoff, and latest verification.
+- [Verification log](docs/history/verification_log.md) - archived historical
+  test and MayaSessiond runs.
 - [Tech stack](docs/05_tech_stack.md) - PySide6/Qt overlay decision.
 - [Customization roadmap](docs/06_wow_style_customization.md) - Edit Mode,
   Bind Mode, flyouts, rings, and profiles.

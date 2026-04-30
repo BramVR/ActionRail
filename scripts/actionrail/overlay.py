@@ -1,4 +1,10 @@
-"""Viewport overlay host for ActionRail widgets."""
+"""Viewport overlay host for ActionRail widgets.
+
+Purpose: position small Qt rail windows from Maya model-panel geometry.
+Owns: active panel lookup, floating host lifecycle, cleanup, predicate timer.
+Used by: runtime show/reload APIs and safe-start diagnostics.
+Tests: `tests/test_overlay.py` and overlay cleanup/capture smoke scripts.
+"""
 
 from __future__ import annotations
 
@@ -21,6 +27,18 @@ OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
 DEFAULT_MARGIN = 12
 PREDICATE_REFRESH_INTERVAL_MS = 250
+
+__all__ = [
+    "CONTAINER_OBJECT_NAME_PREFIX",
+    "DEFAULT_MARGIN",
+    "OBJECT_NAME_PREFIX",
+    "PREDICATE_REFRESH_INTERVAL_MS",
+    "ViewportOverlayHost",
+    "active_model_panel",
+    "cleanup_overlay_widgets",
+    "maya_main_window",
+    "model_panel_widget",
+]
 
 
 def _require_cmds(cmds_module: Any | None = None) -> Any:
