@@ -19,6 +19,7 @@ read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 - Use repo state dir `.gg-maya-sessiond`; prefer `doctor/status/start/call/stop`.
 - Discover tools before guessing: `call --state-dir .gg-maya-sessiond --list --json`.
 - Prefer native MCP inspection/screenshot tools before raw script execution.
+- Before saying all tests passed, run full pytest, Ruff, and `maya-smoke.ps1 -Script all`.
 - Keep docs current so agents know big picture, done state, next work, and blockers.
 - Keep `docs/04_status.md` compact; archive long verification entries in `docs/history/verification_log.md`.
 
