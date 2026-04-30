@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .icons import icon_status, validate_icon_manifest
+from .icons import icon_status, validate_icon_manifest, validate_svg_icon_import
 from .predicates import (
     PredicateContext,
     evaluate_predicate,
@@ -29,6 +29,7 @@ __all__ = [
     "DiagnosticSeverity",
     "clear_last_report",
     "collect_diagnostics",
+    "diagnose_icon_import",
     "diagnose_spec",
     "format_report",
     "last_report",
@@ -50,6 +51,8 @@ class DiagnosticIssue:
     predicate_field: str = ""
     predicate: str = ""
     target: str = ""
+    path: str = ""
+    field: str = ""
     exception_type: str = ""
 
     def as_dict(self) -> dict[str, str]:
@@ -65,6 +68,8 @@ class DiagnosticIssue:
             "predicate_field": self.predicate_field,
             "predicate": self.predicate,
             "target": self.target,
+            "path": self.path,
+            "field": self.field,
             "exception_type": self.exception_type,
         }
         return {key: value for key, value in payload.items() if value}
@@ -268,12 +273,44 @@ def diagnose_spec(
     return _record_report(report)
 
 
+def diagnose_icon_import(
+    source_path: str,
+    icon_id: str,
+    *,
+    source: str,
+    license_name: str,
+    url: str,
+    imported_at: str | None = None,
+    target_path: str = "",
+    overwrite: bool = False,
+) -> DiagnosticReport:
+    """Collect report-backed diagnostics for a local SVG icon import."""
+
+    issues = tuple(
+        _icon_import_issue(issue)
+        for issue in validate_svg_icon_import(
+            source_path,
+            icon_id,
+            source=source,
+            license_name=license_name,
+            url=url,
+            imported_at=imported_at,
+            target_path=target_path,
+            overwrite=overwrite,
+        )
+    )
+    return _record_report(
+        DiagnosticReport(issues, active_overlay_ids=_safe_active_overlay_ids())
+    )
+
+
 def safe_start(
     preset_id: str = "transform_stack",
     *,
     panel: str | None = None,
     registry: ActionRegistry | None = None,
     cmds_module: Any | None = None,
+    fallback_preset_id: str = "",
 ) -> DiagnosticReport:
     """Validate a preset, start it if safe, and report recoverable failures."""
 
@@ -283,6 +320,15 @@ def safe_start(
         cmds_module=cmds_module,
     )
     if report.has_errors:
+        if fallback_preset_id and fallback_preset_id != preset_id:
+            return _recover_with_fallback_preset(
+                report,
+                preset_id,
+                fallback_preset_id,
+                panel=panel,
+                registry=registry,
+                cmds_module=cmds_module,
+            )
         return _record_report(
             report.with_runtime(
                 overlay_started=False,
@@ -429,6 +475,106 @@ def _icon_manifest_issue(issue: object) -> DiagnosticIssue:
         severity="warning",
         message=message,
         target=icon_id,
+        path=getattr(issue, "path", ""),
+        field=getattr(issue, "field", ""),
+    )
+
+
+def _icon_import_issue(issue: object) -> DiagnosticIssue:
+    code = getattr(issue, "code", "invalid_icon_import")
+    message = getattr(issue, "message", "ActionRail icon import is invalid.")
+    icon_id = getattr(issue, "icon_id", "")
+    return DiagnosticIssue(
+        code=code,
+        severity="error",
+        message=message,
+        target=icon_id,
+        path=getattr(issue, "path", ""),
+        field=getattr(issue, "field", ""),
+    )
+
+
+def _recover_with_fallback_preset(
+    report: DiagnosticReport,
+    preset_id: str,
+    fallback_preset_id: str,
+    *,
+    panel: str | None,
+    registry: ActionRegistry | None,
+    cmds_module: Any | None,
+) -> DiagnosticReport:
+    fallback_report = collect_diagnostics(
+        (fallback_preset_id,),
+        registry=registry,
+        cmds_module=cmds_module,
+    )
+    issues = list(report.issues)
+    issues.extend(fallback_report.issues)
+    if fallback_report.has_errors:
+        issues.append(
+            DiagnosticIssue(
+                code="preset_recovery_failed",
+                severity="error",
+                message=(
+                    f"Preset '{preset_id}' failed diagnostics and fallback preset "
+                    f"'{fallback_preset_id}' is not safe to start."
+                ),
+                preset_id=preset_id,
+                target=fallback_preset_id,
+            )
+        )
+        return _record_report(
+            DiagnosticReport(
+                tuple(issues),
+                overlay_started=False,
+                active_overlay_ids=_safe_active_overlay_ids(),
+            )
+        )
+
+    try:
+        _show_overlay(fallback_preset_id, panel=panel, registry=registry)
+    except Exception as exc:
+        _safe_hide_overlay(fallback_preset_id)
+        issues.append(
+            DiagnosticIssue(
+                code="preset_recovery_failed",
+                severity="error",
+                message=(
+                    f"Fallback preset '{fallback_preset_id}' failed to start "
+                    f"after preset '{preset_id}' failed diagnostics: {exc}"
+                ),
+                preset_id=preset_id,
+                target=fallback_preset_id,
+                exception_type=type(exc).__name__,
+            )
+        )
+        return _record_report(
+            DiagnosticReport(
+                tuple(issues),
+                overlay_started=False,
+                active_overlay_ids=_safe_active_overlay_ids(),
+            )
+        )
+
+    issues.append(
+        DiagnosticIssue(
+            code="preset_recovered",
+            severity="warning",
+            message=(
+                f"Preset '{preset_id}' failed diagnostics; started fallback "
+                f"preset '{fallback_preset_id}'."
+            ),
+            preset_id=preset_id,
+            target=fallback_preset_id,
+        )
+    )
+    return _record_report(
+        DiagnosticReport(
+            tuple(issues),
+            overlay_started=True,
+            overlay_id=fallback_preset_id,
+            active_overlay_ids=_safe_active_overlay_ids(),
+        )
     )
 
 

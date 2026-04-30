@@ -102,7 +102,7 @@ def about() -> dict[str, object]:
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
             "phase": "Phase 1 declarative MVP",
-            "next_slice": "broader icon import diagnostics and preset recovery polish",
+            "next_slice": "Maya-facing import diagnostics workflow and fallback startup smoke",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

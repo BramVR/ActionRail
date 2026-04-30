@@ -34,8 +34,9 @@ Snapshot:
   SVG import helper with generated PNG fallbacks.
 - Built-in preset ids currently include `transform_stack` and
   `horizontal_tools`.
-- Current next implementation slice: broaden icon import diagnostics and preset
-  recovery polish now that PNG fallback generation is in place.
+- Current next implementation slice: connect icon import diagnostics to a
+  Maya-facing menu/window workflow and add focused smoke coverage for fallback
+  preset startup if that recovery path becomes user-facing.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -80,7 +81,8 @@ Continue Phase 1 declarative MVP:
    themed Qt diagnostics window that supports copyable reports. Done.
 2. Continue diagnostic work toward the future icon-backed preset/import
    pipeline. First icon-backed rail, manifest/SVG validation, local SVG import,
-   PNG fallback generation, and fallback asset diagnostics are done.
+   PNG fallback generation, fallback asset diagnostics, import preflight
+   reports, and opt-in preset recovery are done.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

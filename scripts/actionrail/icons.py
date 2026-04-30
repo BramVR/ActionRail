@@ -49,6 +49,7 @@ __all__ = [
     "icon_status",
     "import_svg_icon",
     "resolve_icon_path",
+    "validate_svg_icon_import",
     "validate_icon_manifest",
 ]
 
@@ -125,31 +126,23 @@ def import_svg_icon(
 ) -> IconImportResult:
     """Import a safe local SVG and record its source metadata in the manifest."""
 
-    source_file = Path(source_path)
-    if not source_file.is_file():
-        msg = f"SVG icon source does not exist: {source_file}"
-        raise ValueError(msg)
-    if source_file.suffix.lower() != ".svg":
-        msg = "ActionRail only imports SVG icon sources."
-        raise ValueError(msg)
-
-    _validate_import_metadata(
-        icon_id=icon_id,
+    import_issues = validate_svg_icon_import(
+        source_path,
+        icon_id,
         source=source,
         license_name=license_name,
         url=url,
         imported_at=imported_at,
+        target_path=target_path,
+        overwrite=overwrite,
     )
-    svg_issue = _svg_issue(icon_id, str(source_file), source_file)
-    if svg_issue is not None:
-        raise ValueError(svg_issue.message)
+    if import_issues:
+        raise ValueError(import_issues[0].message)
 
+    source_file = Path(source_path)
     payload = _manifest_payload_for_update()
     entries = payload["icons"]
     existing = [entry for entry in entries if entry.get("id") == icon_id]
-    if existing and not overwrite:
-        msg = f"Icon id '{icon_id}' already exists in the ActionRail icon manifest."
-        raise ValueError(msg)
 
     raw_manifest_path = (
         target_path
@@ -158,19 +151,6 @@ def import_svg_icon(
     )
     icon_path = _resolve_import_target(raw_manifest_path)
     manifest_path = _manifest_path_for_icon_path(icon_path)
-    conflicting_path = [
-        entry
-        for entry in entries
-        if entry.get("id") != icon_id
-        and _manifest_entry_icon_path(entry) == icon_path.resolve(strict=False)
-    ]
-    if conflicting_path:
-        other_id = conflicting_path[0].get("id", "<unknown>")
-        msg = f"Icon path '{manifest_path}' is already used by icon '{other_id}'."
-        raise ValueError(msg)
-    if icon_path.exists() and not overwrite and not existing:
-        msg = f"Icon target already exists: {icon_path}"
-        raise ValueError(msg)
 
     manifest_entry = {
         "id": icon_id,
@@ -260,6 +240,129 @@ def generate_png_fallbacks(
         manifest_path=_MANIFEST_PATH,
         manifest_entry=manifest_entry,
     )
+
+
+def validate_svg_icon_import(
+    source_path: str | Path,
+    icon_id: str,
+    *,
+    source: str,
+    license_name: str,
+    url: str,
+    imported_at: str | None = None,
+    target_path: str = "",
+    overwrite: bool = False,
+) -> tuple[IconManifestIssue, ...]:
+    """Return structured diagnostics for a local SVG import without writing files."""
+
+    issues: list[IconManifestIssue] = []
+    source_file = Path(source_path)
+    if not source_file.is_file():
+        issues.append(
+            IconManifestIssue(
+                code="missing_icon_import_source",
+                message=f"SVG icon source does not exist: {source_file}",
+                icon_id=icon_id,
+                path=str(source_file),
+            )
+        )
+    elif source_file.suffix.lower() != ".svg":
+        issues.append(
+            IconManifestIssue(
+                code="invalid_icon_import_source",
+                message="ActionRail only imports SVG icon sources.",
+                icon_id=icon_id,
+                path=str(source_file),
+            )
+        )
+
+    metadata_issue = _import_metadata_issue(
+        icon_id=icon_id,
+        source=source,
+        license_name=license_name,
+        url=url,
+        imported_at=imported_at,
+    )
+    if metadata_issue is not None:
+        issues.append(metadata_issue)
+
+    if source_file.is_file() and source_file.suffix.lower() == ".svg":
+        svg_issue = _svg_issue(icon_id, str(source_file), source_file)
+        if svg_issue is not None:
+            issues.append(svg_issue)
+
+    try:
+        payload = _manifest_payload_for_update()
+    except ValueError as exc:
+        issues.append(
+            IconManifestIssue(
+                code="invalid_icon_manifest",
+                message=str(exc),
+                icon_id=icon_id,
+            )
+        )
+        return tuple(issues)
+
+    entries = payload["icons"]
+    existing = [entry for entry in entries if entry.get("id") == icon_id]
+    if existing and not overwrite:
+        issues.append(
+            IconManifestIssue(
+                code="duplicate_icon",
+                message=f"Icon id '{icon_id}' already exists in the ActionRail icon manifest.",
+                icon_id=icon_id,
+            )
+        )
+
+    raw_manifest_path = (
+        target_path
+        or _existing_icon_path(existing)
+        or _default_import_manifest_path(icon_id)
+    )
+    try:
+        icon_path = _resolve_import_target(raw_manifest_path)
+    except ValueError as exc:
+        issues.append(
+            IconManifestIssue(
+                code="invalid_icon_import_target",
+                message=str(exc),
+                icon_id=icon_id,
+                path=raw_manifest_path,
+            )
+        )
+        return tuple(issues)
+
+    conflicting_path = [
+        entry
+        for entry in entries
+        if entry.get("id") != icon_id
+        and _manifest_entry_icon_path(entry) == icon_path.resolve(strict=False)
+    ]
+    if conflicting_path:
+        other_id = conflicting_path[0].get("id", "<unknown>")
+        manifest_path = _manifest_path_for_icon_path(icon_path)
+        issues.append(
+            IconManifestIssue(
+                code="icon_path_conflict",
+                message=(
+                    f"Icon path '{manifest_path}' is already used by icon "
+                    f"'{other_id}'."
+                ),
+                icon_id=icon_id,
+                path=manifest_path,
+            )
+        )
+    if icon_path.exists() and not overwrite and not existing:
+        issues.append(
+            IconManifestIssue(
+                code="icon_target_exists",
+                message=f"Icon target already exists: {icon_path}",
+                icon_id=icon_id,
+                path=_manifest_path_for_icon_path(icon_path),
+            )
+        )
+
+    return tuple(issues)
 
 
 def resolve_icon_path(icon_id: str) -> Path | None:
@@ -657,20 +760,52 @@ def _validate_import_metadata(
     url: str,
     imported_at: str | None,
 ) -> None:
+    issue = _import_metadata_issue(
+        icon_id=icon_id,
+        source=source,
+        license_name=license_name,
+        url=url,
+        imported_at=imported_at,
+    )
+    if issue is not None:
+        raise ValueError(issue.message)
+
+
+def _import_metadata_issue(
+    *,
+    icon_id: str,
+    source: str,
+    license_name: str,
+    url: str,
+    imported_at: str | None,
+) -> IconManifestIssue | None:
     if not isinstance(icon_id, str) or not _ICON_ID_RE.fullmatch(icon_id):
-        msg = "Icon id must use letters, numbers, dots, underscores, or hyphens."
-        raise ValueError(msg)
+        return IconManifestIssue(
+            code="invalid_icon_import_metadata",
+            message="Icon id must use letters, numbers, dots, underscores, or hyphens.",
+            icon_id=icon_id if isinstance(icon_id, str) else "",
+            field="icon_id",
+        )
     for field, value in (
         ("source", source),
         ("license_name", license_name),
         ("url", url),
     ):
         if not isinstance(value, str) or not value:
-            msg = f"Icon import field '{field}' must be a non-empty string."
-            raise ValueError(msg)
+            return IconManifestIssue(
+                code="invalid_icon_import_metadata",
+                message=f"Icon import field '{field}' must be a non-empty string.",
+                icon_id=icon_id,
+                field=field,
+            )
     if imported_at is not None and (not isinstance(imported_at, str) or not imported_at):
-        msg = "Icon import field 'imported_at' must be a non-empty string when provided."
-        raise ValueError(msg)
+        return IconManifestIssue(
+            code="invalid_icon_import_metadata",
+            message="Icon import field 'imported_at' must be a non-empty string when provided.",
+            icon_id=icon_id,
+            field="imported_at",
+        )
+    return None
 
 
 def _default_import_manifest_path(icon_id: str) -> str:

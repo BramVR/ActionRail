@@ -13,6 +13,7 @@ from actionrail.icons import (
     import_svg_icon,
     resolve_icon_path,
     validate_icon_manifest,
+    validate_svg_icon_import,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -203,6 +204,45 @@ def test_import_svg_icon_generates_png_fallbacks_and_updates_manifest(
     assert isinstance(result.manifest_entry["fallback_source_sha256"], str)
     assert result.manifest_entry["fallback_base_size"] == 24
     assert validate_icon_manifest() == ()
+
+
+def test_validate_svg_icon_import_reports_multiple_preflight_issues(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.txt"
+    target_path = icon_dir / "custom" / "arrow.svg"
+    icon_dir.mkdir()
+    target_path.parent.mkdir(parents=True)
+    target_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"></svg>',
+        encoding="utf-8",
+    )
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text("not svg", encoding="utf-8")
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    issues = validate_svg_icon_import(
+        source_path,
+        "bad id",
+        source="",
+        license_name="Apache-2.0",
+        url="local://source.txt",
+        target_path="icons/custom/arrow.svg",
+    )
+
+    assert [issue.code for issue in issues] == [
+        "invalid_icon_import_source",
+        "invalid_icon_import_metadata",
+        "icon_target_exists",
+    ]
+    assert issues[1].field == "icon_id"
+    assert issues[2].path == "icons/custom/arrow.svg"
 
 
 def test_import_svg_icon_rolls_back_new_asset_when_fallback_generation_fails(

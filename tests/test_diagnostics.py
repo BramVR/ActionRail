@@ -10,6 +10,7 @@ from actionrail.actions import Action, ActionRegistry, create_default_registry
 from actionrail.diagnostics import (
     clear_last_report,
     collect_diagnostics,
+    diagnose_icon_import,
     diagnose_spec,
     format_report,
     last_report,
@@ -225,6 +226,43 @@ def test_show_last_report_opens_qt_window_with_formatted_report(
     assert shown == [(last_report(), text)]
 
 
+def test_diagnose_icon_import_records_copyable_report(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.txt"
+    icon_dir.mkdir()
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text("not svg", encoding="utf-8")
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("existing",))
+
+    import actionrail.icons as icons
+
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    report = diagnose_icon_import(
+        str(source_path),
+        "bad id",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.txt",
+    )
+
+    assert report.has_errors is True
+    assert report.active_overlay_ids == ("existing",)
+    assert [issue.code for issue in report.errors] == [
+        "invalid_icon_import_source",
+        "invalid_icon_import_metadata",
+    ]
+    assert report.errors[1].field == "icon_id"
+    assert last_report() == report
+    assert "invalid_icon_import_source" in format_report(report)
+
+
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -298,6 +336,35 @@ def test_safe_start_skips_overlay_when_diagnostics_have_errors(
     assert report.has_errors is True
     assert started == []
     assert {issue.code for issue in report.errors} == {"missing_action"}
+    assert last_report() == report
+
+
+def test_safe_start_can_recover_to_fallback_preset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    started: list[str] = []
+    monkeypatch.setattr(
+        diagnostics,
+        "_show_overlay",
+        lambda preset_id, *, panel, registry: started.append(preset_id),
+    )
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("transform_stack",))
+
+    report = safe_start(
+        "missing_preset",
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+        fallback_preset_id="transform_stack",
+    )
+
+    assert report.overlay_started is True
+    assert report.overlay_id == "transform_stack"
+    assert report.has_errors is True
+    assert started == ["transform_stack"]
+    assert [issue.code for issue in report.issues] == [
+        "broken_preset",
+        "preset_recovered",
+    ]
     assert last_report() == report
 
 
