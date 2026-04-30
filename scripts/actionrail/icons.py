@@ -1,4 +1,11 @@
-"""Icon manifest lookup and validation helpers for ActionRail presets."""
+"""Icon manifest lookup and validation helpers for ActionRail presets.
+
+Purpose: keep icon ids, source metadata, local paths, and SVG safety checks in
+one pure-Python place.
+Owns: `icons/manifest.json`, local SVG import, manifest diagnostics.
+Used by: preset diagnostics and widget render-state resolution.
+Tests: `tests/test_icons.py`.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +29,16 @@ _EXTERNAL_STYLE_RE = re.compile(
     re.IGNORECASE,
 )
 
+__all__ = [
+    "IconImportResult",
+    "IconManifestIssue",
+    "IconStatus",
+    "icon_status",
+    "import_svg_icon",
+    "resolve_icon_path",
+    "validate_icon_manifest",
+]
+
 
 @dataclass(frozen=True)
 class IconManifestIssue:
@@ -32,6 +49,16 @@ class IconManifestIssue:
     icon_id: str = ""
     path: str = ""
     field: str = ""
+
+    def as_dict(self) -> dict[str, str]:
+        payload = {
+            "code": self.code,
+            "message": self.message,
+            "icon_id": self.icon_id,
+            "path": self.path,
+            "field": self.field,
+        }
+        return {key: value for key, value in payload.items() if value}
 
 
 @dataclass(frozen=True)
@@ -107,7 +134,8 @@ def import_svg_icon(
     conflicting_path = [
         entry
         for entry in entries
-        if entry.get("path") == manifest_path and entry.get("id") != icon_id
+        if entry.get("id") != icon_id
+        and _manifest_entry_icon_path(entry) == icon_path.resolve(strict=False)
     ]
     if conflicting_path:
         other_id = conflicting_path[0].get("id", "<unknown>")
@@ -283,6 +311,17 @@ def _existing_icon_path(entries: list[dict[str, Any]]) -> str:
     return path if isinstance(path, str) else ""
 
 
+def _manifest_entry_icon_path(entry: dict[str, Any]) -> Path | None:
+    raw_path = entry.get("path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+
+    manifest_path = Path(raw_path)
+    if manifest_path.is_absolute() or ".." in manifest_path.parts:
+        return None
+    return _resolve_manifest_path(raw_path).resolve(strict=False)
+
+
 def _manifest_shape_issues(entries: tuple[dict[str, Any], ...]) -> tuple[IconManifestIssue, ...]:
     issues: list[IconManifestIssue] = []
     for entry in entries:
@@ -363,6 +402,8 @@ def _svg_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIssu
         name = _local_name(element.tag)
         if name in {"script", "foreignObject"}:
             return _unsafe_svg_issue(icon_id, raw_path, f"disallowed <{name}> element")
+        if name == "style" and _EXTERNAL_STYLE_RE.search("".join(element.itertext())):
+            return _unsafe_svg_issue(icon_id, raw_path, "external stylesheet reference")
         for attr_name, attr_value in element.attrib.items():
             attr = _local_name(attr_name)
             if attr.lower().startswith("on"):

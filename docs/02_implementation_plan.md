@@ -80,8 +80,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   unsafe-SVG validation before render path resolution.
 - SVG import helper. First pass done through
   `actionrail.icons.import_svg_icon()`, which validates local SVG sources,
-  writes them under `icons/`, and upserts manifest source/license/url/import
-  metadata.
+  rejects external resources in style blocks, writes safe assets under
+  `icons/`, normalizes manifest path conflicts before overwrite, and upserts
+  manifest source/license/url/import metadata.
 - Command/plugin predicate availability badges. First pass done for missing
   `command.exists(...)` and `plugin.exists(...)` targets, including visible
   disabled warning slots when a missing dependency would otherwise hide the

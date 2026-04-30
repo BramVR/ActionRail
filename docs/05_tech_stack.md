@@ -62,7 +62,7 @@ Spike it early as a reference or adapter, but do not make it the core until it p
 
 - Use SVG as source icons.
 - Use `actionrail.icons.import_svg_icon()` for checked-in local SVG imports so
-  safety validation and manifest metadata stay consistent.
+  safety validation, manifest path normalization, and metadata stay consistent.
 - Cache PNG fallbacks at 1x/2x/3x when needed.
 - Track icon source, license, original URL, and import date in `icons/manifest.json`.
 - Preferred icon sources: Lucide, Tabler Icons, Google Material Symbols, and Iconify as a discovery/import source.

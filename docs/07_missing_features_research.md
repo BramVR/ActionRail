@@ -48,7 +48,9 @@ unsafe SVG content.
 2026-04-30 follow-up: `actionrail.icons.import_svg_icon()` now covers the first
 local import-tooling slice by validating local SVG safety, copying assets under
 `icons/`, and upserting manifest source/license/url/import-date metadata. The
-remaining active backlog is PNG fallback generation and import diagnostics.
+helper now rejects external resources in SVG style blocks and normalizes
+manifest paths before overwrite conflict checks. The remaining active backlog
+is PNG fallback generation and import diagnostics.
 
 ## Highest Priority Gaps
 
@@ -236,9 +238,10 @@ Source: [Autodesk hotbox marking menus](https://help.autodesk.com/cloudhelp/2020
 ### 10. Icon Pipeline
 
 The icon manifest now has first-party entries, and `import_svg_icon()` covers
-the first local import path with SVG safety validation and source/license
-metadata. ActionRail still needs fallback generation and broader import
-diagnostics before shipping more polished preset packs.
+the first local import path with SVG safety validation, manifest path
+normalization, and source/license metadata. ActionRail still needs fallback
+generation and broader import diagnostics before shipping more polished preset
+packs.
 
 Required features:
 

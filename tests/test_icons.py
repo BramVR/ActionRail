@@ -178,6 +178,40 @@ def test_import_svg_icon_rejects_unsafe_svg_without_manifest_change(
     assert not (icon_dir / "test" / "unsafe.svg").exists()
 
 
+def test_import_svg_icon_rejects_external_style_block_without_manifest_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "unsafe-style.svg"
+    icon_dir.mkdir()
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        "<style>@import url(https://example.test/icon.css);</style>"
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(ValueError, match="external stylesheet reference"):
+        import_svg_icon(
+            source_path,
+            "test.unsafe_style",
+            source="Local",
+            license_name="Apache-2.0",
+            url="local://unsafe-style.svg",
+            imported_at="2026-04-30",
+        )
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == {"icons": []}
+    assert not (icon_dir / "test" / "unsafe-style.svg").exists()
+
+
 def test_import_svg_icon_refuses_duplicate_without_overwrite(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -278,6 +312,55 @@ def test_import_svg_icon_overwrites_existing_entry(
     assert target_path.read_text(encoding="utf-8") == source_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_import_svg_icon_rejects_equivalent_manifest_path_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    target_path = icon_dir / "custom" / "arrow.svg"
+    target_path.parent.mkdir(parents=True)
+    original_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"></svg>'
+    target_path.write_text(original_svg, encoding="utf-8")
+    manifest_payload = {
+        "icons": [
+            {
+                "id": "other.arrow",
+                "source": "Existing",
+                "license": "MIT",
+                "url": "local://existing.svg",
+                "imported_at": "2026-04-29",
+                "path": "custom/arrow.svg",
+            }
+        ]
+    }
+    manifest_path.write_text(json.dumps(manifest_payload), encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M12 4v16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(ValueError, match="already used by icon 'other.arrow'"):
+        import_svg_icon(
+            source_path,
+            "test.arrow",
+            source="Local",
+            license_name="Apache-2.0",
+            url="local://source.svg",
+            target_path="icons/custom/arrow.svg",
+            overwrite=True,
+        )
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest_payload
+    assert target_path.read_text(encoding="utf-8") == original_svg
 
 
 def test_import_svg_icon_rejects_target_outside_icon_dir(
