@@ -83,6 +83,9 @@ Last updated: 2026-04-30
     fallbacks for manifest SVG icons, `import_svg_icon()` can generate those
     fallbacks at import time, and manifest diagnostics report missing or stale
     generated fallback assets.
+  - `actionrail.icons.import_svg_icon()` now rolls back copied SVG and PNG
+    fallback asset changes when fallback generation fails, so failed imports do
+    not leave orphan files or stale manifest/file mismatches.
   - First-party ActionRail SVG icons now have checked-in `@1x`, `@2x`, and
     `@3x` PNG fallback assets recorded in `icons/manifest.json`.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
@@ -199,7 +202,7 @@ Checks already run for the latest PNG fallback slice:
 
 ## Latest Verification
 
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 141 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 143 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`

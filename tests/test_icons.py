@@ -17,10 +17,16 @@ from actionrail.icons import (
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PNG_BYTES = b"\x89PNG\r\n\x1a\n"
+OLD_PNG_BYTES = b"\x89PNG\r\n\x1a\nold"
 
 
 def fake_png_renderer(_svg_path: Path, png_path: Path, _size_px: int) -> None:
     png_path.write_bytes(PNG_BYTES)
+
+
+def failing_png_renderer(_svg_path: Path, png_path: Path, _size_px: int) -> None:
+    png_path.write_bytes(PNG_BYTES)
+    raise RuntimeError("renderer failed")
 
 
 def test_icon_manifest_has_expected_shape() -> None:
@@ -197,6 +203,43 @@ def test_import_svg_icon_generates_png_fallbacks_and_updates_manifest(
     assert isinstance(result.manifest_entry["fallback_source_sha256"], str)
     assert result.manifest_entry["fallback_base_size"] == 24
     assert validate_icon_manifest() == ()
+
+
+def test_import_svg_icon_rolls_back_new_asset_when_fallback_generation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    icon_dir.mkdir()
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(RuntimeError, match="renderer failed"):
+        import_svg_icon(
+            source_path,
+            "test.arrow",
+            source="Lucide",
+            license_name="ISC",
+            url="https://example.test/arrow",
+            imported_at="2026-04-30",
+            png_renderer=failing_png_renderer,
+        )
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == {"icons": []}
+    assert not (icon_dir / "test" / "arrow.svg").exists()
+    assert not (icon_dir / "test" / "arrow@1x.png").exists()
+    assert not (icon_dir / "test" / "arrow@2x.png").exists()
+    assert not (icon_dir / "test" / "arrow@3x.png").exists()
 
 
 def test_generate_png_fallbacks_updates_existing_manifest_entry(
@@ -460,6 +503,68 @@ def test_import_svg_icon_overwrites_existing_entry(
     assert target_path.read_text(encoding="utf-8") == source_path.read_text(
         encoding="utf-8"
     )
+
+
+def test_import_svg_icon_restores_overwritten_asset_when_fallback_generation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    target_path = icon_dir / "custom" / "arrow.svg"
+    fallback_path = icon_dir / "custom" / "arrow@1x.png"
+    target_path.parent.mkdir(parents=True)
+    original_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"></svg>'
+    target_path.write_text(original_svg, encoding="utf-8")
+    fallback_path.write_bytes(OLD_PNG_BYTES)
+    manifest_payload = {
+        "icons": [
+            {
+                "id": "test.arrow",
+                "source": "Existing",
+                "license": "MIT",
+                "url": "local://existing.svg",
+                "imported_at": "2026-04-29",
+                "path": "icons/custom/arrow.svg",
+                "fallbacks": {
+                    "1x": "icons/custom/arrow@1x.png",
+                    "2x": "icons/custom/arrow@2x.png",
+                    "3x": "icons/custom/arrow@3x.png",
+                },
+                "fallback_source_sha256": "old-hash",
+                "fallback_base_size": 24,
+            }
+        ]
+    }
+    manifest_path.write_text(json.dumps(manifest_payload), encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M12 4v16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(RuntimeError, match="renderer failed"):
+        import_svg_icon(
+            source_path,
+            "test.arrow",
+            source="Local",
+            license_name="Apache-2.0",
+            url="local://source.svg",
+            imported_at="2026-04-30",
+            overwrite=True,
+            png_renderer=failing_png_renderer,
+        )
+
+    assert json.loads(manifest_path.read_text(encoding="utf-8")) == manifest_payload
+    assert target_path.read_text(encoding="utf-8") == original_svg
+    assert fallback_path.read_bytes() == OLD_PNG_BYTES
+    assert not (icon_dir / "custom" / "arrow@2x.png").exists()
+    assert not (icon_dir / "custom" / "arrow@3x.png").exists()
 
 
 def test_import_svg_icon_rejects_equivalent_manifest_path_conflict(

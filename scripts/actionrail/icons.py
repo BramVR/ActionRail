@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import date
 from hashlib import sha256
@@ -179,17 +180,26 @@ def import_svg_icon(
         "imported_at": imported_at or date.today().isoformat(),
         "path": manifest_path,
     }
-    _upsert_manifest_entry(entries, manifest_entry)
 
-    icon_path.parent.mkdir(parents=True, exist_ok=True)
-    icon_path.write_text(source_file.read_text(encoding="utf-8"), encoding="utf-8")
     fallback_paths: tuple[Path, ...] = ()
+    rollback_paths = [icon_path]
     if generate_fallbacks:
-        fallback_paths = _generate_png_fallbacks_for_entry(
-            manifest_entry,
-            icon_path,
-            png_renderer=png_renderer,
-        )
+        rollback_paths.extend(_fallback_paths_for_manifest_entry(manifest_entry))
+    snapshots = _snapshot_files(rollback_paths)
+
+    try:
+        _upsert_manifest_entry(entries, manifest_entry)
+        icon_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_path.write_text(source_file.read_text(encoding="utf-8"), encoding="utf-8")
+        if generate_fallbacks:
+            fallback_paths = _generate_png_fallbacks_for_entry(
+                manifest_entry,
+                icon_path,
+                png_renderer=png_renderer,
+            )
+    except Exception:
+        _restore_file_snapshots(snapshots)
+        raise
 
     _write_manifest_payload(payload)
 
@@ -231,11 +241,16 @@ def generate_png_fallbacks(
         raise ValueError(msg)
 
     manifest_entry = dict(entry)
-    fallback_paths = _generate_png_fallbacks_for_entry(
-        manifest_entry,
-        icon_path,
-        png_renderer=png_renderer,
-    )
+    snapshots = _snapshot_files(_fallback_paths_for_manifest_entry(manifest_entry))
+    try:
+        fallback_paths = _generate_png_fallbacks_for_entry(
+            manifest_entry,
+            icon_path,
+            png_renderer=png_renderer,
+        )
+    except Exception:
+        _restore_file_snapshots(snapshots)
+        raise
     _upsert_manifest_entry(entries, manifest_entry)
     _write_manifest_payload(payload)
     return IconFallbackResult(
@@ -728,6 +743,34 @@ def _generate_png_fallbacks_for_entry(
     manifest_entry[_FALLBACK_HASH_FIELD] = _file_sha256(icon_path)
     manifest_entry[_FALLBACK_SIZE_FIELD] = _FALLBACK_BASE_SIZE
     return tuple(fallback_paths)
+
+
+def _fallback_paths_for_manifest_entry(manifest_entry: dict[str, Any]) -> tuple[Path, ...]:
+    return tuple(
+        _resolve_manifest_path(_fallback_manifest_path(manifest_entry["path"], scale))
+        for scale in _FALLBACK_SCALES
+    )
+
+
+def _snapshot_files(paths: list[Path] | tuple[Path, ...]) -> dict[Path, bytes | None]:
+    snapshots: dict[Path, bytes | None] = {}
+    for path in paths:
+        key = path.resolve(strict=False)
+        if key in snapshots:
+            continue
+        snapshots[key] = key.read_bytes() if key.is_file() else None
+    return snapshots
+
+
+def _restore_file_snapshots(snapshots: dict[Path, bytes | None]) -> None:
+    for path, contents in snapshots.items():
+        if contents is None:
+            with suppress(FileNotFoundError):
+                path.unlink()
+            continue
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(contents)
 
 
 def _fallback_manifest_path(raw_svg_path: str, scale: int) -> str:
