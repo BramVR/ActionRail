@@ -76,6 +76,8 @@ $env:MAYA_MODULE_PATH = "."
 - Icon manifest validation for required metadata, duplicate ids, invalid local
   paths, missing files, invalid SVG files, unsafe SVG content, and unknown icon
   ids.
+- Local SVG import helper that validates source SVG safety, copies the asset
+  into `icons/`, and records source/license/url/import-date metadata.
 - Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
 
@@ -83,8 +85,8 @@ $env:MAYA_MODULE_PATH = "."
 
 Near-term:
 
-- Continue the icon-backed preset/import path with source/license tracking and
-  fallback generation.
+- Continue the icon-backed preset/import path with PNG fallback generation and
+  import diagnostics.
 - Improve visible diagnostics as import tooling and preset recovery expand.
 - Improve preset validation and recovery before broad authoring UI.
 
@@ -94,7 +96,7 @@ Next:
 - Bind Mode: hover a slot, press a shortcut, update Maya hotkeys.
 - Flyouts for compact command groups.
 - Command rings for press/hold/release workflows.
-- Icon import pipeline with source/license tracking.
+- PNG fallback generation for imported SVG icons.
 - Built-in, studio, project, scene/asset, and user preset layers.
 
 Later:

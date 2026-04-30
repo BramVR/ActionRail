@@ -72,6 +72,9 @@ Last updated: 2026-04-30
   - Icon diagnostics now validate manifest metadata, duplicate ids, invalid
     local paths, missing files, unknown icon ids, invalid SVG files, and unsafe
     SVG content before widget rendering resolves an icon path.
+  - `actionrail.icons.import_svg_icon()` now validates local SVG sources,
+    copies safe assets under `icons/`, and upserts source, license, URL,
+    import-date, and manifest path metadata into `icons/manifest.json`.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - Diagnostic entry points now remember the latest `DiagnosticReport`, expose
@@ -128,55 +131,45 @@ Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
 2. First recommended coding slice: continue the icon-backed preset/import path
-   with a narrow SVG import helper or PNG fallback generation.
+   with PNG fallback generation and diagnostics for generated fallback assets.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest transform-stack state smoke:
+Checks already run for the latest SVG import helper slice:
 
-- `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_transform_stack_state_smoke.py` -> all checks passed.
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 118 passed.
-- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_transform_stack_state_smoke.py` passed against the live MayaSessiond on port `7217`; M/R/S each became the only active slot after click, T stayed disabled/locked/inactive, K set 10 keyframes, and S stayed active after K.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 130 passed.
+- `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 
 ## Latest Handoff
 
-- Task goal completed: started the real icon-backed preset path. The
-  `horizontal_tools` built-in preset now references first-party SVG icons
-  through `icons/manifest.json`.
+- Task goal completed: continued the icon-backed preset/import path with a
+  checked-in local SVG import helper.
 - Files changed in this handoff update:
-  `scripts/actionrail/icons.py`, `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/widgets.py`, `icons/manifest.json`,
-  `icons/actionrail/*.svg`, `presets/horizontal_tools.json`,
-  `tests/test_icons.py`, `tests/test_widgets.py`, `tests/test_diagnostics.py`,
-  `tests/test_overlay.py`, `README.md`, `docs/00_start_here.md`,
-  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
-- Behavior verified: icon ids resolve only when manifest metadata, local path,
-  and SVG safety checks pass; missing/unknown/broken icon assets surface as
-  warning diagnostics and warning badges; the horizontal rail still renders
-  with the same labels and dimensions in Maya, and its smoke now saves a direct
-  widget screenshot while asserting each icon-backed button has a non-null Qt
-  icon.
+  `scripts/actionrail/icons.py`, `tests/test_icons.py`, `README.md`,
+  `docs/00_start_here.md`, `docs/02_implementation_plan.md`,
+  `docs/04_status.md`, `docs/05_tech_stack.md`, and
+  `docs/07_missing_features_research.md`.
+- Behavior verified: `actionrail.icons.import_svg_icon()` rejects missing,
+  non-SVG, unsafe, duplicate, conflicting, and out-of-tree imports; valid local
+  SVGs are copied under `icons/`, the manifest is upserted with
+  source/license/url/import-date/path metadata, and the new icon immediately
+  resolves through the existing manifest validation path.
 - Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 123 passed;
-  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_horizontal_smoke.py`
-  -> passed against live MayaSessiond on port `7217`, saved
-  `.gg-maya-sessiond/screenshots/actionrail_horizontal_tools_widget.png`, and
-  verified all four button icons were non-null;
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py`
-  -> passed against live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`. The wrapper
-  cleaned smoke state before and after each script.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py` -> 12 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\icons.py tests\\test_icons.py`
+  -> all checks passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 130 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- Current live state: MayaSessiond was not needed for this pure Python import
+  helper; no Maya UI or runtime overlay behavior changed.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: add a narrow checked-in SVG import helper or PNG fallback
-  generation so future icons can be added with the same metadata and safety
-  checks.
+- Exact next step: add PNG fallback generation for imported SVG icons and
+  diagnostics for missing or stale fallback assets.
 
 ## Next
 
-1. Continue the icon-backed preset/import pipeline with source/license tracking
-   and fallback generation.
-2. Use the diagnostics Qt window as the support/error-report surface for those checks.
+1. Continue the icon-backed preset/import pipeline with PNG fallback generation.
+2. Use the diagnostics Qt window as the support/error-report surface for fallback checks.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -417,6 +410,21 @@ Checks already run for the latest transform-stack state smoke:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 114 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` passed against live MayaSessiond on port `7217`: the diagnostics window showed the missing-action issue, copied selected and full report text to the clipboard, cleared the stored report, saved screenshot `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png` at `720x520`, and `safe_start("transform_stack")` still showed `[46,214]`.
+- 2026-04-30 SVG import helper:
+  - `scripts/actionrail/icons.py` now exposes
+    `actionrail.icons.import_svg_icon()` for local SVG imports with existing SVG
+    safety validation, safe target-path resolution under `icons/`, manifest
+    upsert behavior, overwrite controls, and source/license/url/import-date
+    metadata.
+  - `tests/test_icons.py` covers successful import, unsafe SVG rejection
+    without manifest mutation, duplicate rejection, overwrite behavior, and
+    out-of-tree target rejection.
+  - `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py` -> 12 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\icons.py tests\\test_icons.py` -> all checks passed.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 130 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - Maya smoke was not run because this slice only changes pure Python import
+    tooling and docs, not Maya overlay/UI behavior.
 
 ## Decisions
 

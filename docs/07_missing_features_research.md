@@ -43,8 +43,12 @@ icon-backed presets/import tooling.
 `horizontal_tools` now references first-party SVG icons through
 `icons/manifest.json`, and diagnostics validate required metadata, duplicate
 ids, invalid local paths, missing files, unknown ids, invalid SVG files, and
-unsafe SVG content. The remaining active backlog is import tooling,
-source/license workflow, and fallback generation.
+unsafe SVG content.
+
+2026-04-30 follow-up: `actionrail.icons.import_svg_icon()` now covers the first
+local import-tooling slice by validating local SVG safety, copying assets under
+`icons/`, and upserting manifest source/license/url/import-date metadata. The
+remaining active backlog is PNG fallback generation and import diagnostics.
 
 ## Highest Priority Gaps
 
@@ -231,17 +235,21 @@ Source: [Autodesk hotbox marking menus](https://help.autodesk.com/cloudhelp/2020
 
 ### 10. Icon Pipeline
 
-The icon manifest is currently empty. ActionRail needs an offline asset
-pipeline before shipping more polished presets.
+The icon manifest now has first-party entries, and `import_svg_icon()` covers
+the first local import path with SVG safety validation and source/license
+metadata. ActionRail still needs fallback generation and broader import
+diagnostics before shipping more polished preset packs.
 
 Required features:
 
-- import SVG icons into `icons/`
-- sanitize SVGs: no scripts, no external resources, fixed viewBox
-- prefer monotone `currentColor`
-- record source, license, original URL, and import date
-- generate PNG fallbacks at 1x, 2x, and 3x when needed
-- expose a local icon browser in the designer
+- import SVG icons into `icons/`. First pass done for local SVG files.
+- sanitize SVGs: no scripts, no external resources, fixed viewBox. First pass
+  done through manifest/import validation.
+- prefer monotone `currentColor`.
+- record source, license, original URL, and import date. First pass done in
+  `icons/manifest.json`.
+- generate PNG fallbacks at 1x, 2x, and 3x when needed.
+- expose a local icon browser in the designer.
 
 Iconify is useful as an import source because its icon sets are validated and
 cleaned, but licenses must be tracked per icon set. Lucide is a good first pack
@@ -372,8 +380,8 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue the icon pipeline with import tooling, source/license workflow, and
-   fallback generation.
+1. Continue the icon pipeline with PNG fallback generation and import
+   diagnostics.
 2. Continue visible diagnostics as the icon/preset import path expands.
 3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.

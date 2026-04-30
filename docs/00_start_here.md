@@ -70,6 +70,9 @@ That folder is ignored by Git; committed documentation images live in `docs/asse
   references first-party SVG icons through `icons/manifest.json`, and icon
   diagnostics validate required metadata, invalid local paths, missing files,
   unsafe SVG content, and unknown icon ids before resolving paths for rendering.
+- `actionrail.icons.import_svg_icon()` now provides the first checked-in SVG
+  import helper: it validates local SVG safety, copies assets under `icons/`,
+  and records source, license, URL, import date, and manifest path metadata.
 - WoW-style customization roadmap exists in `docs/06_wow_style_customization.md`.
 
 ## Read Order
@@ -104,7 +107,8 @@ Continue Phase 1 declarative MVP:
 1. Replace `actionrail.show_last_report()`'s `confirmDialog` with a polished,
    themed Qt diagnostics window that supports copyable reports. Done.
 2. Continue diagnostic work toward the future icon-backed preset/import
-   pipeline. First icon-backed rail and manifest/SVG validation are done.
+   pipeline. First icon-backed rail, manifest/SVG validation, and a local SVG
+   import helper are done; PNG fallback generation remains next.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 
