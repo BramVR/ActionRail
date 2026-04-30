@@ -44,14 +44,40 @@ diagnostics_menu_exists_after_install = _exists(
     maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
     cmds.menuItem,
 )
+icon_import_menu_exists_after_install = _exists(
+    maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
+    cmds.menuItem,
+)
 shelf_exists_after_install = _exists(maya_ui.SHELF_BUTTON_NAME, cmds.shelfButton)
 menu_command = cmds.menuItem(maya_ui.MENU_ITEM_NAME, query=True, command=True)
+icon_import_menu_command = cmds.menuItem(
+    maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
+    query=True,
+    command=True,
+)
 diagnostics_menu_command = cmds.menuItem(
     maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
     query=True,
     command=True,
 )
 shelf_command = cmds.shelfButton(maya_ui.SHELF_BUTTON_NAME, query=True, command=True)
+
+icon_import_flow_report = actionrail.diagnose_icon_import_from_maya(
+    source_path="Z:/actionrail/missing-icon.svg",
+    icon_id="smoke.missing-icon",
+)
+app.processEvents()
+icon_import_flow_issue_codes = tuple(
+    issue.code for issue in icon_import_flow_report.issues
+)
+if icon_import_menu_command != maya_ui.diagnose_icon_import_from_maya_command():
+    raise AssertionError(f"Unexpected icon import menu command: {icon_import_menu_command}")
+if not icon_import_menu_exists_after_install:
+    raise AssertionError("Icon import diagnostics menu item was not installed.")
+if "missing_icon_import_source" not in icon_import_flow_issue_codes:
+    raise AssertionError(
+        f"Missing import-source diagnostic not reported: {icon_import_flow_issue_codes}"
+    )
 
 toggle_show = actionrail.toggle_default()
 app.processEvents()
@@ -74,6 +100,13 @@ result = {
     "diagnostics_menu_exists_after_install": diagnostics_menu_exists_after_install,
     "diagnostics_menu_exists_after_uninstall": _exists(
         maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
+        cmds.menuItem,
+    ),
+    "icon_import_flow_issue_codes": icon_import_flow_issue_codes,
+    "icon_import_menu_command": icon_import_menu_command,
+    "icon_import_menu_exists_after_install": icon_import_menu_exists_after_install,
+    "icon_import_menu_exists_after_uninstall": _exists(
+        maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
         cmds.menuItem,
     ),
     "ids_after_hide": ids_after_hide,

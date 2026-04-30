@@ -118,8 +118,13 @@ Last updated: 2026-04-30
 - Maya-native UI entry point:
   - `actionrail.toggle_default()` shows the default `transform_stack` preset when hidden and hides it when visible.
   - `actionrail.install_menu_toggle()` and `actionrail.uninstall_menu_toggle()` manage an idempotent Maya menu item.
+  - The ActionRail Maya menu includes `Diagnose SVG Icon Import...`, which
+    chooses a local SVG, prompts for an icon id, runs the non-writing icon
+    import preflight, records the latest report, and opens the themed
+    diagnostics window. The same flow can be driven directly through
+    `actionrail.diagnose_icon_import_from_maya(...)`.
   - `actionrail.install_shelf_toggle()` and `actionrail.uninstall_shelf_toggle()` manage an idempotent Maya shelf button.
-  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
+  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, icon import diagnostics command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
 - Reusable Maya smoke wrapper:
   - `scripts/maya-smoke.ps1` wraps the stable MayaSessiond command shape for checked-in smoke scripts.
   - The wrapper uses repo-local state, starts Sessiond only when needed, passes the repo module path and absolute smoke-script directory, discovers MCP tools before running, and fails on either MCP-call or script-payload failure.
@@ -162,55 +167,47 @@ Last updated: 2026-04-30
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: continue icon-backed preset/import recovery
-   by wiring import diagnostics into the Maya menu/window workflow or adding a
-   focused Maya smoke for fallback preset startup.
+2. First recommended coding slice: continue hardening visible diagnostics as
+   the icon import path expands; keep the existing fallback preset startup
+   smoke in the verification set when touching recovery behavior.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest PNG fallback slice:
-
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 141 passed.
-- `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-
 ## Latest Handoff
 
-- Task goal completed: broadened icon import diagnostics and added opt-in
-  preset recovery polish.
+- Task goal completed: wired icon import diagnostics into the Maya-facing menu
+  and report-window workflow.
 - Files changed in this handoff update:
-  `scripts/actionrail/icons.py`, `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/__init__.py`, `scripts/actionrail/project.py`,
-  `tests/test_icons.py`, `tests/test_diagnostics.py`,
-  `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
-  `docs/00_start_here.md`, `docs/02_implementation_plan.md`,
-  `docs/03_maya_sessiond_workflow.md`, and `docs/04_status.md`.
-- Behavior verified: `validate_svg_icon_import()` reports multiple non-writing
-  preflight issues, `diagnose_icon_import()` stores those issues in the latest
-  diagnostics report, and `safe_start(..., fallback_preset_id=...)` can start a
-  clean fallback preset after the requested preset fails diagnostics.
+  `scripts/actionrail/maya_ui.py`, `scripts/actionrail/__init__.py`,
+  `scripts/actionrail/project.py`, `tests/test_maya_ui.py`,
+  `tests/test_package.py`, `tests/maya_smoke/actionrail_maya_ui_smoke.py`,
+  `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and
+  `docs/04_status.md`.
+- Behavior verified: the ActionRail Maya menu now installs a `Diagnose SVG Icon
+  Import...` item that runs `actionrail.diagnose_icon_import_from_maya()`. The
+  helper can run interactively through Maya file/id prompts or with explicit
+  arguments for smoke tests, records the existing preflight report, and opens
+  the themed diagnostics window.
 - Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py`
-  -> 38 passed;
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 146 passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_package.py`
+  -> 14 passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 148 passed;
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> printed valid project map with zero icon manifest issues;
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
-  -> passed against MayaSessiond on port `7217`;
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
-  -> passed against MayaSessiond on port `7217` and saved
-  `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png`.
-- Current live state: icon import failures can now be reported through the same
-  diagnostics/report pipeline used by presets and safe startup. No direct Maya
-  widget layout changed.
+  -> printed valid project map with `diagnose_icon_import_from_maya` in the
+  public API and zero icon manifest issues;
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_maya_ui_smoke.py`
+  -> passed against MayaSessiond on port `7217`.
+- Current live state: icon import failures can be initiated from the Maya menu
+  and displayed in the same copyable diagnostics window used by preset and
+  safe-start diagnostics.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: connect the import diagnostics report to a Maya-facing menu
-  or helper flow now that the underlying report window and fallback recovery
-  have smoke coverage.
+- Exact next step: keep hardening visible diagnostics as the icon import path
+  expands; preserve import/recovery smoke coverage when touching recovery.
 
 ## Next
 
-1. Wire icon import diagnostics into a Maya-facing menu/window workflow.
+1. Keep hardening visible diagnostics as the icon import path expands.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
@@ -224,30 +221,31 @@ Checks already run for the latest PNG fallback slice:
 
 ## Latest Verification
 
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 146 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 148 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py`
-  -> 38 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_package.py`
+  -> 14 passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
   from the repo venv -> generated `move@1x.png`, `move@2x.png`, and
   `move@3x.png` via discovered `mayapy`.
 - Latest CLI check:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> printed a valid project map with `diagnose_icon_import` in the public API
-  and zero icon manifest issues.
+  -> printed a valid project map with `diagnose_icon_import_from_maya` in the
+  public API and zero icon manifest issues.
 - Latest Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
-  -> passed against MayaSessiond on port `7217`; diagnostics window copy/full
-  report behavior and `safe_start("transform_stack")` still passed.
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_maya_ui_smoke.py`
+  -> passed against MayaSessiond on port `7217`; verified the icon import
+  diagnostics menu item, explicit missing-source preflight flow, menu/shelf
+  commands, toggle show/hide, and uninstall cleanup.
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`; saved
   `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png`
   at `720x520` and verified fallback startup to `transform_stack`.
-- Latest Maya note: diagnostics smoke used the installed MCP package in the
-  Sessiond venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
+- Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
+  venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.
 - Full historical verification log moved to `docs/history/verification_log.md`.
 

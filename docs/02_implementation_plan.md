@@ -104,6 +104,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   an ActionRail-themed Qt dialog/window that lists warnings/errors, shows the
   full report in a selectable text area, and provides `Copy Selected`,
   `Copy Full Report`, `Clear`, and `Close` actions.
+- Maya-facing icon import diagnostics. First pass done: the ActionRail Maya
+  menu includes `Diagnose SVG Icon Import...`, which lets a user choose a local
+  SVG, enter an icon id, runs the non-writing import preflight, records the
+  latest report, and opens the themed diagnostics window.
 
 ### Acceptance Criteria
 
@@ -233,10 +237,9 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: connect icon import diagnostics to a Maya-facing
-menu/window workflow and add focused smoke coverage for fallback preset startup
-if that recovery path becomes user-facing. Use `docs/04_status.md` as the
-detailed handoff.
+Next implementation slice: keep hardening visible diagnostics as the import
+path expands and preserve the existing fallback preset startup smoke coverage.
+Use `docs/04_status.md` as the detailed handoff.
 
 ## Research Backlog
 

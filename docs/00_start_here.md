@@ -34,9 +34,10 @@ Snapshot:
   SVG import helper with generated PNG fallbacks.
 - Built-in preset ids currently include `transform_stack` and
   `horizontal_tools`.
-- Current next implementation slice: connect icon import diagnostics to a
-  Maya-facing menu/window workflow and add focused smoke coverage for fallback
-  preset startup if that recovery path becomes user-facing.
+- Icon import diagnostics are now exposed through a Maya menu flow that
+  preflights a local SVG and opens the copyable diagnostics window.
+- Current next implementation slice: keep hardening visible diagnostics as the
+  import path expands; do not start the full designer yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.

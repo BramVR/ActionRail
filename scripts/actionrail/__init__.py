@@ -15,6 +15,7 @@ from .diagnostics import (
     show_last_report,
 )
 from .maya_ui import (
+    diagnose_icon_import_from_maya,
     install_menu_toggle,
     install_shelf_toggle,
     toggle_default,
@@ -32,6 +33,7 @@ __all__ = [
     "clear_last_report",
     "collect_diagnostics",
     "diagnose_icon_import",
+    "diagnose_icon_import_from_maya",
     "diagnose_spec",
     "format_report",
     "hide_all",

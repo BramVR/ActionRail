@@ -73,7 +73,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/maya_ui.py",
-        "owns": "Maya menu and shelf toggle entry points",
+        "owns": "Maya menu, shelf, and icon import diagnostics entry points",
         "tests": ("tests/test_maya_ui.py", "tests/maya_smoke/actionrail_maya_ui_smoke.py"),
     },
 )
@@ -102,7 +102,7 @@ def about() -> dict[str, object]:
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
             "phase": "Phase 1 declarative MVP",
-            "next_slice": "Maya-facing import diagnostics workflow and fallback startup smoke",
+            "next_slice": "Visible diagnostics hardening as icon import support expands",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

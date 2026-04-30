@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Literal
 
-from . import runtime
+from . import diagnostics, runtime
 from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
+MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
 SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
 
@@ -47,6 +49,8 @@ def install_menu_toggle(
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, menuItem=True)
 
     toggle_item = str(
         cmds.menuItem(
@@ -57,6 +61,14 @@ def install_menu_toggle(
             parent=MENU_NAME,
             sourceType="python",
         )
+    )
+    cmds.menuItem(
+        MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
+        label="Diagnose SVG Icon Import...",
+        annotation="Preflight a local SVG icon import and show the diagnostics report.",
+        command=diagnose_icon_import_from_maya_command(),
+        parent=MENU_NAME,
+        sourceType="python",
     )
     cmds.menuItem(
         MENU_DIAGNOSTICS_ITEM_NAME,
@@ -73,6 +85,8 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
     """Remove the ActionRail menu toggle created by :func:`install_menu_toggle`."""
 
     cmds = _require_cmds(cmds_module)
+    if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
@@ -143,6 +157,51 @@ def toggle_command(preset_id: str = TRANSFORM_STACK_ID) -> str:
     return f"import actionrail; actionrail.toggle_default({preset_id!r})"
 
 
+def diagnose_icon_import_from_maya(
+    *,
+    source_path: str = "",
+    icon_id: str = "",
+    source: str = "",
+    license_name: str = "Unknown",
+    url: str = "",
+    target_path: str = "",
+    overwrite: bool = False,
+    cmds_module: Any | None = None,
+) -> diagnostics.DiagnosticReport | None:
+    """Run icon import preflight from Maya dialogs and show the report window."""
+
+    cmds = _require_cmds(cmds_module)
+    resolved_source_path = source_path or _choose_svg_source_path(cmds)
+    if not resolved_source_path:
+        return None
+
+    resolved_icon_id = icon_id or _prompt_icon_id(
+        cmds,
+        _default_import_icon_id(resolved_source_path),
+    )
+    if not resolved_icon_id:
+        return None
+
+    source_file = Path(resolved_source_path)
+    report = diagnostics.diagnose_icon_import(
+        resolved_source_path,
+        resolved_icon_id,
+        source=source or source_file.stem or "Maya file dialog",
+        license_name=license_name,
+        url=url or resolved_source_path,
+        target_path=target_path,
+        overwrite=overwrite,
+    )
+    diagnostics.show_last_report()
+    return report
+
+
+def diagnose_icon_import_from_maya_command() -> str:
+    """Return the Python command string for the Maya icon import diagnostics item."""
+
+    return "import actionrail; actionrail.diagnose_icon_import_from_maya()"
+
+
 def _toggle_label(preset_id: str) -> str:
     if preset_id == TRANSFORM_STACK_ID:
         return "Toggle Transform Stack"
@@ -159,6 +218,38 @@ def _default_shelf_parent(mel_module: Any | None = None) -> str:
             raise RuntimeError(msg) from exc
 
     return str(mel.eval("$tmp = $gShelfTopLevel"))
+
+
+def _choose_svg_source_path(cmds: Any) -> str:
+    selection = cmds.fileDialog2(
+        caption="Diagnose ActionRail SVG Icon Import",
+        fileFilter="SVG Icons (*.svg);;All Files (*.*)",
+        fileMode=1,
+    )
+    if not selection:
+        return ""
+    return str(selection[0])
+
+
+def _prompt_icon_id(cmds: Any, default_icon_id: str) -> str:
+    result = cmds.promptDialog(
+        title="ActionRail Icon Import Diagnostics",
+        message="Icon id",
+        text=default_icon_id,
+        button=("Diagnose", "Cancel"),
+        defaultButton="Diagnose",
+        cancelButton="Cancel",
+        dismissString="Cancel",
+    )
+    if result != "Diagnose":
+        return ""
+    return str(cmds.promptDialog(query=True, text=True)).strip()
+
+
+def _default_import_icon_id(source_path: str) -> str:
+    stem = Path(source_path).stem.lower()
+    safe = "".join(char if char.isalnum() else "-" for char in stem).strip("-")
+    return f"custom.{safe or 'icon'}"
 
 
 def _require_cmds(cmds_module: Any | None = None) -> Any:
