@@ -49,8 +49,10 @@ unsafe SVG content.
 local import-tooling slice by validating local SVG safety, copying assets under
 `icons/`, and upserting manifest source/license/url/import-date metadata. The
 helper now rejects external resources in SVG style blocks and normalizes
-manifest paths before overwrite conflict checks. The remaining active backlog
-is PNG fallback generation and import diagnostics.
+manifest paths before overwrite conflict checks. PNG fallback generation now
+records 1x/2x/3x assets plus source hashes in the manifest, and diagnostics
+report missing or stale fallback assets. The remaining active backlog is
+broader import diagnostics and preset recovery polish.
 
 ## Highest Priority Gaps
 
@@ -239,8 +241,8 @@ Source: [Autodesk hotbox marking menus](https://help.autodesk.com/cloudhelp/2020
 
 The icon manifest now has first-party entries, and `import_svg_icon()` covers
 the first local import path with SVG safety validation, manifest path
-normalization, and source/license metadata. ActionRail still needs fallback
-generation and broader import diagnostics before shipping more polished preset
+normalization, source/license metadata, and generated PNG fallbacks. ActionRail
+still needs broader import diagnostics before shipping more polished preset
 packs.
 
 Required features:
@@ -251,7 +253,9 @@ Required features:
 - prefer monotone `currentColor`.
 - record source, license, original URL, and import date. First pass done in
   `icons/manifest.json`.
-- generate PNG fallbacks at 1x, 2x, and 3x when needed.
+- generate PNG fallbacks at 1x, 2x, and 3x when needed. First pass done for
+  import-time generation, explicit regeneration, and fallback asset
+  diagnostics.
 - expose a local icon browser in the designer.
 
 Iconify is useful as an import source because its icon sets are validated and
@@ -383,8 +387,8 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue the icon pipeline with PNG fallback generation and import
-   diagnostics.
+1. Continue the icon pipeline with broader import diagnostics and preset
+   recovery polish.
 2. Continue visible diagnostics as the icon/preset import path expands.
 3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.

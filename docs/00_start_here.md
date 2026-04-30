@@ -31,11 +31,11 @@ Snapshot:
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, the diagnostics Qt window, and the
-  first SVG import helper.
+  SVG import helper with generated PNG fallbacks.
 - Built-in preset ids currently include `transform_stack` and
   `horizontal_tools`.
-- Current next implementation slice: PNG fallback generation for imported SVG
-  icons plus diagnostics for missing or stale fallback assets.
+- Current next implementation slice: broaden icon import diagnostics and preset
+  recovery polish now that PNG fallback generation is in place.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -79,8 +79,8 @@ Continue Phase 1 declarative MVP:
 1. Replace `actionrail.show_last_report()`'s `confirmDialog` with a polished,
    themed Qt diagnostics window that supports copyable reports. Done.
 2. Continue diagnostic work toward the future icon-backed preset/import
-   pipeline. First icon-backed rail, manifest/SVG validation, and a local SVG
-   import helper are done; PNG fallback generation remains next.
+   pipeline. First icon-backed rail, manifest/SVG validation, local SVG import,
+   PNG fallback generation, and fallback asset diagnostics are done.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
 4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
 

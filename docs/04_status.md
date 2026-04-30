@@ -79,6 +79,12 @@ Last updated: 2026-04-30
     `<style>` blocks, and import overwrite checks compare normalized manifest
     paths so equivalent `icons/...` and package-relative paths cannot alias the
     same asset across two ids.
+  - `actionrail.icons.generate_png_fallbacks()` now generates 1x/2x/3x PNG
+    fallbacks for manifest SVG icons, `import_svg_icon()` can generate those
+    fallbacks at import time, and manifest diagnostics report missing or stale
+    generated fallback assets.
+  - First-party ActionRail SVG icons now have checked-in `@1x`, `@2x`, and
+    `@3x` PNG fallback assets recorded in `icons/manifest.json`.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - Diagnostic entry points now remember the latest `DiagnosticReport`, expose
@@ -140,52 +146,48 @@ Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
 2. First recommended coding slice: continue the icon-backed preset/import path
-   with PNG fallback generation and diagnostics for generated fallback assets.
+   with broader import diagnostics and preset recovery polish.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest docs/navigation optimization slice:
+Checks already run for the latest PNG fallback slice:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 135 passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 141 passed.
 - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 
 ## Latest Handoff
 
-- Task goal completed: optimized docs/code navigation for agents while keeping
-  context size down.
+- Task goal completed: added PNG fallback generation and generated-fallback
+  diagnostics for icon manifest entries.
 - Files changed in this handoff update:
-  `scripts/actionrail/project.py`, `scripts/actionrail/__main__.py`,
-  `scripts/actionrail/__init__.py`, `scripts/actionrail/actions.py`,
-  `scripts/actionrail/spec.py`, `scripts/actionrail/runtime.py`,
-  `scripts/actionrail/icons.py`, `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/hotkeys.py`, `scripts/actionrail/widgets.py`,
-  `scripts/actionrail/overlay.py`, `tests/test_project_map.py`,
-  `tests/test_package.py`, `README.md`, `docs/00_start_here.md`,
-  `docs/03_maya_sessiond_workflow.md`, `docs/04_status.md`, and
-  `docs/history/verification_log.md`.
-- Behavior verified: `actionrail.about()` returns a JSON-safe project map;
-  `python -m actionrail --json` prints it from a repo checkout with
-  `PYTHONPATH=scripts`; public-heavy modules now declare `__all__`; large
-  modules have short ownership headers; `docs/00_start_here.md` routes agents
-  to the current live status and `docs/04_status.md` no longer carries the full
-  historical verification log.
+  `scripts/actionrail/icons.py`, `scripts/actionrail/project.py`,
+  `tests/test_icons.py`, `icons/manifest.json`, first-party
+  `icons/actionrail/*@1x.png`, `*@2x.png`, and `*@3x.png` fallback assets,
+  `README.md`, `docs/00_start_here.md`, `docs/02_implementation_plan.md`,
+  `docs/04_status.md`, and `docs/07_missing_features_research.md`.
+- Behavior verified: `actionrail.icons.generate_png_fallbacks()` creates
+  manifest-backed PNG fallbacks, `import_svg_icon()` can generate fallbacks at
+  import time, `validate_icon_manifest()` reports missing and stale generated
+  fallbacks, and the built-in icon manifest validates cleanly with checked-in
+  fallback assets.
 - Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_package.py tests\\test_icons.py` -> 18 passed;
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\project.py scripts\\actionrail\\__main__.py scripts\\actionrail\\__init__.py scripts\\actionrail\\actions.py scripts\\actionrail\\spec.py scripts\\actionrail\\runtime.py scripts\\actionrail\\icons.py scripts\\actionrail\\diagnostics.py scripts\\actionrail\\hotkeys.py scripts\\actionrail\\widgets.py scripts\\actionrail\\overlay.py tests\\test_project_map.py tests\\test_package.py`
-  -> all checks passed;
-  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json` -> printed valid project map;
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 135 passed;
-  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Current live state: MayaSessiond was not needed for this pure Python/docs
-  navigation slice; no Maya UI or runtime overlay behavior changed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py`
+  -> 33 passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 141 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
+  -> printed valid project map with zero icon manifest issues.
+- Current live state: fallback generation uses discovered `mayapy` so the repo
+  venv can generate fallbacks through Maya's bundled Qt renderer without
+  shipping local PySide6, CairoSVG, Pillow, or ImageMagick dependencies. No
+  Maya overlay UI behavior changed.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: add PNG fallback generation for imported SVG icons and
-  diagnostics for missing or stale fallback assets.
+- Exact next step: broaden icon import diagnostics and preset recovery polish.
 
 ## Next
 
-1. Continue the icon-backed preset/import pipeline with PNG fallback generation.
-2. Use the diagnostics Qt window as the support/error-report surface for fallback checks.
+1. Continue the icon-backed preset/import pipeline with broader import diagnostics and preset recovery polish.
+2. Use the diagnostics Qt window as the support/error-report surface for icon import and fallback checks.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
@@ -197,13 +199,17 @@ Checks already run for the latest docs/navigation optimization slice:
 
 ## Latest Verification
 
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 135 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 141 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- Latest fallback check:
+  `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
+  from the repo venv -> generated `move@1x.png`, `move@2x.png`, and
+  `move@3x.png` via discovered `mayapy`.
 - Latest CLI check:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
   -> printed a valid project map.
-- Latest Maya note: MayaSessiond was not needed for this pure Python/docs
-  navigation slice.
+- Latest Maya note: fallback generation can use discovered `mayapy`;
+  MayaSessiond was not needed because no visible overlay behavior changed.
 - Full historical verification log moved to `docs/history/verification_log.md`.
 
 ## Decisions

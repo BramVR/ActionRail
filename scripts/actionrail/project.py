@@ -58,7 +58,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/icons.py",
-        "owns": "icon manifest validation, SVG safety checks, local SVG import",
+        "owns": "icon manifest validation, SVG safety checks, local import, PNG fallbacks",
         "tests": ("tests/test_icons.py",),
     },
     {
@@ -102,7 +102,7 @@ def about() -> dict[str, object]:
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
             "phase": "Phase 1 declarative MVP",
-            "next_slice": "PNG fallback generation for imported SVG icons",
+            "next_slice": "broader icon import diagnostics and preset recovery polish",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

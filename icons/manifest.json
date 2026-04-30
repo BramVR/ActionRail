@@ -6,7 +6,14 @@
       "license": "Apache-2.0",
       "url": "local://actionrail/icons/move.svg",
       "imported_at": "2026-04-30",
-      "path": "icons/actionrail/move.svg"
+      "path": "icons/actionrail/move.svg",
+      "fallbacks": {
+        "1x": "icons/actionrail/move@1x.png",
+        "2x": "icons/actionrail/move@2x.png",
+        "3x": "icons/actionrail/move@3x.png"
+      },
+      "fallback_source_sha256": "f4778353368b9ea83351c2c09791d4761162aeb440abb03f96f29026cd7561a8",
+      "fallback_base_size": 24
     },
     {
       "id": "actionrail.rotate",
@@ -14,7 +21,14 @@
       "license": "Apache-2.0",
       "url": "local://actionrail/icons/rotate.svg",
       "imported_at": "2026-04-30",
-      "path": "icons/actionrail/rotate.svg"
+      "path": "icons/actionrail/rotate.svg",
+      "fallbacks": {
+        "1x": "icons/actionrail/rotate@1x.png",
+        "2x": "icons/actionrail/rotate@2x.png",
+        "3x": "icons/actionrail/rotate@3x.png"
+      },
+      "fallback_source_sha256": "a64a4141425d9c360f58e9f95d7f358be966e8eb811402400f890284e3b722fe",
+      "fallback_base_size": 24
     },
     {
       "id": "actionrail.scale",
@@ -22,7 +36,14 @@
       "license": "Apache-2.0",
       "url": "local://actionrail/icons/scale.svg",
       "imported_at": "2026-04-30",
-      "path": "icons/actionrail/scale.svg"
+      "path": "icons/actionrail/scale.svg",
+      "fallbacks": {
+        "1x": "icons/actionrail/scale@1x.png",
+        "2x": "icons/actionrail/scale@2x.png",
+        "3x": "icons/actionrail/scale@3x.png"
+      },
+      "fallback_source_sha256": "ff5221acbf5d4c739bd78774d6bc5e3e9469115afa7291972aabc4129a2ca535",
+      "fallback_base_size": 24
     },
     {
       "id": "actionrail.key",
@@ -30,7 +51,14 @@
       "license": "Apache-2.0",
       "url": "local://actionrail/icons/key.svg",
       "imported_at": "2026-04-30",
-      "path": "icons/actionrail/key.svg"
+      "path": "icons/actionrail/key.svg",
+      "fallbacks": {
+        "1x": "icons/actionrail/key@1x.png",
+        "2x": "icons/actionrail/key@2x.png",
+        "3x": "icons/actionrail/key@3x.png"
+      },
+      "fallback_source_sha256": "1e1432cde1205456499fe067c0b002c0988b1912724b5f1ab1bce8417796749b",
+      "fallback_base_size": 24
     }
   ]
 }

@@ -83,6 +83,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   rejects external resources in style blocks, writes safe assets under
   `icons/`, normalizes manifest path conflicts before overwrite, and upserts
   manifest source/license/url/import metadata.
+- PNG fallback generation. First pass done through
+  `actionrail.icons.generate_png_fallbacks()` and import-time fallback
+  generation, with manifest diagnostics for missing or stale generated assets.
 - Command/plugin predicate availability badges. First pass done for missing
   `command.exists(...)` and `plugin.exists(...)` targets, including visible
   disabled warning slots when a missing dependency would otherwise hide the
@@ -225,17 +228,17 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
 
-Next implementation slice: continue the icon-backed preset/import path with
-PNG fallback generation and any diagnostics needed around generated fallback
-assets. Use `docs/04_status.md` as the detailed handoff.
+Next implementation slice: broaden icon import diagnostics and preset recovery
+polish now that PNG fallback generation is in place. Use `docs/04_status.md`
+as the detailed handoff.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The highest-priority missing features are:
 
-1. Continue icon-backed preset/import tooling with PNG fallback generation and
-   import diagnostics.
+1. Continue icon-backed preset/import tooling with broader import diagnostics
+   and preset recovery polish.
 2. Continue visible diagnostics as the import path expands.
 3. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
 4. Bind Mode, then flyouts, then command rings.
