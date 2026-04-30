@@ -12,6 +12,7 @@ class FakeCmds:
         self.deleted: list[tuple[str, dict[str, object]]] = []
         self.file_dialog_selection: list[str] = []
         self.prompt_result = "Diagnose"
+        self.prompt_default_text = ""
         self.prompt_text = ""
 
     def menu(self, name: str, **kwargs: object) -> object:
@@ -67,7 +68,7 @@ class FakeCmds:
     def promptDialog(self, **kwargs: object) -> str:  # noqa: N802
         if kwargs.get("query") and kwargs.get("text"):
             return self.prompt_text
-        self.prompt_text = str(kwargs.get("text", ""))
+        self.prompt_default_text = str(kwargs.get("text", ""))
         return self.prompt_result
 
 
@@ -211,6 +212,65 @@ def test_diagnose_icon_import_from_maya_uses_dialog_values(monkeypatch) -> None:
             "overwrite": False,
         },
     )
+
+
+def test_diagnose_icon_import_from_maya_reports_empty_prompt_text(monkeypatch) -> None:
+    cmds = FakeCmds()
+    cmds.file_dialog_selection = ["C:/icons/Empty Id.svg"]
+    cmds.prompt_text = ""
+    calls: dict[str, object] = {}
+
+    def diagnose_icon_import(
+        source_path: str,
+        icon_id: str,
+        **kwargs: object,
+    ) -> object:
+        calls["diagnose"] = (source_path, icon_id, kwargs)
+        return "report"
+
+    def show_last_report() -> str:
+        calls["shown"] = True
+        return "formatted"
+
+    monkeypatch.setattr(
+        maya_ui.diagnostics,
+        "diagnose_icon_import",
+        diagnose_icon_import,
+    )
+    monkeypatch.setattr(maya_ui.diagnostics, "show_last_report", show_last_report)
+
+    result = maya_ui.diagnose_icon_import_from_maya(cmds_module=cmds)
+
+    assert result == "report"
+    assert calls["shown"] is True
+    assert calls["diagnose"] == (
+        "C:/icons/Empty Id.svg",
+        "",
+        {
+            "source": "Empty Id",
+            "license_name": "Unknown",
+            "url": "C:/icons/Empty Id.svg",
+            "target_path": "",
+            "overwrite": False,
+        },
+    )
+
+
+def test_diagnose_icon_import_from_maya_prompt_cancel_returns_none(monkeypatch) -> None:
+    cmds = FakeCmds()
+    cmds.file_dialog_selection = ["C:/icons/Cancel.svg"]
+    cmds.prompt_result = "Cancel"
+    shown = False
+
+    def show_last_report() -> str:
+        nonlocal shown
+        shown = True
+        return "formatted"
+
+    monkeypatch.setattr(maya_ui.diagnostics, "show_last_report", show_last_report)
+
+    assert maya_ui.diagnose_icon_import_from_maya(cmds_module=cmds) is None
+    assert shown is False
 
 
 def test_diagnose_icon_import_from_maya_cancel_returns_none(monkeypatch) -> None:

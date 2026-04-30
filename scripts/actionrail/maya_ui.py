@@ -175,12 +175,15 @@ def diagnose_icon_import_from_maya(
     if not resolved_source_path:
         return None
 
-    resolved_icon_id = icon_id or _prompt_icon_id(
-        cmds,
-        _default_import_icon_id(resolved_source_path),
-    )
+    resolved_icon_id = icon_id
     if not resolved_icon_id:
-        return None
+        prompted_icon_id = _prompt_icon_id(
+            cmds,
+            _default_import_icon_id(resolved_source_path),
+        )
+        if prompted_icon_id is None:
+            return None
+        resolved_icon_id = prompted_icon_id
 
     source_file = Path(resolved_source_path)
     report = diagnostics.diagnose_icon_import(
@@ -231,7 +234,7 @@ def _choose_svg_source_path(cmds: Any) -> str:
     return str(selection[0])
 
 
-def _prompt_icon_id(cmds: Any, default_icon_id: str) -> str:
+def _prompt_icon_id(cmds: Any, default_icon_id: str) -> str | None:
     result = cmds.promptDialog(
         title="ActionRail Icon Import Diagnostics",
         message="Icon id",
@@ -242,7 +245,7 @@ def _prompt_icon_id(cmds: Any, default_icon_id: str) -> str:
         dismissString="Cancel",
     )
     if result != "Diagnose":
-        return ""
+        return None
     return str(cmds.promptDialog(query=True, text=True)).strip()
 
 
