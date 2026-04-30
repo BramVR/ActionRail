@@ -98,6 +98,8 @@ if "4 errors" not in summary_label.text():
 if (
     "Status: errors" not in report_text.toPlainText()
     or "icon_path_conflict" not in report_text.toPlainText()
+    or "path: icons/actionrail/move.svg" not in report_text.toPlainText()
+    or "field: icon_id" not in report_text.toPlainText()
 ):
     raise AssertionError(f"Import report text missing issue detail: {report_text.toPlainText()}")
 

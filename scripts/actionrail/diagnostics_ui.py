@@ -201,7 +201,7 @@ def _summary_text(report: DiagnosticReport | None) -> str:
 
 
 def _issue_title(issue: DiagnosticIssue) -> str:
-    target = issue.slot_id or issue.preset_id or issue.action_id or issue.target
+    target = issue.slot_id or issue.preset_id or issue.action_id or issue.target or issue.path
     suffix = f" - {target}" if target else ""
     return f"{issue.severity.upper()} {issue.code}{suffix}"
 
@@ -219,6 +219,8 @@ def _issue_detail(issue: DiagnosticIssue) -> str:
         ("Predicate field", issue.predicate_field),
         ("Predicate", issue.predicate),
         ("Target", issue.target),
+        ("Path", issue.path),
+        ("Field", issue.field),
         ("Exception", issue.exception_type),
     )
     fields.extend(f"{label}: {value}" for label, value in optional_fields if value)

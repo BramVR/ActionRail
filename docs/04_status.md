@@ -111,6 +111,10 @@ Last updated: 2026-04-30
   - `actionrail.show_last_report()` now opens a themed ActionRail Qt diagnostics
     window with a summary, warning/error issue list, selectable full report text,
     and `Copy Selected`, `Copy Full Report`, `Clear`, and `Close` actions.
+  - Copyable diagnostic reports and selected issue details now include
+    structured `path` and `field` values, so icon import and manifest problems
+    expose the exact source/target path and metadata field in the diagnostics
+    window.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -175,35 +179,27 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: wired icon import diagnostics into the Maya-facing menu
-  and report-window workflow.
-- Files changed in this handoff update:
-  `scripts/actionrail/maya_ui.py`, `scripts/actionrail/__init__.py`,
-  `scripts/actionrail/project.py`, `tests/test_maya_ui.py`,
-  `tests/test_package.py`, `tests/maya_smoke/actionrail_maya_ui_smoke.py`,
-  `docs/00_start_here.md`, `docs/02_implementation_plan.md`, and
-  `docs/04_status.md`.
-- Behavior verified: the ActionRail Maya menu now installs a `Diagnose SVG Icon
-  Import...` item that runs `actionrail.diagnose_icon_import_from_maya()`. The
-  helper can run interactively through Maya file/id prompts or with explicit
-  arguments for smoke tests, records the existing preflight report, and opens
-  the themed diagnostics window.
-- Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_package.py`
-  -> 14 passed;
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 148 passed;
+- Task goal completed: hardened copyable diagnostics for icon import and
+  manifest problems.
+- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
+  `scripts/actionrail/diagnostics_ui.py`, `tests/test_diagnostics.py`,
+  `tests/test_diagnostics_ui.py`,
+  `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
+  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
+- Behavior verified: `actionrail.format_report()` now includes structured
+  optional issue details such as `target`, `path`, and `field`; the diagnostics
+  window's selected-issue copy text shows `Path` and `Field`; issue titles use
+  `path` as a fallback target when no stronger target exists.
+- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed;
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
-  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> printed valid project map with `diagnose_icon_import_from_maya` in the
-  public API and zero icon manifest issues;
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_maya_ui_smoke.py`
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`.
-- Current live state: icon import failures can be initiated from the Maya menu
-  and displayed in the same copyable diagnostics window used by preset and
-  safe-start diagnostics.
+- Current live state: icon import failures initiated from the Maya menu or API
+  now produce copyable diagnostics that expose exact path and metadata-field
+  details in both the full report and selected issue text.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: keep hardening visible diagnostics as the icon import path
-  expands; preserve import/recovery smoke coverage when touching recovery.
+- Exact next step: continue visible diagnostics hardening as the icon import
+  path expands; preserve import/recovery smoke coverage when touching recovery.
 
 ## Next
 
@@ -221,11 +217,11 @@ Start here:
 
 ## Latest Verification
 
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 148 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_package.py`
-  -> 14 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  -> 18 passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
   from the repo venv -> generated `move@1x.png`, `move@2x.png`, and
@@ -241,7 +237,8 @@ Start here:
   commands, toggle show/hide, and uninstall cleanup.
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
-  -> passed against MayaSessiond on port `7217`; saved
+  -> passed against MayaSessiond on port `7217`; verified import report
+  `path`/`field` detail text, saved
   `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png`
   at `720x520` and verified fallback startup to `transform_stack`.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond

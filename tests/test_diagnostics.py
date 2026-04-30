@@ -8,6 +8,8 @@ import pytest
 import actionrail.diagnostics as diagnostics
 from actionrail.actions import Action, ActionRegistry, create_default_registry
 from actionrail.diagnostics import (
+    DiagnosticIssue,
+    DiagnosticReport,
     clear_last_report,
     collect_diagnostics,
     diagnose_icon_import,
@@ -207,6 +209,28 @@ def test_last_report_can_be_cleared_and_formatted() -> None:
     assert last_report() == report
     assert "Status: errors" in text
     assert "missing_action [broken_actions.missing]" in text
+
+
+def test_format_report_includes_structured_issue_details() -> None:
+    report = DiagnosticReport(
+        (
+            DiagnosticIssue(
+                code="invalid_icon_import_metadata",
+                severity="error",
+                message="Icon id must use letters, numbers, dots, underscores, or hyphens.",
+                target="bad id",
+                path="icons/custom/arrow.svg",
+                field="icon_id",
+            ),
+        )
+    )
+
+    text = format_report(report)
+
+    assert "invalid_icon_import_metadata" in text
+    assert "target: bad id" in text
+    assert "path: icons/custom/arrow.svg" in text
+    assert "field: icon_id" in text
 
 
 def test_show_last_report_opens_qt_window_with_formatted_report(

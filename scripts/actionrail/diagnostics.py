@@ -172,6 +172,7 @@ def format_report(report: DiagnosticReport | None = None) -> str:
         elif issue.preset_id:
             label = f"{label} [{issue.preset_id}]"
         lines.append(f"- {issue.severity}: {label}: {issue.message}")
+        lines.extend(f"  {key}: {value}" for key, value in _issue_detail_fields(issue))
     return "\n".join(lines)
 
 
@@ -582,6 +583,23 @@ def _record_report(report: DiagnosticReport) -> DiagnosticReport:
     global _LAST_REPORT
     _LAST_REPORT = report
     return report
+
+
+def _issue_detail_fields(issue: DiagnosticIssue) -> tuple[tuple[str, str], ...]:
+    """Return optional copyable issue fields in stable report order."""
+
+    fields = (
+        ("preset", issue.preset_id),
+        ("slot", issue.slot_id),
+        ("action", issue.action_id),
+        ("predicate_field", issue.predicate_field),
+        ("predicate", issue.predicate),
+        ("target", issue.target),
+        ("path", issue.path),
+        ("field", issue.field),
+        ("exception", issue.exception_type),
+    )
+    return tuple((key, value) for key, value in fields if value)
 
 
 def _show_report_window(report: DiagnosticReport | None, message: str) -> Any:
