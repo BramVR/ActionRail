@@ -63,6 +63,7 @@ class IconManifestIssue:
     icon_id: str = ""
     path: str = ""
     field: str = ""
+    hint: str = ""
 
     def as_dict(self) -> dict[str, str]:
         payload = {
@@ -71,6 +72,7 @@ class IconManifestIssue:
             "icon_id": self.icon_id,
             "path": self.path,
             "field": self.field,
+            "hint": self.hint,
         }
         return {key: value for key, value in payload.items() if value}
 
@@ -264,6 +266,7 @@ def validate_svg_icon_import(
                 message=f"SVG icon source does not exist: {source_file}",
                 icon_id=icon_id,
                 path=str(source_file),
+                hint="Choose an existing local .svg file before running the import preflight.",
             )
         )
     elif source_file.suffix.lower() != ".svg":
@@ -273,6 +276,7 @@ def validate_svg_icon_import(
                 message="ActionRail only imports SVG icon sources.",
                 icon_id=icon_id,
                 path=str(source_file),
+                hint="Choose an SVG file; other icon source formats are not imported.",
             )
         )
 
@@ -299,6 +303,7 @@ def validate_svg_icon_import(
                 code="invalid_icon_manifest",
                 message=str(exc),
                 icon_id=icon_id,
+                hint="Fix icons/manifest.json so it is an object with an icons list.",
             )
         )
         return tuple(issues)
@@ -311,6 +316,7 @@ def validate_svg_icon_import(
                 code="duplicate_icon",
                 message=f"Icon id '{icon_id}' already exists in the ActionRail icon manifest.",
                 icon_id=icon_id,
+                hint="Use overwrite=True to replace the existing icon, or choose a new icon id.",
             )
         )
 
@@ -328,6 +334,7 @@ def validate_svg_icon_import(
                 message=str(exc),
                 icon_id=icon_id,
                 path=raw_manifest_path,
+                hint="Use a relative target under icons/ with the .svg extension.",
             )
         )
         return tuple(issues)
@@ -350,6 +357,7 @@ def validate_svg_icon_import(
                 ),
                 icon_id=icon_id,
                 path=manifest_path,
+                hint="Choose a target path that is not already used by another icon id.",
             )
         )
     if icon_path.exists() and not overwrite and not existing:
@@ -359,6 +367,10 @@ def validate_svg_icon_import(
                 message=f"Icon target already exists: {icon_path}",
                 icon_id=icon_id,
                 path=_manifest_path_for_icon_path(icon_path),
+                hint=(
+                    "Use overwrite=True to replace the existing asset, or choose "
+                    "another target path."
+                ),
             )
         )
 
@@ -402,6 +414,7 @@ def icon_status(icon_id: str) -> IconStatus:
             code="missing_icon",
             message=f"Icon '{icon_id}' is not listed in the ActionRail icon manifest.",
             icon_id=icon_id,
+            hint="Add the icon to icons/manifest.json or remove the slot icon reference.",
         ),
     )
 
@@ -538,7 +551,13 @@ def _manifest_shape_issues(entries: tuple[dict[str, Any], ...]) -> tuple[IconMan
             message = "ActionRail icon manifest entries must be objects."
         else:
             message = f"ActionRail icon manifest is invalid: {error}."
-        issues.append(IconManifestIssue(code=code, message=message))
+        issues.append(
+            IconManifestIssue(
+                code=code,
+                message=message,
+                hint="Restore icons/manifest.json to a valid object with an icons list.",
+            )
+        )
     return tuple(issues)
 
 
@@ -552,6 +571,7 @@ def _entry_issue(entry: dict[str, Any]) -> IconManifestIssue | None:
                 message=f"Icon manifest entry field '{field}' must be a non-empty string.",
                 icon_id=icon_id,
                 field=field,
+                hint="Fill in the required icon manifest metadata field.",
             )
     return None
 
@@ -564,6 +584,7 @@ def _asset_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIs
             message=f"Icon '{icon_id}' path must stay inside the ActionRail icons directory.",
             icon_id=icon_id,
             path=raw_path,
+            hint="Use a relative path inside icons/ for this manifest entry.",
         )
 
     if not icon_path.is_file():
@@ -572,6 +593,7 @@ def _asset_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIs
             message=f"Icon '{icon_id}' points to a missing file: {raw_path}.",
             icon_id=icon_id,
             path=raw_path,
+            hint="Restore the referenced asset or update the manifest path.",
         )
 
     if icon_path.suffix.lower() == ".svg":
@@ -600,6 +622,7 @@ def _fallback_issues(
                 icon_id=icon_id,
                 path=raw_path,
                 field=_FALLBACKS_FIELD,
+                hint=_fallback_regeneration_hint(icon_id),
             ),
         )
 
@@ -611,6 +634,7 @@ def _fallback_issues(
                 icon_id=icon_id,
                 path=raw_path,
                 field=_FALLBACKS_FIELD,
+                hint="Replace fallback metadata with 1x, 2x, and 3x PNG paths.",
             ),
         )
 
@@ -626,6 +650,7 @@ def _fallback_issues(
                     icon_id=icon_id,
                     path=raw_path,
                     field=f"{_FALLBACKS_FIELD}.{label}",
+                    hint=_fallback_regeneration_hint(icon_id),
                 )
             )
             continue
@@ -644,6 +669,7 @@ def _fallback_issues(
                 icon_id=icon_id,
                 path=raw_path,
                 field=_FALLBACK_HASH_FIELD,
+                hint=_fallback_regeneration_hint(icon_id),
             )
         )
     elif recorded_hash != current_hash:
@@ -654,6 +680,7 @@ def _fallback_issues(
                 icon_id=icon_id,
                 path=raw_path,
                 field=_FALLBACK_HASH_FIELD,
+                hint=_fallback_regeneration_hint(icon_id),
             )
         )
 
@@ -666,6 +693,7 @@ def _fallback_issues(
                 icon_id=icon_id,
                 path=raw_path,
                 field=_FALLBACK_SIZE_FIELD,
+                hint=_fallback_regeneration_hint(icon_id),
             )
         )
 
@@ -683,6 +711,7 @@ def _fallback_path_issue(icon_id: str, raw_path: str) -> IconManifestIssue | Non
             ),
             icon_id=icon_id,
             path=raw_path,
+            hint="Use a relative PNG fallback path inside icons/.",
         )
     if manifest_path.suffix.lower() != ".png":
         return IconManifestIssue(
@@ -690,6 +719,7 @@ def _fallback_path_issue(icon_id: str, raw_path: str) -> IconManifestIssue | Non
             message=f"Icon '{icon_id}' fallback path must use the .png extension.",
             icon_id=icon_id,
             path=raw_path,
+            hint="Regenerate PNG fallbacks or update the fallback path to a .png file.",
         )
 
     fallback_path = _resolve_manifest_path(raw_path)
@@ -699,8 +729,13 @@ def _fallback_path_issue(icon_id: str, raw_path: str) -> IconManifestIssue | Non
             message=f"Icon '{icon_id}' points to a missing PNG fallback: {raw_path}.",
             icon_id=icon_id,
             path=raw_path,
+            hint=_fallback_regeneration_hint(icon_id),
         )
     return None
+
+
+def _fallback_regeneration_hint(icon_id: str) -> str:
+    return f"Regenerate fallbacks with actionrail.icons.generate_png_fallbacks({icon_id!r})."
 
 
 def _svg_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIssue | None:
@@ -712,6 +747,7 @@ def _svg_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIssu
             message=f"Icon '{icon_id}' SVG could not be parsed: {exc}.",
             icon_id=icon_id,
             path=raw_path,
+            hint="Use a valid SVG file with an <svg> root and viewBox.",
         )
 
     if _local_name(root.tag) != "svg" or not root.attrib.get("viewBox"):
@@ -720,6 +756,7 @@ def _svg_issue(icon_id: str, raw_path: str, icon_path: Path) -> IconManifestIssu
             message=f"Icon '{icon_id}' SVG must have an <svg> root and viewBox.",
             icon_id=icon_id,
             path=raw_path,
+            hint="Use a valid SVG file with an <svg> root and viewBox.",
         )
 
     for element in root.iter():
@@ -745,6 +782,7 @@ def _unsafe_svg_issue(icon_id: str, raw_path: str, reason: str) -> IconManifestI
         message=f"Icon '{icon_id}' SVG is unsafe: {reason}.",
         icon_id=icon_id,
         path=raw_path,
+        hint="Use a cleaned local SVG without scripts, event handlers, or external resources.",
     )
 
 
@@ -785,6 +823,10 @@ def _import_metadata_issue(
             message="Icon id must use letters, numbers, dots, underscores, or hyphens.",
             icon_id=icon_id if isinstance(icon_id, str) else "",
             field="icon_id",
+            hint=(
+                "Use an id such as namespace.name with only letters, numbers, dots, "
+                "underscores, or hyphens."
+            ),
         )
     for field, value in (
         ("source", source),
@@ -797,6 +839,7 @@ def _import_metadata_issue(
                 message=f"Icon import field '{field}' must be a non-empty string.",
                 icon_id=icon_id,
                 field=field,
+                hint="Provide source, license_name, and url metadata before importing.",
             )
     if imported_at is not None and (not isinstance(imported_at, str) or not imported_at):
         return IconManifestIssue(
@@ -804,6 +847,7 @@ def _import_metadata_issue(
             message="Icon import field 'imported_at' must be a non-empty string when provided.",
             icon_id=icon_id,
             field="imported_at",
+            hint="Omit imported_at to use today's date, or pass a non-empty date string.",
         )
     return None
 

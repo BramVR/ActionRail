@@ -104,8 +104,8 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   an ActionRail-themed Qt dialog/window that lists warnings/errors, shows the
   full report in a selectable text area, and provides `Copy Selected`,
   `Copy Full Report`, `Clear`, and `Close` actions. Copyable reports and
-  selected issue details include structured issue `path` and `field` values for
-  import and manifest diagnostics.
+  selected issue details include structured issue `path`, `field`, and `hint`
+  values for import and manifest diagnostics.
 - Maya-facing icon import diagnostics. First pass done: the ActionRail Maya
   menu includes `Diagnose SVG Icon Import...`, which lets a user choose a local
   SVG, enter an icon id, runs the non-writing import preflight, records the

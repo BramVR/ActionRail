@@ -115,6 +115,10 @@ Last updated: 2026-04-30
     structured `path` and `field` values, so icon import and manifest problems
     expose the exact source/target path and metadata field in the diagnostics
     window.
+  - Icon import and manifest diagnostics now carry structured `hint` text, so
+    the full report and selected-issue copy text include remediation guidance
+    such as choosing a valid SVG, using `overwrite=True`, or regenerating PNG
+    fallbacks.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -179,24 +183,24 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: hardened copyable diagnostics for icon import and
-  manifest problems.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/diagnostics_ui.py`, `tests/test_diagnostics.py`,
+- Task goal completed: hardened copyable diagnostics with actionable hints for
+  icon import and manifest problems.
+- Files changed in this handoff update: `scripts/actionrail/icons.py`,
+  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/diagnostics_ui.py`,
+  `tests/test_icons.py`, `tests/test_diagnostics.py`,
   `tests/test_diagnostics_ui.py`,
   `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
   `docs/02_implementation_plan.md`, and `docs/04_status.md`.
-- Behavior verified: `actionrail.format_report()` now includes structured
-  optional issue details such as `target`, `path`, and `field`; the diagnostics
-  window's selected-issue copy text shows `Path` and `Field`; issue titles use
-  `path` as a fallback target when no stronger target exists.
+- Behavior verified: icon manifest/import issues now carry optional `hint`
+  values; `DiagnosticIssue.as_dict()`, `actionrail.format_report()`, and the
+  diagnostics window selected-issue copy text expose those hints.
 - Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed;
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
-  -> passed against MayaSessiond on port `7217`.
+  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
+  port `7217`.
 - Current live state: icon import failures initiated from the Maya menu or API
-  now produce copyable diagnostics that expose exact path and metadata-field
-  details in both the full report and selected issue text.
+  now produce copyable diagnostics that expose exact path, metadata-field, and
+  remediation-hint details in both the full report and selected issue text.
 - Blockers/risks: no current implementation blocker known.
 - Exact next step: continue visible diagnostics hardening as the icon import
   path expands; preserve import/recovery smoke coverage when touching recovery.
@@ -220,8 +224,8 @@ Start here:
 - Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
-  -> 18 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  -> 41 passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
   from the repo venv -> generated `move@1x.png`, `move@2x.png`, and
@@ -238,9 +242,12 @@ Start here:
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`; verified import report
-  `path`/`field` detail text, saved
+  `path`/`field`/`hint` detail text, copied selected issue hint text, saved
   `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png`
   at `720x520` and verified fallback startup to `transform_stack`.
+- Latest full Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
+  port `7217`.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

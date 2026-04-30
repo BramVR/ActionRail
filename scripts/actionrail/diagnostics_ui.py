@@ -221,6 +221,7 @@ def _issue_detail(issue: DiagnosticIssue) -> str:
         ("Target", issue.target),
         ("Path", issue.path),
         ("Field", issue.field),
+        ("Hint", issue.hint),
         ("Exception", issue.exception_type),
     )
     fields.extend(f"{label}: {value}" for label, value in optional_fields if value)

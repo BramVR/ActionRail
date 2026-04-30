@@ -221,6 +221,7 @@ def test_format_report_includes_structured_issue_details() -> None:
                 target="bad id",
                 path="icons/custom/arrow.svg",
                 field="icon_id",
+                hint="Use a valid icon id.",
             ),
         )
     )
@@ -231,6 +232,7 @@ def test_format_report_includes_structured_issue_details() -> None:
     assert "target: bad id" in text
     assert "path: icons/custom/arrow.svg" in text
     assert "field: icon_id" in text
+    assert "hint: Use a valid icon id." in text
 
 
 def test_show_last_report_opens_qt_window_with_formatted_report(
@@ -283,8 +285,10 @@ def test_diagnose_icon_import_records_copyable_report(
         "invalid_icon_import_metadata",
     ]
     assert report.errors[1].field == "icon_id"
+    assert report.errors[1].hint
     assert last_report() == report
     assert "invalid_icon_import_source" in format_report(report)
+    assert "hint:" in format_report(report)
 
 
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(

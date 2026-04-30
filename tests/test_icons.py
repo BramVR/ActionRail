@@ -242,7 +242,9 @@ def test_validate_svg_icon_import_reports_multiple_preflight_issues(
         "icon_target_exists",
     ]
     assert issues[1].field == "icon_id"
+    assert issues[1].hint
     assert issues[2].path == "icons/custom/arrow.svg"
+    assert "overwrite=True" in issues[2].hint
 
 
 def test_import_svg_icon_rolls_back_new_asset_when_fallback_generation_fails(
@@ -746,3 +748,4 @@ def test_validate_icon_manifest_reports_missing_and_stale_fallbacks(
         ("missing_icon_fallback_file", "source@3x.png"),
         ("stale_icon_fallback", "source.svg"),
     ]
+    assert all("generate_png_fallbacks" in issue.hint for issue in issues)

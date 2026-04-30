@@ -100,8 +100,21 @@ if (
     or "icon_path_conflict" not in report_text.toPlainText()
     or "path: icons/actionrail/move.svg" not in report_text.toPlainText()
     or "field: icon_id" not in report_text.toPlainText()
+    or "hint:" not in report_text.toPlainText()
 ):
     raise AssertionError(f"Import report text missing issue detail: {report_text.toPlainText()}")
+
+issue_list.setCurrentRow(1)
+copy_buttons = {
+    button.text(): button for button in diagnostics_window.findChildren(QtWidgets.QPushButton)
+}
+copy_buttons["Copy Selected"].click()
+app.processEvents()
+selected_clipboard_text = QtWidgets.QApplication.clipboard().text()
+if "Code: invalid_icon_import_metadata" not in selected_clipboard_text:
+    raise AssertionError(f"Copy Selected produced wrong issue: {selected_clipboard_text}")
+if "Hint:" not in selected_clipboard_text or "icon_id" not in selected_clipboard_text:
+    raise AssertionError(f"Copy Selected missing import hint detail: {selected_clipboard_text}")
 
 window_pixmap = diagnostics_window.grab()
 if not window_pixmap.save(str(output_path), "PNG"):
@@ -134,6 +147,7 @@ result = {
     "active_overlay_ids": active_overlay_ids(),
     "import_error_codes": import_codes,
     "import_report_text_has_conflict": "icon_path_conflict" in window_report_text,
+    "import_selected_copy_has_hint": "Hint:" in selected_clipboard_text,
     "import_screenshot": str(output_path),
     "import_screenshot_size": [window_pixmap.width(), window_pixmap.height()],
     "recovery_codes": recovery_codes,

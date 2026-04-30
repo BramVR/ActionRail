@@ -53,6 +53,7 @@ class DiagnosticIssue:
     target: str = ""
     path: str = ""
     field: str = ""
+    hint: str = ""
     exception_type: str = ""
 
     def as_dict(self) -> dict[str, str]:
@@ -70,6 +71,7 @@ class DiagnosticIssue:
             "target": self.target,
             "path": self.path,
             "field": self.field,
+            "hint": self.hint,
             "exception_type": self.exception_type,
         }
         return {key: value for key, value in payload.items() if value}
@@ -464,6 +466,9 @@ def _icon_issue(preset_id: str, item: StackItem) -> DiagnosticIssue | None:
         preset_id=preset_id,
         slot_id=item.id,
         target=issue.icon_id or item.icon,
+        path=issue.path,
+        field=issue.field,
+        hint=issue.hint,
     )
 
 
@@ -478,6 +483,7 @@ def _icon_manifest_issue(issue: object) -> DiagnosticIssue:
         target=icon_id,
         path=getattr(issue, "path", ""),
         field=getattr(issue, "field", ""),
+        hint=getattr(issue, "hint", ""),
     )
 
 
@@ -492,6 +498,7 @@ def _icon_import_issue(issue: object) -> DiagnosticIssue:
         target=icon_id,
         path=getattr(issue, "path", ""),
         field=getattr(issue, "field", ""),
+        hint=getattr(issue, "hint", ""),
     )
 
 
@@ -597,6 +604,7 @@ def _issue_detail_fields(issue: DiagnosticIssue) -> tuple[tuple[str, str], ...]:
         ("target", issue.target),
         ("path", issue.path),
         ("field", issue.field),
+        ("hint", issue.hint),
         ("exception", issue.exception_type),
     )
     return tuple((key, value) for key, value in fields if value)

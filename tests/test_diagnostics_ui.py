@@ -12,6 +12,7 @@ def test_issue_detail_includes_import_path_and_field() -> None:
         target="bad id",
         path="icons/custom/arrow.svg",
         field="icon_id",
+        hint="Use a valid icon id.",
     )
 
     detail = _issue_detail(issue)
@@ -19,6 +20,7 @@ def test_issue_detail_includes_import_path_and_field() -> None:
     assert "Target: bad id" in detail
     assert "Path: icons/custom/arrow.svg" in detail
     assert "Field: icon_id" in detail
+    assert "Hint: Use a valid icon id." in detail
 
 
 def test_issue_title_uses_path_when_no_stronger_target_exists() -> None:
