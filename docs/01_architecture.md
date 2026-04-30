@@ -139,7 +139,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
     "locked": true
   },
   "items": [
-    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move"},
+    {"type": "toolButton", "id": "transform_stack.move", "label": "M", "action": "maya.tool.move", "active_when": "maya.tool == move"},
     {"type": "toolButton", "id": "transform_stack.translate", "label": "T", "tooltip": "Unassigned slot"},
     {"type": "toolButton", "id": "transform_stack.rotate", "label": "R", "action": "maya.tool.rotate", "active_when": "maya.tool == rotate"},
     {"type": "toolButton", "id": "transform_stack.scale", "label": "S", "action": "maya.tool.scale", "active_when": "maya.tool == scale"},

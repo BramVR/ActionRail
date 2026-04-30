@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from typing import Any
+from weakref import ref
 
 from .actions import ActionRegistry, create_default_registry
 from .qt import load
@@ -204,10 +205,14 @@ class _ResizeEventFilter:
 
     def __init__(self, host: ViewportOverlayHost) -> None:
         qt = load()
-        host_ref = host
+        host_ref = ref(host)
 
         class _Filter(qt.QtCore.QObject):
             def eventFilter(self, watched: Any, event: Any) -> bool:  # noqa: N802
+                host = host_ref()
+                if host is None:
+                    return False
+
                 event_type = event.type()
                 if event_type in {
                     qt.QtCore.QEvent.Move,
@@ -216,7 +221,8 @@ class _ResizeEventFilter:
                     qt.QtCore.QEvent.LayoutRequest,
                     qt.QtCore.QEvent.WindowStateChange,
                 }:
-                    host_ref.position()
+                    with suppress(Exception):
+                        host.position()
                 return False
 
         self._object = _Filter()
@@ -282,6 +288,15 @@ def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) ->
     for widget in stale_widgets:
         if not _qt_widget_is_valid(widget):
             continue
+        stale_host = getattr(widget, "_actionrail_host", None)
+        close = getattr(stale_host, "close", None)
+        if callable(close):
+            try:
+                close()
+                removed += 1
+                continue
+            except Exception:
+                pass
         try:
             widget.hide()
             widget.setParent(None)
@@ -335,6 +350,8 @@ class ViewportOverlayHost:
             cmds_module=self.cmds,
         )
         widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{self.spec.id}")
+        with suppress(Exception):
+            widget._actionrail_host = self
         if self._floating:
             widget.setParent(self.window_parent)
             widget.setWindowFlags(_floating_window_flags(self.qt))
@@ -362,6 +379,8 @@ class ViewportOverlayHost:
 
     def position(self) -> None:
         if self.widget is None or self.parent is None:
+            return
+        if not _qt_widget_is_valid(self.widget) or not _qt_widget_is_valid(self.parent):
             return
 
         parent_rect = self.parent.rect()
@@ -395,6 +414,8 @@ class ViewportOverlayHost:
                     target.removeEventFilter(self._resize_filter.object)
 
         if self.widget is not None and _qt_widget_is_valid(self.widget):
+            with suppress(Exception):
+                self.widget._actionrail_host = None
             self.widget.hide()
             self.widget.setParent(None)
             self.widget.deleteLater()
@@ -431,6 +452,8 @@ class ViewportOverlayHost:
             set_slot_key_label(self.widget, slot_id, key_label)
 
         if old_widget is not None and _qt_widget_is_valid(old_widget):
+            with suppress(Exception):
+                old_widget._actionrail_host = None
             old_widget.hide()
             old_widget.setParent(None)
             old_widget.deleteLater()

@@ -5,7 +5,12 @@ from typing import Any
 import pytest
 
 import actionrail.overlay as overlay
-from actionrail.overlay import _anchored_position, _viewport_area_widget, active_model_panel
+from actionrail.overlay import (
+    _anchored_position,
+    _viewport_area_widget,
+    active_model_panel,
+    cleanup_overlay_widgets,
+)
 from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
@@ -75,6 +80,59 @@ def test_active_model_panel_raises_when_no_model_panel_exists() -> None:
 
     with pytest.raises(RuntimeError, match="No Maya modelPanel"):
         active_model_panel(cmds)
+
+
+def test_cleanup_overlay_widgets_closes_owning_host_before_delete() -> None:
+    closed: list[bool] = []
+
+    class FakeHost:
+        def close(self) -> None:
+            closed.append(True)
+
+    class FakeQt:
+        class QtWidgets:
+            QWidget = object
+
+            class QApplication:
+                @staticmethod
+                def instance() -> None:
+                    return None
+
+    class FakeWidget:
+        def __init__(self, object_name: str) -> None:
+            self._object_name = object_name
+            self._actionrail_host = FakeHost()
+            self.deleted = False
+
+        def objectName(self) -> str:  # noqa: N802
+            return self._object_name
+
+        def hide(self) -> None:
+            raise AssertionError("owning host should close the stale widget")
+
+        def setParent(self, _parent: object) -> None:  # noqa: N802
+            raise AssertionError("owning host should close the stale widget")
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeParent:
+        def __init__(self, children: list[FakeWidget]) -> None:
+            self.children = children
+
+        def objectName(self) -> str:  # noqa: N802
+            return "modelPanel4"
+
+        def findChildren(self, _widget_type: object) -> list[FakeWidget]:  # noqa: N802
+            return self.children
+
+    stale = FakeWidget("ActionRailViewportOverlay_transform_stack")
+
+    removed = cleanup_overlay_widgets(FakeParent([stale]), "transform_stack", FakeQt)
+
+    assert removed == 1
+    assert closed == [True]
+    assert stale.deleted is False
 
 
 def test_overlay_snapshot_uses_resolved_panel(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -409,6 +467,25 @@ def test_overlay_starts_predicate_refresh_timer_and_stops_on_close(
     assert captured["refreshes"] == 1
     assert timer.stopped is True
     assert timer.deleted is True
+
+
+def test_position_ignores_deleted_qt_widget(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DeletedWidget:
+        def sizeHint(self) -> object:  # noqa: N802
+            raise RuntimeError("Internal C++ object already deleted")
+
+    class FakeParent:
+        def rect(self) -> object:
+            raise AssertionError("position should return before reading parent geometry")
+
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.widget = DeletedWidget()
+    host.parent = FakeParent()
+    host.qt = object()
+
+    monkeypatch.setattr(overlay, "_qt_widget_is_valid", lambda widget: not isinstance(widget, DeletedWidget))
+
+    host.position()
 
 
 def test_viewport_area_widget_prefers_large_inset_panel_child() -> None:
