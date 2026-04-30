@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-04-29
+Last updated: 2026-04-30
 
 ## Done
 
@@ -79,6 +79,7 @@ Last updated: 2026-04-29
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
+  - Maya smoke coverage now validates the real transform-stack button-state sequence: M/R/S switch active state, T is a locked unassigned placeholder, and K remains a one-shot keyframe button.
 - Maya-native UI entry point:
   - `actionrail.toggle_default()` shows the default `transform_stack` preset when hidden and hides it when visible.
   - `actionrail.install_menu_toggle()` and `actionrail.uninstall_menu_toggle()` manage an idempotent Maya menu item.
@@ -126,46 +127,31 @@ Start here:
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
-Checks already run for the latest diagnostic badge fix:
+Checks already run for the latest transform-stack state smoke:
 
-- `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_diagnostics.py` -> 24 passed.
-- `.\\.venv\\Scripts\\python.exe -m pytest` -> 109 passed.
-- `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostic_badges_smoke.py` passed against the live MayaSessiond on port `7217`; missing action/icon/command/plugin slots rendered expected badges.
-- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_predicates_smoke.py` passed against the live MayaSessiond on port `7217`; the missing-command predicate slot rendered `DK\n?` through automatic refresh.
+- `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_transform_stack_state_smoke.py` -> all checks passed.
+- `.\\.venv\\Scripts\\python.exe -m pytest` -> 118 passed.
+- `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_transform_stack_state_smoke.py` passed against the live MayaSessiond on port `7217`; M/R/S each became the only active slot after click, T stayed disabled/locked/inactive, K set 10 keyframes, and S stayed active after K.
 
 ## Latest Handoff
 
-- Task goal completed: replaced `actionrail.show_last_report()`'s Maya
-  `confirmDialog` with a themed ActionRail Qt diagnostics window.
+- Task goal completed: added a checked-in Maya smoke for generalized
+  transform-stack button-state clicks.
 - Files changed in this handoff update:
-  `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/diagnostics_ui.py`,
-  `tests/test_diagnostics.py`,
-  `tests/maya_smoke/actionrail_diagnostics_smoke.py`,
-  `docs/00_start_here.md`,
-  `docs/02_implementation_plan.md`,
-  `docs/04_status.md`, and
-  `docs/07_missing_features_research.md`.
-- Behavior added: the diagnostics window shows a summary, issue list,
-  selectable full report text, and `Copy Selected`, `Copy Full Report`,
-  `Clear`, and `Close` actions. The existing Maya menu command remains
-  `import actionrail; actionrail.show_last_report()`.
+  `tests/maya_smoke/actionrail_transform_stack_state_smoke.py`,
+  `docs/03_maya_sessiond_workflow.md`, and `docs/04_status.md`.
+- Behavior verified: using the real `transform_stack` preset, M/R/S each become
+  the only active slot after click, T stays disabled/locked/inactive as an
+  unassigned placeholder, and K sets keyframes without becoming active.
 - Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_package.py` -> 13 passed;
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 114 passed;
-  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py` -> passed against live MayaSessiond on port `7217`.
-- Maya verification saved a window screenshot at
-  `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png` with size
-  `720x520`. The smoke verified issue-list rendering, selected/full report copy
-  actions, clear behavior, and `safe_start("transform_stack")` after closing the
-  diagnostics window.
-- Current live state: MayaSessiond is running on port `7217`. Raw execution was
-  not required; verification used checked-in allowlisted smoke-script paths.
+  `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_transform_stack_state_smoke.py` -> all checks passed;
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 118 passed;
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_transform_stack_state_smoke.py` -> passed against live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`. The smoke used
+  checked-in allowlisted smoke-script paths and cleaned up after itself.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: continue visible diagnostics toward the future icon-backed
-  preset/import path.
+- Exact next step: continue the next ActionRail feature slice using the smoke
+  wrapper for Maya verification when feasible.
 
 ## Next
 
