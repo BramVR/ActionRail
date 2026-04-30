@@ -11,10 +11,10 @@
     "locked": false
   },
   "items": [
-    {"type": "toolButton", "id": "horizontal_tools.move", "label": "M", "action": "maya.tool.move", "key_label": "W", "tooltip": "Move tool", "active_when": "maya.tool == move"},
-    {"type": "toolButton", "id": "horizontal_tools.rotate", "label": "R", "action": "maya.tool.rotate", "key_label": "E", "tooltip": "Rotate tool", "active_when": "maya.tool == rotate"},
-    {"type": "toolButton", "id": "horizontal_tools.scale", "label": "S", "action": "maya.tool.scale", "key_label": "R", "tooltip": "Scale tool", "active_when": "maya.tool == scale"},
+    {"type": "toolButton", "id": "horizontal_tools.move", "label": "M", "icon": "actionrail.move", "action": "maya.tool.move", "key_label": "W", "tooltip": "Move tool", "active_when": "maya.tool == move"},
+    {"type": "toolButton", "id": "horizontal_tools.rotate", "label": "R", "icon": "actionrail.rotate", "action": "maya.tool.rotate", "key_label": "E", "tooltip": "Rotate tool", "active_when": "maya.tool == rotate"},
+    {"type": "toolButton", "id": "horizontal_tools.scale", "label": "S", "icon": "actionrail.scale", "action": "maya.tool.scale", "key_label": "R", "tooltip": "Scale tool", "active_when": "maya.tool == scale"},
     {"type": "spacer", "id": "horizontal_tools.gap", "size": 8},
-    {"type": "button", "id": "horizontal_tools.set_key", "label": "K", "action": "maya.anim.set_key", "tone": "teal", "key_label": "S", "tooltip": "Set keyframe"}
+    {"type": "button", "id": "horizontal_tools.set_key", "label": "K", "icon": "actionrail.key", "action": "maya.anim.set_key", "tone": "teal", "key_label": "S", "tooltip": "Set keyframe"}
   ]
 }

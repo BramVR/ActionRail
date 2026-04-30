@@ -1,3 +1,36 @@
 {
-  "icons": []
+  "icons": [
+    {
+      "id": "actionrail.move",
+      "source": "ActionRail",
+      "license": "Apache-2.0",
+      "url": "local://actionrail/icons/move.svg",
+      "imported_at": "2026-04-30",
+      "path": "icons/actionrail/move.svg"
+    },
+    {
+      "id": "actionrail.rotate",
+      "source": "ActionRail",
+      "license": "Apache-2.0",
+      "url": "local://actionrail/icons/rotate.svg",
+      "imported_at": "2026-04-30",
+      "path": "icons/actionrail/rotate.svg"
+    },
+    {
+      "id": "actionrail.scale",
+      "source": "ActionRail",
+      "license": "Apache-2.0",
+      "url": "local://actionrail/icons/scale.svg",
+      "imported_at": "2026-04-30",
+      "path": "icons/actionrail/scale.svg"
+    },
+    {
+      "id": "actionrail.key",
+      "source": "ActionRail",
+      "license": "Apache-2.0",
+      "url": "local://actionrail/icons/key.svg",
+      "imported_at": "2026-04-30",
+      "path": "icons/actionrail/key.svg"
+    }
+  ]
 }

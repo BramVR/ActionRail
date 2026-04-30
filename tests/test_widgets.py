@@ -268,6 +268,27 @@ def test_slot_render_state_marks_missing_icon_as_warning() -> None:
     assert state.text == "I\n?"
 
 
+def test_slot_render_state_resolves_manifest_icon_path() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="icon.ok",
+        label="M",
+        action="maya.tool.move",
+        icon="actionrail.move",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.enabled is True
+    assert state.icon == "actionrail.move"
+    assert state.icon_path.endswith("icons\\actionrail\\move.svg") or state.icon_path.endswith(
+        "icons/actionrail/move.svg"
+    )
+    assert state.diagnostic_code == ""
+    assert state.text == "M"
+
+
 def test_slot_render_state_marks_missing_command_predicate_as_warning() -> None:
     registry = create_default_registry(AvailabilityCmds())
     item = StackItem(

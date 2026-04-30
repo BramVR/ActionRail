@@ -145,6 +145,31 @@ def test_diagnose_spec_reports_missing_icon_warning() -> None:
     ]
 
 
+def test_diagnose_spec_accepts_manifest_icon() -> None:
+    spec = StackSpec(
+        id="with_icon",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="with_icon.move",
+                label="M",
+                action="maya.tool.move",
+                icon="actionrail.move",
+            ),
+        ),
+    )
+
+    report = diagnose_spec(
+        spec,
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+    )
+
+    assert report.has_errors is False
+    assert report.warnings == ()
+
+
 def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     report = collect_diagnostics(("missing_preset",), cmds_module=AvailabilityCmds())
 

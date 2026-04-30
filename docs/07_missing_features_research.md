@@ -39,6 +39,13 @@ First-pass last diagnostic report API/UI is also implemented. The sections
 below remain useful research context; the active backlog starts with
 icon-backed presets/import tooling.
 
+2026-04-30 status note: the first icon-backed built-in rail is implemented.
+`horizontal_tools` now references first-party SVG icons through
+`icons/manifest.json`, and diagnostics validate required metadata, duplicate
+ids, invalid local paths, missing files, unknown ids, invalid SVG files, and
+unsafe SVG content. The remaining active backlog is import tooling,
+source/license workflow, and fallback generation.
+
 ## Highest Priority Gaps
 
 ### 1. Real Predicate Evaluation
@@ -365,8 +372,9 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Build the icon pipeline and first icon-backed rail.
-2. Continue visible diagnostics as the icon/preset import path appears.
+1. Continue the icon pipeline with import tooling, source/license workflow, and
+   fallback generation.
+2. Continue visible diagnostics as the icon/preset import path expands.
 3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
    option, preview, save user preset.
 4. Add Bind Mode.

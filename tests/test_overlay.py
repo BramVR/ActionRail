@@ -483,7 +483,11 @@ def test_position_ignores_deleted_qt_widget(monkeypatch: pytest.MonkeyPatch) -> 
     host.parent = FakeParent()
     host.qt = object()
 
-    monkeypatch.setattr(overlay, "_qt_widget_is_valid", lambda widget: not isinstance(widget, DeletedWidget))
+    monkeypatch.setattr(
+        overlay,
+        "_qt_widget_is_valid",
+        lambda widget: not isinstance(widget, DeletedWidget),
+    )
 
     host.position()
 

@@ -147,7 +147,8 @@ Useful variants:
 - `actionrail_phase0_smoke.py`: import, reference stack, action buttons, hide/reload cleanup.
 - `actionrail_capture_smoke.py`: direct widget screenshot capture and reference widget metrics.
 - `actionrail_transform_stack_state_smoke.py`: real transform-stack button sequence; verifies M/R/S active-state switching, T as a locked unassigned placeholder, and K one-shot behavior.
-- `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, anchor, and opacity.
+- `actionrail_horizontal_smoke.py`: horizontal rail layout, key labels, icon
+  paths/non-null Qt icons, direct widget screenshot, anchor, and opacity.
 - `actionrail_hidden_visibility_smoke.py`: literal false visibility handling and empty-cluster regression.
 - `actionrail_predicates_smoke.py`: selection/tool/action/command predicates driving initial visible, enabled, and active button state plus automatic timer refresh after tool and selection changes.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.

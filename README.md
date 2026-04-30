@@ -22,7 +22,7 @@ and TDs can define as data, share as presets, and bind through Maya's native
 command system.
 
 The included examples are a compact transform stack, `M/T/R/S` plus a separate
-`K` key button, and a horizontal tool rail.
+`K` key button, and an icon-backed horizontal tool rail.
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ $env:MAYA_MODULE_PATH = "."
 
 - Qt rail overlay anchored to Maya model-panel geometry and shown as a small
   frameless Maya-owned tool window to avoid Viewport 2.0 repaint artifacts.
-- Built-in `transform_stack` and `horizontal_tools` JSON presets.
+- Built-in `transform_stack` and icon-backed `horizontal_tools` JSON presets.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.
 - Stable slot ids for hotkeys, user overrides, and preset migrations.
@@ -71,7 +71,11 @@ $env:MAYA_MODULE_PATH = "."
 - Automatic predicate refresh for visible overlays.
 - Safe-mode diagnostics through `actionrail.collect_diagnostics()`,
   `actionrail.diagnose_spec()`, and `actionrail.safe_start()`.
-- Visible diagnostic badges for missing actions and missing icons.
+- Visible diagnostic badges for missing actions, missing icons, and missing
+  command/plugin predicate dependencies.
+- Icon manifest validation for required metadata, duplicate ids, invalid local
+  paths, missing files, invalid SVG files, unsafe SVG content, and unknown icon
+  ids.
 - Idempotent Maya menu and shelf toggle entry points.
 - Theme tokens compiled to QSS.
 
@@ -79,9 +83,9 @@ $env:MAYA_MODULE_PATH = "."
 
 Near-term:
 
-- Continue visible diagnostics for command/plugin predicate availability and
-  last-error UI.
-- Build toward real icon-backed presets and import tooling.
+- Continue the icon-backed preset/import path with source/license tracking and
+  fallback generation.
+- Improve visible diagnostics as import tooling and preset recovery expand.
 - Improve preset validation and recovery before broad authoring UI.
 
 Next:

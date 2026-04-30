@@ -67,6 +67,11 @@ Last updated: 2026-04-30
   - Active color is now a generic theme state applied through `actionRailActive="true"` after `active_when` evaluates true. Built-in tool slots declare active predicates; one-shot macro buttons such as Set Key do not.
   - Preset slots may intentionally omit `action`; these unassigned placeholders render disabled/locked, are skipped by action id validation and hotkey publishing, and do not show missing-action diagnostics. The demo transform stack keeps `M` as the active move slot while `T` is an unassigned locked placeholder.
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
+  - `horizontal_tools` is now the first manifest-backed icon rail, with
+    first-party SVG icons for move, rotate, scale, and set key.
+  - Icon diagnostics now validate manifest metadata, duplicate ids, invalid
+    local paths, missing files, unknown icon ids, invalid SVG files, and unsafe
+    SVG content before widget rendering resolves an icon path.
   - Missing `command.exists(...)` and `plugin.exists(...)` predicate targets now render disabled warning badges on affected slots. Slots hidden only by a missing command/plugin availability predicate are kept visible so broken dependencies are not silent, while compound context clauses and negated availability checks keep their declared predicate semantics.
   - `StackItem(...)` preserves the documented Python API positional constructor order through `tone`; optional `icon` support is appended after existing fields so JSON presets and Python callers both remain compatible.
   - Diagnostic entry points now remember the latest `DiagnosticReport`, expose
@@ -122,8 +127,8 @@ Last updated: 2026-04-30
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: continue visible diagnostics toward the
-   future icon-backed preset/import path.
+2. First recommended coding slice: continue the icon-backed preset/import path
+   with a narrow SVG import helper or PNG fallback generation.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -135,28 +140,43 @@ Checks already run for the latest transform-stack state smoke:
 
 ## Latest Handoff
 
-- Task goal completed: added a checked-in Maya smoke for generalized
-  transform-stack button-state clicks.
+- Task goal completed: started the real icon-backed preset path. The
+  `horizontal_tools` built-in preset now references first-party SVG icons
+  through `icons/manifest.json`.
 - Files changed in this handoff update:
-  `tests/maya_smoke/actionrail_transform_stack_state_smoke.py`,
-  `docs/03_maya_sessiond_workflow.md`, and `docs/04_status.md`.
-- Behavior verified: using the real `transform_stack` preset, M/R/S each become
-  the only active slot after click, T stays disabled/locked/inactive as an
-  unassigned placeholder, and K sets keyframes without becoming active.
+  `scripts/actionrail/icons.py`, `scripts/actionrail/diagnostics.py`,
+  `scripts/actionrail/widgets.py`, `icons/manifest.json`,
+  `icons/actionrail/*.svg`, `presets/horizontal_tools.json`,
+  `tests/test_icons.py`, `tests/test_widgets.py`, `tests/test_diagnostics.py`,
+  `tests/test_overlay.py`, `README.md`, `docs/00_start_here.md`,
+  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
+- Behavior verified: icon ids resolve only when manifest metadata, local path,
+  and SVG safety checks pass; missing/unknown/broken icon assets surface as
+  warning diagnostics and warning badges; the horizontal rail still renders
+  with the same labels and dimensions in Maya, and its smoke now saves a direct
+  widget screenshot while asserting each icon-backed button has a non-null Qt
+  icon.
 - Checks run:
-  `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_transform_stack_state_smoke.py` -> all checks passed;
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 118 passed;
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_transform_stack_state_smoke.py` -> passed against live MayaSessiond on port `7217`.
-- Current live state: MayaSessiond is running on port `7217`. The smoke used
-  checked-in allowlisted smoke-script paths and cleaned up after itself.
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 123 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_horizontal_smoke.py`
+  -> passed against live MayaSessiond on port `7217`, saved
+  `.gg-maya-sessiond/screenshots/actionrail_horizontal_tools_widget.png`, and
+  verified all four button icons were non-null;
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_diagnostics_smoke.py`
+  -> passed against live MayaSessiond on port `7217`.
+- Current live state: MayaSessiond is running on port `7217`. The wrapper
+  cleaned smoke state before and after each script.
 - Blockers/risks: no current implementation blocker known.
-- Exact next step: continue the next ActionRail feature slice using the smoke
-  wrapper for Maya verification when feasible.
+- Exact next step: add a narrow checked-in SVG import helper or PNG fallback
+  generation so future icons can be added with the same metadata and safety
+  checks.
 
 ## Next
 
-1. Continue diagnostic work toward the future icon-backed preset/import pipeline.
-2. Use the new diagnostics Qt window as the support/error-report surface for those checks.
+1. Continue the icon-backed preset/import pipeline with source/license tracking
+   and fallback generation.
+2. Use the diagnostics Qt window as the support/error-report surface for those checks.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 

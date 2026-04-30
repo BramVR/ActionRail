@@ -6,7 +6,7 @@ from contextlib import suppress
 from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
-from .icons import resolve_icon_path
+from .icons import icon_status, resolve_icon_path
 from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
@@ -234,7 +234,9 @@ def _build_button(
         qt.QtCore.Qt.PointingHandCursor if item.action else qt.QtCore.Qt.ArrowCursor
     )
     if item.action:
-        button.clicked.connect(lambda _checked=False, action_id=item.action: registry.run(action_id))
+        button.clicked.connect(
+            lambda _checked=False, action_id=item.action: registry.run(action_id)
+        )
     return button
 
 
@@ -392,7 +394,17 @@ def _slot_diagnostic(
     if availability_diagnostic[0]:
         return availability_diagnostic
 
-    if item.icon and resolve_icon_path(item.icon) is None:
+    if item.icon:
+        status = icon_status(item.icon)
+        if status.ok:
+            return ("", "", "", "")
+        if status.issue is not None:
+            return (
+                status.issue.code,
+                "warning",
+                "?",
+                status.issue.message,
+            )
         return (
             "missing_icon",
             "warning",

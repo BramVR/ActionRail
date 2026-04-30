@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .icons import resolve_icon_path
+from .icons import icon_status, validate_icon_manifest
 from .predicates import (
     PredicateContext,
     evaluate_predicate,
@@ -171,7 +171,9 @@ def collect_diagnostics(
 
     resolved_cmds = _resolve_cmds_module(cmds_module)
     action_registry = registry or create_default_registry(resolved_cmds)
-    issues: list[DiagnosticIssue] = []
+    issues: list[DiagnosticIssue] = [
+        _icon_manifest_issue(issue) for issue in validate_icon_manifest()
+    ]
     for preset_id in tuple(preset_ids) if preset_ids is not None else builtin_preset_ids():
         try:
             spec = load_builtin_preset(preset_id)
@@ -228,20 +230,10 @@ def diagnose_spec(
                     action_id=item.action,
                 )
             )
-        if item.icon and resolve_icon_path(item.icon) is None:
-            issues.append(
-                DiagnosticIssue(
-                    code="missing_icon",
-                    severity="warning",
-                    message=(
-                        f"Preset '{spec.id}' slot '{item.id}' references missing "
-                        f"ActionRail icon '{item.icon}'."
-                    ),
-                    preset_id=spec.id,
-                    slot_id=item.id,
-                    target=item.icon,
-                )
-            )
+        if item.icon:
+            icon_issue = _icon_issue(spec.id, item)
+            if icon_issue is not None:
+                issues.append(icon_issue)
 
         issues.extend(
             _predicate_diagnostics(
@@ -390,6 +382,34 @@ def _availability_issue(
         predicate_field=predicate_field,
         predicate=predicate,
         target=target,
+    )
+
+
+def _icon_issue(preset_id: str, item: StackItem) -> DiagnosticIssue | None:
+    status = icon_status(item.icon)
+    if status.ok or status.issue is None:
+        return None
+
+    issue = status.issue
+    return DiagnosticIssue(
+        code=issue.code,
+        severity="warning",
+        message=f"Preset '{preset_id}' slot '{item.id}': {issue.message}",
+        preset_id=preset_id,
+        slot_id=item.id,
+        target=issue.icon_id or item.icon,
+    )
+
+
+def _icon_manifest_issue(issue: object) -> DiagnosticIssue:
+    code = getattr(issue, "code", "invalid_icon_manifest")
+    message = getattr(issue, "message", "ActionRail icon manifest is invalid.")
+    icon_id = getattr(issue, "icon_id", "")
+    return DiagnosticIssue(
+        code=code,
+        severity="warning",
+        message=message,
+        target=icon_id,
     )
 
 
