@@ -135,8 +135,12 @@ Last updated: 2026-05-01
     import preflight, records the latest report, and opens the themed
     diagnostics window. The same flow can be driven directly through
     `actionrail.diagnose_icon_import_from_maya(...)`.
+  - The ActionRail Maya menu now includes `Run Diagnostics`, which collects a
+    fresh bundled preset/icon diagnostics report, records it as the latest
+    report, and opens the themed diagnostics window. The same flow can be
+    driven directly through `actionrail.run_diagnostics_from_maya()`.
   - `actionrail.install_shelf_toggle()` and `actionrail.uninstall_shelf_toggle()` manage an idempotent Maya shelf button.
-  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, icon import diagnostics command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
+  - `tests/maya_smoke/actionrail_maya_ui_smoke.py` verifies menu/shelf command text, run diagnostics and icon import diagnostics command text, idempotent reinstall, toggle show/hide, and uninstall cleanup in Maya.
 - Reusable Maya smoke wrapper:
   - `scripts/maya-smoke.ps1` wraps the stable MayaSessiond command shape for checked-in smoke scripts.
   - The wrapper uses repo-local state, starts Sessiond only when needed, passes the repo module path and absolute smoke-script directory, discovers MCP tools before running, and fails on either MCP-call or script-payload failure.
@@ -187,21 +191,22 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: preserved the public `DiagnosticIssue(...)` positional
-  constructor ABI after adding hint support.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
-  `tests/test_diagnostics.py`, and `docs/04_status.md`.
-- Behavior verified: an old positional `exception_type` argument still maps to
-  `exception_type`, while hint remains optional and report/UI display order is
-  unchanged.
-- Checks run:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
-  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py`
-  -> all checks passed.
-- Current live state: copyable diagnostics still expose hints, and existing
-  positional callers do not silently lose exception details.
-- Blockers/risks: full pytest, full Ruff, and Maya smoke were not rerun for
-  this narrow compatibility fix.
+- Task goal completed: added a Maya-facing `Run Diagnostics` support flow that
+  collects a fresh bundled preset/icon report, records it as the latest report,
+  and opens the themed diagnostics window.
+- Files changed in this handoff update: `scripts/actionrail/maya_ui.py`,
+  `scripts/actionrail/__init__.py`, `tests/test_maya_ui.py`,
+  `tests/maya_smoke/actionrail_maya_ui_smoke.py`, and `docs/04_status.md`.
+- Behavior verified: the ActionRail menu installs an idempotent `Run
+  Diagnostics` item, the public `actionrail.run_diagnostics_from_maya()` API
+  opens the diagnostics window in Maya, records `last_report()`, and leaves the
+  icon import diagnostics/recovery smoke passing.
+- Checks run: full pytest, full Ruff, the Maya UI smoke, the import/recovery
+  Maya smoke, and the project-map CLI check all passed.
+- Current live state: Maya users can now generate a fresh diagnostics report
+  from the ActionRail menu without needing a pre-existing report.
+- Blockers/risks: full Maya smoke `-Script all` was not rerun for this narrow
+  menu/API slice.
 - Exact next step: continue visible diagnostics hardening as the icon import
   path expands; preserve import/recovery smoke coverage when touching recovery.
 
@@ -222,10 +227,10 @@ Start here:
 ## Latest Verification
 
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
-  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_maya_ui.py tests\\test_package.py`
+  -> 14 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\maya_ui.py scripts\\actionrail\\__init__.py tests\\test_maya_ui.py tests\\maya_smoke\\actionrail_maya_ui_smoke.py`
   -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 155 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Previous targeted checks:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
@@ -236,13 +241,14 @@ Start here:
   `move@3x.png` via discovered `mayapy`.
 - Latest CLI check:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> printed a valid project map with `diagnose_icon_import_from_maya` in the
-  public API and zero icon manifest issues.
+  -> printed a valid project map with `run_diagnostics_from_maya` in the public
+  API and zero icon manifest issues.
 - Latest Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_maya_ui_smoke.py`
-  -> passed against MayaSessiond on port `7217`; verified the icon import
-  diagnostics menu item, explicit missing-source preflight flow, menu/shelf
-  commands, toggle show/hide, and uninstall cleanup.
+  -> passed against MayaSessiond on port `7217`; verified the run diagnostics
+  menu item opens the diagnostics window and records `last_report()`, the icon
+  import diagnostics menu item, explicit missing-source preflight flow,
+  menu/shelf commands, toggle show/hide, and uninstall cleanup.
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`; verified import report

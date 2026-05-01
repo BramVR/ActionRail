@@ -86,6 +86,9 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     assert maya_ui.diagnose_icon_import_from_maya_command() == (
         "import actionrail; actionrail.diagnose_icon_import_from_maya()"
     )
+    assert maya_ui.run_diagnostics_from_maya_command() == (
+        "import actionrail; actionrail.run_diagnostics_from_maya()"
+    )
 
 
 def test_toggle_default_shows_when_hidden_and_hides_when_visible(
@@ -127,10 +130,14 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert tuple(cmds.menus) == (maya_ui.MENU_NAME,)
     assert tuple(cmds.menu_items) == (
         maya_ui.MENU_ITEM_NAME,
+        maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
     )
     assert cmds.menu_items[maya_ui.MENU_ITEM_NAME]["command"] == maya_ui.toggle_command()
+    assert cmds.menu_items[maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME][
+        "command"
+    ] == maya_ui.run_diagnostics_from_maya_command()
     assert cmds.menu_items[maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME][
         "command"
     ] == maya_ui.diagnose_icon_import_from_maya_command()
@@ -139,6 +146,7 @@ def test_install_menu_toggle_is_idempotent() -> None:
     )
     assert cmds.deleted == [
         (maya_ui.MENU_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
     ]
@@ -154,6 +162,7 @@ def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
     assert cmds.menus == {}
     assert (maya_ui.MENU_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (
         maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
         {"menuItem": True},
@@ -287,6 +296,28 @@ def test_diagnose_icon_import_from_maya_cancel_returns_none(monkeypatch) -> None
 
     assert maya_ui.diagnose_icon_import_from_maya(cmds_module=cmds) is None
     assert shown is False
+
+
+def test_run_diagnostics_from_maya_collects_and_shows_report(monkeypatch) -> None:
+    cmds = FakeCmds()
+    calls: dict[str, object] = {}
+
+    def collect_diagnostics(**kwargs: object) -> object:
+        calls["collect"] = kwargs
+        return "report"
+
+    def show_last_report() -> str:
+        calls["shown"] = True
+        return "formatted"
+
+    monkeypatch.setattr(maya_ui.diagnostics, "collect_diagnostics", collect_diagnostics)
+    monkeypatch.setattr(maya_ui.diagnostics, "show_last_report", show_last_report)
+
+    result = maya_ui.run_diagnostics_from_maya(cmds_module=cmds)
+
+    assert result == "report"
+    assert calls["shown"] is True
+    assert calls["collect"] == {"cmds_module": cmds}
 
 
 def test_install_shelf_toggle_is_idempotent() -> None:

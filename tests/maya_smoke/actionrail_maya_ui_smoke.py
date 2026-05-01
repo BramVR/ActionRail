@@ -14,6 +14,7 @@ from PySide6 import QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
+from actionrail.diagnostics_ui import WINDOW_OBJECT_NAME  # noqa: E402
 from actionrail.runtime import _OVERLAYS, active_overlay_ids  # noqa: E402
 
 app = QtWidgets.QApplication.instance()
@@ -44,6 +45,10 @@ diagnostics_menu_exists_after_install = _exists(
     maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
     cmds.menuItem,
 )
+run_diagnostics_menu_exists_after_install = _exists(
+    maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
+    cmds.menuItem,
+)
 icon_import_menu_exists_after_install = _exists(
     maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
     cmds.menuItem,
@@ -60,7 +65,33 @@ diagnostics_menu_command = cmds.menuItem(
     query=True,
     command=True,
 )
+run_diagnostics_menu_command = cmds.menuItem(
+    maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
+    query=True,
+    command=True,
+)
 shelf_command = cmds.shelfButton(maya_ui.SHELF_BUTTON_NAME, query=True, command=True)
+
+run_diagnostics_report = actionrail.run_diagnostics_from_maya()
+app.processEvents()
+run_diagnostics_window = next(
+    (
+        widget
+        for widget in app.allWidgets()
+        if widget.objectName() == WINDOW_OBJECT_NAME and widget.isVisible()
+    ),
+    None,
+)
+if run_diagnostics_menu_command != maya_ui.run_diagnostics_from_maya_command():
+    raise AssertionError(f"Unexpected diagnostics command: {run_diagnostics_menu_command}")
+if not run_diagnostics_menu_exists_after_install:
+    raise AssertionError("Run Diagnostics menu item was not installed.")
+if actionrail.last_report() != run_diagnostics_report:
+    raise AssertionError("Run Diagnostics did not record last_report().")
+if run_diagnostics_window is None:
+    raise AssertionError("Run Diagnostics did not open the diagnostics window.")
+run_diagnostics_window.close()
+app.processEvents()
 
 icon_import_flow_report = actionrail.diagnose_icon_import_from_maya(
     source_path="Z:/actionrail/missing-icon.svg",
@@ -102,6 +133,14 @@ result = {
         maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
         cmds.menuItem,
     ),
+    "run_diagnostics_menu_command": run_diagnostics_menu_command,
+    "run_diagnostics_menu_exists_after_install": run_diagnostics_menu_exists_after_install,
+    "run_diagnostics_menu_exists_after_uninstall": _exists(
+        maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
+        cmds.menuItem,
+    ),
+    "run_diagnostics_opened_window": run_diagnostics_window is not None,
+    "run_diagnostics_report_has_errors": run_diagnostics_report.has_errors,
     "icon_import_flow_issue_codes": icon_import_flow_issue_codes,
     "icon_import_menu_command": icon_import_menu_command,
     "icon_import_menu_exists_after_install": icon_import_menu_exists_after_install,

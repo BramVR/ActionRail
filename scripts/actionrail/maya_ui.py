@@ -10,6 +10,7 @@ from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
+MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
 SHELF_NAME = "ActionRail"
@@ -47,6 +48,8 @@ def install_menu_toggle(
 
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_RUN_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_RUN_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -61,6 +64,14 @@ def install_menu_toggle(
             parent=MENU_NAME,
             sourceType="python",
         )
+    )
+    cmds.menuItem(
+        MENU_RUN_DIAGNOSTICS_ITEM_NAME,
+        label="Run Diagnostics",
+        annotation="Collect current ActionRail diagnostics and show the report.",
+        command=run_diagnostics_from_maya_command(),
+        parent=MENU_NAME,
+        sourceType="python",
     )
     cmds.menuItem(
         MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
@@ -89,6 +100,8 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
         cmds.deleteUI(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_DIAGNOSTICS_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_RUN_DIAGNOSTICS_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_RUN_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
 
@@ -197,6 +210,24 @@ def diagnose_icon_import_from_maya(
     )
     diagnostics.show_last_report()
     return report
+
+
+def run_diagnostics_from_maya(
+    *,
+    cmds_module: Any | None = None,
+) -> diagnostics.DiagnosticReport:
+    """Collect current ActionRail diagnostics from Maya and show the report window."""
+
+    cmds = _require_cmds(cmds_module)
+    report = diagnostics.collect_diagnostics(cmds_module=cmds)
+    diagnostics.show_last_report()
+    return report
+
+
+def run_diagnostics_from_maya_command() -> str:
+    """Return the Python command string for the Maya diagnostics collection item."""
+
+    return "import actionrail; actionrail.run_diagnostics_from_maya()"
 
 
 def diagnose_icon_import_from_maya_command() -> str:
