@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-04-30
+Last updated: 2026-05-01
 
 ## Done
 
@@ -119,6 +119,10 @@ Last updated: 2026-04-30
     the full report and selected-issue copy text include remediation guidance
     such as choosing a valid SVG, using `overwrite=True`, or regenerating PNG
     fallbacks.
+  - `DiagnosticIssue(...)` preserves the public positional constructor order
+    through `exception_type`; optional `hint` support is appended after existing
+    fields while report and diagnostics-window display order still shows hints
+    before exception details.
   - `cmds.hotkey` query now follows Maya's positional-key query form while preserving keyword-based assignment.
   - Maya smoke coverage now validates runtime command execution for an action and a preset slot with no overlay visible.
   - Maya smoke coverage now validates key-label sync on a visible slot after hotkey assignment.
@@ -183,25 +187,21 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: hardened copyable diagnostics with actionable hints for
-  icon import and manifest problems.
-- Files changed in this handoff update: `scripts/actionrail/icons.py`,
-  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/diagnostics_ui.py`,
-  `tests/test_icons.py`, `tests/test_diagnostics.py`,
-  `tests/test_diagnostics_ui.py`,
-  `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
-  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
-- Behavior verified: icon manifest/import issues now carry optional `hint`
-  values; `DiagnosticIssue.as_dict()`, `actionrail.format_report()`, and the
-  diagnostics window selected-issue copy text expose those hints.
-- Checks run: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed;
-  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed;
-  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
-  port `7217`.
-- Current live state: icon import failures initiated from the Maya menu or API
-  now produce copyable diagnostics that expose exact path, metadata-field, and
-  remediation-hint details in both the full report and selected issue text.
-- Blockers/risks: no current implementation blocker known.
+- Task goal completed: preserved the public `DiagnosticIssue(...)` positional
+  constructor ABI after adding hint support.
+- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
+  `tests/test_diagnostics.py`, and `docs/04_status.md`.
+- Behavior verified: an old positional `exception_type` argument still maps to
+  `exception_type`, while hint remains optional and report/UI display order is
+  unchanged.
+- Checks run:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py`
+  -> all checks passed.
+- Current live state: copyable diagnostics still expose hints, and existing
+  positional callers do not silently lose exception details.
+- Blockers/risks: full pytest, full Ruff, and Maya smoke were not rerun for
+  this narrow compatibility fix.
 - Exact next step: continue visible diagnostics hardening as the icon import
   path expands; preserve import/recovery smoke coverage when touching recovery.
 
@@ -221,9 +221,13 @@ Start here:
 
 ## Latest Verification
 
+- Latest targeted checks:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py tests\\test_diagnostics.py`
+  -> all checks passed.
 - Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 153 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Latest targeted checks:
+- Previous targeted checks:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
   -> 41 passed.
 - Latest fallback check:

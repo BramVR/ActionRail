@@ -53,8 +53,8 @@ class DiagnosticIssue:
     target: str = ""
     path: str = ""
     field: str = ""
-    hint: str = ""
     exception_type: str = ""
+    hint: str = ""
 
     def as_dict(self) -> dict[str, str]:
         """Return a compact serializable shape for scripts and future UI."""

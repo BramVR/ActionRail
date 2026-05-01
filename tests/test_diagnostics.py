@@ -235,6 +235,28 @@ def test_format_report_includes_structured_issue_details() -> None:
     assert "hint: Use a valid icon id." in text
 
 
+def test_diagnostic_issue_preserves_positional_exception_type_order() -> None:
+    issue = DiagnosticIssue(
+        "overlay_startup_failed",
+        "error",
+        "ActionRail overlay startup failed.",
+        "transform_stack",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "RuntimeError",
+    )
+
+    assert issue.exception_type == "RuntimeError"
+    assert issue.hint == ""
+    assert issue.as_dict()["exception_type"] == "RuntimeError"
+    assert "hint" not in issue.as_dict()
+
+
 def test_show_last_report_opens_qt_window_with_formatted_report(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
