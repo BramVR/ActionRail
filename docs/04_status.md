@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 ## Done
 
@@ -154,6 +154,9 @@ Last updated: 2026-05-01
   - `actionrail.safe_start()` validates first, starts the overlay only when there are no diagnostic errors, returns recoverable overlay startup failures as report issues, and resolves importable `maya.cmds` automatically for default command/plugin availability diagnostics.
   - `tests/maya_smoke/actionrail_diagnostics_smoke.py` verifies diagnostics and `safe_start()` inside Maya.
 - Test/docs hardening:
+  - Slot diagnostic internals now use a private named diagnostic value instead
+    of positional tuples, and stale overlay cleanup is split into focused
+    private discovery/close/delete helpers without changing public APIs.
   - Schema tests now cover duplicate slot ids and boolean values incorrectly accepted as integer layout/spacer fields.
   - Runtime tests now cover unknown slots and slots without actions.
   - Hotkey tests now cover idempotent publishing, same-binding assignment, release bindings, command modifiers, conflict text, and unpublish behavior.
@@ -191,20 +194,19 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: added a Maya-facing `Run Diagnostics` support flow that
-  makes selected issue details visible directly in the themed diagnostics
-  window.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics_ui.py`,
-  `tests/maya_smoke/actionrail_diagnostics_smoke.py`,
-  `tests/maya_smoke/actionrail_import_recovery_smoke.py`, and
+- Task goal completed: reduced complexity in slot diagnostic and stale overlay
+  cleanup internals while preserving public APIs and behavior.
+- Files changed in this handoff update: `scripts/actionrail/widgets.py`,
+  `scripts/actionrail/overlay.py`, `tests/test_overlay.py`, and
   `docs/04_status.md`.
-- Behavior verified: selecting an issue now fills a read-only detail pane with
-  the same structured support text used by `Copy Selected`, including import
-  `path`, `field`, and `hint` details.
-- Checks run: full pytest, full Ruff, targeted diagnostics/import Maya smoke,
-  and full Maya smoke passed.
-- Current live state: Maya users can inspect selected diagnostic issue details
-  without hunting through the full raw report or copying text first.
+- Behavior verified: diagnostic badges still report missing action, command,
+  plugin, and icon states; stale floating overlays are still found, owning hosts
+  are closed first, failed host closes fall back to widget deletion, and reloads
+  leave one live overlay widget.
+- Checks run: focused widget/overlay pytest, full pytest, full Ruff, and full
+  Maya smoke passed.
+- Current live state: the diagnostic/cleanup behavior is unchanged externally,
+  but the implementation is easier to inspect and extend.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue visible diagnostics hardening as the icon import
   path expands; preserve import/recovery smoke coverage when touching recovery.
@@ -226,10 +228,10 @@ Start here:
 ## Latest Verification
 
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
-  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics_ui.py tests\\maya_smoke\\actionrail_diagnostics_smoke.py tests\\maya_smoke\\actionrail_import_recovery_smoke.py tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_overlay.py`
+  -> 32 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\widgets.py scripts\\actionrail\\overlay.py tests\\test_widgets.py tests\\test_overlay.py`
   -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 155 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 157 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Previous targeted checks:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_icons.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`

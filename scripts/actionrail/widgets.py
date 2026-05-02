@@ -78,6 +78,25 @@ class SlotRenderState:
         return "true" if self.active else "false"
 
 
+@dataclass(frozen=True)
+class _SlotDiagnostic:
+    code: str = ""
+    severity: str = ""
+    badge: str = ""
+    message: str = ""
+
+    @property
+    def blocks_enabled(self) -> bool:
+        return self.severity == "error" or self.code in {"missing_command", "missing_plugin"}
+
+    @property
+    def has_issue(self) -> bool:
+        return bool(self.code)
+
+
+_NO_SLOT_DIAGNOSTIC = _SlotDiagnostic()
+
+
 class ActionRailRoot:
     """Factory wrapper for the root widget class.
 
@@ -368,12 +387,12 @@ def _slot_render_state(
         tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
         enabled=not locked
         and evaluate_predicate(item.enabled_when, item_context)
-        and not _diagnostic_blocks_enabled(diagnostic),
+        and not diagnostic.blocks_enabled,
         active=not locked and _is_item_active(item, item_context),
         locked=locked,
-        diagnostic_code=diagnostic[0],
-        diagnostic_severity=diagnostic[1],
-        diagnostic_badge=diagnostic[2],
+        diagnostic_code=diagnostic.code,
+        diagnostic_severity=diagnostic.severity,
+        diagnostic_badge=diagnostic.badge,
     )
 
 
@@ -398,50 +417,54 @@ def _slot_diagnostic(
     item: StackItem,
     registry: ActionRegistry | None = None,
     context: PredicateContext | None = None,
-) -> tuple[str, str, str, str]:
+) -> _SlotDiagnostic:
     get_action = getattr(registry, "get", None)
     if item.action and get_action is not None:
         try:
             get_action(item.action)
         except Exception:
-            return (
-                "missing_action",
-                "error",
-                "!",
-                f"Missing ActionRail action: {item.action}",
+            return _SlotDiagnostic(
+                code="missing_action",
+                severity="error",
+                badge="!",
+                message=f"Missing ActionRail action: {item.action}",
             )
 
     availability_diagnostic = _availability_diagnostic(item, context)
-    if availability_diagnostic[0]:
+    if availability_diagnostic.has_issue:
         return availability_diagnostic
 
     if item.icon:
-        status = icon_status(item.icon)
-        if status.ok:
-            return ("", "", "", "")
-        if status.issue is not None:
-            return (
-                status.issue.code,
-                "warning",
-                "?",
-                status.issue.message,
-            )
-        return (
-            "missing_icon",
-            "warning",
-            "?",
-            f"Missing ActionRail icon: {item.icon}",
-        )
+        return _icon_diagnostic(item.icon)
 
-    return ("", "", "", "")
+    return _NO_SLOT_DIAGNOSTIC
+
+
+def _icon_diagnostic(icon_id: str) -> _SlotDiagnostic:
+    status = icon_status(icon_id)
+    if status.ok:
+        return _NO_SLOT_DIAGNOSTIC
+    if status.issue is not None:
+        return _SlotDiagnostic(
+            code=status.issue.code,
+            severity="warning",
+            badge="?",
+            message=status.issue.message,
+        )
+    return _SlotDiagnostic(
+        code="missing_icon",
+        severity="warning",
+        badge="?",
+        message=f"Missing ActionRail icon: {icon_id}",
+    )
 
 
 def _availability_diagnostic(
     item: StackItem,
     context: PredicateContext | None,
-) -> tuple[str, str, str, str]:
+) -> _SlotDiagnostic:
     if context is None:
-        return ("", "", "", "")
+        return _NO_SLOT_DIAGNOSTIC
 
     for field_name in ("enabled_when", "visible_when", "active_when"):
         predicate = getattr(item, field_name)
@@ -449,34 +472,29 @@ def _availability_diagnostic(
             continue
         for kind, target in availability_blocking_targets(predicate, context):
             if kind == "command":
-                return (
-                    "missing_command",
-                    "warning",
-                    "?",
-                    f"Unavailable Maya command in {field_name}: {target}",
+                return _SlotDiagnostic(
+                    code="missing_command",
+                    severity="warning",
+                    badge="?",
+                    message=f"Unavailable Maya command in {field_name}: {target}",
                 )
             if kind == "plugin":
-                return (
-                    "missing_plugin",
-                    "warning",
-                    "?",
-                    f"Unavailable Maya plugin in {field_name}: {target}",
+                return _SlotDiagnostic(
+                    code="missing_plugin",
+                    severity="warning",
+                    badge="?",
+                    message=f"Unavailable Maya plugin in {field_name}: {target}",
                 )
 
-    return ("", "", "", "")
+    return _NO_SLOT_DIAGNOSTIC
 
 
-def _diagnostic_blocks_enabled(diagnostic: tuple[str, str, str, str]) -> bool:
-    return diagnostic[1] == "error" or diagnostic[0] in {"missing_command", "missing_plugin"}
-
-
-def _diagnostic_tooltip(base_tooltip: str, diagnostic: tuple[str, str, str, str]) -> str:
-    message = diagnostic[3]
-    if not message:
+def _diagnostic_tooltip(base_tooltip: str, diagnostic: _SlotDiagnostic) -> str:
+    if not diagnostic.message:
         return base_tooltip
     if not base_tooltip:
-        return message
-    return f"{base_tooltip}\n{message}"
+        return diagnostic.message
+    return f"{base_tooltip}\n{diagnostic.message}"
 
 
 def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:

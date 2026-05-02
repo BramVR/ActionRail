@@ -135,6 +135,117 @@ def test_cleanup_overlay_widgets_closes_owning_host_before_delete() -> None:
     assert stale.deleted is False
 
 
+def test_cleanup_overlay_widgets_finds_floating_widget_from_qapplication() -> None:
+    class FakeWidget:
+        def __init__(self, object_name: str) -> None:
+            self._object_name = object_name
+            self.hidden = False
+            self.parent = object()
+            self.deleted = False
+
+        def objectName(self) -> str:  # noqa: N802
+            return self._object_name
+
+        def hide(self) -> None:
+            self.hidden = True
+
+        def setParent(self, parent: object | None) -> None:  # noqa: N802
+            self.parent = parent
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeApp:
+        def __init__(self, widgets: list[FakeWidget]) -> None:
+            self._widgets = widgets
+
+        def allWidgets(self) -> list[FakeWidget]:  # noqa: N802
+            return self._widgets
+
+        def sendPostedEvents(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+    class FakeQt:
+        class QtCore:
+            class QEvent:
+                DeferredDelete = object()
+
+        class QtWidgets:
+            QWidget = object
+            app: FakeApp | None = None
+
+            class QApplication:
+                @staticmethod
+                def instance() -> FakeApp | None:
+                    return FakeQt.QtWidgets.app
+
+    class FakeParent:
+        def objectName(self) -> str:  # noqa: N802
+            return "modelPanel4"
+
+        def findChildren(self, _widget_type: object) -> list[object]:  # noqa: N802
+            return []
+
+    stale = FakeWidget("ActionRailViewportOverlay_transform_stack")
+    FakeQt.QtWidgets.app = FakeApp([stale])
+
+    removed = cleanup_overlay_widgets(FakeParent(), "transform_stack", FakeQt)
+
+    assert removed == 1
+    assert stale.hidden is True
+    assert stale.parent is None
+    assert stale.deleted is True
+
+
+def test_cleanup_overlay_widgets_deletes_when_owning_host_close_fails() -> None:
+    class FakeHost:
+        def close(self) -> None:
+            raise RuntimeError("close failed")
+
+    class FakeQt:
+        class QtWidgets:
+            QWidget = object
+
+            class QApplication:
+                @staticmethod
+                def instance() -> None:
+                    return None
+
+    class FakeWidget:
+        def __init__(self) -> None:
+            self._actionrail_host = FakeHost()
+            self.deleted = False
+
+        def objectName(self) -> str:  # noqa: N802
+            return "ActionRailViewportOverlay_transform_stack"
+
+        def hide(self) -> None:
+            return None
+
+        def setParent(self, _parent: object | None) -> None:  # noqa: N802
+            return None
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeParent:
+        def __init__(self, children: list[FakeWidget]) -> None:
+            self.children = children
+
+        def objectName(self) -> str:  # noqa: N802
+            return "modelPanel4"
+
+        def findChildren(self, _widget_type: object) -> list[FakeWidget]:  # noqa: N802
+            return self.children
+
+    stale = FakeWidget()
+
+    removed = cleanup_overlay_widgets(FakeParent([stale]), "transform_stack", FakeQt)
+
+    assert removed == 1
+    assert stale.deleted is True
+
+
 def test_overlay_snapshot_uses_resolved_panel(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 

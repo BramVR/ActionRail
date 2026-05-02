@@ -8,6 +8,7 @@ Tests: `tests/test_overlay.py` and overlay cleanup/capture smoke scripts.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import suppress
 from typing import Any
 from weakref import ref
@@ -254,40 +255,62 @@ def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) ->
     """Hide/delete stale ActionRail widgets under a Maya panel widget."""
 
     qt = qt or load()
-    qt_widgets = getattr(qt, "QtWidgets", None)
-    object_names = {
-        f"{OBJECT_NAME_PREFIX}_{spec_id}",
-        f"{CONTAINER_OBJECT_NAME_PREFIX}_{spec_id}",
-    }
-    search_roots = [parent]
+    removed = sum(
+        1 for widget in _stale_overlay_widgets(parent, spec_id, qt) if _close_stale_widget(widget)
+    )
+    if removed:
+        _flush_qt_deferred_deletes(qt)
+    return removed
+
+
+def _cleanup_search_roots(parent: Any, qt: Any) -> list[Any]:
+    roots = [parent]
     outer_panel = getattr(parent, "_actionrail_outer_panel_widget", None)
     if outer_panel is not None and outer_panel is not parent:
-        search_roots.append(outer_panel)
+        roots.append(outer_panel)
 
-    stale_widgets: list[Any] = []
-    seen: set[int] = set()
-
+    qt_widgets = getattr(qt, "QtWidgets", None)
     app = getattr(qt_widgets, "QApplication", None)
     if app is not None:
         try:
             instance = app.instance()
             if instance is not None:
-                search_roots.extend(instance.allWidgets())
+                roots.extend(instance.allWidgets())
         except Exception:
             pass
+    return roots
 
-    for root in search_roots:
+
+def _iter_widget_candidates(root: Any, qt_widgets: Any) -> Iterator[Any]:
+    if root is None or not _qt_widget_is_valid(root):
+        return
+
+    yield root
+    find_children = getattr(root, "findChildren", None)
+    if find_children is None or qt_widgets is None:
+        return
+
+    try:
+        children = find_children(qt_widgets.QWidget) or []
+    except Exception:
+        return
+
+    yield from children
+
+
+def _stale_overlay_widgets(parent: Any, spec_id: str, qt: Any) -> list[Any]:
+    qt_widgets = getattr(qt, "QtWidgets", None)
+    object_names = {
+        f"{OBJECT_NAME_PREFIX}_{spec_id}",
+        f"{CONTAINER_OBJECT_NAME_PREFIX}_{spec_id}",
+    }
+    stale_widgets: list[Any] = []
+    seen: set[int] = set()
+
+    for root in _cleanup_search_roots(parent, qt):
         if root is None or not _qt_widget_is_valid(root):
             continue
-        candidates = [root]
-        find_children = getattr(root, "findChildren", None)
-        if find_children is not None and qt_widgets is not None:
-            try:
-                children = find_children(qt_widgets.QWidget) or []
-            except Exception:
-                children = []
-            candidates.extend(children)
-        for widget in candidates:
+        for widget in _iter_widget_candidates(root, qt_widgets):
             if not _qt_widget_is_valid(widget):
                 continue
             try:
@@ -302,29 +325,29 @@ def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) ->
             stale_widgets.append(widget)
             seen.add(identifier)
 
-    removed = 0
-    for widget in stale_widgets:
-        if not _qt_widget_is_valid(widget):
-            continue
-        stale_host = getattr(widget, "_actionrail_host", None)
-        close = getattr(stale_host, "close", None)
-        if callable(close):
-            try:
-                close()
-                removed += 1
-                continue
-            except Exception:
-                pass
+    return stale_widgets
+
+
+def _close_stale_widget(widget: Any) -> bool:
+    if not _qt_widget_is_valid(widget):
+        return False
+
+    stale_host = getattr(widget, "_actionrail_host", None)
+    close = getattr(stale_host, "close", None)
+    if callable(close):
         try:
-            widget.hide()
-            widget.setParent(None)
-            widget.deleteLater()
-            removed += 1
+            close()
+            return True
         except Exception:
-            continue
-    if removed:
-        _flush_qt_deferred_deletes(qt)
-    return removed
+            pass
+
+    try:
+        widget.hide()
+        widget.setParent(None)
+        widget.deleteLater()
+    except Exception:
+        return False
+    return True
 
 
 class ViewportOverlayHost:
