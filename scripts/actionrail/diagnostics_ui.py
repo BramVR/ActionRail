@@ -12,6 +12,7 @@ from .theme import DEFAULT_THEME
 
 WINDOW_OBJECT_NAME = "ActionRailDiagnosticsWindow"
 ISSUE_LIST_OBJECT_NAME = "ActionRailDiagnosticsIssueList"
+ISSUE_DETAIL_OBJECT_NAME = "ActionRailDiagnosticsIssueDetail"
 REPORT_TEXT_OBJECT_NAME = "ActionRailDiagnosticsReportText"
 SUMMARY_OBJECT_NAME = "ActionRailDiagnosticsSummary"
 
@@ -92,6 +93,15 @@ def _build_window(
     _populate_issue_list(issue_list, qt, report)
     splitter.addWidget(issue_list)
 
+    issue_detail = qt.QtWidgets.QTextEdit()
+    issue_detail.setObjectName(ISSUE_DETAIL_OBJECT_NAME)
+    issue_detail.setReadOnly(True)
+    issue_detail.setAcceptRichText(False)
+    issue_detail.setLineWrapMode(qt.QtWidgets.QTextEdit.WidgetWidth)
+    issue_detail.setMinimumHeight(88)
+    issue_detail.setPlainText(_current_issue_detail_text(issue_list, qt))
+    splitter.addWidget(issue_detail)
+
     report_box = qt.QtWidgets.QTextEdit()
     report_box.setObjectName(REPORT_TEXT_OBJECT_NAME)
     report_box.setReadOnly(True)
@@ -99,7 +109,7 @@ def _build_window(
     report_box.setLineWrapMode(qt.QtWidgets.QTextEdit.NoWrap)
     report_box.setPlainText(report_text)
     splitter.addWidget(report_box)
-    splitter.setSizes([220, 220])
+    splitter.setSizes([180, 130, 220])
 
     button_row = qt.QtWidgets.QHBoxLayout()
     button_row.setContentsMargins(0, 0, 0, 0)
@@ -126,14 +136,21 @@ def _build_window(
     def copy_full_text() -> None:
         _set_clipboard(qt, report_box.toPlainText())
 
+    def update_issue_detail() -> None:
+        issue_detail.setPlainText(_current_issue_detail_text(issue_list, qt))
+
     def clear_report() -> None:
         if on_clear is not None:
             on_clear()
         issue_list.clear()
         _add_empty_issue_item(issue_list, qt, "No ActionRail diagnostic report has been recorded.")
+        issue_detail.setPlainText("No ActionRail diagnostic report has been recorded.")
         summary.setText(_summary_text(None))
         report_box.setPlainText("No ActionRail diagnostic report has been recorded.")
 
+    issue_list.itemSelectionChanged.connect(update_issue_detail)
+    if report is not None and report.issues:
+        issue_list.setCurrentRow(0)
     copy_selected.clicked.connect(copy_selected_text)
     copy_full.clicked.connect(copy_full_text)
     clear_button.clicked.connect(clear_report)
@@ -177,6 +194,19 @@ def _selected_issue_text(issue_list: Any, qt: QtBinding) -> str:
         if item is not None and item.data(qt.QtCore.Qt.UserRole)
     ]
     return "\n\n".join(str(detail) for detail in details)
+
+
+def _current_issue_detail_text(issue_list: Any, qt: QtBinding) -> str:
+    selected_text = _selected_issue_text(issue_list, qt)
+    if selected_text:
+        return selected_text
+    if issue_list.count():
+        first_item = issue_list.item(0)
+        detail = first_item.data(qt.QtCore.Qt.UserRole)
+        if detail:
+            return str(detail)
+        return first_item.text()
+    return "No issues found."
 
 
 def _set_clipboard(qt: QtBinding, text: str) -> None:
@@ -247,6 +277,7 @@ QLabel#{SUMMARY_OBJECT_NAME} {{
     letter-spacing: 0px;
 }}
 QListWidget#{ISSUE_LIST_OBJECT_NAME},
+QTextEdit#{ISSUE_DETAIL_OBJECT_NAME},
 QTextEdit#{REPORT_TEXT_OBJECT_NAME} {{
     background: #333338;
     color: {theme.button_color};

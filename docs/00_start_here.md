@@ -79,7 +79,8 @@ Build PySide6/Qt overlay first.
 Continue Phase 1 declarative MVP:
 
 1. Replace `actionrail.show_last_report()`'s `confirmDialog` with a polished,
-   themed Qt diagnostics window that supports copyable reports. Done.
+   themed Qt diagnostics window that supports visible issue details and
+   copyable reports. Done.
 2. Continue diagnostic work toward the future icon-backed preset/import
    pipeline. First icon-backed rail, manifest/SVG validation, local SVG import,
    PNG fallback generation, fallback asset diagnostics, import preflight

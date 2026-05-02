@@ -25,6 +25,7 @@ from PySide6 import QtWidgets  # noqa: E402
 import actionrail  # noqa: E402
 from actionrail.diagnostics import diagnose_spec  # noqa: E402
 from actionrail.diagnostics_ui import (  # noqa: E402
+    ISSUE_DETAIL_OBJECT_NAME,
     ISSUE_LIST_OBJECT_NAME,
     REPORT_TEXT_OBJECT_NAME,
     SUMMARY_OBJECT_NAME,
@@ -100,9 +101,10 @@ if diagnostics_window is None:
     raise AssertionError("Diagnostics window did not open.")
 
 issue_list = diagnostics_window.findChild(QtWidgets.QListWidget, ISSUE_LIST_OBJECT_NAME)
+issue_detail = diagnostics_window.findChild(QtWidgets.QTextEdit, ISSUE_DETAIL_OBJECT_NAME)
 report_text = diagnostics_window.findChild(QtWidgets.QTextEdit, REPORT_TEXT_OBJECT_NAME)
 summary_label = diagnostics_window.findChild(QtWidgets.QLabel, SUMMARY_OBJECT_NAME)
-if issue_list is None or report_text is None or summary_label is None:
+if issue_list is None or issue_detail is None or report_text is None or summary_label is None:
     raise AssertionError("Diagnostics window is missing expected child widgets.")
 if issue_list.count() != 1 or "missing_action" not in issue_list.item(0).text():
     raise AssertionError(
@@ -119,6 +121,10 @@ if not window_screenshot_saved:
     raise AssertionError(f"Could not save diagnostics screenshot: {output_path}")
 
 issue_list.setCurrentRow(0)
+app.processEvents()
+selected_detail_text = issue_detail.toPlainText()
+if "Code: missing_action" not in selected_detail_text:
+    raise AssertionError(f"Selected issue detail produced wrong text: {selected_detail_text}")
 copy_buttons = {
     button.text(): button for button in diagnostics_window.findChildren(QtWidgets.QPushButton)
 }
@@ -132,7 +138,10 @@ copy_buttons["Copy Full Report"].click()
 app.processEvents()
 full_clipboard_text = QtWidgets.QApplication.clipboard().text()
 if full_clipboard_text != window_report_text:
-    raise AssertionError("Copy Full Report did not copy the formatted report.")
+    raise AssertionError(
+        "Copy Full Report did not copy the formatted report: "
+        f"{full_clipboard_text!r} != {window_report_text!r}"
+    )
 
 copy_buttons["Clear"].click()
 app.processEvents()
@@ -188,6 +197,7 @@ result = {
     "safe_start_active_ids": active_overlay_ids(),
     "safe_start_overlay_started": start_report.overlay_started,
     "last_report_text": last_report_text,
+    "diagnostics_window_selected_detail": "Code: missing_action" in selected_detail_text,
     "diagnostics_window_copied_selected": "Code: missing_action" in selected_clipboard_text,
     "diagnostics_window_copied_full": full_clipboard_text == window_report_text,
     "diagnostics_window_screenshot": str(output_path),

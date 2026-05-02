@@ -344,7 +344,8 @@ Required features:
 - last error report
 - broken-action and missing-icon badges
 - themed diagnostics window with summary, issue list, selectable full report,
-  and copy actions for selected issues and the full report. First pass done.
+  visible selected-issue details, and copy actions for selected issues and the
+  full report. First pass done.
 
 ### 14. High DPI And Visual Regression
 

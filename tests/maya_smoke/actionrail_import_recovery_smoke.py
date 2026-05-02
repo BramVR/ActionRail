@@ -33,6 +33,7 @@ from PySide6 import QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
 from actionrail.diagnostics_ui import (  # noqa: E402
+    ISSUE_DETAIL_OBJECT_NAME,
     ISSUE_LIST_OBJECT_NAME,
     REPORT_TEXT_OBJECT_NAME,
     SUMMARY_OBJECT_NAME,
@@ -82,9 +83,10 @@ if diagnostics_window is None:
     raise AssertionError("Import diagnostics window did not open.")
 
 issue_list = diagnostics_window.findChild(QtWidgets.QListWidget, ISSUE_LIST_OBJECT_NAME)
+issue_detail = diagnostics_window.findChild(QtWidgets.QTextEdit, ISSUE_DETAIL_OBJECT_NAME)
 report_text = diagnostics_window.findChild(QtWidgets.QTextEdit, REPORT_TEXT_OBJECT_NAME)
 summary_label = diagnostics_window.findChild(QtWidgets.QLabel, SUMMARY_OBJECT_NAME)
-if issue_list is None or report_text is None or summary_label is None:
+if issue_list is None or issue_detail is None or report_text is None or summary_label is None:
     raise AssertionError("Import diagnostics window is missing expected child widgets.")
 
 if issue_list.count() != len(expected_import_codes):
@@ -105,6 +107,12 @@ if (
     raise AssertionError(f"Import report text missing issue detail: {report_text.toPlainText()}")
 
 issue_list.setCurrentRow(1)
+app.processEvents()
+selected_detail_text = issue_detail.toPlainText()
+if "Code: invalid_icon_import_metadata" not in selected_detail_text:
+    raise AssertionError(f"Selected issue detail produced wrong issue: {selected_detail_text}")
+if "Hint:" not in selected_detail_text or "icon_id" not in selected_detail_text:
+    raise AssertionError(f"Selected issue detail missing import fields: {selected_detail_text}")
 copy_buttons = {
     button.text(): button for button in diagnostics_window.findChildren(QtWidgets.QPushButton)
 }
@@ -147,6 +155,7 @@ result = {
     "active_overlay_ids": active_overlay_ids(),
     "import_error_codes": import_codes,
     "import_report_text_has_conflict": "icon_path_conflict" in window_report_text,
+    "import_selected_detail_has_hint": "Hint:" in selected_detail_text,
     "import_selected_copy_has_hint": "Hint:" in selected_clipboard_text,
     "import_screenshot": str(output_path),
     "import_screenshot_size": [window_pixmap.width(), window_pixmap.height()],

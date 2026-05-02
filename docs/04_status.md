@@ -192,21 +192,20 @@ Start here:
 ## Latest Handoff
 
 - Task goal completed: added a Maya-facing `Run Diagnostics` support flow that
-  collects a fresh bundled preset/icon report, records it as the latest report,
-  and opens the themed diagnostics window.
-- Files changed in this handoff update: `scripts/actionrail/maya_ui.py`,
-  `scripts/actionrail/__init__.py`, `tests/test_maya_ui.py`,
-  `tests/maya_smoke/actionrail_maya_ui_smoke.py`, and `docs/04_status.md`.
-- Behavior verified: the ActionRail menu installs an idempotent `Run
-  Diagnostics` item, the public `actionrail.run_diagnostics_from_maya()` API
-  opens the diagnostics window in Maya, records `last_report()`, and leaves the
-  icon import diagnostics/recovery smoke passing.
-- Checks run: full pytest, full Ruff, the Maya UI smoke, the import/recovery
-  Maya smoke, and the project-map CLI check all passed.
-- Current live state: Maya users can now generate a fresh diagnostics report
-  from the ActionRail menu without needing a pre-existing report.
-- Blockers/risks: full Maya smoke `-Script all` was not rerun for this narrow
-  menu/API slice.
+  makes selected issue details visible directly in the themed diagnostics
+  window.
+- Files changed in this handoff update: `scripts/actionrail/diagnostics_ui.py`,
+  `tests/maya_smoke/actionrail_diagnostics_smoke.py`,
+  `tests/maya_smoke/actionrail_import_recovery_smoke.py`, and
+  `docs/04_status.md`.
+- Behavior verified: selecting an issue now fills a read-only detail pane with
+  the same structured support text used by `Copy Selected`, including import
+  `path`, `field`, and `hint` details.
+- Checks run: full pytest, full Ruff, targeted diagnostics/import Maya smoke,
+  and full Maya smoke passed.
+- Current live state: Maya users can inspect selected diagnostic issue details
+  without hunting through the full raw report or copying text first.
+- Blockers/risks: no implementation blocker known.
 - Exact next step: continue visible diagnostics hardening as the icon import
   path expands; preserve import/recovery smoke coverage when touching recovery.
 
@@ -227,8 +226,8 @@ Start here:
 ## Latest Verification
 
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_maya_ui.py tests\\test_package.py`
-  -> 14 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\maya_ui.py scripts\\actionrail\\__init__.py tests\\test_maya_ui.py tests\\maya_smoke\\actionrail_maya_ui_smoke.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
+  -> 19 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics_ui.py tests\\maya_smoke\\actionrail_diagnostics_smoke.py tests\\maya_smoke\\actionrail_import_recovery_smoke.py tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
   -> all checks passed.
 - Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 155 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
@@ -252,12 +251,21 @@ Start here:
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`; verified import report
-  `path`/`field`/`hint` detail text, copied selected issue hint text, saved
-  `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png`
-  at `720x520` and verified fallback startup to `transform_stack`.
+  `path`/`field`/`hint` detail text, visible selected-issue detail text,
+  copied selected issue hint text, saved
+  `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png` at
+  `720x520` and verified fallback startup to `transform_stack`.
+- Latest diagnostics Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
+  -> passed against MayaSessiond on port `7217`; verified the selected issue
+  detail pane, copy selected, copy full report, clear, missing
+  command/plugin/action/icon diagnostics, and safe start.
 - Latest full Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
-  port `7217`.
+  port `7217`; verified capture, diagnostic badges, diagnostics window,
+  hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
+  import/recovery diagnostics, Maya menu/shelf UI, overlay cleanup, phase 0,
+  predicates, StackItem ABI, and transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.
