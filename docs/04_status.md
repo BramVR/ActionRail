@@ -202,7 +202,7 @@ Start here:
   bridge by adding published command state and stale generated command warnings.
 - Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
   `scripts/actionrail/diagnostics_ui.py`, `tests/test_diagnostics.py`, and
-  `docs/04_status.md`.
+  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
 - Behavior verified: copyable reports list published ActionRail runtime
   commands, the diagnostics window summary shows the published command count,
   and orphaned generated action/slot commands appear as warning issues with
