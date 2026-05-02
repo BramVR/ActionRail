@@ -115,6 +115,10 @@ Last updated: 2026-05-02
     the diagnostics window summary shows the published command count, and
     stale generated action/slot runtime commands are reported as warning issues
     with sync/unpublish hints.
+  - Diagnostic reports now include compact active overlay support state,
+    including panel, widget visibility/validity, event-filter target count, and
+    predicate refresh timer state. The diagnostics window summary shows
+    aggregate event-filter and refresh-timer counts.
   - Copyable diagnostic reports and selected issue details now include
     structured `path` and `field` values, so icon import and manifest problems
     expose the exact source/target path and metadata field in the diagnostics
@@ -198,22 +202,26 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: hardened visible diagnostics for the runtime-command
-  bridge by adding published command state and stale generated command warnings.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/diagnostics_ui.py`, `tests/test_diagnostics.py`, and
+- Task goal completed: hardened visible diagnostics by adding active overlay
+  support state to report data, copyable report text, and the diagnostics
+  window summary.
+- Files changed in this handoff update: `scripts/actionrail/runtime.py`,
+  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/diagnostics_ui.py`,
+  `tests/test_diagnostics.py`, `tests/test_diagnostics_ui.py`,
   `docs/02_implementation_plan.md`, and `docs/04_status.md`.
-- Behavior verified: copyable reports list published ActionRail runtime
-  commands, the diagnostics window summary shows the published command count,
-  and orphaned generated action/slot commands appear as warning issues with
-  remediation hints.
-- Checks run: focused diagnostics/hotkey pytest, full pytest, full Ruff,
-  targeted diagnostics/import-recovery Maya smoke, and full Maya smoke passed.
-- Current live state: the diagnostics window and report text now expose more
-  support state without changing overlay startup or hotkey publishing behavior.
+- Behavior verified: report text now lists active overlay details such as panel,
+  widget visibility/validity, event-filter target count, and predicate refresh
+  timer state; the diagnostics summary shows aggregate event-filter and
+  refresh-timer counts.
+- Checks run: focused diagnostics pytest/Ruff, full pytest, full Ruff, targeted
+  diagnostics Maya smoke, and full Maya smoke passed.
+- Current live state: visible diagnostics now expose more support state without
+  changing overlay startup, cleanup, predicate refresh, or hotkey publishing
+  behavior.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue visible diagnostics hardening as the icon import
-  path expands; preserve import/recovery smoke coverage when touching recovery.
+  path expands; preserve import/recovery smoke coverage when touching recovery
+  or diagnostics-window behavior.
 
 ## Next
 
@@ -232,10 +240,10 @@ Start here:
 ## Latest Verification
 
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py tests\\test_hotkeys.py`
-  -> 47 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py scripts\\actionrail\\diagnostics_ui.py tests\\test_diagnostics.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  -> 24 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\runtime.py scripts\\actionrail\\diagnostics.py scripts\\actionrail\\diagnostics_ui.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
   -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 159 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 162 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
@@ -263,7 +271,7 @@ Start here:
   -> passed against MayaSessiond on port `7217`; verified the selected issue
   detail pane, copy selected, copy full report, clear, missing
   command/plugin/action/icon diagnostics, published runtime-command report text,
-  and safe start.
+  active overlay support-state report text, and safe start.
 - Latest full Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,

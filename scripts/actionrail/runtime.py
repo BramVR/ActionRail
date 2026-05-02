@@ -11,6 +11,7 @@ _OVERLAYS: dict[str, Any] = {}
 
 __all__ = [
     "active_overlay_ids",
+    "active_overlay_states",
     "hide_all",
     "hide_example",
     "reload",
@@ -66,6 +67,14 @@ def active_overlay_ids() -> tuple[str, ...]:
     return tuple(_OVERLAYS)
 
 
+def active_overlay_states() -> tuple[dict[str, object], ...]:
+    """Return diagnostic support state for active overlay hosts."""
+
+    return tuple(
+        _overlay_state(preset_id, host) for preset_id, host in _OVERLAYS.items()
+    )
+
+
 def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
     """Update the rendered key label for an active preset slot, if visible."""
 
@@ -108,3 +117,49 @@ def _qualified_slot_id(preset_id: str, slot_id: str) -> str:
     if slot_id.startswith(prefix):
         return slot_id
     return f"{preset_id}.{slot_id}"
+
+
+def _overlay_state(preset_id: str, host: Any) -> dict[str, object]:
+    widget = getattr(host, "widget", None)
+    timer = getattr(host, "_predicate_refresh_timer", None)
+    return {
+        "preset_id": preset_id,
+        "panel": getattr(host, "panel", ""),
+        "widget_visible": _safe_widget_visible(widget),
+        "widget_valid": _safe_widget_valid(widget),
+        "filter_target_count": len(getattr(host, "_filter_targets", ()) or ()),
+        "predicate_timer_active": _safe_timer_active(timer),
+    }
+
+
+def _safe_widget_visible(widget: Any) -> bool:
+    is_visible = getattr(widget, "isVisible", None)
+    if not callable(is_visible):
+        return False
+    try:
+        return bool(is_visible())
+    except Exception:
+        return False
+
+
+def _safe_widget_valid(widget: Any) -> bool:
+    if widget is None:
+        return False
+    try:
+        from .overlay import _qt_widget_is_valid
+
+        return bool(_qt_widget_is_valid(widget))
+    except Exception:
+        return False
+
+
+def _safe_timer_active(timer: Any) -> bool:
+    if timer is None:
+        return False
+    is_active = getattr(timer, "isActive", None)
+    if not callable(is_active):
+        return True
+    try:
+        return bool(is_active())
+    except Exception:
+        return True

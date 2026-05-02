@@ -225,10 +225,15 @@ def _summary_text(report: DiagnosticReport | None) -> str:
     overlay = "started" if report.overlay_started else "not started"
     active = ", ".join(report.active_overlay_ids) if report.active_overlay_ids else "none"
     published_count = len(report.published_runtime_commands)
+    filter_count = sum(state.filter_target_count for state in report.active_overlay_states)
+    timer_count = sum(
+        1 for state in report.active_overlay_states if state.predicate_timer_active
+    )
     return (
         f"{status} - {error_count} errors, {warning_count} warnings, "
         f"{issue_count} total issues. Overlay {overlay}. Active overlays: {active}. "
-        f"Published commands: {published_count}."
+        f"Published commands: {published_count}. Event filters: {filter_count}. "
+        f"Refresh timers: {timer_count}."
     )
 
 

@@ -9,6 +9,7 @@ import actionrail.diagnostics as diagnostics
 from actionrail.actions import Action, ActionRegistry, create_default_registry
 from actionrail.diagnostics import (
     DiagnosticIssue,
+    DiagnosticOverlayState,
     DiagnosticReport,
     clear_last_report,
     collect_diagnostics,
@@ -270,6 +271,54 @@ def test_collect_diagnostics_includes_published_runtime_commands() -> None:
 
     assert report.published_runtime_commands == ("ActionRail_action_maya_tool_move",)
     assert "Published runtime commands: ActionRail_action_maya_tool_move" in text
+
+
+def test_collect_diagnostics_includes_active_overlay_support_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("transform_stack",))
+    monkeypatch.setattr(
+        diagnostics,
+        "_safe_active_overlay_states",
+        lambda: (
+            DiagnosticOverlayState(
+                preset_id="transform_stack",
+                panel="modelPanel4",
+                widget_visible=True,
+                widget_valid=True,
+                filter_target_count=2,
+                predicate_timer_active=True,
+            ),
+        ),
+    )
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=AvailabilityCmds())
+    text = format_report(report)
+
+    assert report.active_overlay_states[0].as_dict() == {
+        "preset_id": "transform_stack",
+        "panel": "modelPanel4",
+        "widget_visible": True,
+        "widget_valid": True,
+        "filter_target_count": 2,
+        "predicate_timer_active": True,
+    }
+    assert "Active overlay details:" in text
+    assert (
+        "- transform_stack: panel=modelPanel4, widget_visible=True, "
+        "widget_valid=True, filter_targets=2, predicate_timer_active=True"
+    ) in text
+
+
+def test_diagnostic_overlay_state_as_dict_preserves_false_booleans() -> None:
+    state = DiagnosticOverlayState(preset_id="transform_stack")
+
+    assert state.as_dict() == {
+        "preset_id": "transform_stack",
+        "widget_visible": False,
+        "widget_valid": False,
+        "predicate_timer_active": False,
+    }
 
 
 def test_collect_diagnostics_reports_orphaned_runtime_commands() -> None:

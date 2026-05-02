@@ -25,6 +25,7 @@ DiagnosticSeverity = Literal["info", "warning", "error"]
 
 __all__ = [
     "DiagnosticIssue",
+    "DiagnosticOverlayState",
     "DiagnosticReport",
     "DiagnosticSeverity",
     "clear_last_report",
@@ -78,6 +79,35 @@ class DiagnosticIssue:
 
 
 @dataclass(frozen=True)
+class DiagnosticOverlayState:
+    """Support state for one active overlay host."""
+
+    preset_id: str
+    panel: str = ""
+    widget_visible: bool = False
+    widget_valid: bool = False
+    filter_target_count: int = 0
+    predicate_timer_active: bool = False
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a compact serializable shape for diagnostics consumers."""
+
+        payload: dict[str, object] = {
+            "preset_id": self.preset_id,
+            "panel": self.panel,
+            "widget_visible": self.widget_visible,
+            "widget_valid": self.widget_valid,
+            "filter_target_count": self.filter_target_count,
+            "predicate_timer_active": self.predicate_timer_active,
+        }
+        return {
+            key: value
+            for key, value in payload.items()
+            if value != "" and not (type(value) is int and value == 0)
+        }
+
+
+@dataclass(frozen=True)
 class DiagnosticReport:
     """Diagnostics plus safe-start runtime state."""
 
@@ -86,6 +116,7 @@ class DiagnosticReport:
     overlay_id: str = ""
     active_overlay_ids: tuple[str, ...] = ()
     published_runtime_commands: tuple[str, ...] = ()
+    active_overlay_states: tuple[DiagnosticOverlayState, ...] = ()
 
     @property
     def has_errors(self) -> bool:
@@ -108,6 +139,9 @@ class DiagnosticReport:
             "overlay_id": self.overlay_id,
             "active_overlay_ids": self.active_overlay_ids,
             "published_runtime_commands": self.published_runtime_commands,
+            "active_overlay_states": tuple(
+                state.as_dict() for state in self.active_overlay_states
+            ),
             "issues": tuple(issue.as_dict() for issue in self.issues),
         }
 
@@ -120,12 +154,14 @@ class DiagnosticReport:
         overlay_started: bool,
         overlay_id: str = "",
         active_overlay_ids: tuple[str, ...] = (),
+        active_overlay_states: tuple[DiagnosticOverlayState, ...] = (),
     ) -> DiagnosticReport:
         return replace(
             self,
             overlay_started=overlay_started,
             overlay_id=overlay_id,
             active_overlay_ids=active_overlay_ids,
+            active_overlay_states=active_overlay_states,
         )
 
 
@@ -167,6 +203,12 @@ def format_report(report: DiagnosticReport | None = None) -> str:
         lines.append(
             "Published runtime commands: "
             + ", ".join(diagnostic_report.published_runtime_commands)
+        )
+    if diagnostic_report.active_overlay_states:
+        lines.append("Active overlay details:")
+        lines.extend(
+            f"- {state.preset_id}: {_format_overlay_state(state)}"
+            for state in diagnostic_report.active_overlay_states
         )
 
     if not diagnostic_report.issues:
@@ -237,6 +279,7 @@ def collect_diagnostics(
             tuple(issues),
             active_overlay_ids=_safe_active_overlay_ids(),
             published_runtime_commands=_safe_published_runtime_commands(resolved_cmds),
+            active_overlay_states=_safe_active_overlay_states(),
         )
     )
 
@@ -286,6 +329,7 @@ def diagnose_spec(
         tuple(issues),
         active_overlay_ids=_safe_active_overlay_ids(),
         published_runtime_commands=_safe_published_runtime_commands(resolved_cmds),
+        active_overlay_states=_safe_active_overlay_states(),
     )
     if not record:
         return report
@@ -325,6 +369,7 @@ def diagnose_icon_import(
             published_runtime_commands=_safe_published_runtime_commands(
                 _resolve_cmds_module(None)
             ),
+            active_overlay_states=_safe_active_overlay_states(),
         )
     )
 
@@ -358,6 +403,7 @@ def safe_start(
             report.with_runtime(
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
+                active_overlay_states=_safe_active_overlay_states(),
             )
         )
 
@@ -376,6 +422,7 @@ def safe_start(
             report.with_issues((issue,)).with_runtime(
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
+                active_overlay_states=_safe_active_overlay_states(),
             )
         )
 
@@ -384,6 +431,7 @@ def safe_start(
             overlay_started=True,
             overlay_id=preset_id,
             active_overlay_ids=_safe_active_overlay_ids(),
+            active_overlay_states=_safe_active_overlay_states(),
         )
     )
 
@@ -559,6 +607,7 @@ def _recover_with_fallback_preset(
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
                 published_runtime_commands=report.published_runtime_commands,
+                active_overlay_states=_safe_active_overlay_states(),
             )
         )
 
@@ -585,6 +634,7 @@ def _recover_with_fallback_preset(
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
                 published_runtime_commands=report.published_runtime_commands,
+                active_overlay_states=_safe_active_overlay_states(),
             )
         )
 
@@ -607,6 +657,7 @@ def _recover_with_fallback_preset(
             overlay_id=fallback_preset_id,
             active_overlay_ids=_safe_active_overlay_ids(),
             published_runtime_commands=report.published_runtime_commands,
+            active_overlay_states=_safe_active_overlay_states(),
         )
     )
 
@@ -633,6 +684,17 @@ def _issue_detail_fields(issue: DiagnosticIssue) -> tuple[tuple[str, str], ...]:
         ("exception", issue.exception_type),
     )
     return tuple((key, value) for key, value in fields if value)
+
+
+def _format_overlay_state(state: DiagnosticOverlayState) -> str:
+    details = [
+        f"panel={state.panel or 'unknown'}",
+        f"widget_visible={state.widget_visible}",
+        f"widget_valid={state.widget_valid}",
+        f"filter_targets={state.filter_target_count}",
+        f"predicate_timer_active={state.predicate_timer_active}",
+    ]
+    return ", ".join(details)
 
 
 def _runtime_command_diagnostics(
@@ -779,3 +841,32 @@ def _safe_active_overlay_ids() -> tuple[str, ...]:
         return active_overlay_ids()
     except Exception:
         return ()
+
+
+def _safe_active_overlay_states() -> tuple[DiagnosticOverlayState, ...]:
+    try:
+        from .runtime import active_overlay_states
+
+        return tuple(_diagnostic_overlay_state(state) for state in active_overlay_states())
+    except Exception:
+        return ()
+
+
+def _diagnostic_overlay_state(state: object) -> DiagnosticOverlayState:
+    if not isinstance(state, dict):
+        return DiagnosticOverlayState(preset_id="")
+    return DiagnosticOverlayState(
+        preset_id=str(state.get("preset_id") or ""),
+        panel=str(state.get("panel") or ""),
+        widget_visible=bool(state.get("widget_visible")),
+        widget_valid=bool(state.get("widget_valid")),
+        filter_target_count=_safe_int(state.get("filter_target_count")),
+        predicate_timer_active=bool(state.get("predicate_timer_active")),
+    )
+
+
+def _safe_int(value: object) -> int:
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except Exception:
+        return 0
