@@ -19,6 +19,7 @@ from actionrail.diagnostics import (
     safe_start,
     show_last_report,
 )
+from actionrail.hotkeys import publish_action, publish_slot
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -28,6 +29,31 @@ class AvailabilityCmds:
 
     def pluginInfo(self, plugin_name: str, *, query: bool = False, loaded: bool = False) -> bool:  # noqa: N802
         return plugin_name == "loadedPlugin" and query and loaded
+
+
+class RuntimeCmds(AvailabilityCmds):
+    def __init__(self) -> None:
+        self.runtime_commands: dict[str, dict[str, object]] = {}
+        self.name_commands: dict[str, dict[str, object]] = {}
+
+    def runTimeCommand(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("userCommandArray"):
+            return tuple(self.runtime_commands)
+        if kwargs.get("exists"):
+            return name in self.runtime_commands
+        if kwargs.get("query") and kwargs.get("command"):
+            return self.runtime_commands[name].get("command")
+        if kwargs.get("delete"):
+            self.runtime_commands.pop(name, None)
+            return None
+        payload = dict(kwargs)
+        payload.pop("edit", None)
+        self.runtime_commands[name] = payload
+        return name
+
+    def nameCommand(self, name: str, **kwargs: object) -> str:  # noqa: N802
+        self.name_commands[name] = dict(kwargs)
+        return name
 
 
 def test_builtin_preset_ids_are_discovered_from_presets_directory() -> None:
@@ -233,6 +259,39 @@ def test_format_report_includes_structured_issue_details() -> None:
     assert "path: icons/custom/arrow.svg" in text
     assert "field: icon_id" in text
     assert "hint: Use a valid icon id." in text
+
+
+def test_collect_diagnostics_includes_published_runtime_commands() -> None:
+    cmds = RuntimeCmds()
+    publish_action("maya.tool.move", label="Move", cmds_module=cmds)
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=cmds)
+    text = format_report(report)
+
+    assert report.published_runtime_commands == ("ActionRail_action_maya_tool_move",)
+    assert "Published runtime commands: ActionRail_action_maya_tool_move" in text
+
+
+def test_collect_diagnostics_reports_orphaned_runtime_commands() -> None:
+    cmds = RuntimeCmds()
+    stale_action = publish_action("maya.tool.removed", label="Removed", cmds_module=cmds)
+    stale_slot = publish_slot(
+        "transform_stack",
+        "removed_slot",
+        label="Removed",
+        cmds_module=cmds,
+    )
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=cmds)
+
+    orphaned = [
+        issue for issue in report.warnings if issue.code == "orphaned_runtime_command"
+    ]
+    assert [(issue.action_id, issue.slot_id, issue.target) for issue in orphaned] == [
+        ("maya.tool.removed", "", stale_action.runtime_command),
+        ("", "removed_slot", stale_slot.runtime_command),
+    ]
+    assert all(issue.hint for issue in orphaned)
 
 
 def test_diagnostic_issue_preserves_positional_exception_type_order() -> None:

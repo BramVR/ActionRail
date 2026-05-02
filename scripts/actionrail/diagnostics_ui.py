@@ -224,9 +224,11 @@ def _summary_text(report: DiagnosticReport | None) -> str:
     status = "Errors found" if report.has_errors else "OK"
     overlay = "started" if report.overlay_started else "not started"
     active = ", ".join(report.active_overlay_ids) if report.active_overlay_ids else "none"
+    published_count = len(report.published_runtime_commands)
     return (
         f"{status} - {error_count} errors, {warning_count} warnings, "
-        f"{issue_count} total issues. Overlay {overlay}. Active overlays: {active}."
+        f"{issue_count} total issues. Overlay {overlay}. Active overlays: {active}. "
+        f"Published commands: {published_count}."
     )
 
 

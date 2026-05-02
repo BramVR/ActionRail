@@ -106,6 +106,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   `Copy Selected`, `Copy Full Report`, `Clear`, and `Close` actions. Visible
   and copyable selected issue details include structured issue `path`, `field`,
   and `hint` values for import and manifest diagnostics.
+- Runtime-command support diagnostics. First pass done: reports include
+  published ActionRail runtime-command names, the diagnostics window summary
+  shows the published command count, and stale generated action/slot commands
+  are reported as warning issues with sync/unpublish hints.
 - Maya-facing icon import diagnostics. First pass done: the ActionRail Maya
   menu includes `Diagnose SVG Icon Import...`, which lets a user choose a local
   SVG, enter an icon id, runs the non-writing import preflight, records the

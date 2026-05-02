@@ -85,6 +85,7 @@ class DiagnosticReport:
     overlay_started: bool = False
     overlay_id: str = ""
     active_overlay_ids: tuple[str, ...] = ()
+    published_runtime_commands: tuple[str, ...] = ()
 
     @property
     def has_errors(self) -> bool:
@@ -106,6 +107,7 @@ class DiagnosticReport:
             "overlay_started": self.overlay_started,
             "overlay_id": self.overlay_id,
             "active_overlay_ids": self.active_overlay_ids,
+            "published_runtime_commands": self.published_runtime_commands,
             "issues": tuple(issue.as_dict() for issue in self.issues),
         }
 
@@ -160,6 +162,11 @@ def format_report(report: DiagnosticReport | None = None) -> str:
     if diagnostic_report.active_overlay_ids:
         lines.append(
             "Active overlays: " + ", ".join(diagnostic_report.active_overlay_ids)
+        )
+    if diagnostic_report.published_runtime_commands:
+        lines.append(
+            "Published runtime commands: "
+            + ", ".join(diagnostic_report.published_runtime_commands)
         )
 
     if not diagnostic_report.issues:
@@ -224,8 +231,13 @@ def collect_diagnostics(
                 record=False,
             ).issues
         )
+    issues.extend(_runtime_command_diagnostics(action_registry, resolved_cmds))
     return _record_report(
-        DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+        DiagnosticReport(
+            tuple(issues),
+            active_overlay_ids=_safe_active_overlay_ids(),
+            published_runtime_commands=_safe_published_runtime_commands(resolved_cmds),
+        )
     )
 
 
@@ -270,7 +282,11 @@ def diagnose_spec(
                 cmds_module=resolved_cmds,
             )
         )
-    report = DiagnosticReport(tuple(issues), active_overlay_ids=_safe_active_overlay_ids())
+    report = DiagnosticReport(
+        tuple(issues),
+        active_overlay_ids=_safe_active_overlay_ids(),
+        published_runtime_commands=_safe_published_runtime_commands(resolved_cmds),
+    )
     if not record:
         return report
     return _record_report(report)
@@ -303,7 +319,13 @@ def diagnose_icon_import(
         )
     )
     return _record_report(
-        DiagnosticReport(issues, active_overlay_ids=_safe_active_overlay_ids())
+        DiagnosticReport(
+            issues,
+            active_overlay_ids=_safe_active_overlay_ids(),
+            published_runtime_commands=_safe_published_runtime_commands(
+                _resolve_cmds_module(None)
+            ),
+        )
     )
 
 
@@ -536,6 +558,7 @@ def _recover_with_fallback_preset(
                 tuple(issues),
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
+                published_runtime_commands=report.published_runtime_commands,
             )
         )
 
@@ -561,6 +584,7 @@ def _recover_with_fallback_preset(
                 tuple(issues),
                 overlay_started=False,
                 active_overlay_ids=_safe_active_overlay_ids(),
+                published_runtime_commands=report.published_runtime_commands,
             )
         )
 
@@ -582,6 +606,7 @@ def _recover_with_fallback_preset(
             overlay_started=True,
             overlay_id=fallback_preset_id,
             active_overlay_ids=_safe_active_overlay_ids(),
+            published_runtime_commands=report.published_runtime_commands,
         )
     )
 
@@ -608,6 +633,98 @@ def _issue_detail_fields(issue: DiagnosticIssue) -> tuple[tuple[str, str], ...]:
         ("exception", issue.exception_type),
     )
     return tuple((key, value) for key, value in fields if value)
+
+
+def _runtime_command_diagnostics(
+    registry: ActionRegistry,
+    cmds_module: Any | None,
+) -> tuple[DiagnosticIssue, ...]:
+    if cmds_module is None:
+        return ()
+
+    issues: list[DiagnosticIssue] = []
+    action_ids = set(registry.ids())
+    for command in _safe_published_commands(cmds_module):
+        if command.target_kind == "action":
+            if command.target_id not in action_ids:
+                issues.append(
+                    DiagnosticIssue(
+                        code="orphaned_runtime_command",
+                        severity="warning",
+                        message=(
+                            f"Published ActionRail runtime command "
+                            f"'{command.runtime_command}' targets missing action "
+                            f"'{command.target_id}'."
+                        ),
+                        action_id=command.target_id,
+                        target=command.runtime_command,
+                        hint=(
+                            "Run actionrail.hotkeys.sync_default_actions() to remove "
+                            "stale generated action commands."
+                        ),
+                    )
+                )
+            continue
+
+        preset_id, slot_id = _split_runtime_slot_target(command.target_id)
+        if not preset_id or not slot_id:
+            issues.append(_orphaned_slot_command_issue(command, "", ""))
+            continue
+
+        try:
+            spec = load_builtin_preset(preset_id)
+        except Exception:
+            issues.append(_orphaned_slot_command_issue(command, preset_id, slot_id))
+            continue
+
+        if not any(item.id == command.target_id and item.action for item in spec.items):
+            issues.append(_orphaned_slot_command_issue(command, preset_id, slot_id))
+
+    return tuple(issues)
+
+
+def _orphaned_slot_command_issue(
+    command: Any,
+    preset_id: str,
+    slot_id: str,
+) -> DiagnosticIssue:
+    return DiagnosticIssue(
+        code="orphaned_runtime_command",
+        severity="warning",
+        message=(
+            f"Published ActionRail runtime command '{command.runtime_command}' "
+            f"targets missing or unassigned slot '{command.target_id}'."
+        ),
+        preset_id=preset_id,
+        slot_id=slot_id,
+        target=command.runtime_command,
+        hint=(
+            "Run actionrail.hotkeys.sync_preset_slots() for the affected preset "
+            "or unpublish the stale generated command."
+        ),
+    )
+
+
+def _split_runtime_slot_target(target_id: str) -> tuple[str, str]:
+    preset_id, separator, slot_id = target_id.partition(".")
+    if not separator:
+        return "", ""
+    return preset_id, slot_id
+
+
+def _safe_published_runtime_commands(cmds_module: Any | None) -> tuple[str, ...]:
+    return tuple(command.runtime_command for command in _safe_published_commands(cmds_module))
+
+
+def _safe_published_commands(cmds_module: Any | None) -> tuple[Any, ...]:
+    if cmds_module is None:
+        return ()
+    try:
+        from .hotkeys import list_published_commands
+
+        return tuple(list_published_commands(cmds_module=cmds_module))
+    except Exception:
+        return ()
 
 
 def _show_report_window(report: DiagnosticReport | None, message: str) -> Any:
