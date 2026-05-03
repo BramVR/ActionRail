@@ -346,6 +346,7 @@ def diagnose_icon_import(
     imported_at: str | None = None,
     target_path: str = "",
     overwrite: bool = False,
+    generate_fallbacks: bool = True,
 ) -> DiagnosticReport:
     """Collect report-backed diagnostics for a local SVG icon import."""
 
@@ -360,6 +361,7 @@ def diagnose_icon_import(
             imported_at=imported_at,
             target_path=target_path,
             overwrite=overwrite,
+            generate_fallbacks=generate_fallbacks,
         )
     )
     return _record_report(

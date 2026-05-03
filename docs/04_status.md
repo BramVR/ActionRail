@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 ## Done
 
@@ -95,6 +95,12 @@ Last updated: 2026-05-02
   - `actionrail.diagnose_icon_import()` records those import preflight issues
     as the latest copyable diagnostics report, and `DiagnosticIssue` now carries
     optional `path` and `field` details for import/manifest problems.
+  - SVG import preflight now reports generated PNG fallback target conflicts
+    before writing files, including orphaned fallback files and fallback paths
+    already owned by another manifest icon.
+  - Report-backed and Maya-facing icon import diagnostics now honor
+    `generate_fallbacks=False`, so preflight reports match imports that
+    intentionally skip PNG fallback generation.
   - `actionrail.safe_start(..., fallback_preset_id="transform_stack")` can now
     opt in to recovering from a broken requested preset by starting a
     diagnostics-clean fallback preset while preserving the original errors in
@@ -202,26 +208,24 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: hardened visible diagnostics by adding active overlay
-  support state to report data, copyable report text, and the diagnostics
-  window summary.
-- Files changed in this handoff update: `scripts/actionrail/runtime.py`,
-  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/diagnostics_ui.py`,
-  `tests/test_diagnostics.py`, `tests/test_diagnostics_ui.py`,
-  `docs/02_implementation_plan.md`, and `docs/04_status.md`.
-- Behavior verified: report text now lists active overlay details such as panel,
-  widget visibility/validity, event-filter target count, and predicate refresh
-  timer state; the diagnostics summary shows aggregate event-filter and
-  refresh-timer counts.
-- Checks run: focused diagnostics pytest/Ruff, full pytest, full Ruff, targeted
-  diagnostics Maya smoke, and full Maya smoke passed.
-- Current live state: visible diagnostics now expose more support state without
-  changing overlay startup, cleanup, predicate refresh, or hotkey publishing
-  behavior.
+- Task goal completed: threaded the icon import `generate_fallbacks` option
+  through report-backed diagnostics and the Maya-facing preflight wrapper.
+- Files changed in this handoff update: `scripts/actionrail/icons.py`,
+  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/maya_ui.py`,
+  `tests/test_icons.py`, `tests/test_diagnostics.py`,
+  `tests/test_maya_ui.py`, `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
+  and `docs/04_status.md`.
+- Behavior verified: import preflight still reports generated fallback target
+  conflicts for the default SVG import path, while callers that opt out with
+  `generate_fallbacks=False` no longer get fallback-target diagnostics that do
+  not match the requested import behavior.
+- Checks run: focused import/diagnostics/Maya UI pytest and Ruff passed.
+- Current live state: the Maya-facing import diagnostics path can now mirror
+  both fallback-generating and SVG-only import settings.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue visible diagnostics hardening as the icon import
-  path expands; preserve import/recovery smoke coverage when touching recovery
-  or diagnostics-window behavior.
+  path expands; preserve import/recovery smoke coverage when touching import,
+  recovery, or diagnostics-window behavior.
 
 ## Next
 
@@ -240,10 +244,10 @@ Start here:
 ## Latest Verification
 
 - Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
-  -> 24 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\runtime.py scripts\\actionrail\\diagnostics.py scripts\\actionrail\\diagnostics_ui.py tests\\test_diagnostics.py tests\\test_diagnostics_ui.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_icons.py`
+  -> 63 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py scripts\\actionrail\\maya_ui.py tests\\test_diagnostics.py tests\\test_maya_ui.py`
   -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 162 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 166 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
@@ -262,8 +266,9 @@ Start here:
 - Latest import/recovery Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
   -> passed against MayaSessiond on port `7217`; verified import report
-  `path`/`field`/`hint` detail text, visible selected-issue detail text,
-  copied selected issue hint text, saved
+  `path`/`field`/`hint` detail text, generated fallback path conflict
+  diagnostics, visible selected-issue detail text, copied selected issue hint
+  text, saved
   `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png` at
   `720x520` and verified fallback startup to `transform_stack`.
 - Latest diagnostics Maya smoke:

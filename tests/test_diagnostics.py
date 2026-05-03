@@ -421,6 +421,83 @@ def test_diagnose_icon_import_records_copyable_report(
     assert "hint:" in format_report(report)
 
 
+def test_diagnose_icon_import_reports_fallback_target_details(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    fallback_path = icon_dir / "custom" / "arrow@3x.png"
+    fallback_path.parent.mkdir(parents=True)
+    fallback_path.write_bytes(b"\x89PNG\r\n\x1a\n")
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+
+    import actionrail.icons as icons
+
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    report = diagnose_icon_import(
+        str(source_path),
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.svg",
+    )
+    text = format_report(report)
+
+    assert [issue.code for issue in report.errors] == ["icon_fallback_target_exists"]
+    assert report.errors[0].path == "icons/custom/arrow@3x.png"
+    assert report.errors[0].field == "fallbacks.3x"
+    assert "path: icons/custom/arrow@3x.png" in text
+    assert "field: fallbacks.3x" in text
+    assert "hint:" in text
+
+
+def test_diagnose_icon_import_honors_disabled_fallback_generation(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    fallback_path = icon_dir / "custom" / "arrow@3x.png"
+    fallback_path.parent.mkdir(parents=True)
+    fallback_path.write_bytes(b"\x89PNG\r\n\x1a\n")
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+
+    import actionrail.icons as icons
+
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    report = diagnose_icon_import(
+        str(source_path),
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.svg",
+        generate_fallbacks=False,
+    )
+
+    assert report.issues == ()
+
+
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

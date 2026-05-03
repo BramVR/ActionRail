@@ -247,6 +247,140 @@ def test_validate_svg_icon_import_reports_multiple_preflight_issues(
     assert "overwrite=True" in issues[2].hint
 
 
+def test_validate_svg_icon_import_reports_existing_fallback_targets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    fallback_path = icon_dir / "custom" / "arrow@2x.png"
+    fallback_path.parent.mkdir(parents=True)
+    fallback_path.write_bytes(PNG_BYTES)
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    issues = validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.svg",
+    )
+
+    assert [(issue.code, issue.path, issue.field) for issue in issues] == [
+        (
+            "icon_fallback_target_exists",
+            "icons/custom/arrow@2x.png",
+            "fallbacks.2x",
+        )
+    ]
+    assert "overwrite=True" in issues[0].hint
+
+
+def test_validate_svg_icon_import_ignores_fallback_targets_when_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    fallback_path = icon_dir / "custom" / "arrow@2x.png"
+    fallback_path.parent.mkdir(parents=True)
+    fallback_path.write_bytes(PNG_BYTES)
+    manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    issues = validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.svg",
+        generate_fallbacks=False,
+    )
+
+    assert issues == ()
+
+
+def test_validate_svg_icon_import_reports_fallback_manifest_path_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    package_root = tmp_path
+    icon_dir = package_root / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    icon_dir.mkdir()
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "other.arrow",
+                        "source": "Existing",
+                        "license": "MIT",
+                        "url": "local://existing.svg",
+                        "imported_at": "2026-05-01",
+                        "path": "icons/other/arrow.svg",
+                        "fallbacks": {
+                            "1x": "icons/custom/arrow@1x.png",
+                            "2x": "icons/other/arrow@2x.png",
+                            "3x": "icons/other/arrow@3x.png",
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">'
+        '<path d="M4 12h16"/></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    issues = validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.svg",
+        overwrite=True,
+    )
+
+    assert [(issue.code, issue.path, issue.field) for issue in issues] == [
+        (
+            "icon_fallback_path_conflict",
+            "icons/custom/arrow@1x.png",
+            "fallbacks.1x",
+        )
+    ]
+    assert "other.arrow" in issues[0].message
+
+
 def test_import_svg_icon_rolls_back_new_asset_when_fallback_generation_fails(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

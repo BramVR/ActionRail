@@ -179,6 +179,7 @@ def diagnose_icon_import_from_maya(
     url: str = "",
     target_path: str = "",
     overwrite: bool = False,
+    generate_fallbacks: bool = True,
     cmds_module: Any | None = None,
 ) -> diagnostics.DiagnosticReport | None:
     """Run icon import preflight from Maya dialogs and show the report window."""
@@ -207,6 +208,7 @@ def diagnose_icon_import_from_maya(
         url=url or resolved_source_path,
         target_path=target_path,
         overwrite=overwrite,
+        generate_fallbacks=generate_fallbacks,
     )
     diagnostics.show_last_report()
     return report

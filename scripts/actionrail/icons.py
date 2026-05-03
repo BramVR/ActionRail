@@ -137,6 +137,7 @@ def import_svg_icon(
         imported_at=imported_at,
         target_path=target_path,
         overwrite=overwrite,
+        generate_fallbacks=generate_fallbacks,
     )
     if import_issues:
         raise ValueError(import_issues[0].message)
@@ -254,6 +255,7 @@ def validate_svg_icon_import(
     imported_at: str | None = None,
     target_path: str = "",
     overwrite: bool = False,
+    generate_fallbacks: bool = True,
 ) -> tuple[IconManifestIssue, ...]:
     """Return structured diagnostics for a local SVG import without writing files."""
 
@@ -371,6 +373,15 @@ def validate_svg_icon_import(
                     "Use overwrite=True to replace the existing asset, or choose "
                     "another target path."
                 ),
+            )
+        )
+    if generate_fallbacks:
+        issues.extend(
+            _fallback_import_target_issues(
+                icon_id,
+                icon_path,
+                entries,
+                overwrite=overwrite,
             )
         )
 
@@ -732,6 +743,81 @@ def _fallback_path_issue(icon_id: str, raw_path: str) -> IconManifestIssue | Non
             hint=_fallback_regeneration_hint(icon_id),
         )
     return None
+
+
+def _fallback_import_target_issues(
+    icon_id: str,
+    icon_path: Path,
+    entries: list[dict[str, Any]],
+    *,
+    overwrite: bool,
+) -> tuple[IconManifestIssue, ...]:
+    manifest_svg_path = _manifest_path_for_icon_path(icon_path)
+    issues: list[IconManifestIssue] = []
+    for scale in _FALLBACK_SCALES:
+        label = f"{scale}x"
+        fallback_manifest_path = _fallback_manifest_path(manifest_svg_path, scale)
+        conflicting_id = _fallback_manifest_path_owner(
+            fallback_manifest_path,
+            entries,
+            icon_id=icon_id,
+        )
+        if conflicting_id:
+            issues.append(
+                IconManifestIssue(
+                    code="icon_fallback_path_conflict",
+                    message=(
+                        f"Generated PNG fallback path '{fallback_manifest_path}' "
+                        f"is already used by icon '{conflicting_id}'."
+                    ),
+                    icon_id=icon_id,
+                    path=fallback_manifest_path,
+                    field=f"{_FALLBACKS_FIELD}.{label}",
+                    hint=(
+                        "Choose a target path whose generated fallback paths "
+                        "are not used by another icon."
+                    ),
+                )
+            )
+            continue
+
+        fallback_path = _resolve_manifest_path(fallback_manifest_path)
+        if fallback_path.exists() and not overwrite:
+            issues.append(
+                IconManifestIssue(
+                    code="icon_fallback_target_exists",
+                    message=f"Generated PNG fallback target already exists: {fallback_path}",
+                    icon_id=icon_id,
+                    path=fallback_manifest_path,
+                    field=f"{_FALLBACKS_FIELD}.{label}",
+                    hint=(
+                        "Use overwrite=True to replace generated fallback assets, "
+                        "choose another target path, or remove the orphaned PNG."
+                    ),
+                )
+            )
+    return tuple(issues)
+
+
+def _fallback_manifest_path_owner(
+    fallback_manifest_path: str,
+    entries: list[dict[str, Any]],
+    *,
+    icon_id: str,
+) -> str:
+    fallback_path = _resolve_manifest_path(fallback_manifest_path).resolve(strict=False)
+    for entry in entries:
+        if entry.get("id") == icon_id:
+            continue
+        fallbacks = entry.get(_FALLBACKS_FIELD)
+        if not isinstance(fallbacks, dict):
+            continue
+        for raw_path in fallbacks.values():
+            if not isinstance(raw_path, str):
+                continue
+            if _resolve_manifest_path(raw_path).resolve(strict=False) == fallback_path:
+                return str(entry.get("id") or "<unknown>")
+    return ""
 
 
 def _fallback_regeneration_hint(icon_id: str) -> str:

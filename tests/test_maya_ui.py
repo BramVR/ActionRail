@@ -219,6 +219,7 @@ def test_diagnose_icon_import_from_maya_uses_dialog_values(monkeypatch) -> None:
             "url": "C:/icons/Example Icon.svg",
             "target_path": "",
             "overwrite": False,
+            "generate_fallbacks": True,
         },
     )
 
@@ -261,6 +262,55 @@ def test_diagnose_icon_import_from_maya_reports_empty_prompt_text(monkeypatch) -
             "url": "C:/icons/Empty Id.svg",
             "target_path": "",
             "overwrite": False,
+            "generate_fallbacks": True,
+        },
+    )
+
+
+def test_diagnose_icon_import_from_maya_forwards_fallback_generation_option(
+    monkeypatch,
+) -> None:
+    cmds = FakeCmds()
+    calls: dict[str, object] = {}
+
+    def diagnose_icon_import(
+        source_path: str,
+        icon_id: str,
+        **kwargs: object,
+    ) -> object:
+        calls["diagnose"] = (source_path, icon_id, kwargs)
+        return "report"
+
+    def show_last_report() -> str:
+        calls["shown"] = True
+        return "formatted"
+
+    monkeypatch.setattr(
+        maya_ui.diagnostics,
+        "diagnose_icon_import",
+        diagnose_icon_import,
+    )
+    monkeypatch.setattr(maya_ui.diagnostics, "show_last_report", show_last_report)
+
+    result = maya_ui.diagnose_icon_import_from_maya(
+        source_path="C:/icons/No Fallbacks.svg",
+        icon_id="custom.no-fallbacks",
+        generate_fallbacks=False,
+        cmds_module=cmds,
+    )
+
+    assert result == "report"
+    assert calls["shown"] is True
+    assert calls["diagnose"] == (
+        "C:/icons/No Fallbacks.svg",
+        "custom.no-fallbacks",
+        {
+            "source": "No Fallbacks",
+            "license_name": "Unknown",
+            "url": "C:/icons/No Fallbacks.svg",
+            "target_path": "",
+            "overwrite": False,
+            "generate_fallbacks": False,
         },
     )
 

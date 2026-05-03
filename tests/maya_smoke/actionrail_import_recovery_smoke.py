@@ -61,6 +61,9 @@ expected_import_codes = [
     "invalid_icon_import_metadata",
     "icon_path_conflict",
     "icon_target_exists",
+    "icon_fallback_path_conflict",
+    "icon_fallback_path_conflict",
+    "icon_fallback_path_conflict",
 ]
 if import_codes != expected_import_codes:
     raise AssertionError(f"Unexpected import diagnostics: {import_report.as_dict()}")
@@ -95,12 +98,14 @@ ui_issue_text = "\n".join(issue_list.item(index).text() for index in range(issue
 for code in expected_import_codes:
     if code not in ui_issue_text:
         raise AssertionError(f"Import diagnostics UI missing {code}: {ui_issue_text}")
-if "4 errors" not in summary_label.text():
+if "7 errors" not in summary_label.text():
     raise AssertionError(f"Import diagnostics summary missing error count: {summary_label.text()}")
 if (
     "Status: errors" not in report_text.toPlainText()
     or "icon_path_conflict" not in report_text.toPlainText()
+    or "icon_fallback_path_conflict" not in report_text.toPlainText()
     or "path: icons/actionrail/move.svg" not in report_text.toPlainText()
+    or "field: fallbacks.1x" not in report_text.toPlainText()
     or "field: icon_id" not in report_text.toPlainText()
     or "hint:" not in report_text.toPlainText()
 ):
