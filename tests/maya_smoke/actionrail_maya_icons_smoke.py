@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 __args__ = globals().get("__args__", {})
 
@@ -17,6 +18,15 @@ import actionrail  # noqa: E402
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
+
+output_path = Path(
+    __args__.get(
+        "output_path",
+        "C:/PROJECTS/GG/ScreenUI/.gg-maya-sessiond/screenshots/"
+        "actionrail_maya_icons_widget.png",
+    )
+)
+output_path.parent.mkdir(parents=True, exist_ok=True)
 
 cmds.file(new=True, force=True)
 cmds.polyCube(name="actionrailMayaIconSmokeCube")
@@ -76,12 +86,18 @@ for button in buttons:
     slot_id = button.property("actionRailSlotId")
     if not isinstance(slot_id, str) or not slot_id:
         continue
+    icon_pixmap = button.icon().pixmap(18, 18)
     icon_state[slot_id] = {
         "icon_id": button.property("actionRailIcon"),
         "icon_name": button.property("actionRailIconName"),
         "icon_path": button.property("actionRailIconPath"),
         "icon_is_null": bool(button.icon().isNull()),
+        "icon_pixmap_is_null": bool(icon_pixmap.isNull()),
+        "icon_pixmap_size": [icon_pixmap.width(), icon_pixmap.height()],
     }
+
+pixmap = host.widget.grab()
+screenshot_saved = pixmap.save(str(output_path), "PNG")
 
 expected_names = {
     "maya_icon_smoke.move": "move_M.png",
@@ -95,14 +111,20 @@ bad_slots = {
     if icon_state.get(slot_id, {}).get("icon_name") != icon_name
     or icon_state.get(slot_id, {}).get("icon_path") != ""
     or icon_state.get(slot_id, {}).get("icon_is_null") is not False
+    or icon_state.get(slot_id, {}).get("icon_pixmap_is_null") is not False
 }
 if bad_slots:
     raise AssertionError(f"Maya resource icon rendering failed: {bad_slots}")
+if not screenshot_saved or pixmap.width() <= 0 or pixmap.height() <= 0:
+    raise AssertionError(f"Failed to save Maya icon smoke screenshot: {output_path}")
 
 result = {
     "button_count": len(buttons),
     "button_labels": [button.text() for button in buttons],
     "button_icons": icon_state,
+    "screenshot": str(output_path),
+    "screenshot_saved": bool(screenshot_saved),
+    "screenshot_size": [pixmap.width(), pixmap.height()],
     "size": [host.widget.width(), host.widget.height()],
     "visible": bool(host.widget.isVisible()),
 }

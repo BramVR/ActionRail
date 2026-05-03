@@ -599,7 +599,7 @@ def _apply_button_icon(button: object, icon_path: str, icon_name: str = "") -> i
     if not callable(set_icon):
         return 0
 
-    icon_source = icon_path or icon_name
+    icon_source = _qt_icon_source(icon_path, icon_name)
     try:
         current = button.property("actionRailAppliedIconSource")
     except Exception:
@@ -618,6 +618,14 @@ def _apply_button_icon(button: object, icon_path: str, icon_name: str = "") -> i
     except Exception:
         return 0
     return 1
+
+
+def _qt_icon_source(icon_path: str, icon_name: str = "") -> str:
+    if icon_path:
+        return icon_path
+    if not icon_name or icon_name.startswith(":"):
+        return icon_name
+    return f":/{icon_name}"
 
 
 def _set_button_property(button: object, name: str, value: object) -> int:

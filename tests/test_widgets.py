@@ -917,7 +917,10 @@ def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monke
     assert _apply_button_icon(button, "icons/test.svg") == 1
     assert button.icon_size.width == 18
     assert _apply_button_icon(button, "", "move_M.png") == 1
-    assert button.icons[-1].path == "move_M.png"
+    assert button.icons[-1].path == ":/move_M.png"
+    assert button.property("actionRailAppliedIconSource") == ":/move_M.png"
+    assert _apply_button_icon(button, "", ":/rotate_M.png") == 1
+    assert button.icons[-1].path == ":/rotate_M.png"
 
     class FailingIconButton(BuildButton):
         def property(self, _name: str) -> object:
