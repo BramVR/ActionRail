@@ -163,6 +163,13 @@ runtime rendering simple while giving Quick Create a picker-friendly
 `IconDescriptor` model with provider, label, category, keywords, source, and
 resolved Qt resource/file data.
 
+Maya resource icons intentionally keep their raw resource names in descriptor
+metadata and diagnostics, for example `move_M.png`, because that is what
+`cmds.resourceManager(nameFilter=...)` validates. The Qt widget render path
+adds the `:/` resource prefix only when constructing the `QIcon`, for example
+`:/move_M.png`. ActionRail slot buttons paint icons as full-size inner-button
+underlays and then draw the label, key label, or diagnostic badge over them.
+
 Later phases should evolve the public naming toward user-authored rail/slot data:
 
 ```json

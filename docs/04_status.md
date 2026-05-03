@@ -80,6 +80,10 @@ Last updated: 2026-05-03
     `maya.scale`, and `maya.set_key`.
   - `maya_tools` is a bundled horizontal rail proving Maya resource icons can
     render without copying Autodesk assets into the ActionRail icon manifest.
+  - Maya icon descriptors and diagnostics keep raw resource names such as
+    `move_M.png`, while widget rendering uses Qt resource URLs such as
+    `:/move_M.png`. Slot icons now fill the inner button area and labels,
+    hotkey text, and diagnostic badges draw over the icon.
   - Icon diagnostics now validate manifest metadata, duplicate ids, invalid
     local paths, missing files, unknown icon ids, invalid SVG files, and unsafe
     SVG content before widget rendering resolves an icon path.
@@ -246,19 +250,20 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: Maya built-in icon provider groundwork for future
-  macro-style icon selection.
-- Files changed in this handoff update: icon provider/runtime resolution,
-  diagnostics/project-map exposure, `maya_tools` preset, focused tests, Maya
-  smoke coverage, and docs.
-- Behavior verified: provider-aware icon descriptors, Maya logical ids,
-  manifest icon compatibility, missing Maya resource diagnostics, Qt resource
-  icon rendering, coverage-gated full pytest, full Ruff, and full Maya smoke
-  all passed.
+- Task goal completed: Maya-backed slot icons now validate against the active
+  Maya `cmds` resource manager and render visibly as full-slot Qt resource
+  underlays.
+- Files changed in this handoff update: widget icon render/diagnostic path,
+  focused widget tests, Maya icon/missing-resource smoke tests, and these docs.
+- Behavior verified: missing Maya resources produce warning badges instead of
+  blank healthy slots; valid curated Maya resources render through `:/...`
+  `QIcon` sources as non-null 32x32 pixmaps; saved Maya screenshots confirm
+  icons fill the slot with text drawn over them.
 - Current live state: Presets can reference `maya.move`, `maya.rotate`,
   `maya.scale`, and `maya.set_key` without copying Autodesk assets. Future
   Quick Create work can use `actionrail.list_icon_descriptors()` for
-  picker-facing provider/category/keyword metadata.
+  picker-facing provider/category/keyword metadata, while runtime rendering
+  keeps raw Maya resource metadata separate from Qt resource URLs.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: build the Phase 2 step 2.2 dockable Quick Create panel on top
   of the draft/user-preset helpers and the provider-aware icon descriptor list.
@@ -294,6 +299,12 @@ Start here:
   icon rail, hotkey bridge, hotkey label sync, import/recovery diagnostics,
   curated Maya built-in icon rendering, Maya menu/shelf UI, overlay cleanup,
   phase 0, predicates, StackItem ABI, and transform-stack state.
+- Latest focused Maya icon checks:
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_icons_smoke.py`
+  -> passed with non-null `32x32` Maya resource pixmaps and a saved widget
+  screenshot;
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_missing_maya_icon_resource_smoke.py`
+  -> passed with a visible missing-resource warning badge.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.
