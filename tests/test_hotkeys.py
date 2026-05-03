@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 import pytest
 
 from actionrail.hotkeys import (
     HotkeyConflictError,
+    PublishedCommand,
     _clear_published_cache,
     assign_hotkey,
     assign_published_hotkey,
     assign_slot_hotkey,
     clear_visible_key_label,
+    clear_visible_published_key_label,
     format_hotkey,
+    list_published_commands,
     name_command_name,
     publish_action,
     publish_default_actions,
@@ -20,6 +26,7 @@ from actionrail.hotkeys import (
     slot_target_id,
     sync_default_actions,
     sync_preset_slots,
+    sync_visible_key_label,
     unpublish,
 )
 
@@ -79,6 +86,25 @@ class FakeCmds:
         return None
 
 
+class StringCommandArrayCmds(FakeCmds):
+    def runTimeCommand(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("userCommandArray"):
+            return "ActionRail_action_maya_tool_move"
+        return super().runTimeCommand(name, **kwargs)
+
+
+class BrokenQueryCmds(FakeCmds):
+    def runTimeCommand(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("query") and kwargs.get("command"):
+            raise RuntimeError("command deleted")
+        return super().runTimeCommand(name, **kwargs)
+
+
+class FailingNameCommandCmds(FakeCmds):
+    def nameCommand(self, name: str, **kwargs: object) -> str:  # noqa: N802
+        raise RuntimeError("permission denied")
+
+
 def test_runtime_command_names_are_stable_maya_identifiers() -> None:
     assert runtime_command_name("action", "maya.tool.move") == "ActionRail_action_maya_tool_move"
     assert runtime_command_name("slot", "transform_stack.set_key") == (
@@ -128,6 +154,11 @@ def test_publish_action_ignores_existing_name_command() -> None:
 
     assert first.name_command == second.name_command
     assert cmds.runtime_commands[second.runtime_command]["label"] == "Move Updated"
+
+
+def test_publish_action_reraises_unexpected_name_command_errors() -> None:
+    with pytest.raises(RuntimeError, match="permission denied"):
+        publish_action("maya.tool.move", label="Move", cmds_module=FailingNameCommandCmds())
 
 
 def test_publish_default_actions_creates_one_command_per_registered_action() -> None:
@@ -267,6 +298,30 @@ def test_assign_published_hotkey_clears_cached_slot_when_query_misses(
     ]
 
 
+def test_assign_published_hotkey_clears_uncached_existing_slot_label(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    cmds.hotkeys[("S", False, False, False, False, False)] = (
+        "ActionRail_slot_transform_stack_set_key_NameCommand"
+    )
+    move = publish_slot("transform_stack", "move", label="Move", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assign_published_hotkey(move, "S", overwrite=True, cmds_module=cmds)
+
+    assert updates == [
+        ("transform_stack", "set_key", ""),
+        ("transform_stack", "move", "S"),
+    ]
+
+
 def test_clear_visible_key_label_resolves_persisted_builtin_slot_name_command(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -281,6 +336,23 @@ def test_clear_visible_key_label_resolves_persisted_builtin_slot_name_command(
     cleared = clear_visible_key_label("ActionRail_slot_transform_stack_set_key_NameCommand")
 
     assert cleared == 1
+    assert updates == [("transform_stack", "set_key", "")]
+
+
+def test_clear_visible_key_label_uses_published_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cmds = FakeCmds()
+    published = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assert clear_visible_key_label(published.name_command) == 1
     assert updates == [("transform_stack", "set_key", "")]
 
 
@@ -324,6 +396,40 @@ def test_assign_published_hotkey_leaves_action_labels_alone(
 
     assign_published_hotkey(published, "R", cmds_module=cmds)
 
+    assert updates == []
+
+
+def test_visible_key_label_helpers_ignore_non_slot_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+    action = PublishedCommand(
+        "action",
+        "maya.tool.move",
+        "ActionRail_action_maya_tool_move",
+        "ActionRail_action_maya_tool_move_NameCommand",
+    )
+    malformed_slot = PublishedCommand(
+        "slot",
+        "malformed",
+        "ActionRail_slot_malformed",
+        "ActionRail_slot_malformed_NameCommand",
+    )
+
+    action_binding = assign_hotkey(action.name_command, "M", cmds_module=FakeCmds())
+    malformed_binding = assign_hotkey(malformed_slot.name_command, "M", cmds_module=FakeCmds())
+
+    assert sync_visible_key_label(action, action_binding) == 0
+    assert sync_visible_key_label(malformed_slot, malformed_binding) == 0
+    assert clear_visible_published_key_label(action) == 0
+    assert clear_visible_published_key_label(malformed_slot) == 0
+    assert clear_visible_key_label("NotAnActionRailNameCommand") == 0
     assert updates == []
 
 
@@ -435,6 +541,91 @@ def test_unpublish_forgets_cached_slot_label() -> None:
     unpublish(published, cmds_module=cmds)
 
     assert clear_visible_key_label(published.name_command) == 0
+
+
+def test_unpublish_forgets_cached_hotkey_binding() -> None:
+    cmds = FakeCmds()
+    published = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    assign_published_hotkey(published, "S", cmds_module=cmds, sync_visible=False)
+
+    unpublish(published, cmds_module=cmds)
+
+    replacement = publish_slot("transform_stack", "move", label="Move", cmds_module=cmds)
+    assign_published_hotkey(replacement, "S", overwrite=True, cmds_module=cmds, sync_visible=False)
+
+
+def test_list_published_commands_filters_kind_and_preset() -> None:
+    cmds = FakeCmds()
+    action = publish_action("maya.tool.move", label="Move", cmds_module=cmds)
+    set_key = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    rotate = publish_slot("horizontal_tools", "rotate", label="Rotate", cmds_module=cmds)
+    cmds.runtime_commands["OtherTool"] = {"command": "print('external')"}
+
+    assert list_published_commands(cmds_module=cmds) == (action, set_key, rotate)
+    assert list_published_commands(target_kind="action", cmds_module=cmds) == (action,)
+    assert list_published_commands(
+        target_kind="slot",
+        preset_id="transform_stack",
+        cmds_module=cmds,
+    ) == (set_key,)
+
+
+def test_list_published_commands_handles_string_command_arrays() -> None:
+    cmds = StringCommandArrayCmds()
+    published = publish_action("maya.tool.move", label="Move", cmds_module=cmds)
+
+    assert list_published_commands(cmds_module=cmds) == (published,)
+
+
+def test_list_published_commands_skips_unreadable_or_unparseable_commands() -> None:
+    broken = BrokenQueryCmds()
+    broken.runtime_commands["ActionRail_action_maya_tool_move"] = {
+        "command": "import actionrail; actionrail.run_action('maya.tool.move')",
+    }
+
+    empty = FakeCmds()
+    empty.runtime_commands["ActionRail_action_maya_tool_move"] = {"command": ""}
+
+    syntax = FakeCmds()
+    syntax.runtime_commands["ActionRail_action_maya_tool_move"] = {"command": "not python("}
+
+    non_actionrail = FakeCmds()
+    non_actionrail.runtime_commands["ActionRail_action_maya_tool_move"] = {
+        "command": "other.run_action('maya.tool.move')",
+    }
+
+    dynamic_arg = FakeCmds()
+    dynamic_arg.runtime_commands["ActionRail_action_maya_tool_move"] = {
+        "command": "import actionrail; actionrail.run_action(action_id)",
+    }
+
+    wrong_name = FakeCmds()
+    wrong_name.runtime_commands["ActionRail_action_wrong"] = {
+        "command": "import actionrail; actionrail.run_action('maya.tool.move')",
+    }
+
+    for cmds in (broken, empty, syntax, non_actionrail, dynamic_arg, wrong_name):
+        assert list_published_commands(cmds_module=cmds) == ()
+
+
+def test_clear_visible_key_label_ignores_unknown_persisted_names() -> None:
+    assert clear_visible_key_label("ActionRail_action_maya_tool_move_NameCommand") == 0
+    assert clear_visible_key_label("ActionRail_slot_missing_slot_NameCommand") == 0
+
+
+def test_hotkeys_require_cmds_when_not_in_maya() -> None:
+    with pytest.raises(RuntimeError, match="requires maya.cmds"):
+        list_published_commands()
+
+
+def test_hotkeys_import_cmds_when_available(monkeypatch) -> None:
+    cmds = FakeCmds()
+    published = publish_action("maya.tool.move", label="Move", cmds_module=cmds)
+    maya_module = ModuleType("maya")
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)
+
+    assert list_published_commands() == (published,)
 
 
 def test_format_hotkey_includes_modifiers_in_order() -> None:
