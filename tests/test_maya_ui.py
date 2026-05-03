@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 from actionrail import maya_ui
 
 
@@ -89,6 +92,7 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     assert maya_ui.run_diagnostics_from_maya_command() == (
         "import actionrail; actionrail.run_diagnostics_from_maya()"
     )
+    assert maya_ui._toggle_label("horizontal_tools") == "Toggle Horizontal Tools"
 
 
 def test_toggle_default_shows_when_hidden_and_hides_when_visible(
@@ -179,6 +183,21 @@ def test_uninstall_menu_toggle_leaves_nonempty_menu() -> None:
 
     assert maya_ui.MENU_NAME in cmds.menus
     assert "OtherItem" in cmds.menu_items
+
+
+def test_uninstall_menu_toggle_handles_menu_query_failure() -> None:
+    class BrokenMenuCmds(FakeCmds):
+        def menu(self, name: str, **kwargs: object) -> object:
+            if kwargs.get("query") and kwargs.get("itemArray"):
+                raise RuntimeError("menu deleted")
+            return super().menu(name, **kwargs)
+
+    cmds = BrokenMenuCmds()
+    maya_ui.install_menu_toggle(cmds_module=cmds)
+
+    maya_ui.uninstall_menu_toggle(cmds_module=cmds)
+
+    assert cmds.menus == {}
 
 
 def test_diagnose_icon_import_from_maya_uses_dialog_values(monkeypatch) -> None:
@@ -405,3 +424,42 @@ def test_uninstall_shelf_toggle_leaves_nonempty_shelf() -> None:
 
     assert maya_ui.SHELF_NAME in cmds.shelves
     assert "OtherButton" in cmds.shelf_buttons
+
+
+def test_uninstall_shelf_toggle_handles_child_query_failure() -> None:
+    class BrokenShelfCmds(FakeCmds):
+        def shelfLayout(self, name: str, **kwargs: object) -> object:  # noqa: N802
+            if kwargs.get("query") and kwargs.get("childArray"):
+                raise RuntimeError("shelf deleted")
+            return super().shelfLayout(name, **kwargs)
+
+    cmds = BrokenShelfCmds()
+    maya_ui.install_shelf_toggle(parent="ShelfLayout", cmds_module=cmds)
+
+    maya_ui.uninstall_shelf_toggle(cmds_module=cmds)
+
+    assert cmds.shelves == {}
+
+
+def test_default_shelf_parent_requires_mel_when_not_in_maya() -> None:
+    try:
+        sys.modules.pop("maya.mel", None)
+        sys.modules.pop("maya", None)
+        try:
+            maya_ui._default_shelf_parent()
+        except RuntimeError as exc:
+            assert "requires maya.mel" in str(exc)
+        else:
+            raise AssertionError("Expected missing maya.mel to raise")
+    finally:
+        sys.modules.pop("maya.mel", None)
+        sys.modules.pop("maya", None)
+
+
+def test_maya_ui_imports_cmds_when_available(monkeypatch) -> None:
+    cmds = FakeCmds()
+    maya_module = ModuleType("maya")
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)
+
+    assert maya_ui._require_cmds() is cmds
