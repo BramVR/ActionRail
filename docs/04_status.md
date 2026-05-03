@@ -120,6 +120,8 @@ Last updated: 2026-05-03
   - The diagnostics window now includes a `Hide Overlays` support action wired
     to the runtime overlay registry, so users can dismiss active ActionRail
     overlays from the same report surface when diagnosing stuck or broken UI.
+    The support action hides each active overlay under its own exception guard,
+    so one broken close does not prevent later overlays from being dismissed.
   - Diagnostic reports now include published ActionRail runtime-command names,
     the diagnostics window summary shows the published command count, and
     stale generated action/slot runtime commands are reported as warning issues
@@ -213,17 +215,17 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: added a diagnostics-window `Hide Overlays` support action
-  and wired `actionrail.show_last_report()` to dismiss all runtime-owned
-  overlays defensively.
+- Task goal completed: fixed the diagnostics-window `Hide Overlays` cleanup so
+  a close failure for one runtime-owned overlay does not stop remaining active
+  overlays from being hidden.
 - Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
-  `scripts/actionrail/diagnostics_ui.py`, diagnostics tests, and this status
-  file.
-- Behavior verified: coverage-gated full pytest, full Ruff, and full Maya smoke
-  all passed.
+  `tests/test_diagnostics.py`, and this status file.
+- Behavior verified: focused diagnostics tests, coverage-gated full pytest,
+  and full Ruff all passed. Maya smoke was not rerun for this narrow follow-up
+  bugfix; the latest full smoke result below remains the current Maya baseline.
 - Current live state: the diagnostics window still exposes copy/full-report and
   clear actions, and now also provides a visible overlay-dismiss action for
-  stuck UI support.
+  stuck UI support that continues after individual overlay close failures.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue Phase 1 declarative MVP work; preserve the 100%
   coverage gate when changing package code.
@@ -245,14 +247,16 @@ Start here:
 ## Latest Verification
 
 - Focused diagnostics checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
-  -> 47 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py`
+  -> 40 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 284 passed, `TOTAL 2957 0 100%`.
+  -> 285 passed, `TOTAL 2959 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Latest full Maya smoke:
+- Maya smoke for latest bugfix:
+  not rerun; this was a pure-Python diagnostics cleanup wrapper change covered
+  by unit tests. Latest full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,
   hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
