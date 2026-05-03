@@ -14,7 +14,7 @@ import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import date
@@ -41,6 +41,7 @@ _FALLBACK_SIZE_FIELD = "fallback_base_size"
 _PngRenderer = Callable[[Path, Path, int], None]
 
 __all__ = [
+    "IconDescriptor",
     "IconFallbackResult",
     "IconImportResult",
     "IconManifestIssue",
@@ -48,10 +49,43 @@ __all__ = [
     "generate_png_fallbacks",
     "icon_status",
     "import_svg_icon",
+    "list_icon_descriptors",
+    "resolve_icon_name",
     "resolve_icon_path",
     "validate_svg_icon_import",
     "validate_icon_manifest",
 ]
+
+
+@dataclass(frozen=True)
+class IconDescriptor:
+    """Picker-facing metadata for an available icon choice."""
+
+    id: str
+    provider: str
+    label: str
+    category: str = ""
+    keywords: tuple[str, ...] = ()
+    path: Path | None = None
+    qt_name: str = ""
+    source: str = ""
+    license: str = ""
+    url: str = ""
+
+    def as_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "id": self.id,
+            "provider": self.provider,
+            "label": self.label,
+            "category": self.category,
+            "keywords": self.keywords,
+            "path": str(self.path) if self.path is not None else "",
+            "qt_name": self.qt_name,
+            "source": self.source,
+            "license": self.license,
+            "url": self.url,
+        }
+        return {key: value for key, value in payload.items() if value}
 
 
 @dataclass(frozen=True)
@@ -83,11 +117,13 @@ class IconStatus:
 
     icon_id: str
     path: Path | None = None
+    qt_name: str = ""
+    provider: str = ""
     issue: IconManifestIssue | None = None
 
     @property
     def ok(self) -> bool:
-        return self.path is not None and self.issue is None
+        return (self.path is not None or bool(self.qt_name)) and self.issue is None
 
 
 @dataclass(frozen=True)
@@ -111,6 +147,55 @@ class IconFallbackResult:
     fallback_paths: tuple[Path, ...]
     manifest_path: Path
     manifest_entry: dict[str, Any]
+
+
+_MAYA_ICON_DESCRIPTORS: tuple[IconDescriptor, ...] = (
+    IconDescriptor(
+        id="maya.move",
+        provider="maya",
+        label="Move Tool",
+        category="Transform",
+        keywords=("move", "translate", "transform", "tool"),
+        qt_name="move_M.png",
+        source="Autodesk Maya",
+        license="Autodesk Maya",
+        url="maya-resource://move_M.png",
+    ),
+    IconDescriptor(
+        id="maya.rotate",
+        provider="maya",
+        label="Rotate Tool",
+        category="Transform",
+        keywords=("rotate", "transform", "tool"),
+        qt_name="rotate_M.png",
+        source="Autodesk Maya",
+        license="Autodesk Maya",
+        url="maya-resource://rotate_M.png",
+    ),
+    IconDescriptor(
+        id="maya.scale",
+        provider="maya",
+        label="Scale Tool",
+        category="Transform",
+        keywords=("scale", "transform", "tool"),
+        qt_name="scale_M.png",
+        source="Autodesk Maya",
+        license="Autodesk Maya",
+        url="maya-resource://scale_M.png",
+    ),
+    IconDescriptor(
+        id="maya.set_key",
+        provider="maya",
+        label="Set Key",
+        category="Animation",
+        keywords=("key", "keyframe", "animation", "set key"),
+        qt_name="setKeyframe.png",
+        source="Autodesk Maya",
+        license="Autodesk Maya",
+        url="maya-resource://setKeyframe.png",
+    ),
+)
+_MAYA_ICON_BY_ID = {descriptor.id: descriptor for descriptor in _MAYA_ICON_DESCRIPTORS}
 
 
 def import_svg_icon(
@@ -394,11 +479,21 @@ def resolve_icon_path(icon_id: str) -> Path | None:
     return icon_status(icon_id).path
 
 
-def icon_status(icon_id: str) -> IconStatus:
+def resolve_icon_name(icon_id: str) -> str:
+    """Return a Qt resource name for an icon id if it is not file-backed."""
+
+    return icon_status(icon_id).qt_name
+
+
+def icon_status(icon_id: str, *, cmds_module: object | None = None) -> IconStatus:
     """Return the resolved path or first diagnostic issue for one icon id."""
 
     if not icon_id:
         return IconStatus(icon_id)
+
+    maya_status = _maya_icon_status(icon_id, cmds_module=cmds_module)
+    if maya_status is not None:
+        return maya_status
 
     entries = _manifest_icons()
     for issue in _manifest_shape_issues(entries):
@@ -417,7 +512,7 @@ def icon_status(icon_id: str) -> IconStatus:
         asset_issue = _asset_issue(icon_id, raw_path, icon_path)
         if asset_issue is not None:
             return IconStatus(icon_id, issue=asset_issue)
-        return IconStatus(icon_id, path=icon_path)
+        return IconStatus(icon_id, path=icon_path, provider="manifest")
 
     return IconStatus(
         icon_id,
@@ -427,6 +522,19 @@ def icon_status(icon_id: str) -> IconStatus:
             icon_id=icon_id,
             hint="Add the icon to icons/manifest.json or remove the slot icon reference.",
         ),
+    )
+
+
+def list_icon_descriptors(*, provider: str = "") -> tuple[IconDescriptor, ...]:
+    """Return icon metadata for future picker UIs."""
+
+    descriptors = (*_manifest_icon_descriptors(), *_MAYA_ICON_DESCRIPTORS)
+    if not provider:
+        return tuple(sorted(descriptors, key=_icon_descriptor_sort_key))
+    return tuple(
+        descriptor
+        for descriptor in sorted(descriptors, key=_icon_descriptor_sort_key)
+        if descriptor.provider == provider
     )
 
 
@@ -466,6 +574,92 @@ def validate_icon_manifest(*, require_fallbacks: bool = True) -> tuple[IconManif
         issues.extend(_fallback_issues(entry, require_fallbacks=require_fallbacks))
 
     return tuple(issues)
+
+
+def _maya_icon_status(icon_id: str, *, cmds_module: object | None) -> IconStatus | None:
+    descriptor = _MAYA_ICON_BY_ID.get(icon_id)
+    if descriptor is None:
+        return None
+
+    if cmds_module is not None and not _maya_resource_exists(descriptor.qt_name, cmds_module):
+        return IconStatus(
+            icon_id,
+            provider="maya",
+            issue=IconManifestIssue(
+                code="missing_maya_icon_resource",
+                message=(
+                    f"Maya icon resource '{descriptor.qt_name}' for icon "
+                    f"'{icon_id}' is unavailable in this Maya session."
+                ),
+                icon_id=icon_id,
+                path=descriptor.qt_name,
+                hint=(
+                    "Choose another Maya icon id or update the ActionRail Maya "
+                    "resource mapping for this Maya version."
+                ),
+            ),
+        )
+
+    return IconStatus(icon_id, qt_name=descriptor.qt_name, provider="maya")
+
+
+def _maya_resource_exists(resource_name: str, cmds_module: object) -> bool:
+    resource_manager = getattr(cmds_module, "resourceManager", None)
+    if not callable(resource_manager):
+        return False
+
+    try:
+        resources = resource_manager(nameFilter=resource_name) or ()
+    except Exception:
+        return False
+    return resource_name in set(_string_values(resources))
+
+
+def _string_values(values: Iterable[object]) -> tuple[str, ...]:
+    return tuple(value for value in values if isinstance(value, str))
+
+
+def _manifest_icon_descriptors() -> tuple[IconDescriptor, ...]:
+    entries = _manifest_icons()
+    if _manifest_shape_issues(entries):
+        return ()
+
+    descriptors: list[IconDescriptor] = []
+    for entry in entries:
+        if _entry_issue(entry) is not None:
+            continue
+        raw_path = entry["path"]
+        icon_path = _resolve_manifest_path(raw_path)
+        if _asset_issue(entry["id"], raw_path, icon_path) is not None:
+            continue
+        descriptors.append(
+            IconDescriptor(
+                id=entry["id"],
+                provider="manifest",
+                label=_label_from_icon_id(entry["id"]),
+                category=str(entry.get("category") or "Custom"),
+                keywords=_keywords_from_icon_id(entry["id"]),
+                path=icon_path,
+                source=entry["source"],
+                license=entry["license"],
+                url=entry["url"],
+            )
+        )
+    return tuple(descriptors)
+
+
+def _label_from_icon_id(icon_id: str) -> str:
+    label = icon_id.rsplit(".", 1)[-1].replace("_", " ").replace("-", " ")
+    return " ".join(word.capitalize() for word in label.split()) or icon_id
+
+
+def _keywords_from_icon_id(icon_id: str) -> tuple[str, ...]:
+    words = re.split(r"[._-]+", icon_id)
+    return tuple(word for word in words if word)
+
+
+def _icon_descriptor_sort_key(descriptor: IconDescriptor) -> tuple[str, str, str]:
+    return (descriptor.provider, descriptor.category, descriptor.label)
 
 
 def _manifest_icons() -> tuple[dict[str, Any], ...]:

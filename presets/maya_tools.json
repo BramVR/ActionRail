@@ -1,0 +1,20 @@
+{
+  "id": "maya_tools",
+  "layout": {
+    "anchor": "viewport.bottom.center",
+    "orientation": "horizontal",
+    "rows": 1,
+    "columns": 5,
+    "offset": [0, -72],
+    "scale": 1.0,
+    "opacity": 0.92,
+    "locked": false
+  },
+  "items": [
+    {"type": "toolButton", "id": "maya_tools.move", "label": "M", "icon": "maya.move", "action": "maya.tool.move", "key_label": "W", "tooltip": "Move tool", "active_when": "maya.tool == move"},
+    {"type": "toolButton", "id": "maya_tools.rotate", "label": "R", "icon": "maya.rotate", "action": "maya.tool.rotate", "key_label": "E", "tooltip": "Rotate tool", "active_when": "maya.tool == rotate"},
+    {"type": "toolButton", "id": "maya_tools.scale", "label": "S", "icon": "maya.scale", "action": "maya.tool.scale", "key_label": "R", "tooltip": "Scale tool", "active_when": "maya.tool == scale"},
+    {"type": "spacer", "id": "maya_tools.gap", "size": 8},
+    {"type": "button", "id": "maya_tools.set_key", "label": "K", "icon": "maya.set_key", "action": "maya.anim.set_key", "tone": "teal", "key_label": "S", "tooltip": "Set keyframe"}
+  ]
+}

@@ -52,6 +52,7 @@ class FakeButton:
             "actionRailKeyLabel": key_label,
             "actionRailIcon": "",
             "actionRailIconPath": "",
+            "actionRailIconName": "",
             "actionRailTone": tone,
             "actionRailActive": active,
             "actionRailLocked": "false",
@@ -584,6 +585,26 @@ def test_slot_render_state_resolves_manifest_icon_path() -> None:
     assert state.text == "M"
 
 
+def test_slot_render_state_resolves_maya_icon_name() -> None:
+    registry = create_default_registry(object())
+    item = StackItem(
+        type="button",
+        id="icon.maya",
+        label="M",
+        action="maya.tool.move",
+        icon="maya.move",
+    )
+
+    state = _slot_render_state(item, registry)
+
+    assert state.enabled is True
+    assert state.icon == "maya.move"
+    assert state.icon_path == ""
+    assert state.icon_name == "move_M.png"
+    assert state.diagnostic_code == ""
+    assert state.text == "M"
+
+
 def test_slot_render_state_marks_missing_command_predicate_as_warning() -> None:
     registry = create_default_registry(AvailabilityCmds())
     item = StackItem(
@@ -811,6 +832,7 @@ def test_apply_slot_render_state_handles_partial_and_raising_buttons(monkeypatch
             key_label="K",
             icon="",
             icon_path="",
+            icon_name="",
             tone="neutral",
             tooltip="Tip",
             enabled=False,
@@ -839,6 +861,7 @@ def test_apply_slot_render_state_ignores_tooltip_access_errors(monkeypatch) -> N
             key_label="",
             icon="",
             icon_path="",
+            icon_name="",
             tone="neutral",
             tooltip="Tip",
             enabled=True,
@@ -857,6 +880,8 @@ def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monke
     assert _apply_button_icon(button, "") == 0
     assert _apply_button_icon(button, "icons/test.svg") == 1
     assert button.icon_size.width == 18
+    assert _apply_button_icon(button, "", "move_M.png") == 1
+    assert button.icons[-1].path == "move_M.png"
 
     class FailingIconButton(BuildButton):
         def property(self, _name: str) -> object:

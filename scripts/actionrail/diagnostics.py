@@ -351,7 +351,7 @@ def diagnose_spec(
                 )
             )
         if item.icon:
-            icon_issue = _icon_issue(spec.id, item)
+            icon_issue = _icon_issue(spec.id, item, cmds_module=resolved_cmds)
             if icon_issue is not None:
                 issues.append(icon_issue)
 
@@ -563,8 +563,13 @@ def _availability_issue(
     )
 
 
-def _icon_issue(preset_id: str, item: StackItem) -> DiagnosticIssue | None:
-    status = icon_status(item.icon)
+def _icon_issue(
+    preset_id: str,
+    item: StackItem,
+    *,
+    cmds_module: Any | None,
+) -> DiagnosticIssue | None:
+    status = icon_status(item.icon, cmds_module=cmds_module)
     if status.ok or status.issue is None:
         return None
 

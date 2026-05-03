@@ -7,7 +7,7 @@ from typing import Any
 
 from .actions import create_default_registry
 from .authoring import user_preset_dir, user_preset_ids
-from .icons import validate_icon_manifest
+from .icons import list_icon_descriptors, validate_icon_manifest
 from .spec import builtin_preset_ids
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
@@ -128,6 +128,7 @@ def about() -> dict[str, object]:
             "manifest": "icons/manifest.json",
             "issue_count": len(icon_issues),
             "issues": tuple(issue.as_dict() for issue in icon_issues[:10]),
+            "providers": _icon_provider_summary(),
         },
         "docs": _doc_entries(),
         "modules": MODULE_MAP,
@@ -146,6 +147,20 @@ def _loaded_package() -> object:
     import actionrail
 
     return actionrail
+
+
+def _icon_provider_summary() -> tuple[dict[str, object], ...]:
+    descriptors = list_icon_descriptors()
+    providers = sorted({descriptor.provider for descriptor in descriptors})
+    return tuple(
+        {
+            "id": provider,
+            "icon_count": sum(
+                1 for descriptor in descriptors if descriptor.provider == provider
+            ),
+        }
+        for provider in providers
+    )
 
 
 def _doc_entries() -> tuple[dict[str, object], ...]:

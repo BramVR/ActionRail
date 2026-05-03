@@ -12,7 +12,7 @@ from contextlib import suppress
 from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
-from .icons import icon_status, resolve_icon_path
+from .icons import icon_status
 from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
@@ -60,6 +60,7 @@ class SlotRenderState:
     key_label: str
     icon: str
     icon_path: str
+    icon_name: str
     tone: str
     tooltip: str
     enabled: bool
@@ -377,12 +378,14 @@ def _slot_render_state(
 ) -> SlotRenderState:
     item_context = _item_context(item, registry, context)
     diagnostic = _slot_diagnostic(item, registry, item_context)
+    icon = icon_status(item.icon) if item.icon else None
     locked = not bool(item.action)
     return SlotRenderState(
         label=item.label,
         key_label=item.key_label if key_label is None else key_label,
         icon=item.icon,
-        icon_path=str(resolve_icon_path(item.icon) or "") if item.icon else "",
+        icon_path=str(icon.path or "") if icon is not None else "",
+        icon_name=icon.qt_name if icon is not None else "",
         tone=item.tone,
         tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
         enabled=not locked
@@ -505,6 +508,7 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
     refreshed += _set_button_property(button, "actionRailKeyLabel", state.key_label)
     refreshed += _set_button_property(button, "actionRailIcon", state.icon)
     refreshed += _set_button_property(button, "actionRailIconPath", state.icon_path)
+    refreshed += _set_button_property(button, "actionRailIconName", state.icon_name)
     tone_changed = _set_button_property(button, "actionRailTone", state.tone)
     active_changed = _set_button_property(
         button,
@@ -540,7 +544,7 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
         or diagnostic_code_changed
         or diagnostic_severity_changed
     )
-    refreshed += _apply_button_icon(button, state.icon_path)
+    refreshed += _apply_button_icon(button, state.icon_path, state.icon_name)
 
     text = getattr(button, "text", None)
     set_text = getattr(button, "setText", None)
@@ -581,26 +585,27 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
     return refreshed
 
 
-def _apply_button_icon(button: object, icon_path: str) -> int:
+def _apply_button_icon(button: object, icon_path: str, icon_name: str = "") -> int:
     set_icon = getattr(button, "setIcon", None)
     if not callable(set_icon):
         return 0
 
+    icon_source = icon_path or icon_name
     try:
-        current = button.property("actionRailAppliedIconPath")
+        current = button.property("actionRailAppliedIconSource")
     except Exception:
         current = None
 
-    if current == icon_path:
+    if current == icon_source:
         return 0
 
     try:
         qt = load()
-        set_icon(qt.QtGui.QIcon(icon_path) if icon_path else qt.QtGui.QIcon())
+        set_icon(qt.QtGui.QIcon(icon_source) if icon_source else qt.QtGui.QIcon())
         set_icon_size = getattr(button, "setIconSize", None)
-        if callable(set_icon_size) and icon_path:
+        if callable(set_icon_size) and icon_source:
             set_icon_size(qt.QtCore.QSize(18, 18))
-        button.setProperty("actionRailAppliedIconPath", icon_path)
+        button.setProperty("actionRailAppliedIconSource", icon_source)
     except Exception:
         return 0
     return 1

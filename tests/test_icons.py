@@ -11,6 +11,8 @@ from actionrail.icons import (
     generate_png_fallbacks,
     icon_status,
     import_svg_icon,
+    list_icon_descriptors,
+    resolve_icon_name,
     resolve_icon_path,
     validate_icon_manifest,
     validate_svg_icon_import,
@@ -56,8 +58,47 @@ def test_icon_status_resolves_safe_manifest_icon() -> None:
     status = icon_status("actionrail.move")
 
     assert status.ok is True
+    assert status.provider == "manifest"
     assert status.path == REPO_ROOT / "icons" / "actionrail" / "move.svg"
+    assert status.qt_name == ""
     assert resolve_icon_path("actionrail.move") == status.path
+
+
+def test_icon_status_resolves_known_maya_resource_icon() -> None:
+    status = icon_status("maya.move")
+
+    assert status.ok is True
+    assert status.provider == "maya"
+    assert status.path is None
+    assert status.qt_name == "move_M.png"
+    assert resolve_icon_path("maya.move") is None
+    assert resolve_icon_name("maya.move") == "move_M.png"
+
+
+def test_icon_status_reports_missing_maya_resource_when_cmds_can_verify() -> None:
+    class MissingResourceCmds:
+        def resourceManager(self, *, nameFilter: str):  # noqa: N802
+            assert nameFilter == "move_M.png"
+            return []
+
+    status = icon_status("maya.move", cmds_module=MissingResourceCmds())
+
+    assert status.ok is False
+    assert status.provider == "maya"
+    assert status.issue is not None
+    assert status.issue.code == "missing_maya_icon_resource"
+    assert status.issue.path == "move_M.png"
+
+
+def test_icon_status_verifies_existing_maya_resource_with_cmds() -> None:
+    class ResourceCmds:
+        def resourceManager(self, *, nameFilter: str):  # noqa: N802
+            return [nameFilter]
+
+    status = icon_status("maya.set_key", cmds_module=ResourceCmds())
+
+    assert status.ok is True
+    assert status.qt_name == "setKeyframe.png"
 
 
 def test_icon_status_reports_unknown_icon() -> None:
@@ -67,6 +108,47 @@ def test_icon_status_reports_unknown_icon() -> None:
     assert status.path is None
     assert status.issue is not None
     assert status.issue.code == "missing_icon"
+
+
+def test_icon_descriptors_include_manifest_and_maya_picker_metadata() -> None:
+    descriptors = list_icon_descriptors()
+    ids = {descriptor.id for descriptor in descriptors}
+
+    assert {"actionrail.move", "maya.move", "maya.set_key"} <= ids
+    maya_move = next(descriptor for descriptor in descriptors if descriptor.id == "maya.move")
+    actionrail_move = next(
+        descriptor for descriptor in descriptors if descriptor.id == "actionrail.move"
+    )
+    assert maya_move.provider == "maya"
+    assert maya_move.category == "Transform"
+    assert maya_move.qt_name == "move_M.png"
+    assert "translate" in maya_move.keywords
+    assert actionrail_move.provider == "manifest"
+    assert actionrail_move.path == REPO_ROOT / "icons" / "actionrail" / "move.svg"
+    assert [descriptor.id for descriptor in list_icon_descriptors(provider="maya")] == [
+        "maya.set_key",
+        "maya.move",
+        "maya.rotate",
+        "maya.scale",
+    ]
+
+
+def test_icon_descriptor_as_dict_is_compact() -> None:
+    descriptor = icons.IconDescriptor(
+        id="maya.move",
+        provider="maya",
+        label="Move",
+        keywords=("move",),
+        qt_name="move_M.png",
+    )
+
+    assert descriptor.as_dict() == {
+        "id": "maya.move",
+        "provider": "maya",
+        "label": "Move",
+        "keywords": ("move",),
+        "qt_name": "move_M.png",
+    }
 
 
 def test_validate_icon_manifest_reports_duplicate_ids(monkeypatch: pytest.MonkeyPatch) -> None:

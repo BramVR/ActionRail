@@ -24,6 +24,7 @@ from .diagnostics import (
     safe_start,
     show_last_report,
 )
+from .icons import IconDescriptor, list_icon_descriptors
 from .maya_ui import (
     diagnose_icon_import_from_maya,
     install_menu_toggle,
@@ -56,6 +57,7 @@ from .spec import (
 
 __all__ = [
     "DiagnosticIssue",
+    "IconDescriptor",
     "DiagnosticReport",
     "DraftRail",
     "DraftSlot",
@@ -77,6 +79,7 @@ __all__ = [
     "install_menu_toggle",
     "install_shelf_toggle",
     "last_report",
+    "list_icon_descriptors",
     "load_builtin_preset",
     "load_preset",
     "load_user_preset",

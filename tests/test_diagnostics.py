@@ -33,6 +33,12 @@ class AvailabilityCmds:
         return plugin_name == "loadedPlugin" and query and loaded
 
 
+class MissingMayaIconCmds(AvailabilityCmds):
+    def resourceManager(self, *, nameFilter: str):  # noqa: N802
+        assert nameFilter == "move_M.png"
+        return []
+
+
 class RuntimeCmds(AvailabilityCmds):
     def __init__(self) -> None:
         self.runtime_commands: dict[str, dict[str, object]] = {}
@@ -59,7 +65,7 @@ class RuntimeCmds(AvailabilityCmds):
 
 
 def test_builtin_preset_ids_are_discovered_from_presets_directory() -> None:
-    assert builtin_preset_ids() == ("horizontal_tools", "transform_stack")
+    assert builtin_preset_ids() == ("horizontal_tools", "maya_tools", "transform_stack")
 
 
 def test_diagnose_spec_reports_missing_action() -> None:
@@ -219,6 +225,33 @@ def test_diagnose_spec_accepts_manifest_icon() -> None:
 
     assert report.has_errors is False
     assert report.warnings == ()
+
+
+def test_diagnose_spec_reports_missing_maya_icon_resource() -> None:
+    spec = StackSpec(
+        id="with_maya_icon",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="with_maya_icon.move",
+                label="M",
+                action="maya.tool.move",
+                icon="maya.move",
+            ),
+        ),
+    )
+
+    report = diagnose_spec(
+        spec,
+        registry=create_default_registry(MissingMayaIconCmds()),
+        cmds_module=MissingMayaIconCmds(),
+    )
+
+    assert report.has_errors is False
+    assert [(issue.code, issue.target, issue.path) for issue in report.warnings] == [
+        ("missing_maya_icon_resource", "maya.move", "move_M.png")
+    ]
 
 
 def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:

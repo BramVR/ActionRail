@@ -111,6 +111,19 @@ def test_horizontal_rail_loads_from_json() -> None:
     )
 
 
+def test_maya_tools_rail_uses_maya_resource_icon_ids() -> None:
+    spec = load_builtin_preset("maya_tools")
+
+    assert spec.id == "maya_tools"
+    assert spec.layout.orientation == "horizontal"
+    assert [item.icon for item in spec.items if item.icon] == [
+        "maya.move",
+        "maya.rotate",
+        "maya.scale",
+        "maya.set_key",
+    ]
+
+
 def test_legacy_top_level_anchor_remains_supported() -> None:
     spec = parse_stack_spec(
         {
