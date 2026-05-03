@@ -14,7 +14,6 @@ from PySide6 import QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
 
-
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")

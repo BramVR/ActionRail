@@ -90,6 +90,19 @@ def test_icon_status_reports_missing_maya_resource_when_cmds_can_verify() -> Non
     assert status.issue.path == "move_M.png"
 
 
+def test_maya_resource_verification_handles_missing_or_failing_cmds() -> None:
+    class NoResourceManager:
+        pass
+
+    class FailingResourceCmds:
+        def resourceManager(self, *, nameFilter: str):  # noqa: N802
+            raise RuntimeError(nameFilter)
+
+    assert icons._maya_resource_exists("move_M.png", NoResourceManager()) is False
+    assert icons._maya_resource_exists("move_M.png", FailingResourceCmds()) is False
+    assert icons._string_values(("move_M.png", 123, None)) == ("move_M.png",)
+
+
 def test_icon_status_verifies_existing_maya_resource_with_cmds() -> None:
     class ResourceCmds:
         def resourceManager(self, *, nameFilter: str):  # noqa: N802
@@ -149,6 +162,53 @@ def test_icon_descriptor_as_dict_is_compact() -> None:
         "keywords": ("move",),
         "qt_name": "move_M.png",
     }
+
+
+def test_manifest_icon_descriptors_skip_invalid_manifest_entries(monkeypatch) -> None:
+    valid_entry = {
+        "id": "valid.icon",
+        "source": "Local",
+        "license": "Apache-2.0",
+        "url": "local://valid.svg",
+        "imported_at": "2026-05-03",
+        "path": "valid.svg",
+    }
+    missing_field_entry = {"id": "missing.field"}
+    missing_asset_entry = {
+        "id": "missing.asset",
+        "source": "Local",
+        "license": "Apache-2.0",
+        "url": "local://missing.svg",
+        "imported_at": "2026-05-03",
+        "path": "missing.svg",
+    }
+    monkeypatch.setattr(
+        icons,
+        "_manifest_icons",
+        lambda: (valid_entry, missing_field_entry, missing_asset_entry),
+    )
+
+    def fake_asset_issue(icon_id: str, _raw_path: str, _icon_path: Path):
+        if icon_id == "missing.asset":
+            return icons.IconManifestIssue("missing_icon_file", "Missing.")
+        return None
+
+    monkeypatch.setattr(icons, "_asset_issue", fake_asset_issue)
+
+    descriptors = icons._manifest_icon_descriptors()
+
+    assert [descriptor.id for descriptor in descriptors] == ["valid.icon"]
+    assert descriptors[0].label == "Icon"
+
+
+def test_manifest_icon_descriptors_skip_invalid_manifest_shape(monkeypatch) -> None:
+    monkeypatch.setattr(
+        icons,
+        "_manifest_icons",
+        lambda: ({"__manifest_error__": "missing"},),
+    )
+
+    assert icons._manifest_icon_descriptors() == ()
 
 
 def test_validate_icon_manifest_reports_duplicate_ids(monkeypatch: pytest.MonkeyPatch) -> None:
