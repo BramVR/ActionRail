@@ -56,11 +56,9 @@ def _soften(node: str) -> None:
 
 
 def _bevel(node: str, offset: float = 0.035, segments: int = 2) -> None:
-    try:
+    with suppress(Exception):
         cmds.polyBevel(node, offset=offset, segments=segments, autoFit=True)
         _soften(node)
-    except Exception:
-        pass
 
 
 def _create_scene() -> str:
@@ -68,57 +66,38 @@ def _create_scene() -> str:
     cmds.currentUnit(linear="cm")
     cmds.currentTime(12)
 
-    slate = _material("ar_slate_mat", (0.18, 0.2, 0.23))
-    blue = _material("ar_blue_mat", (0.18, 0.48, 0.76))
+    blue = _material("ar_blue_mat", (0.16, 0.42, 0.72))
     teal = _material("ar_teal_mat", (0.08, 0.7, 0.64))
-    pink = _material("ar_pink_mat", (0.72, 0.34, 0.58))
     gold = _material("ar_gold_mat", (0.95, 0.68, 0.24))
-    graphite = _material("ar_graphite_mat", (0.11, 0.12, 0.14))
+    graphite = _material("ar_graphite_mat", (0.12, 0.13, 0.145))
 
-    ground = cmds.polyPlane(name="ActionRailStage", width=9.0, height=6.2)[0]
+    ground = cmds.polyPlane(name="ActionRailStage", width=7.2, height=4.8)[0]
     cmds.move(0, -0.04, 0, ground)
     _assign(ground, graphite)
 
-    hero = cmds.polyCube(name="ActionRailHeroControl", width=1.25, height=1.25, depth=1.25)[0]
-    cmds.move(-0.5, 0.64, 0, hero)
-    cmds.rotate(0, 34, 0, hero)
+    hero = cmds.polyCube(name="ActionRailSelectedControl", width=1.25, height=1.25, depth=1.25)[0]
+    cmds.move(-0.15, 0.64, 0, hero)
+    cmds.rotate(0, 32, 0, hero)
     _assign(hero, blue)
     _bevel(hero)
 
-    knob = cmds.polySphere(name="ActionRailSelectedHandle", radius=0.42)[0]
-    cmds.move(0.75, 1.25, -0.2, knob)
-    _assign(knob, teal)
-    _soften(knob)
+    handle = cmds.polySphere(name="ActionRailHandle", radius=0.28)[0]
+    cmds.move(0.98, 1.08, -0.18, handle)
+    _assign(handle, teal)
+    _soften(handle)
 
-    key = cmds.polyCylinder(
-        name="ActionRailKeyShape",
-        radius=0.42,
-        height=1.15,
-        subdivisionsX=32,
-    )[0]
-    cmds.move(1.9, 0.58, 0.75, key)
-    cmds.rotate(0, 0, 90, key)
-    _assign(key, gold)
-    _soften(key)
+    marker = cmds.polyCylinder(name="ActionRailKeyMarker", radius=0.18, height=0.55)[0]
+    cmds.move(-1.45, 0.24, 0.9, marker)
+    cmds.rotate(0, 0, 90, marker)
+    _assign(marker, gold)
+    _soften(marker)
 
-    torus = cmds.polyTorus(name="ActionRailMotionRing", radius=0.82, sectionRadius=0.035)[0]
-    cmds.move(-1.95, 0.9, 0.8, torus)
-    cmds.rotate(90, 0, 20, torus)
-    _assign(torus, pink)
-    _soften(torus)
-
-    for index, x_pos in enumerate((-2.8, -2.15, -1.5, -0.85)):
-        dot = cmds.polySphere(name=f"ActionRailTimelineDot{index + 1}", radius=0.09)[0]
-        cmds.move(x_pos, 0.08, -1.55 + (index * 0.12), dot)
-        _assign(dot, gold if index == 3 else slate)
-        _soften(dot)
-
-    rotate_control = cmds.circle(name="ActionRailRotateControl", normal=(0, 1, 0), radius=1.72)[0]
-    cmds.move(-0.5, 0.66, 0, rotate_control)
+    rotate_control = cmds.circle(name="ActionRailRotateGuide", normal=(0, 1, 0), radius=1.55)[0]
+    cmds.move(-0.15, 0.66, 0, rotate_control)
     _set_override_color(rotate_control, 13)
 
-    scale_control = cmds.circle(name="ActionRailScaleControl", normal=(1, 0, 0), radius=1.45)[0]
-    cmds.move(-0.5, 0.66, 0, scale_control)
+    scale_control = cmds.circle(name="ActionRailScaleGuide", normal=(1, 0, 0), radius=1.3)[0]
+    cmds.move(-0.15, 0.66, 0, scale_control)
     _set_override_color(scale_control, 18)
 
     cmds.directionalLight(name="ActionRailKeyLight", intensity=0.95)
@@ -145,13 +124,13 @@ def _active_model_panel() -> str:
 
 def _look_at_camera(panel: str) -> str:
     camera, shape = cmds.camera(name="ActionRailReadmeCamera")
-    cmds.setAttr(f"{shape}.focalLength", 48)
+    cmds.setAttr(f"{shape}.focalLength", 55)
     cmds.setAttr(f"{shape}.nearClipPlane", 0.1)
     cmds.setAttr(f"{shape}.farClipPlane", 1000)
-    cmds.xform(camera, translation=(5.2, 3.35, 5.3))
+    cmds.xform(camera, translation=(4.35, 2.7, 4.55))
 
     target = cmds.spaceLocator(name="ActionRailReadmeCameraTarget")[0]
-    cmds.xform(target, translation=(-0.25, 0.78, 0.05))
+    cmds.xform(target, translation=(-0.1, 0.7, 0.05))
     constraint = cmds.aimConstraint(
         target,
         camera,
@@ -175,81 +154,133 @@ def _set_viewport_style(panel: str) -> None:
         "selectionHiliteDisplay": True,
         "textures": False,
         "useDefaultMaterial": False,
-        "wireframeOnShaded": True,
+        "wireframeOnShaded": False,
     }
     for flag, value in flags.items():
         with suppress(Exception):
             cmds.modelEditor(editor, edit=True, **{flag: value})
 
     for name, color in {
-        "background": (0.095, 0.105, 0.12),
-        "backgroundTop": (0.16, 0.18, 0.2),
-        "backgroundBottom": (0.075, 0.08, 0.09),
+        "background": (0.075, 0.082, 0.095),
+        "backgroundTop": (0.105, 0.115, 0.13),
+        "backgroundBottom": (0.055, 0.06, 0.07),
     }.items():
         with suppress(Exception):
             cmds.displayRGBColor(name, color[0], color[1], color[2])
 
 
-def _quick_spec() -> actionrail.StackSpec:
+ACTION_SLOTS = (
+    ("move", "M", "maya.tool.move", "actionrail.move"),
+    ("rotate", "R", "maya.tool.rotate", "actionrail.rotate"),
+    ("scale", "S", "maya.tool.scale", "actionrail.scale"),
+    ("key", "K", "maya.anim.set_key", "actionrail.key"),
+)
+
+
+def _action_item(
+    spec_id: str,
+    index: int,
+    *,
+    key_label: str = "",
+    icon_only: bool = False,
+    active: bool = False,
+) -> actionrail.StackItem:
+    action_name, label, action_id, icon_id = ACTION_SLOTS[index % len(ACTION_SLOTS)]
+    active_when = ""
+    if active and action_id == "maya.tool.rotate":
+        active_when = "maya.tool == rotate"
+    elif active and action_id == "maya.tool.move":
+        active_when = "maya.tool == move"
+    elif active and action_id == "maya.tool.scale":
+        active_when = "maya.tool == scale"
+
+    return actionrail.StackItem(
+        type="toolButton",
+        id=f"{spec_id}.{action_name}_{index + 1}",
+        label="" if icon_only else label,
+        action=action_id,
+        icon=icon_id,
+        key_label=key_label,
+        tooltip=f"{label} action",
+        active_when=active_when,
+    )
+
+
+def _number_bar_spec() -> actionrail.StackSpec:
+    spec_id = "readme_number_actionbar"
+    key_labels = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=")
     return actionrail.StackSpec(
-        id="readme_context_rail",
+        id=spec_id,
+        layout=actionrail.RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            offset=(0, -22),
+            opacity=0.95,
+        ),
+        items=tuple(
+            _action_item(spec_id, index, key_label=key, active=index == 1)
+            for index, key in enumerate(key_labels)
+        ),
+    )
+
+
+def _icon_strip_spec() -> actionrail.StackSpec:
+    spec_id = "readme_icon_strip"
+    return actionrail.StackSpec(
+        id=spec_id,
+        layout=actionrail.RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            offset=(0, -76),
+            opacity=0.92,
+        ),
+        items=tuple(_action_item(spec_id, index, icon_only=True) for index in range(8)),
+    )
+
+
+def _left_icon_column_spec() -> actionrail.StackSpec:
+    spec_id = "readme_left_icon_column"
+    return actionrail.StackSpec(
+        id=spec_id,
+        layout=actionrail.RailLayout(
+            anchor="viewport.left.center",
+            orientation="vertical",
+            offset=(6, -62),
+            opacity=0.94,
+        ),
+        items=tuple(_action_item(spec_id, index, icon_only=True) for index in range(9)),
+    )
+
+
+def _right_number_column_spec() -> actionrail.StackSpec:
+    spec_id = "readme_right_number_column"
+    return actionrail.StackSpec(
+        id=spec_id,
         layout=actionrail.RailLayout(
             anchor="viewport.right.center",
             orientation="vertical",
-            offset=(-8, -18),
+            offset=(-8, -42),
             opacity=0.94,
         ),
-        items=(
-            actionrail.StackItem(
-                type="toolButton",
-                id="readme_context_rail.move",
-                label="W",
-                action="maya.tool.move",
-                icon="actionrail.move",
-                tooltip="Move tool",
-                key_label="W",
-                active_when="maya.tool == move",
-            ),
-            actionrail.StackItem(
-                type="toolButton",
-                id="readme_context_rail.rotate",
-                label="E",
-                action="maya.tool.rotate",
-                icon="actionrail.rotate",
-                tooltip="Rotate tool",
-                key_label="E",
-                active_when="maya.tool == rotate",
-            ),
-            actionrail.StackItem(
-                type="toolButton",
-                id="readme_context_rail.scale",
-                label="R",
-                action="maya.tool.scale",
-                icon="actionrail.scale",
-                tooltip="Scale tool",
-                key_label="R",
-                active_when="maya.tool == scale",
-            ),
-            actionrail.StackItem(type="spacer", id="readme_context_rail.gap", size=10),
-            actionrail.StackItem(
-                type="button",
-                id="readme_context_rail.key",
-                label="K",
-                action="maya.anim.set_key",
-                icon="actionrail.key",
-                tone="teal",
-                tooltip="Set keyframe",
-                key_label="S",
-            ),
+        items=tuple(
+            _action_item(
+                spec_id,
+                index,
+                key_label=str(index + 1),
+                icon_only=True,
+                active=index == 1,
+            )
+            for index in range(7)
         ),
     )
 
 
 def _show_bars(panel: str) -> tuple[object, ...]:
     hosts = (
-        actionrail.show_example("transform_stack", panel=panel),
-        actionrail.show_example("horizontal_tools", panel=panel),
-        actionrail.show_spec(_quick_spec(), panel=panel),
+        actionrail.show_spec(_number_bar_spec(), panel=panel),
+        actionrail.show_spec(_icon_strip_spec(), panel=panel),
+        actionrail.show_spec(_left_icon_column_spec(), panel=panel),
+        actionrail.show_spec(_right_number_column_spec(), panel=panel),
     )
     _process_events(350)
     for host in hosts:
@@ -400,14 +431,7 @@ def main() -> None:
                 ASSET_DIR / "actionrail_readme_maya_scene.png",
                 viewport_size=(1600, 900),
                 blast_name="actionrail_readme_maya_scene_base.png",
-            ),
-            _save_composite(
-                hosts,
-                ASSET_DIR / "actionrail_readme_maya_detail.png",
-                viewport_size=(1200, 760),
-                blast_name="actionrail_readme_maya_detail_base.png",
-                rail_margin=16,
-            ),
+            )
         ]
     finally:
         actionrail.hide_all()

@@ -17,8 +17,7 @@ part of Maya instead of a large docked tool window.
 ## In Maya
 
 <p align="center">
-  <img src="docs/assets/actionrail_readme_maya_scene.png" alt="ActionRail bars shown over a Maya viewport scene" width="49%">
-  <img src="docs/assets/actionrail_readme_maya_detail.png" alt="ActionRail transform and tool rails in a Maya scene" width="49%">
+  <img src="docs/assets/actionrail_readme_maya_scene.png" alt="ActionRail action bars shown over a minimal Maya viewport scene">
 </p>
 
 ## Why
