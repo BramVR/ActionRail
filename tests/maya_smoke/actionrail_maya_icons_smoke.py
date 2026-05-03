@@ -86,12 +86,14 @@ for button in buttons:
     slot_id = button.property("actionRailSlotId")
     if not isinstance(slot_id, str) or not slot_id:
         continue
-    icon_pixmap = button.icon().pixmap(18, 18)
+    render_size = button.iconSize()
+    icon_pixmap = button.icon().pixmap(render_size)
     icon_state[slot_id] = {
         "icon_id": button.property("actionRailIcon"),
         "icon_name": button.property("actionRailIconName"),
         "icon_path": button.property("actionRailIconPath"),
         "icon_is_null": bool(button.icon().isNull()),
+        "icon_render_size": [render_size.width(), render_size.height()],
         "icon_pixmap_is_null": bool(icon_pixmap.isNull()),
         "icon_pixmap_size": [icon_pixmap.width(), icon_pixmap.height()],
     }
@@ -111,6 +113,7 @@ bad_slots = {
     if icon_state.get(slot_id, {}).get("icon_name") != icon_name
     or icon_state.get(slot_id, {}).get("icon_path") != ""
     or icon_state.get(slot_id, {}).get("icon_is_null") is not False
+    or icon_state.get(slot_id, {}).get("icon_render_size") != [32, 32]
     or icon_state.get(slot_id, {}).get("icon_pixmap_is_null") is not False
 }
 if bad_slots:

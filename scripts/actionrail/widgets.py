@@ -265,20 +265,67 @@ def _build_button(
 ) -> object:
     qt = load()
     state = _slot_render_state(item, registry, context)
-    button = qt.QtWidgets.QPushButton(state.text)
+    button = _button_class(qt)(state.text)
     button.setProperty("actionRailRole", "button")
     button.setProperty("actionRailSlotId", item.id)
-    _apply_slot_render_state(button, state)
+    button.setProperty("actionRailButtonIconSize", theme.button_size)
+    button.setProperty("actionRailButtonIconInset", theme.button_border_width)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(
         qt.QtCore.Qt.PointingHandCursor if item.action else qt.QtCore.Qt.ArrowCursor
     )
+    _apply_slot_render_state(button, state)
     if item.action:
         button.clicked.connect(
             lambda _checked=False, action_id=item.action: registry.run(action_id)
         )
     return button
+
+
+def _button_class(qt: object) -> type:
+    base = qt.QtWidgets.QPushButton
+    if (
+        not hasattr(qt.QtWidgets, "QStyleOptionButton")
+        or not hasattr(qt.QtWidgets, "QStyle")
+        or not hasattr(qt.QtGui, "QPainter")
+    ):
+        return base
+
+    class ActionRailButton(base):  # type: ignore[misc, valid-type]
+        def paintEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            painter = qt.QtGui.QPainter(self)
+            try:
+                option = qt.QtWidgets.QStyleOptionButton()
+                self.initStyleOption(option)
+                option.text = ""
+                option.icon = qt.QtGui.QIcon()
+                self.style().drawControl(qt.QtWidgets.QStyle.CE_PushButton, option, painter, self)
+
+                icon = self.icon()
+                if not icon.isNull():
+                    target = self.rect()
+                    inset = _button_icon_inset(self)
+                    if inset:
+                        target = target.adjusted(inset, inset, -inset, -inset)
+                    pixmap = icon.pixmap(target.size())
+                    if not pixmap.isNull():
+                        painter.drawPixmap(target, pixmap)
+
+                text = self.text()
+                if text:
+                    painter.setFont(self.font())
+                    painter.setPen(self.palette().buttonText().color())
+                    painter.drawText(
+                        self.rect(),
+                        qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap,
+                        text,
+                    )
+            finally:
+                painter.end()
+                _ = event
+
+    return ActionRailButton
 
 
 def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
@@ -613,7 +660,8 @@ def _apply_button_icon(button: object, icon_path: str, icon_name: str = "") -> i
         set_icon(qt.QtGui.QIcon(icon_source) if icon_source else qt.QtGui.QIcon())
         set_icon_size = getattr(button, "setIconSize", None)
         if callable(set_icon_size) and icon_source:
-            set_icon_size(qt.QtCore.QSize(18, 18))
+            icon_size = _button_icon_size(button)
+            set_icon_size(qt.QtCore.QSize(icon_size, icon_size))
         button.setProperty("actionRailAppliedIconSource", icon_source)
     except Exception:
         return 0
@@ -626,6 +674,26 @@ def _qt_icon_source(icon_path: str, icon_name: str = "") -> str:
     if not icon_name or icon_name.startswith(":"):
         return icon_name
     return f":/{icon_name}"
+
+
+def _button_icon_size(button: object) -> int:
+    try:
+        raw_size = button.property("actionRailButtonIconSize")
+    except Exception:
+        raw_size = None
+    if isinstance(raw_size, int) and raw_size > 0:
+        return raw_size
+    return 18
+
+
+def _button_icon_inset(button: object) -> int:
+    try:
+        raw_inset = button.property("actionRailButtonIconInset")
+    except Exception:
+        raw_inset = None
+    if isinstance(raw_inset, int) and raw_inset > 0:
+        return raw_inset
+    return 0
 
 
 def _set_button_property(button: object, name: str, value: object) -> int:

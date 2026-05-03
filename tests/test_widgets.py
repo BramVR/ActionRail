@@ -911,11 +911,13 @@ def test_apply_slot_render_state_ignores_tooltip_access_errors(monkeypatch) -> N
 def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     button = BuildButton("Icon")
+    button.setProperty("actionRailButtonIconSize", 32)
 
     assert _apply_button_icon(button, "") == 1
     assert _apply_button_icon(button, "") == 0
     assert _apply_button_icon(button, "icons/test.svg") == 1
-    assert button.icon_size.width == 18
+    assert button.icon_size.width == 32
+    assert button.icon_size.height == 32
     assert _apply_button_icon(button, "", "move_M.png") == 1
     assert button.icons[-1].path == ":/move_M.png"
     assert button.property("actionRailAppliedIconSource") == ":/move_M.png"
