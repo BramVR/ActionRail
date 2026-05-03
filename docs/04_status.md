@@ -219,7 +219,8 @@ Start here:
   conflicts for the default SVG import path, while callers that opt out with
   `generate_fallbacks=False` no longer get fallback-target diagnostics that do
   not match the requested import behavior.
-- Checks run: focused import/diagnostics/Maya UI pytest and Ruff passed.
+- Checks run: focused import/diagnostics/Maya UI pytest and Ruff, full pytest,
+  full Ruff, and full Maya smoke passed.
 - Current live state: the Maya-facing import diagnostics path can now mirror
   both fallback-generating and SVG-only import settings.
 - Blockers/risks: no implementation blocker known.
@@ -247,7 +248,7 @@ Start here:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_icons.py`
   -> 63 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py scripts\\actionrail\\maya_ui.py tests\\test_diagnostics.py tests\\test_maya_ui.py`
   -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 166 passed
+- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 168 passed
   and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest fallback check:
   `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
