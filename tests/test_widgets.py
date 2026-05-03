@@ -3,14 +3,22 @@ from __future__ import annotations
 import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
 from actionrail.predicates import PredicateContext
+from actionrail.qt import QtBinding
 from actionrail.spec import RailLayout, StackItem, StackSpec
 from actionrail.state import MayaStateSnapshot
 from actionrail.widgets import (
+    SlotRenderState,
+    _apply_button_icon,
+    _apply_slot_render_state,
     _button_text,
+    _diagnostic_tooltip,
+    _icon_diagnostic,
     _is_item_active,
     _is_item_visible,
+    _scaled_theme,
     _slot_render_state,
     refresh_predicate_state,
+    set_slot_key_label,
 )
 
 
@@ -101,6 +109,148 @@ class FakeQt:
         QPushButton = FakeButton
 
 
+class FakeSignal:
+    def __init__(self) -> None:
+        self.callbacks = []
+
+    def connect(self, callback) -> None:
+        self.callbacks.append(callback)
+
+    def emit(self) -> None:
+        for callback in list(self.callbacks):
+            callback(False)
+
+
+class FakeWidgetBase:
+    def __init__(self) -> None:
+        self.children = []
+        self.properties = {}
+
+    def setObjectName(self, name: str) -> None:  # noqa: N802
+        self.object_name = name
+
+    def setAttribute(self, *args) -> None:  # noqa: N802
+        self.attribute = args
+
+    def setFocusPolicy(self, policy) -> None:  # noqa: N802
+        self.focus_policy = policy
+
+    def setStyleSheet(self, style: str) -> None:  # noqa: N802
+        self.style_sheet = style
+
+    def setWindowOpacity(self, opacity: float) -> None:  # noqa: N802
+        self.opacity = opacity
+
+    def adjustSize(self) -> None:  # noqa: N802
+        self.adjusted = True
+
+    def sizeHint(self):  # noqa: N802
+        return (100, 200)
+
+    def setFixedSize(self, *args) -> None:  # noqa: N802
+        self.fixed_size = args
+
+    def findChildren(self, widget_type):  # noqa: N802
+        found = []
+
+        def walk(widget) -> None:
+            if isinstance(widget, widget_type):
+                found.append(widget)
+            for child in getattr(widget, "children", []):
+                walk(child)
+
+        walk(self)
+        return found
+
+    def setProperty(self, name: str, value) -> None:  # noqa: N802
+        self.properties[name] = value
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802
+        event.ignore()
+
+    mouseMoveEvent = mousePressEvent
+    mouseReleaseEvent = mousePressEvent
+    wheelEvent = mousePressEvent
+
+
+class FakeFrame(FakeWidgetBase):
+    pass
+
+
+class BuildButton(FakeButton):
+    def __init__(self, text: str) -> None:
+        super().__init__("", label=text)
+        self.clicked = FakeSignal()
+        self.icons = []
+
+    def setFixedSize(self, *args) -> None:  # noqa: N802
+        self.fixed_size = args
+
+    def setFocusPolicy(self, policy) -> None:  # noqa: N802
+        self.focus_policy = policy
+
+    def setCursor(self, cursor) -> None:  # noqa: N802
+        self.cursor = cursor
+
+    def setIcon(self, icon) -> None:  # noqa: N802
+        self.icons.append(icon)
+
+    def setIconSize(self, size) -> None:  # noqa: N802
+        self.icon_size = size
+
+
+class FakeLayout:
+    def __init__(self, parent) -> None:
+        self.parent = parent
+        self.items = []
+
+    def setContentsMargins(self, *margins) -> None:  # noqa: N802
+        self.margins = margins
+
+    def setSpacing(self, spacing: int) -> None:  # noqa: N802
+        self.spacing = spacing
+
+    def addWidget(self, widget, *args) -> None:  # noqa: N802
+        self.items.append(("widget", widget, args))
+        self.parent.children.append(widget)
+
+    def addSpacing(self, spacing: int) -> None:  # noqa: N802
+        self.items.append(("spacing", spacing))
+
+
+class BuildQtCore:
+    class Qt:
+        WA_TranslucentBackground = 1
+        WA_NoSystemBackground = 2
+        NoFocus = 3
+        AlignLeft = 4
+        PointingHandCursor = 5
+        ArrowCursor = 6
+
+    class QSize:
+        def __init__(self, width: int, height: int) -> None:
+            self.width = width
+            self.height = height
+
+
+class BuildQtGui:
+    class QIcon:
+        def __init__(self, path: str = "") -> None:
+            self.path = path
+
+
+class BuildQtWidgets:
+    QWidget = FakeWidgetBase
+    QFrame = FakeFrame
+    QPushButton = BuildButton
+    QVBoxLayout = FakeLayout
+    QHBoxLayout = FakeLayout
+
+
+def build_qt_binding() -> QtBinding:
+    return QtBinding("Fake", BuildQtCore, BuildQtGui, BuildQtWidgets, lambda pointer, base: base)
+
+
 class AvailabilityCmds:
     def commandInfo(self, command_name: str, *, exists: bool = False) -> bool:  # noqa: N802
         return command_name == "availableCommand" and exists
@@ -109,10 +259,135 @@ class AvailabilityCmds:
         return plugin_name == "loadedPlugin" and query and loaded
 
 
+class BuildCmds(AvailabilityCmds):
+    def __init__(self) -> None:
+        self.calls = []
+
+    def setToolTo(self, context: str) -> None:  # noqa: N802
+        self.calls.append(("setToolTo", context))
+
+    def setKeyframe(self) -> None:  # noqa: N802
+        self.calls.append(("setKeyframe", ""))
+
+
 def test_literal_false_visibility_skips_item_before_frame_building() -> None:
     assert _is_item_visible(StackItem(type="button", visible_when="")) is True
     assert _is_item_visible(StackItem(type="button", visible_when="true")) is True
     assert _is_item_visible(StackItem(type="button", visible_when="false")) is False
+
+
+def test_action_rail_root_ignores_mouse_and_wheel_events(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    root = widgets.ActionRailRoot.create()
+    ignored = []
+
+    class Event:
+        def ignore(self) -> None:
+            ignored.append(True)
+
+    event = Event()
+    root.mousePressEvent(event)
+    root.mouseMoveEvent(event)
+    root.mouseReleaseEvent(event)
+    root.wheelEvent(event)
+
+    assert ignored == [True, True, True, True]
+
+
+def test_build_transform_stack_constructs_scaled_horizontal_widget(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    cmds = BuildCmds()
+    registry = create_default_registry(cmds)
+    spec = StackSpec(
+        id="built",
+        layout=RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            scale=1.5,
+            opacity=0.5,
+        ),
+        items=(
+            StackItem(
+                type="toolButton",
+                id="built.move",
+                label="M",
+                action="maya.tool.move",
+                active_when="maya.tool == move",
+            ),
+            StackItem(type="spacer", id="built.gap", size=3),
+            StackItem(type="button", id="built.empty", label="E"),
+            StackItem(
+                type="button",
+                id="built.hidden",
+                label="H",
+                visible_when="false",
+            ),
+        ),
+    )
+
+    root = widgets.build_transform_stack(
+        spec,
+        registry,
+        state_snapshot=MayaStateSnapshot(current_tool="moveSuperContext", selection_count=0),
+        cmds_module=cmds,
+    )
+    buttons = root.findChildren(BuildButton)
+
+    assert root.opacity == 0.5
+    assert root.fixed_size == ((100, 200),)
+    assert [button.property("actionRailSlotId") for button in buttons] == [
+        "built.move",
+        "built.empty",
+    ]
+    assert buttons[0].property("actionRailActive") == "true"
+    assert buttons[1].property("actionRailLocked") == "true"
+
+    buttons[0].clicked.emit()
+    assert cmds.calls == [("setToolTo", "moveSuperContext")]
+
+
+def test_build_transform_stack_flushes_pending_vertical_tool_cluster(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    spec = StackSpec(
+        id="vertical",
+        layout=RailLayout(anchor="viewport.left.center", orientation="vertical"),
+        items=(
+            StackItem(type="toolButton", id="vertical.move", label="M", action="maya.tool.move"),
+        ),
+    )
+
+    root = widgets.build_transform_stack(spec, create_default_registry(BuildCmds()))
+
+    assert root.children[0].fixed_size[0] == widgets.DEFAULT_THEME.rail_width
+
+
+def test_set_slot_key_label_updates_matching_buttons(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    button = BuildButton("M")
+    button.setProperty("actionRailSlotId", "slot.move")
+    button.setProperty("actionRailLabel", "")
+    button.setProperty("actionRailDiagnosticBadge", "?")
+    button.setText("Move")
+    root = FakeRoot([button])
+
+    assert set_slot_key_label(root, "slot.move", "Ctrl+M") == 1
+    assert button.text() == "Move\nCtrl+M?"
+    assert set_slot_key_label(root, "slot.other", "X") == 0
+
+
+def test_refresh_predicate_state_skips_missing_button_after_visibility_match(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    spec = StackSpec(
+        id="refresh",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id="refresh.one", label="One"),),
+    )
+    monkeypatch.setattr(widgets, "_slot_buttons", lambda _root: {"refresh.one": None})
+
+    result = refresh_predicate_state(FakeRoot([]), spec, create_default_registry(BuildCmds()))
+
+    assert result.needs_rebuild is False
+    assert result.refreshed == 0
 
 
 def test_state_visibility_skips_item_before_frame_building() -> None:
@@ -194,6 +469,7 @@ def test_empty_active_predicate_is_inactive_by_default() -> None:
 def test_button_text_adds_key_label_on_second_line() -> None:
     assert _button_text("K", "") == "K"
     assert _button_text("K", "Ctrl+S") == "K\nCtrl+S"
+    assert _button_text("K", "Ctrl+S", "?") == "K\nCtrl+S?"
 
 
 def test_slot_render_state_uses_action_tooltip_fallback() -> None:
@@ -266,6 +542,25 @@ def test_slot_render_state_marks_missing_icon_as_warning() -> None:
     assert state.diagnostic_code == "missing_icon"
     assert state.diagnostic_severity == "warning"
     assert state.text == "I\n?"
+
+
+def test_icon_diagnostic_handles_status_without_issue(monkeypatch) -> None:
+    monkeypatch.setattr(
+        widgets,
+        "icon_status",
+        lambda _icon_id: type("Status", (), {"ok": False, "issue": None})(),
+    )
+
+    assert _icon_diagnostic("missing.icon").code == "missing_icon"
+
+
+def test_slot_diagnostic_ignores_availability_without_context() -> None:
+    diagnostic = widgets._availability_diagnostic(
+        StackItem(type="button", enabled_when="command.exists('missing')"),
+        None,
+    )
+
+    assert diagnostic.has_issue is False
 
 
 def test_slot_render_state_resolves_manifest_icon_path() -> None:
@@ -479,3 +774,108 @@ def test_refresh_predicate_state_requests_rebuild_when_visibility_changes(
     assert result.needs_rebuild is True
     assert result.visible_slot_ids == ("refresh_test.visible_after_select",)
     assert result.rendered_slot_ids == ()
+
+
+def test_apply_slot_render_state_handles_partial_and_raising_buttons(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+
+    class PartialButton:
+        def __init__(self) -> None:
+            self.tooltip = ""
+
+        def property(self, _name: str) -> object:
+            raise RuntimeError("deleted")
+
+        def setProperty(self, _name: str, _value: object) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+        def setToolTip(self, tooltip: str) -> None:  # noqa: N802
+            self.tooltip = tooltip
+
+        def text(self) -> str:
+            raise RuntimeError("deleted")
+
+        def setText(self, _text: str) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+        def isEnabled(self) -> bool:  # noqa: N802
+            raise RuntimeError("deleted")
+
+        def setEnabled(self, _enabled: bool) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+    refreshed = _apply_slot_render_state(
+        PartialButton(),
+        SlotRenderState(
+            label="L",
+            key_label="K",
+            icon="",
+            icon_path="",
+            tone="neutral",
+            tooltip="Tip",
+            enabled=False,
+            active=False,
+            locked=True,
+        ),
+    )
+
+    assert refreshed == 0
+
+
+def test_apply_slot_render_state_ignores_tooltip_access_errors(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+
+    class TooltipButton(BuildButton):
+        def toolTip(self) -> str:  # noqa: N802
+            raise RuntimeError("deleted")
+
+        def setToolTip(self, _tooltip: str) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+    refreshed = _apply_slot_render_state(
+        TooltipButton("L"),
+        SlotRenderState(
+            label="L",
+            key_label="",
+            icon="",
+            icon_path="",
+            tone="neutral",
+            tooltip="Tip",
+            enabled=True,
+            active=False,
+        ),
+    )
+
+    assert refreshed >= 0
+
+
+def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    button = BuildButton("Icon")
+
+    assert _apply_button_icon(button, "") == 1
+    assert _apply_button_icon(button, "") == 0
+    assert _apply_button_icon(button, "icons/test.svg") == 1
+    assert button.icon_size.width == 18
+
+    class FailingIconButton(BuildButton):
+        def property(self, _name: str) -> object:
+            raise RuntimeError("deleted")
+
+        def setIcon(self, _icon) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+    assert _apply_button_icon(FailingIconButton("Icon"), "icons/test.svg") == 0
+
+
+def test_set_button_property_and_diagnostic_tooltip_helpers() -> None:
+    class BrokenPropertyButton:
+        def property(self, _name: str) -> object:
+            raise RuntimeError("deleted")
+
+        def setProperty(self, _name: str, _value: object) -> None:  # noqa: N802
+            raise RuntimeError("deleted")
+
+    assert widgets._set_button_property(BrokenPropertyButton(), "name", "value") == 0
+    assert _diagnostic_tooltip("", widgets._SlotDiagnostic(message="Problem")) == "Problem"
+    assert _scaled_theme(widgets.DEFAULT_THEME, 1.0) is widgets.DEFAULT_THEME
