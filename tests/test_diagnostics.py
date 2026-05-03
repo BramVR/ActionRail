@@ -148,6 +148,26 @@ def test_diagnose_spec_reports_missing_command_and_plugin_predicates() -> None:
     ]
 
 
+def test_diagnose_spec_skips_availability_checks_without_cmds() -> None:
+    spec = StackSpec(
+        id="availability",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="availability.command",
+                label="C",
+                action="maya.anim.set_key",
+                enabled_when="command.exists('missingCommand')",
+            ),
+        ),
+    )
+
+    report = diagnose_spec(spec, registry=create_default_registry(AvailabilityCmds()))
+
+    assert report.issues == ()
+
+
 def test_diagnose_spec_reports_missing_icon_warning() -> None:
     spec = StackSpec(
         id="missing_icon",
@@ -236,6 +256,47 @@ def test_last_report_can_be_cleared_and_formatted() -> None:
     assert last_report() == report
     assert "Status: errors" in text
     assert "missing_action [broken_actions.missing]" in text
+
+
+def test_diagnostic_report_dict_and_runtime_helpers() -> None:
+    base = DiagnosticReport()
+    issue = DiagnosticIssue("warning_code", "warning", "Warned.")
+    state = DiagnosticOverlayState(
+        preset_id="transform_stack",
+        filter_target_count=2,
+        predicate_timer_active=True,
+    )
+
+    report = base.with_issues((issue,)).with_runtime(
+        overlay_started=True,
+        overlay_id="transform_stack",
+        active_overlay_ids=("transform_stack",),
+        active_overlay_states=(state,),
+    )
+
+    assert report.warnings == (issue,)
+    assert report.as_dict() == {
+        "has_errors": False,
+        "overlay_started": True,
+        "overlay_id": "transform_stack",
+        "active_overlay_ids": ("transform_stack",),
+        "published_runtime_commands": (),
+        "active_overlay_states": (state.as_dict(),),
+        "issues": (issue.as_dict(),),
+    }
+
+
+def test_format_report_for_clean_report_lists_no_issues() -> None:
+    text = format_report(DiagnosticReport())
+
+    assert "Status: ok" in text
+    assert "Issues: none" in text
+
+
+def test_format_report_includes_overlay_id() -> None:
+    text = format_report(DiagnosticReport(overlay_started=True, overlay_id="transform_stack"))
+
+    assert "Overlay id: transform_stack" in text
 
 
 def test_format_report_includes_structured_issue_details() -> None:
@@ -341,6 +402,58 @@ def test_collect_diagnostics_reports_orphaned_runtime_commands() -> None:
         ("", "removed_slot", stale_slot.runtime_command),
     ]
     assert all(issue.hint for issue in orphaned)
+
+
+def test_collect_diagnostics_reports_unknown_slot_runtime_commands() -> None:
+    cmds = RuntimeCmds()
+    unknown = publish_slot("unknown", "slot", label="Unknown", cmds_module=cmds)
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=cmds)
+
+    orphaned = [
+        issue for issue in report.warnings if issue.code == "orphaned_runtime_command"
+    ]
+    assert [(issue.preset_id, issue.slot_id, issue.target) for issue in orphaned] == [
+        ("unknown", "slot", unknown.runtime_command),
+    ]
+
+
+def test_collect_diagnostics_hides_published_command_query_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(diagnostics, "_safe_published_commands", lambda _cmds: ())
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=object())
+
+    assert report.published_runtime_commands == ()
+
+
+def test_runtime_command_diagnostics_ignore_missing_cmds() -> None:
+    registry = create_default_registry(AvailabilityCmds())
+
+    assert diagnostics._runtime_command_diagnostics(registry, None) == ()
+
+
+def test_runtime_command_diagnostics_reports_malformed_slot_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    command = types.SimpleNamespace(
+        target_kind="slot",
+        target_id="malformed",
+        runtime_command="ActionRail_slot_malformed",
+    )
+    monkeypatch.setattr(diagnostics, "_safe_published_commands", lambda _cmds: (command,))
+    registry = create_default_registry(AvailabilityCmds())
+
+    issues = diagnostics._runtime_command_diagnostics(registry, object())
+
+    assert [(issue.preset_id, issue.slot_id, issue.target) for issue in issues] == [
+        ("", "", "ActionRail_slot_malformed")
+    ]
+
+
+def test_split_runtime_slot_target_handles_malformed_target() -> None:
+    assert diagnostics._split_runtime_slot_target("malformed") == ("", "")
 
 
 def test_diagnostic_issue_preserves_positional_exception_type_order() -> None:
@@ -498,6 +611,16 @@ def test_diagnose_icon_import_honors_disabled_fallback_generation(
     assert report.issues == ()
 
 
+def test_icon_manifest_and_import_issue_fallback_fields() -> None:
+    manifest_issue = diagnostics._icon_manifest_issue(object())
+    import_issue = diagnostics._icon_import_issue(object())
+
+    assert manifest_issue.code == "invalid_icon_manifest"
+    assert manifest_issue.severity == "warning"
+    assert import_issue.code == "invalid_icon_import"
+    assert import_issue.severity == "error"
+
+
 def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -603,6 +726,61 @@ def test_safe_start_can_recover_to_fallback_preset(
     assert last_report() == report
 
 
+def test_safe_start_reports_failed_recovery_when_fallback_has_errors() -> None:
+    registry = ActionRegistry()
+    registry.register(Action("only.custom.action", "Custom", lambda: None))
+
+    report = safe_start(
+        "missing_preset",
+        registry=registry,
+        cmds_module=AvailabilityCmds(),
+        fallback_preset_id="transform_stack",
+    )
+
+    assert report.overlay_started is False
+    assert [issue.code for issue in report.errors] == [
+        "broken_preset",
+        "missing_action",
+        "missing_action",
+        "missing_action",
+        "missing_action",
+        "preset_recovery_failed",
+    ]
+
+
+def test_safe_start_reports_failed_recovery_when_fallback_start_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    hidden: list[str] = []
+
+    def fail_to_start(
+        _preset_id: str,
+        *,
+        panel: str | None,
+        registry: ActionRegistry | None,
+    ) -> object:
+        raise RuntimeError("fallback failed")
+
+    monkeypatch.setattr(diagnostics, "_show_overlay", fail_to_start)
+    monkeypatch.setattr(
+        diagnostics,
+        "_safe_hide_overlay",
+        lambda preset_id: hidden.append(preset_id),
+    )
+
+    report = safe_start(
+        "missing_preset",
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+        fallback_preset_id="transform_stack",
+    )
+
+    assert report.overlay_started is False
+    assert report.errors[-1].code == "preset_recovery_failed"
+    assert report.errors[-1].exception_type == "RuntimeError"
+    assert hidden == ["transform_stack"]
+
+
 def test_safe_start_reports_recoverable_overlay_startup_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -656,3 +834,93 @@ def test_safe_start_reports_started_overlay(
     assert report.overlay_started is True
     assert report.overlay_id == "transform_stack"
     assert report.active_overlay_ids == ("transform_stack",)
+
+
+def test_diagnostics_private_runtime_boundaries_are_defensive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_maya = types.ModuleType("maya")
+    fake_maya.__path__ = []
+    fake_cmds = types.ModuleType("maya.cmds")
+    fake_maya.cmds = fake_cmds
+    monkeypatch.setitem(sys.modules, "maya", fake_maya)
+    monkeypatch.setitem(sys.modules, "maya.cmds", fake_cmds)
+
+    assert diagnostics._resolve_cmds_module(None) is fake_cmds
+    assert diagnostics._require_cmds_module(fake_cmds) is fake_cmds
+
+    monkeypatch.delitem(sys.modules, "maya.cmds")
+    monkeypatch.delitem(sys.modules, "maya")
+    with pytest.raises(RuntimeError, match="requires maya.cmds"):
+        diagnostics._require_cmds_module(None)
+
+
+def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    diagnostics_ui_module = types.ModuleType("actionrail.diagnostics_ui")
+    runtime_module = types.ModuleType("actionrail.runtime")
+    calls: list[tuple[str, object]] = []
+
+    def show_report_window(report, message, *, on_clear):
+        calls.append(("window", (report, message, on_clear)))
+        return "window"
+
+    def show_example(preset_id, *, panel, registry):
+        calls.append(("show", (preset_id, panel, registry)))
+        return "host"
+
+    diagnostics_ui_module.show_report_window = show_report_window
+    runtime_module.show_example = show_example
+    monkeypatch.setitem(sys.modules, "actionrail.diagnostics_ui", diagnostics_ui_module)
+    monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
+
+    report = DiagnosticReport()
+
+    assert diagnostics._show_report_window(report, "message") == "window"
+    assert (
+        diagnostics._show_overlay("transform_stack", panel="modelPanel4", registry=None)
+        == "host"
+    )
+    assert calls[0][0] == "window"
+    assert calls[1] == ("show", ("transform_stack", "modelPanel4", None))
+
+
+def test_diagnostics_safe_runtime_helpers_hide_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_module = types.ModuleType("actionrail.runtime")
+
+    def raise_error(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError("runtime unavailable")
+
+    runtime_module.hide_example = raise_error
+    runtime_module.active_overlay_ids = raise_error
+    runtime_module.active_overlay_states = raise_error
+    monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
+
+    diagnostics._safe_hide_overlay("transform_stack")
+
+    assert diagnostics._safe_active_overlay_ids() == ()
+    assert diagnostics._safe_active_overlay_states() == ()
+
+
+def test_diagnostic_overlay_state_conversion_is_defensive() -> None:
+    assert diagnostics._diagnostic_overlay_state(object()) == DiagnosticOverlayState(preset_id="")
+    assert diagnostics._diagnostic_overlay_state(
+        {
+            "preset_id": "transform_stack",
+            "panel": "modelPanel4",
+            "widget_visible": 1,
+            "widget_valid": 1,
+            "filter_target_count": "bad",
+            "predicate_timer_active": 1,
+        }
+    ) == DiagnosticOverlayState(
+        preset_id="transform_stack",
+        panel="modelPanel4",
+        widget_visible=True,
+        widget_valid=True,
+        filter_target_count=0,
+        predicate_timer_active=True,
+    )
