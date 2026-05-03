@@ -428,7 +428,7 @@ def main() -> None:
         captures = [
             _save_composite(
                 hosts,
-                ASSET_DIR / "actionrail_readme_maya_scene.png",
+                ASSET_DIR / "actionrail_readme_maya_showcase.png",
                 viewport_size=(1600, 900),
                 blast_name="actionrail_readme_maya_scene_base.png",
             )
