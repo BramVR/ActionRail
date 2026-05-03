@@ -670,6 +670,94 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
     assert events[-1] == ("end",)
 
 
+def test_secondary_hotkey_badge_uses_fitting_display_text() -> None:
+    class HorizontalMetrics:
+        def __init__(self, _font: object) -> None:
+            pass
+
+        def horizontalAdvance(self, text: str) -> int:  # noqa: N802
+            return len(text) * 4
+
+    class WidthMetrics:
+        def __init__(self, _font: object) -> None:
+            pass
+
+        def width(self, text: str) -> int:
+            return len(text) * 3
+
+    class MetricsQt:
+        class QtGui:
+            QFontMetrics = HorizontalMetrics
+
+    class WidthMetricsQt:
+        class QtGui:
+            QFontMetrics = WidthMetrics
+
+    class FallbackQt:
+        class QtGui:
+            pass
+
+    font = object()
+
+    assert widgets._button_secondary_display_text(MetricsQt, font, "Ctrl+K", 28) == "Ctrl+K"
+    assert (
+        widgets._button_secondary_display_text(
+            MetricsQt,
+            font,
+            "Ctrl+Alt+Shift+Command+K",
+            28,
+        )
+        == "CASM+K"
+    )
+    assert widgets._button_secondary_display_text(WidthMetricsQt, font, "Ctrl+K", 12) == "C+K"
+    assert widgets._compact_hotkey_label("Control+Alt+Shift+Command+K") == "C+A+S+M+K"
+    assert widgets._dense_hotkey_label("F12") == "F12"
+    assert widgets._dense_hotkey_label("Ctrl+Alt+K") == "CA+K"
+    assert widgets._button_secondary_display_text(FallbackQt, font, "ABCDEFG", 25) == "A...G"
+    assert widgets._elide_text(FallbackQt, font, "F12", 15) == "F12"
+    assert widgets._elide_text(FallbackQt, font, "ABCDEFG", 25) == "A...G"
+    assert widgets._elide_text(FallbackQt, font, "ABCDEFG", 10) == "G"
+
+
+def test_secondary_hotkey_badge_rect_uses_available_button_width() -> None:
+    class Rect:
+        def width(self) -> int:
+            return 32
+
+        def right(self) -> int:
+            return 31
+
+        def bottom(self) -> int:
+            return 31
+
+    class TextRect:
+        def __init__(self, left: int, top: int, width: int, height: int) -> None:
+            self.geometry = (left, top, width, height)
+
+    class Button:
+        def rect(self) -> Rect:
+            return Rect()
+
+    class Metrics:
+        def __init__(self, _font: object) -> None:
+            pass
+
+        def horizontalAdvance(self, text: str) -> int:  # noqa: N802
+            return {"Ctrl+K": 24}.get(text, len(text) * 4)
+
+    class MetricsQt:
+        class QtCore:
+            QRect = TextRect
+
+        class QtGui:
+            QFontMetrics = Metrics
+
+    rect = widgets._button_secondary_rect(Button(), MetricsQt, "Ctrl+K", object())
+
+    assert rect.geometry == (2, 21, 27, 9)
+    assert widgets._button_secondary_max_width(Button()) == 28
+
+
 def test_button_icon_metric_helpers_fall_back_after_property_errors() -> None:
     class BrokenButton:
         def property(self, _name: str) -> object:
@@ -679,6 +767,7 @@ def test_button_icon_metric_helpers_fall_back_after_property_errors() -> None:
 
     assert widgets._secondary_font_size(0) == 6
     assert widgets._secondary_font_size(13) == 7
+    assert widgets._button_secondary_max_width(button) == 28
     assert widgets._button_icon_size(button) == 18
     assert widgets._button_icon_inset(button) == 0
 

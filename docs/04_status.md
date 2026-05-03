@@ -251,14 +251,16 @@ Start here:
 ## Latest Handoff
 
 - Task goal completed: README in-Maya showcase regenerated as a single
-  minimal scene image with multiple ActionRail bars.
+  minimal scene image with multiple ActionRail bars, then review-fixed so
+  multi-character visible hotkey labels no longer clip in a fixed-width badge.
 - Files changed in this handoff update: README asset reference, generated
   README Maya screenshot, screenshot smoke script, Maya icon descriptor catalog,
   widget hotkey-badge painting, and focused tests.
 - Behavior verified: the showcase keeps the README hero image, uses centered
   `A-I` labels on the left rail, uses unique Maya resource icons on the
-  remaining bars, and paints hotkey badges smaller in explicit lower-right
-  badge rectangles.
+  remaining bars, and paints hotkey badges with fit-aware lower-right text that
+  can show labels such as `Ctrl+K`, compact long modifier chords, and elide only
+  as a last resort.
 - Current live state: `actionrail.list_icon_descriptors(provider="maya")`
   exposes 36 curated Maya resource icons; the README "In Maya" section points
   at `docs/assets/actionrail_readme_maya_icons_showcase.png`.
@@ -291,7 +293,7 @@ Start here:
   `docs/assets/actionrail_readme_maya_icons_showcase.png`.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 316 passed, `TOTAL 3350 0 100%`.
+  -> 318 passed, `TOTAL 3398 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke baseline:

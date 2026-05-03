@@ -326,10 +326,16 @@ def _button_class(qt: object) -> type:
                 if secondary:
                     font = qt.QtGui.QFont(self.font())
                     font.setPointSize(_secondary_font_size(font.pointSize()))
+                    secondary = _button_secondary_display_text(
+                        qt,
+                        font,
+                        secondary,
+                        _button_secondary_max_width(self),
+                    )
                     painter.setFont(font)
                     painter.setPen(self.palette().buttonText().color())
                     painter.drawText(
-                        _button_secondary_rect(self, qt, secondary),
+                        _button_secondary_rect(self, qt, secondary, font),
                         qt.QtCore.Qt.AlignRight | qt.QtCore.Qt.AlignBottom,
                         secondary,
                     )
@@ -464,9 +470,71 @@ def _secondary_font_size(point_size: int) -> int:
     return max(6, int(point_size * 0.6))
 
 
-def _button_secondary_rect(button: object, qt: object, secondary: str) -> object:
+def _button_secondary_display_text(
+    qt: object,
+    font: object,
+    secondary: str,
+    max_width: int,
+) -> str:
+    candidates = (
+        secondary,
+        _compact_hotkey_label(secondary),
+        _dense_hotkey_label(secondary),
+    )
+    for candidate in dict.fromkeys(candidates):
+        if _text_width(qt, font, candidate) <= max_width:
+            return candidate
+    return _elide_text(qt, font, candidates[-1], max_width)
+
+
+def _compact_hotkey_label(label: str) -> str:
+    replacements = {
+        "Control": "C",
+        "Ctrl": "C",
+        "Shift": "S",
+        "Alt": "A",
+        "Command": "M",
+        "Cmd": "M",
+        "Meta": "M",
+    }
+    return "+".join(replacements.get(part, part) for part in label.split("+"))
+
+
+def _dense_hotkey_label(label: str) -> str:
+    parts = _compact_hotkey_label(label).split("+")
+    if len(parts) < 2:
+        return label
+    return "".join(parts[:-1]) + f"+{parts[-1]}"
+
+
+def _elide_text(qt: object, font: object, text: str, max_width: int) -> str:
+    if _text_width(qt, font, text) <= max_width:
+        return text
+
+    marker = "..."
+    if _text_width(qt, font, marker) > max_width:
+        return text[-1:]
+
+    best = marker
+    for prefix_length in range(1, len(text)):
+        for suffix_length in range(1, len(text) - prefix_length + 1):
+            candidate = f"{text[:prefix_length]}{marker}{text[-suffix_length:]}"
+            if _text_width(qt, font, candidate) <= max_width:
+                best = candidate
+                continue
+            break
+    return best
+
+
+def _button_secondary_rect(
+    button: object,
+    qt: object,
+    secondary: str,
+    font: object,
+) -> object:
     rect = button.rect()
-    width = max(8, min(16, (len(secondary) * 5) + 3))
+    max_width = _button_secondary_max_width(button)
+    width = max(8, min(max_width, _text_width(qt, font, secondary) + 3))
     height = 9
     return qt.QtCore.QRect(
         rect.right() - width - 2,
@@ -474,6 +542,27 @@ def _button_secondary_rect(button: object, qt: object, secondary: str) -> object
         width,
         height,
     )
+
+
+def _button_secondary_max_width(button: object) -> int:
+    try:
+        return max(8, button.rect().width() - 4)
+    except Exception:
+        return 28
+
+
+def _text_width(qt: object, font: object, text: str) -> int:
+    metrics_class = getattr(qt.QtGui, "QFontMetrics", None)
+    if metrics_class is not None:
+        with suppress(Exception):
+            metrics = metrics_class(font)
+            horizontal_advance = getattr(metrics, "horizontalAdvance", None)
+            if callable(horizontal_advance):
+                return int(horizontal_advance(text))
+            width = getattr(metrics, "width", None)
+            if callable(width):
+                return int(width(text))
+    return len(text) * 5
 
 
 def _slot_render_state(
