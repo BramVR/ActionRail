@@ -251,11 +251,15 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Continue Phase 1 declarative MVP. Keep `docs/06_wow_style_customization.md` in mind while shaping schema/action ids, but do not build the full designer, Bind Mode, flyouts, command rings, or Viewport 2.0 backend until the reusable rail/action foundation is stable.
+Phase 1 declarative MVP is complete and verified. The reusable rail/action
+foundation is stable enough to start Phase 2 with a narrow Quick Create/Edit
+Mode kickoff.
 
-Next implementation slice: keep hardening visible diagnostics as the import
-path expands and preserve the existing fallback preset startup smoke coverage.
-Use `docs/04_status.md` as the detailed handoff.
+Next implementation slice: define and implement the smallest artist-facing
+authoring workflow that can choose a template/action, preview a rail, and save a
+user preset. Keep `docs/06_wow_style_customization.md` in mind, but do not start
+Bind Mode, flyouts, command rings, profile layers, marking-menu export, or
+Viewport 2.0 yet.
 
 ## Research Backlog
 

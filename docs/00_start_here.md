@@ -27,7 +27,8 @@ document.
 
 Snapshot:
 
-- Phase 0 prototype is verified; Phase 1 declarative MVP is in progress.
+- Phase 0 prototype is verified; Phase 1 declarative MVP is complete and
+  verified.
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, the diagnostics Qt window, and the
@@ -36,8 +37,9 @@ Snapshot:
   `horizontal_tools`.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
-- Current next implementation slice: keep hardening visible diagnostics as the
-  import path expands; do not start the full designer yet.
+- Current next implementation slice: begin the Phase 2 Quick Create/Edit Mode
+  kickoff with a narrow authoring workflow; do not start Bind Mode, flyouts,
+  command rings, profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -76,17 +78,17 @@ Build PySide6/Qt overlay first.
 
 ## Current Priority
 
-Continue Phase 1 declarative MVP:
+Phase 1 declarative MVP is complete. Begin Phase 2 with the smallest useful
+Quick Create/Edit Mode slice:
 
-1. Replace `actionrail.show_last_report()`'s `confirmDialog` with a polished,
-   themed Qt diagnostics window that supports visible issue details and
-   copyable reports. Done.
-2. Continue diagnostic work toward the future icon-backed preset/import
-   pipeline. First icon-backed rail, manifest/SVG validation, local SVG import,
-   PNG fallback generation, fallback asset diagnostics, import preflight
-   reports, and opt-in preset recovery are done.
-3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when Maya verification is feasible.
-4. Use `docs/07_missing_features_research.md` as the feature-gap backlog, but do not start the full designer before the declarative MVP is stable.
+1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
+2. Keep the first authoring workflow narrow: template/action selection,
+   preview, and saving a user preset are enough for the kickoff.
+3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
+   Maya verification is feasible.
+4. Do not start Bind Mode, flyouts, command rings, profile layers,
+   marking-menu export, or Viewport 2.0 until the Phase 2 authoring surface has
+   a stable first pass.
 
 ## Working Rules
 

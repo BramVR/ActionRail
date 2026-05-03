@@ -52,7 +52,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 1 declarative MVP" in output
+    assert "Status: Phase 1 complete" in output
     assert "Use --json" in output
 
 

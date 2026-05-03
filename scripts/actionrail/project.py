@@ -101,8 +101,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 1 declarative MVP",
-            "next_slice": "Visible diagnostics hardening as icon import support expands",
+            "phase": "Phase 1 complete",
+            "next_slice": "Phase 2 narrow Quick Create and Edit Mode kickoff",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

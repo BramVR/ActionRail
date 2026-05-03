@@ -33,7 +33,7 @@ Last updated: 2026-05-03
   - Maya action bindings for move/translate, rotate, scale, and set key.
   - Pure Python unit tests and allowlisted MayaSessiond smoke scripts.
 - `docs/03_maya_sessiond_workflow.md` now documents the repo-specific MayaSessiond port rule. Use port `7217` for ActionRail unless it is already in use.
-- Phase 1 declarative MVP started:
+- Phase 1 declarative MVP complete:
   - Built-in examples now load from JSON presets in `presets/`.
   - The public Python builder API is now exposed from `actionrail`: callers can
     construct `StackSpec`, `RailLayout`, and `StackItem` objects directly or use
@@ -209,44 +209,46 @@ Last updated: 2026-05-03
 
 ## In Progress
 
-- Phase 1 declarative MVP.
+- Phase 2 Quick Create/Edit Mode kickoff is not started yet.
 
 ## Next Agent Start
 
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: continue hardening visible diagnostics as
-   the icon import path expands; keep the existing fallback preset startup
-   smoke in the verification set when touching recovery behavior.
+2. First recommended coding slice: begin Phase 2 with the smallest useful
+   Quick Create/Edit Mode authoring workflow. Read
+   `docs/06_wow_style_customization.md` first, then keep the initial slice to
+   template/action selection, preview, and saving a user preset.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 ## Latest Handoff
 
-- Task goal completed: exposed the Python builder/display path for
-  user-authored rails.
-- Files changed in this handoff update: `scripts/actionrail/runtime.py`,
-  `scripts/actionrail/__init__.py`, `tests/test_package.py`,
-  `docs/01_architecture.md`, `docs/02_implementation_plan.md`,
-  `examples/README.md`, and this status file.
+- Task goal completed: Phase 1 declarative MVP completion audit and status
+  update.
+- Files changed in this handoff update: `scripts/actionrail/project.py`,
+  `tests/test_project_map.py`, `docs/00_start_here.md`,
+  `docs/02_implementation_plan.md`, `docs/04_status.md`, and
+  `docs/06_wow_style_customization.md`.
 - Behavior verified: focused package/spec tests, coverage-gated full pytest,
   full Ruff, and full Maya smoke all passed.
-- Current live state: built-in presets still render through
-  `actionrail.show_example(...)`; custom Python `StackSpec` objects can now be
-  rendered with `actionrail.show_spec(...)` and replace any active overlay with
-  the same spec id before showing.
+- Current live state: Phase 1 is complete. Built-in presets render through
+  `actionrail.show_example(...)`; custom Python `StackSpec` objects render with
+  `actionrail.show_spec(...)`; the project map reports `Phase 1 complete`.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: audit the Phase 1 deliverables against implementation-plan
-  acceptance criteria before declaring the phase complete.
+- Exact next step: start the Phase 2 Quick Create/Edit Mode kickoff with a
+  narrow, verified authoring slice.
 
 ## Next
 
-1. Keep hardening visible diagnostics as the icon import path expands.
+1. Start Phase 2 with a narrow Quick Create/Edit Mode authoring workflow.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
-4. Use `docs/07_missing_features_research.md` to prioritize later authoring, icon, profile, flyout/ring, marking-menu, and Viewport 2.0 work.
+4. Use `docs/06_wow_style_customization.md` and
+   `docs/07_missing_features_research.md` to prioritize later authoring, icon,
+   profile, flyout/ring, marking-menu, and Viewport 2.0 work.
 
 ## Blockers
 

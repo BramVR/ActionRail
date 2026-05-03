@@ -214,7 +214,9 @@ Example:
 
 ## Schema Direction
 
-Current Phase 1 specs describe a simple stack. The next schema should describe rails, slots, and interaction modes.
+Completed Phase 1 specs describe reusable rails with stable slots, layout
+metadata, predicates, icons, hotkey labels, and diagnostics. The next schema
+work should move toward user-authored rails, slots, and interaction modes.
 
 Draft shape:
 
@@ -272,6 +274,8 @@ Draft shape:
 
 Extend the current stack spec into a rail spec:
 
+Status: complete for the declarative MVP.
+
 - stable slot ids
 - rail layout metadata
 - rows/columns/orientation
@@ -285,6 +289,8 @@ Exit criteria: the current transform stack still loads, and a horizontal rail ca
 ### Phase 1B - Runtime Commands And Hotkey Bridge
 
 Add Maya-native command publishing:
+
+Status: complete for the declarative MVP.
 
 - create runtime commands for ActionRail actions
 - create runtime commands for each published slot
