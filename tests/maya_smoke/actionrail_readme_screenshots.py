@@ -169,23 +169,63 @@ def _set_viewport_style(panel: str) -> None:
             cmds.displayRGBColor(name, color[0], color[1], color[2])
 
 
-ACTION_SLOTS = (
-    ("move", "M", "maya.tool.move", "actionrail.move"),
-    ("rotate", "R", "maya.tool.rotate", "actionrail.rotate"),
-    ("scale", "S", "maya.tool.scale", "actionrail.scale"),
-    ("key", "K", "maya.anim.set_key", "actionrail.key"),
+ACTION_CYCLE = (
+    ("move", "M", "maya.tool.move"),
+    ("rotate", "R", "maya.tool.rotate"),
+    ("scale", "S", "maya.tool.scale"),
+    ("key", "K", "maya.anim.set_key"),
+)
+SHOWCASE_ICON_IDS = (
+    "maya.move",
+    "maya.rotate",
+    "maya.scale",
+    "maya.set_key",
+    "maya.camera",
+    "maya.light",
+    "maya.grid",
+    "maya.isolate_selected",
+    "maya.center_pivot",
+    "maya.freeze_transform",
+    "maya.knife",
+    "maya.quad_draw",
+    "maya.area_light",
+    "maya.directional_light",
+    "maya.point_light",
+    "maya.spot_light",
+    "maya.volume_light",
+    "maya.image_plane",
+    "maya.depth_of_field",
+    "maya.film_gate",
+    "maya.cut",
+    "maya.cut_edge",
+    "maya.smooth_brush",
+    "maya.auto_weld",
+    "maya.bevel",
+    "maya.extrude",
+    "maya.pan_zoom",
+    "maya.reflection",
+    "maya.resolution_gate",
+    "maya.high_quality",
+    "maya.low_quality",
+    "maya.objects",
+    "maya.lock",
+    "maya.regular_viewport",
+    "maya.camera_lock",
+    "maya.translate",
 )
 
 
 def _action_item(
     spec_id: str,
     index: int,
+    icon_id: str,
     *,
+    label_override: str | None = None,
     key_label: str = "",
     icon_only: bool = False,
     active: bool = False,
 ) -> actionrail.StackItem:
-    action_name, label, action_id, icon_id = ACTION_SLOTS[index % len(ACTION_SLOTS)]
+    action_name, label, action_id = ACTION_CYCLE[index % len(ACTION_CYCLE)]
     active_when = ""
     if active and action_id == "maya.tool.rotate":
         active_when = "maya.tool == rotate"
@@ -197,11 +237,11 @@ def _action_item(
     return actionrail.StackItem(
         type="toolButton",
         id=f"{spec_id}.{action_name}_{index + 1}",
-        label="" if icon_only else label,
+        label="" if icon_only else (label_override if label_override is not None else label),
         action=action_id,
         icon=icon_id,
         key_label=key_label,
-        tooltip=f"{label} action",
+        tooltip=f"{label_override or label} action",
         active_when=active_when,
     )
 
@@ -209,6 +249,7 @@ def _action_item(
 def _number_bar_spec() -> actionrail.StackSpec:
     spec_id = "readme_number_actionbar"
     key_labels = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=")
+    icon_ids = SHOWCASE_ICON_IDS[: len(key_labels)]
     return actionrail.StackSpec(
         id=spec_id,
         layout=actionrail.RailLayout(
@@ -218,14 +259,22 @@ def _number_bar_spec() -> actionrail.StackSpec:
             opacity=0.95,
         ),
         items=tuple(
-            _action_item(spec_id, index, key_label=key, active=index == 1)
-            for index, key in enumerate(key_labels)
+            _action_item(
+                spec_id,
+                index,
+                icon_id,
+                key_label=key,
+                icon_only=True,
+                active=index == 1,
+            )
+            for index, (key, icon_id) in enumerate(zip(key_labels, icon_ids, strict=True))
         ),
     )
 
 
 def _icon_strip_spec() -> actionrail.StackSpec:
     spec_id = "readme_icon_strip"
+    icon_ids = SHOWCASE_ICON_IDS[12:20]
     return actionrail.StackSpec(
         id=spec_id,
         layout=actionrail.RailLayout(
@@ -234,12 +283,16 @@ def _icon_strip_spec() -> actionrail.StackSpec:
             offset=(0, -76),
             opacity=0.92,
         ),
-        items=tuple(_action_item(spec_id, index, icon_only=True) for index in range(8)),
+        items=tuple(
+            _action_item(spec_id, index, icon_id, icon_only=True)
+            for index, icon_id in enumerate(icon_ids)
+        ),
     )
 
 
-def _left_icon_column_spec() -> actionrail.StackSpec:
-    spec_id = "readme_left_icon_column"
+def _left_label_column_spec() -> actionrail.StackSpec:
+    spec_id = "readme_left_label_column"
+    labels = tuple("ABCDEFGHI")
     return actionrail.StackSpec(
         id=spec_id,
         layout=actionrail.RailLayout(
@@ -248,12 +301,16 @@ def _left_icon_column_spec() -> actionrail.StackSpec:
             offset=(6, -62),
             opacity=0.94,
         ),
-        items=tuple(_action_item(spec_id, index, icon_only=True) for index in range(9)),
+        items=tuple(
+            _action_item(spec_id, index, "", label_override=label)
+            for index, label in enumerate(labels)
+        ),
     )
 
 
 def _right_number_column_spec() -> actionrail.StackSpec:
     spec_id = "readme_right_number_column"
+    icon_ids = SHOWCASE_ICON_IDS[20:27]
     return actionrail.StackSpec(
         id=spec_id,
         layout=actionrail.RailLayout(
@@ -266,21 +323,29 @@ def _right_number_column_spec() -> actionrail.StackSpec:
             _action_item(
                 spec_id,
                 index,
+                icon_id,
                 key_label=str(index + 1),
                 icon_only=True,
                 active=index == 1,
             )
-            for index in range(7)
+            for index, icon_id in enumerate(icon_ids)
         ),
     )
 
 
 def _show_bars(panel: str) -> tuple[object, ...]:
+    specs = (
+        _number_bar_spec(),
+        _icon_strip_spec(),
+        _left_label_column_spec(),
+        _right_number_column_spec(),
+    )
+    _assert_unique_icons(specs)
     hosts = (
-        actionrail.show_spec(_number_bar_spec(), panel=panel),
-        actionrail.show_spec(_icon_strip_spec(), panel=panel),
-        actionrail.show_spec(_left_icon_column_spec(), panel=panel),
-        actionrail.show_spec(_right_number_column_spec(), panel=panel),
+        actionrail.show_spec(specs[0], panel=panel),
+        actionrail.show_spec(specs[1], panel=panel),
+        actionrail.show_spec(specs[2], panel=panel),
+        actionrail.show_spec(specs[3], panel=panel),
     )
     _process_events(350)
     for host in hosts:
@@ -292,6 +357,13 @@ def _show_bars(panel: str) -> tuple[object, ...]:
             pass
     _process_events(150)
     return hosts
+
+
+def _assert_unique_icons(specs: tuple[actionrail.StackSpec, ...]) -> None:
+    icon_ids = [item.icon for spec in specs for item in spec.items if item.icon]
+    duplicates = sorted({icon_id for icon_id in icon_ids if icon_ids.count(icon_id) > 1})
+    if duplicates:
+        raise AssertionError(f"README showcase icon ids must be unique: {duplicates}")
 
 
 def _process_events(delay_ms: int = 0) -> None:
@@ -428,7 +500,7 @@ def main() -> None:
         captures = [
             _save_composite(
                 hosts,
-                ASSET_DIR / "actionrail_readme_maya_showcase.png",
+                ASSET_DIR / "actionrail_readme_maya_icons_showcase.png",
                 viewport_size=(1600, 900),
                 blast_name="actionrail_readme_maya_scene_base.png",
             )

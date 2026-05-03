@@ -312,14 +312,26 @@ def _button_class(qt: object) -> type:
                     if not pixmap.isNull():
                         painter.drawPixmap(target, pixmap)
 
-                text = self.text()
-                if text:
+                label = _button_label(self)
+                if label:
                     painter.setFont(self.font())
                     painter.setPen(self.palette().buttonText().color())
                     painter.drawText(
                         self.rect(),
                         qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap,
-                        text,
+                        label,
+                    )
+
+                secondary = _button_secondary(self)
+                if secondary:
+                    font = qt.QtGui.QFont(self.font())
+                    font.setPointSize(_secondary_font_size(font.pointSize()))
+                    painter.setFont(font)
+                    painter.setPen(self.palette().buttonText().color())
+                    painter.drawText(
+                        _button_secondary_rect(self, qt, secondary),
+                        qt.QtCore.Qt.AlignRight | qt.QtCore.Qt.AlignBottom,
+                        secondary,
                     )
             finally:
                 painter.end()
@@ -414,6 +426,54 @@ def _button_secondary_text(key_label: str, diagnostic_badge: str = "") -> str:
     if key_label and diagnostic_badge:
         return f"{key_label}{diagnostic_badge}"
     return key_label or diagnostic_badge
+
+
+def _button_label(button: object) -> str:
+    try:
+        label = button.property("actionRailLabel")
+    except Exception:
+        label = None
+    if isinstance(label, str):
+        return label
+
+    text = getattr(button, "text", None)
+    if callable(text):
+        with suppress(Exception):
+            return text().split("\n", 1)[0]
+    return ""
+
+
+def _button_secondary(button: object) -> str:
+    try:
+        key_label = button.property("actionRailKeyLabel")
+    except Exception:
+        key_label = ""
+    try:
+        diagnostic_badge = button.property("actionRailDiagnosticBadge")
+    except Exception:
+        diagnostic_badge = ""
+    return _button_secondary_text(
+        key_label if isinstance(key_label, str) else "",
+        diagnostic_badge if isinstance(diagnostic_badge, str) else "",
+    )
+
+
+def _secondary_font_size(point_size: int) -> int:
+    if point_size <= 0:
+        return 6
+    return max(6, int(point_size * 0.6))
+
+
+def _button_secondary_rect(button: object, qt: object, secondary: str) -> object:
+    rect = button.rect()
+    width = max(8, min(16, (len(secondary) * 5) + 3))
+    height = 9
+    return qt.QtCore.QRect(
+        rect.right() - width - 2,
+        rect.bottom() - height - 1,
+        width,
+        height,
+    )
 
 
 def _slot_render_state(

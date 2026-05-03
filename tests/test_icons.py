@@ -138,12 +138,18 @@ def test_icon_descriptors_include_manifest_and_maya_picker_metadata() -> None:
     assert "translate" in maya_move.keywords
     assert actionrail_move.provider == "manifest"
     assert actionrail_move.path == REPO_ROOT / "icons" / "actionrail" / "move.svg"
-    assert [descriptor.id for descriptor in list_icon_descriptors(provider="maya")] == [
-        "maya.set_key",
+    maya_descriptors = list_icon_descriptors(provider="maya")
+    maya_ids = {descriptor.id for descriptor in maya_descriptors}
+    assert {
+        "maya.camera",
+        "maya.grid",
         "maya.move",
+        "maya.quad_draw",
         "maya.rotate",
         "maya.scale",
-    ]
+        "maya.set_key",
+    } <= maya_ids
+    assert len(maya_ids) == len(maya_descriptors)
 
 
 def test_icon_descriptor_as_dict_is_compact() -> None:

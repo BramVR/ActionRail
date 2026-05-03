@@ -250,23 +250,21 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: Maya-backed slot icons now validate against the active
-  Maya `cmds` resource manager and render visibly as full-slot Qt resource
-  underlays.
-- Files changed in this handoff update: widget icon render/diagnostic path,
-  focused widget tests, Maya icon/missing-resource smoke tests, and these docs.
-- Behavior verified: missing Maya resources produce warning badges instead of
-  blank healthy slots; valid curated Maya resources render through `:/...`
-  `QIcon` sources as non-null 32x32 pixmaps; saved Maya screenshots confirm
-  icons fill the slot with text drawn over them.
-- Current live state: Presets can reference `maya.move`, `maya.rotate`,
-  `maya.scale`, and `maya.set_key` without copying Autodesk assets. Future
-  Quick Create work can use `actionrail.list_icon_descriptors()` for
-  picker-facing provider/category/keyword metadata, while runtime rendering
-  keeps raw Maya resource metadata separate from Qt resource URLs.
+- Task goal completed: README in-Maya showcase regenerated as a single
+  minimal scene image with multiple ActionRail bars.
+- Files changed in this handoff update: README asset reference, generated
+  README Maya screenshot, screenshot smoke script, Maya icon descriptor catalog,
+  widget hotkey-badge painting, and focused tests.
+- Behavior verified: the showcase keeps the README hero image, uses centered
+  `A-I` labels on the left rail, uses unique Maya resource icons on the
+  remaining bars, and paints hotkey badges smaller in explicit lower-right
+  badge rectangles.
+- Current live state: `actionrail.list_icon_descriptors(provider="maya")`
+  exposes 36 curated Maya resource icons; the README "In Maya" section points
+  at `docs/assets/actionrail_readme_maya_icons_showcase.png`.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: build the Phase 2 step 2.2 dockable Quick Create panel on top
-  of the draft/user-preset helpers and the provider-aware icon descriptor list.
+- Exact next step: commit/push the screenshot update if desired, or continue
+  with the Phase 2 step 2.2 dockable Quick Create panel.
 
 ## Next
 
@@ -287,9 +285,13 @@ Start here:
 
 ## Latest Verification
 
+- README screenshot smoke:
+  `GG_MayaSessiond call script.execute tests/maya_smoke/actionrail_readme_screenshots.py`
+  -> passed on dedicated port `7218`; wrote
+  `docs/assets/actionrail_readme_maya_icons_showcase.png`.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 312 passed, `TOTAL 3251 0 100%`.
+  -> 316 passed, `TOTAL 3350 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke baseline:

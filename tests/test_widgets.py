@@ -10,6 +10,8 @@ from actionrail.widgets import (
     SlotRenderState,
     _apply_button_icon,
     _apply_slot_render_state,
+    _button_label,
+    _button_secondary,
     _button_text,
     _diagnostic_tooltip,
     _icon_diagnostic,
@@ -477,6 +479,205 @@ def test_button_text_adds_key_label_on_second_line() -> None:
     assert _button_text("K", "") == "K"
     assert _button_text("K", "Ctrl+S") == "K\nCtrl+S"
     assert _button_text("K", "Ctrl+S", "?") == "K\nCtrl+S?"
+
+
+def test_button_paint_text_helpers_use_properties_and_text_fallback() -> None:
+    button = FakeButton("slot", label="", key_label="7")
+    button.setProperty("actionRailDiagnosticBadge", "?")
+
+    assert _button_label(button) == ""
+    assert _button_secondary(button) == "7?"
+
+    button.setProperty("actionRailLabel", None)
+    button.setText("Move\nCtrl+M")
+    button.setProperty("actionRailKeyLabel", None)
+    button.setProperty("actionRailDiagnosticBadge", None)
+
+    assert _button_label(button) == "Move"
+    assert _button_secondary(button) == ""
+
+    class BrokenButton:
+        def property(self, _name: str) -> object:
+            raise RuntimeError("deleted")
+
+        def text(self) -> str:
+            raise RuntimeError("deleted")
+
+    broken = BrokenButton()
+
+    assert _button_label(broken) == ""
+    assert _button_secondary(broken) == ""
+
+
+def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
+    events = []
+
+    class Rect:
+        def __init__(self, adjusted: tuple[int, int, int, int] | None = None) -> None:
+            self.adjusted_args = adjusted
+
+        def adjusted(self, left: int, top: int, right: int, bottom: int) -> Rect:
+            return Rect((left, top, right, bottom))
+
+        def size(self) -> tuple[int, int]:
+            return (32, 32)
+
+        def right(self) -> int:
+            return 31
+
+        def bottom(self) -> int:
+            return 31
+
+    class TextRect:
+        def __init__(self, left: int, top: int, width: int, height: int) -> None:
+            self.geometry = (left, top, width, height)
+            self.adjusted_args = None
+
+    class Pixmap:
+        def isNull(self) -> bool:  # noqa: N802
+            return False
+
+    class Icon:
+        def isNull(self) -> bool:  # noqa: N802
+            return False
+
+        def pixmap(self, size: tuple[int, int]) -> Pixmap:
+            events.append(("pixmap", size))
+            return Pixmap()
+
+    class Font:
+        def __init__(self, other: object | None = None) -> None:
+            self.size = getattr(other, "size", 13)
+
+        def pointSize(self) -> int:  # noqa: N802
+            return self.size
+
+        def setPointSize(self, size: int) -> None:  # noqa: N802
+            self.size = size
+
+    class Color:
+        def color(self) -> str:
+            return "#ffffff"
+
+    class Palette:
+        def buttonText(self) -> Color:  # noqa: N802
+            return Color()
+
+    class Painter:
+        def __init__(self, _button: object) -> None:
+            self.font_size = 0
+
+        def setFont(self, font: Font) -> None:  # noqa: N802
+            self.font_size = font.pointSize()
+
+        def setPen(self, pen: str) -> None:  # noqa: N802
+            events.append(("pen", pen))
+
+        def drawPixmap(self, rect: Rect, _pixmap: Pixmap) -> None:  # noqa: N802
+            events.append(("pixmap_drawn", rect.adjusted_args))
+
+        def drawText(self, rect: Rect | TextRect, flags: int, text: str) -> None:  # noqa: N802
+            geometry = getattr(rect, "geometry", None)
+            events.append(("text", text, flags, rect.adjusted_args, geometry, self.font_size))
+
+        def end(self) -> None:
+            events.append(("end",))
+
+    class StyleOptionButton:
+        text = "old"
+        icon = object()
+
+    class EmptyIcon:
+        pass
+
+    class Style:
+        def drawControl(  # noqa: N802
+            self,
+            control: int,
+            option: StyleOptionButton,
+            _painter: Painter,
+            _button: object,
+        ) -> None:
+            events.append(("control", control, option.text, isinstance(option.icon, EmptyIcon)))
+
+    class BaseButton:
+        def __init__(self, text: str) -> None:
+            self.text_value = text
+            self.properties = {
+                "actionRailLabel": "M",
+                "actionRailKeyLabel": "7",
+                "actionRailDiagnosticBadge": "",
+                "actionRailButtonIconInset": 2,
+            }
+
+        def initStyleOption(self, _option: StyleOptionButton) -> None:  # noqa: N802
+            events.append(("init",))
+
+        def style(self) -> Style:
+            return Style()
+
+        def icon(self) -> Icon:
+            return Icon()
+
+        def rect(self) -> Rect:
+            return Rect()
+
+        def property(self, name: str) -> object:
+            return self.properties.get(name)
+
+        def font(self) -> Font:
+            return Font()
+
+        def palette(self) -> Palette:
+            return Palette()
+
+        def text(self) -> str:
+            return self.text_value
+
+    class PaintQt:
+        class QtCore:
+            QRect = TextRect
+
+            class Qt:
+                AlignCenter = 1
+                TextWordWrap = 2
+                AlignRight = 4
+                AlignBottom = 8
+
+        class QtGui:
+            QPainter = Painter
+            QFont = Font
+            QIcon = EmptyIcon
+
+        class QtWidgets:
+            QPushButton = BaseButton
+            QStyleOptionButton = StyleOptionButton
+
+            class QStyle:
+                CE_PushButton = 11
+
+    button = widgets._button_class(PaintQt)("M\n7")
+    button.paintEvent(object())
+
+    assert ("control", 11, "", True) in events
+    assert ("pixmap", (32, 32)) in events
+    assert ("pixmap_drawn", (2, 2, -2, -2)) in events
+    assert ("text", "M", 3, None, None, 13) in events
+    assert ("text", "7", 12, None, (21, 21, 8, 9), 7) in events
+    assert events[-1] == ("end",)
+
+
+def test_button_icon_metric_helpers_fall_back_after_property_errors() -> None:
+    class BrokenButton:
+        def property(self, _name: str) -> object:
+            raise RuntimeError("deleted")
+
+    button = BrokenButton()
+
+    assert widgets._secondary_font_size(0) == 6
+    assert widgets._secondary_font_size(13) == 7
+    assert widgets._button_icon_size(button) == 18
+    assert widgets._button_icon_inset(button) == 0
 
 
 def test_slot_render_state_uses_action_tooltip_fallback() -> None:
