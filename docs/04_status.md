@@ -206,42 +206,58 @@ Last updated: 2026-05-03
 - Product scope clarified:
   - `M/T/R/S/K` is documented as the first proof preset and regression target, not the boundary of ActionRail.
   - The docs now state that the product goal is user-authored rails, slots, hotkey badges, flyouts, and command layouts.
+- Phase 2 step 2.1 authoring model and user-preset storage complete:
+  - `scripts/actionrail/authoring.py` defines `DraftRail` and `DraftSlot` as
+    the narrow Quick Create draft model that validates into the existing
+    `StackSpec`, `RailLayout`, and `StackItem` runtime schema.
+  - `actionrail.save_user_preset()` and `actionrail.load_user_preset()` save and
+    reload user presets from a user storage path separate from locked built-in
+    presets. The storage path is injectable for tests and honors
+    `ACTIONRAIL_USER_PRESET_DIR`.
+  - User preset saves validate file-safe ids, prevent overwriting bundled preset
+    ids such as `transform_stack`, and round-trip through the existing JSON
+    preset parser before writing.
+  - `actionrail.collect_diagnostics()` now scans saved user preset files and
+    reports malformed or otherwise broken user presets as warnings, so bundled
+    preset diagnostics and startup are not blocked by a bad saved user file.
+  - `actionrail.about()` now lists the authoring module and current user preset
+    storage summary.
 
 ## In Progress
 
-- Phase 2 Quick Create/Edit Mode kickoff is not started yet.
+- Phase 2 step 2.2 Dockable Quick Create Panel is next; not started yet.
 
 ## Next Agent Start
 
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: begin Phase 2 step 2.1, Authoring Model And
-   User Preset Storage. Read `docs/06_wow_style_customization.md` first, then
-   proceed through the medium Phase 2 steps in `docs/02_implementation_plan.md`.
+2. First recommended coding slice: begin Phase 2 step 2.2, Dockable Quick
+   Create Panel. Use the `DraftRail`/`DraftSlot` helpers from
+   `scripts/actionrail/authoring.py` instead of inventing another draft model.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 ## Latest Handoff
 
-- Task goal completed: Phase 1 declarative MVP completion audit and status
-  update.
-- Files changed in this handoff update: `scripts/actionrail/project.py`,
-  `tests/test_project_map.py`, `docs/00_start_here.md`,
-  `docs/02_implementation_plan.md`, `docs/04_status.md`, and
-  `docs/06_wow_style_customization.md`.
-- Behavior verified: focused package/spec tests, coverage-gated full pytest,
-  full Ruff, and full Maya smoke all passed.
-- Current live state: Phase 1 is complete. Built-in presets render through
-  `actionrail.show_example(...)`; custom Python `StackSpec` objects render with
-  `actionrail.show_spec(...)`; the project map reports `Phase 1 complete`.
+- Task goal completed: Phase 2 step 2.1, Authoring Model And User Preset
+  Storage.
+- Files changed in this handoff update: `scripts/actionrail/authoring.py`,
+  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/__init__.py`,
+  `scripts/actionrail/project.py`, focused tests, and the Phase 2 docs/status
+  updates.
+- Behavior verified: focused authoring/diagnostics/package/project tests,
+  coverage-gated full pytest, full Ruff, and full Maya smoke all passed.
+- Current live state: Phase 2 step 2.1 is complete. A draft rail can be built,
+  saved as a user preset, reloaded through the existing parser, and verified not
+  to overwrite locked built-in presets.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: start the Phase 2 Quick Create/Edit Mode kickoff with a
-  narrow, verified authoring slice.
+- Exact next step: build the Phase 2 step 2.2 dockable Quick Create panel on top
+  of the draft/user-preset helpers.
 
 ## Next
 
-1. Start Phase 2 step 2.1, then continue through the medium Quick Create/Edit
+1. Start Phase 2 step 2.2, then continue through the medium Quick Create/Edit
    Mode steps in `docs/02_implementation_plan.md`.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
@@ -258,20 +274,21 @@ Start here:
 
 ## Latest Verification
 
-- Focused builder/API checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_package.py tests\\test_spec.py`
-  -> 32 passed.
+- Focused authoring/storage checks:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_authoring.py tests\\test_diagnostics.py tests\\test_package.py tests\\test_project_map.py`
+  -> 62 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 288 passed, `TOTAL 3014 0 100%`.
+  -> 298 passed, `TOTAL 3143 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
-  port `7217`; verified capture, diagnostic badges, diagnostics window,
-  hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
-  import/recovery diagnostics, Maya menu/shelf UI, overlay cleanup, phase 0,
-  predicates, StackItem ABI, and transform-stack state.
+  port `7217` after the step 2.1 authoring/storage changes; verified capture,
+  diagnostic badges, diagnostics window, hidden visibility, horizontal icon
+  rail, hotkey bridge, hotkey label sync, import/recovery diagnostics, Maya
+  menu/shelf UI, overlay cleanup, phase 0, predicates, StackItem ABI, and
+  transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

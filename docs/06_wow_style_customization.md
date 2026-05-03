@@ -303,8 +303,9 @@ Exit criteria: a preset action can be triggered from a Maya hotkey without the o
 
 Build the user-facing authoring workflow in medium slices:
 
-1. Authoring model and user preset storage: draft rail data, safe user-preset
-   writes, schema validation, and diagnostics for broken user presets.
+1. Authoring model and user preset storage: complete for the first foundation
+   slice through `DraftRail`, `DraftSlot`, safe user-preset writes, schema
+   validation, and non-blocking diagnostics for broken user presets.
 2. Dockable Quick Create panel: Maya workspace-control entry point, vertical and
    horizontal templates, action picker, labels, icons, and basic layout values.
 3. Preview and save workflow: preview without saving, cleanup preview overlays,

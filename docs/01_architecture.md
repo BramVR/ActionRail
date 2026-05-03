@@ -27,6 +27,7 @@ ActionRail/
       hotkeys.py
       state.py
       spec.py
+      authoring.py
       theme.py
   icons/
   presets/
@@ -152,6 +153,8 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 ```
 
 The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
+
+Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. This is a local user-preset layer only; project/studio/profile layering is still reserved for a later phase.
 
 Later phases should evolve the public naming toward user-authored rail/slot data:
 

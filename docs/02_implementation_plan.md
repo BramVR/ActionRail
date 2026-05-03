@@ -185,13 +185,22 @@ Goal: let users create rails, palettes, action bars, and hotkey-labeled button l
 
 #### 2.1 Authoring Model And User Preset Storage
 
+Status: complete for the first Quick Create foundation slice.
+
 - Define the draft authoring model that maps cleanly to `StackSpec`, `RailLayout`,
-  and `StackItem`.
+  and `StackItem`. Done through public `DraftRail`, `DraftSlot`, and
+  `build_draft_spec()`.
 - Add a user-preset location separate from locked built-in presets.
+  Done through the injectable `actionrail.user_preset_dir()` storage path, which
+  defaults outside the bundled `presets/` directory and can be overridden with
+  `ACTIONRAIL_USER_PRESET_DIR`.
 - Add safe save/load helpers that validate ids, prevent built-in overwrite, and
-  preserve existing JSON schema guarantees.
+  preserve existing JSON schema guarantees. Done through
+  `actionrail.save_user_preset()` and `actionrail.load_user_preset()`, which
+  serialize through the existing preset parser before writing.
 - Extend diagnostics so malformed saved user presets are visible without
-  blocking bundled presets.
+  blocking bundled presets. Done by reporting saved user-preset parse and spec
+  issues as warnings during `collect_diagnostics()`.
 
 Done when a test can build a draft rail, save it as a user preset, reload it,
 and prove locked built-in presets were not modified.
@@ -370,15 +379,15 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 1 declarative MVP is complete and verified. The reusable rail/action
-foundation is stable enough to start Phase 2 with a narrow Quick Create/Edit
-Mode kickoff.
+Phase 2 step 2.1 is complete and verified locally. The draft authoring model and
+safe user-preset storage are ready for the first Maya-facing Quick Create UI.
 
-Next implementation slice: define and implement the smallest artist-facing
-authoring workflow that can choose a template/action, preview a rail, and save a
-user preset. Keep `docs/06_wow_style_customization.md` in mind, but do not start
-Bind Mode, flyouts, command rings, profile layers, marking-menu export, or
-Viewport 2.0 yet.
+Next implementation slice: Phase 2 step 2.2, a dockable Quick Create panel that
+can choose a vertical or horizontal template, pick registered actions, edit
+basic labels/icons/layout values, and produce a valid draft. Keep
+`docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
+flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
+yet.
 
 ## Research Backlog
 
