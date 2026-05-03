@@ -74,6 +74,12 @@ Last updated: 2026-05-03
   - Optional slot `icon` ids now resolve through the icon manifest, and `SlotRenderState` carries icon path plus diagnostic code/severity/badge state. Missing actions render disabled with an error badge; missing icons render warning badges while leaving actions enabled.
   - `horizontal_tools` is now the first manifest-backed icon rail, with
     first-party SVG icons for move, rotate, scale, and set key.
+  - `actionrail.icons` now has a provider-aware icon descriptor layer for future
+    picker UIs. It supports manifest-backed ids such as `actionrail.move` and
+    curated Maya built-in resource ids such as `maya.move`, `maya.rotate`,
+    `maya.scale`, and `maya.set_key`.
+  - `maya_tools` is a bundled horizontal rail proving Maya resource icons can
+    render without copying Autodesk assets into the ActionRail icon manifest.
   - Icon diagnostics now validate manifest metadata, duplicate ids, invalid
     local paths, missing files, unknown icon ids, invalid SVG files, and unsafe
     SVG content before widget rendering resolves an icon path.
@@ -240,20 +246,22 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: Phase 2 step 2.1, Authoring Model And User Preset
-  Storage.
-- Files changed in this handoff update: `scripts/actionrail/authoring.py`,
-  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/__init__.py`,
-  `scripts/actionrail/project.py`, focused tests, and the Phase 2 docs/status
-  updates.
-- Behavior verified: focused authoring/diagnostics/package/project tests,
-  coverage-gated full pytest, full Ruff, and full Maya smoke all passed.
-- Current live state: Phase 2 step 2.1 is complete. A draft rail can be built,
-  saved as a user preset, reloaded through the existing parser, and verified not
-  to overwrite locked built-in presets.
+- Task goal completed: Maya built-in icon provider groundwork for future
+  macro-style icon selection.
+- Files changed in this handoff update: icon provider/runtime resolution,
+  diagnostics/project-map exposure, `maya_tools` preset, focused tests, Maya
+  smoke coverage, and docs.
+- Behavior verified: provider-aware icon descriptors, Maya logical ids,
+  manifest icon compatibility, missing Maya resource diagnostics, Qt resource
+  icon rendering, coverage-gated full pytest, full Ruff, and full Maya smoke
+  all passed.
+- Current live state: Presets can reference `maya.move`, `maya.rotate`,
+  `maya.scale`, and `maya.set_key` without copying Autodesk assets. Future
+  Quick Create work can use `actionrail.list_icon_descriptors()` for
+  picker-facing provider/category/keyword metadata.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: build the Phase 2 step 2.2 dockable Quick Create panel on top
-  of the draft/user-preset helpers.
+  of the draft/user-preset helpers and the provider-aware icon descriptor list.
 
 ## Next
 
@@ -274,21 +282,18 @@ Start here:
 
 ## Latest Verification
 
-- Focused authoring/storage checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_authoring.py tests\\test_diagnostics.py tests\\test_package.py tests\\test_project_map.py`
-  -> 62 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 298 passed, `TOTAL 3143 0 100%`.
+  -> 312 passed, `TOTAL 3251 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
-  port `7217` after the step 2.1 authoring/storage changes; verified capture,
-  diagnostic badges, diagnostics window, hidden visibility, horizontal icon
-  rail, hotkey bridge, hotkey label sync, import/recovery diagnostics, Maya
-  menu/shelf UI, overlay cleanup, phase 0, predicates, StackItem ABI, and
-  transform-stack state.
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` -> passed against the
+  already-running MayaSessiond on port `7217`; verified capture, diagnostic
+  badges, diagnostics window, hidden visibility, manifest-backed horizontal
+  icon rail, hotkey bridge, hotkey label sync, import/recovery diagnostics,
+  curated Maya built-in icon rendering, Maya menu/shelf UI, overlay cleanup,
+  phase 0, predicates, StackItem ABI, and transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

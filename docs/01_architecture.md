@@ -156,6 +156,13 @@ The schema is still named `StackSpec` in code for compatibility, but current pre
 
 Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. This is a local user-preset layer only; project/studio/profile layering is still reserved for a later phase.
 
+Icon fields should store stable logical ids, not raw file paths. The icon
+provider layer currently resolves manifest-backed ids such as
+`actionrail.move` and curated Maya resource ids such as `maya.move`. This keeps
+runtime rendering simple while giving Quick Create a picker-friendly
+`IconDescriptor` model with provider, label, category, keywords, source, and
+resolved Qt resource/file data.
+
 Later phases should evolve the public naming toward user-authored rail/slot data:
 
 ```json

@@ -242,8 +242,9 @@ Source: [Autodesk hotbox marking menus](https://help.autodesk.com/cloudhelp/2020
 The icon manifest now has first-party entries, and `import_svg_icon()` covers
 the first local import path with SVG safety validation, manifest path
 normalization, source/license metadata, and generated PNG fallbacks. ActionRail
-still needs broader import diagnostics before shipping more polished preset
-packs.
+also has a first provider-aware descriptor layer for curated Maya built-in
+resource icons. ActionRail still needs a polished icon browser before shipping
+larger preset packs.
 
 Required features:
 
@@ -257,6 +258,9 @@ Required features:
   import-time generation, explicit regeneration, and fallback asset
   diagnostics.
 - expose a local icon browser in the designer.
+- expose Maya built-in resources in the same browser through stable logical ids
+  such as `maya.move`, not raw resource names such as `move_M.png`. First pass
+  done for a curated provider and `IconDescriptor` metadata.
 
 Iconify is useful as an import source because its icon sets are validated and
 cleaned, but licenses must be tracked per icon set. Lucide is a good first pack

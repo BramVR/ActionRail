@@ -34,8 +34,10 @@ Snapshot:
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, the diagnostics Qt window, and the
   SVG import helper with generated PNG fallbacks.
-- Built-in preset ids currently include `transform_stack` and
-  `horizontal_tools`.
+- Built-in preset ids currently include `transform_stack`,
+  `horizontal_tools`, and `maya_tools`.
+- Icons now support provider-backed logical ids: manifest/local icons such as
+  `actionrail.move` and curated Maya resource icons such as `maya.move`.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.2, a dockable Quick Create

@@ -81,6 +81,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
 - Icon-backed preset path. First pass done for a manifest-backed
   `horizontal_tools` rail plus icon metadata, missing-file, unknown-id, and
   unsafe-SVG validation before render path resolution.
+- Maya built-in icon provider. First pass done for curated `maya.*` logical ids,
+  picker-facing `IconDescriptor` metadata, Qt resource-name rendering, Maya
+  resource diagnostics, and a `maya_tools` preset.
 - SVG import helper. First pass done through
   `actionrail.icons.import_svg_icon()`, which validates local SVG sources,
   rejects external resources in style blocks, writes safe assets under
