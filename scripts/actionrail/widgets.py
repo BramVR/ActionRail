@@ -434,7 +434,7 @@ def _button_label(button: object) -> str:
     except Exception:
         label = None
     if isinstance(label, str):
-        return label
+        return label.split("\n", 1)[0]
 
     text = getattr(button, "text", None)
     if callable(text):

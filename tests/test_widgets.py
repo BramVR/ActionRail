@@ -488,6 +488,9 @@ def test_button_paint_text_helpers_use_properties_and_text_fallback() -> None:
     assert _button_label(button) == ""
     assert _button_secondary(button) == "7?"
 
+    button.setProperty("actionRailLabel", "Move\nCtrl+M")
+    assert _button_label(button) == "Move"
+
     button.setProperty("actionRailLabel", None)
     button.setText("Move\nCtrl+M")
     button.setProperty("actionRailKeyLabel", None)
