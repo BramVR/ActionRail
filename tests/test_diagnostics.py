@@ -870,12 +870,16 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
         calls.append(("show", (preset_id, panel, registry)))
         return "host"
 
-    def hide_all():
-        calls.append(("hide_all", None))
+    def active_overlay_ids():
+        return ("transform_stack",)
+
+    def hide_example(preset_id):
+        calls.append(("hide_example", preset_id))
 
     diagnostics_ui_module.show_report_window = show_report_window
     runtime_module.show_example = show_example
-    runtime_module.hide_all = hide_all
+    runtime_module.active_overlay_ids = active_overlay_ids
+    runtime_module.hide_example = hide_example
     monkeypatch.setitem(sys.modules, "actionrail.diagnostics_ui", diagnostics_ui_module)
     monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
 
@@ -888,8 +892,31 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
         diagnostics._show_overlay("transform_stack", panel="modelPanel4", registry=None)
         == "host"
     )
-    assert calls[1] == ("hide_all", None)
+    assert calls[1] == ("hide_example", "transform_stack")
     assert calls[2] == ("show", ("transform_stack", "modelPanel4", None))
+
+
+def test_diagnostics_hide_all_overlays_continues_after_close_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime_module = types.ModuleType("actionrail.runtime")
+    hidden: list[str] = []
+
+    def active_overlay_ids():
+        return ("broken", "remaining")
+
+    def hide_example(preset_id):
+        hidden.append(preset_id)
+        if preset_id == "broken":
+            raise RuntimeError("deleted Qt host")
+
+    runtime_module.active_overlay_ids = active_overlay_ids
+    runtime_module.hide_example = hide_example
+    monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
+
+    diagnostics._safe_hide_all_overlays()
+
+    assert hidden == ["broken", "remaining"]
 
 
 def test_diagnostics_safe_runtime_helpers_hide_exceptions(

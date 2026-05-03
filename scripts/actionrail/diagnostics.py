@@ -843,11 +843,13 @@ def _safe_hide_overlay(preset_id: str) -> None:
 
 def _safe_hide_all_overlays() -> None:
     try:
-        from .runtime import hide_all
+        from .runtime import active_overlay_ids
 
-        hide_all()
+        overlay_ids = active_overlay_ids()
     except Exception:
         return
+    for preset_id in overlay_ids:
+        _safe_hide_overlay(preset_id)
 
 
 def _safe_active_overlay_ids() -> tuple[str, ...]:
