@@ -883,3 +883,533 @@ def test_validate_icon_manifest_reports_missing_and_stale_fallbacks(
         ("stale_icon_fallback", "source.svg"),
     ]
     assert all("generate_png_fallbacks" in issue.hint for issue in issues)
+
+
+def test_icon_dataclasses_report_compact_status() -> None:
+    issue = icons.IconManifestIssue(
+        "missing_icon",
+        "Missing.",
+        icon_id="missing.icon",
+        hint="Add it.",
+    )
+
+    assert issue.as_dict() == {
+        "code": "missing_icon",
+        "message": "Missing.",
+        "icon_id": "missing.icon",
+        "hint": "Add it.",
+    }
+    assert icons.IconStatus("").ok is False
+
+
+def test_manifest_shape_errors_cover_missing_invalid_and_bad_entries(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "icons" / "manifest.json"
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    assert validate_icon_manifest()[0].code == "missing_icon_manifest"
+
+    manifest_path.parent.mkdir()
+    manifest_path.write_text("{not json", encoding="utf-8")
+    assert validate_icon_manifest()[0].message.endswith("JSONDecodeError.")
+
+    manifest_path.write_text('{"icons": "bad"}', encoding="utf-8")
+    assert validate_icon_manifest()[0].code == "invalid_icon_manifest"
+
+    manifest_path.write_text('{"icons": ["bad"]}', encoding="utf-8")
+    assert "entries must be objects" in validate_icon_manifest()[0].message
+
+
+def test_icon_status_reports_manifest_shape_and_asset_issues(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "icons" / "manifest.json"
+    manifest_path.parent.mkdir()
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "broken.path",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://broken.svg",
+                        "imported_at": "2026-04-30",
+                        "path": "../broken.svg",
+                    },
+                    {
+                        "id": "missing.file",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://missing.svg",
+                        "imported_at": "2026-04-30",
+                        "path": "missing.svg",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    assert icon_status("").issue is None
+    assert icon_status("broken.path").issue.code == "invalid_icon_path"
+    assert icon_status("missing.file").issue.code == "missing_icon_file"
+
+
+def test_validate_svg_icon_import_reports_invalid_manifest_and_duplicate(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    source_path = tmp_path / "source.svg"
+    icon_dir.mkdir()
+    source_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    manifest_path.write_text("{not json", encoding="utf-8")
+    assert validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+    )[0].code == "invalid_icon_manifest"
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "custom.arrow",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://old.svg",
+                        "imported_at": "2026-04-30",
+                        "path": "icons/custom/arrow.svg",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+    )[0].code == "duplicate_icon"
+
+
+def test_validate_svg_icon_import_reports_invalid_sources_and_targets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    icon_dir.mkdir()
+    manifest_path.write_text('{"icons": []}', encoding="utf-8")
+    source_path = tmp_path / "source.svg"
+    source_path.write_text("<svg></svg>", encoding="utf-8")
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    assert validate_svg_icon_import(
+        tmp_path / "missing.svg",
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://missing.svg",
+    )[0].code == "missing_icon_import_source"
+    assert validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        target_path="icons/custom/arrow.png",
+    )[-1].code == "invalid_icon_import_target"
+    assert validate_svg_icon_import(
+        source_path,
+        "custom.arrow",
+        source="Local",
+        license_name="Apache-2.0",
+        url="local://source.svg",
+        imported_at="",
+    )[0].field == "imported_at"
+
+
+def test_validate_icon_manifest_reports_fallback_metadata_shapes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    svg_path = tmp_path / "source.svg"
+    svg_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
+        encoding="utf-8",
+    )
+    entry = {
+        "id": "test.source",
+        "source": "Local",
+        "license": "Apache-2.0",
+        "url": "local://source.svg",
+        "imported_at": "2026-04-30",
+        "path": "source.svg",
+        "fallbacks": {"1x": "../escape.png", "2x": "bad.txt", "3x": ""},
+        "fallback_source_sha256": "",
+        "fallback_base_size": 0,
+    }
+    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry,))
+    monkeypatch.setattr(icons, "_resolve_manifest_path", lambda path: tmp_path / path)
+
+    issues = validate_icon_manifest()
+
+    assert [issue.code for issue in issues] == [
+        "invalid_icon_fallback_path",
+        "invalid_icon_fallback_path",
+        "missing_icon_fallback",
+        "missing_icon_fallback_hash",
+        "invalid_icon_fallback_size",
+    ]
+
+    entry["fallbacks"] = "bad"
+    assert validate_icon_manifest()[0].code == "invalid_icon_fallbacks"
+
+
+def test_svg_validation_rejects_bad_roots_and_unsafe_references(tmp_path: Path) -> None:
+    cases = [
+        ("bad.xml", "<not-svg></not-svg>", "invalid_icon_svg"),
+        (
+            "foreign.svg",
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><foreignObject /></svg>',
+            "unsafe_icon_svg",
+        ),
+        (
+            "event.svg",
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1" onclick="x"></svg>',
+            "unsafe_icon_svg",
+        ),
+        (
+            "href.svg",
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><image href="https://example.test/x.png"/></svg>',
+            "unsafe_icon_svg",
+        ),
+        (
+            "style-attr.svg",
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1" style="background:url(https://example.test/x.png)"></svg>',
+            "unsafe_icon_svg",
+        ),
+    ]
+
+    for filename, contents, expected_code in cases:
+        svg_path = tmp_path / filename
+        svg_path.write_text(contents, encoding="utf-8")
+        assert icons._svg_issue("test.svg", filename, svg_path).code == expected_code
+
+    invalid_xml = tmp_path / "invalid.svg"
+    invalid_xml.write_text("<svg", encoding="utf-8")
+    assert icons._svg_issue("test.svg", "invalid.svg", invalid_xml).code == "invalid_icon_svg"
+
+
+def test_generate_png_fallbacks_rejects_invalid_manifest_entries(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    icon_dir.mkdir()
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    manifest_path.write_text('{"icons": []}', encoding="utf-8")
+    with pytest.raises(ValueError, match="not listed"):
+        generate_png_fallbacks("missing.icon")
+
+    manifest_path.write_text('{"icons": [{"id": "bad"}]}', encoding="utf-8")
+    with pytest.raises(ValueError, match="field 'source'"):
+        generate_png_fallbacks("bad")
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "missing.file",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://missing.svg",
+                        "imported_at": "2026-04-30",
+                        "path": "icons/missing.svg",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="missing file"):
+        generate_png_fallbacks("missing.file")
+
+    png_path = icon_dir / "source.png"
+    png_path.write_bytes(PNG_BYTES)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "png.source",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://source.png",
+                        "imported_at": "2026-04-30",
+                        "path": "icons/source.png",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="must point to an SVG"):
+        generate_png_fallbacks("png.source")
+
+
+def test_generate_png_fallbacks_restores_existing_files_on_renderer_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    icon_dir = tmp_path / "icons"
+    manifest_path = icon_dir / "manifest.json"
+    svg_path = icon_dir / "source.svg"
+    fallback_path = icon_dir / "source@1x.png"
+    icon_dir.mkdir()
+    svg_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
+        encoding="utf-8",
+    )
+    fallback_path.write_bytes(OLD_PNG_BYTES)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "icons": [
+                    {
+                        "id": "test.source",
+                        "source": "Local",
+                        "license": "Apache-2.0",
+                        "url": "local://source.svg",
+                        "imported_at": "2026-04-30",
+                        "path": "icons/source.svg",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    with pytest.raises(RuntimeError, match="renderer failed"):
+        generate_png_fallbacks("test.source", png_renderer=failing_png_renderer)
+
+    assert fallback_path.read_bytes() == OLD_PNG_BYTES
+    assert not (icon_dir / "source@2x.png").exists()
+    assert not (icon_dir / "source@3x.png").exists()
+
+
+def test_render_png_reports_missing_or_failing_mayapy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    svg_path = tmp_path / "source.svg"
+    png_path = tmp_path / "source.png"
+    monkeypatch.setattr(icons, "_mayapy_candidates", lambda: ())
+
+    with pytest.raises(RuntimeError, match="mayapy"):
+        icons._render_png_with_mayapy(svg_path, png_path, 24)
+    with pytest.raises(RuntimeError, match="Unable to generate PNG"):
+        icons._render_png(svg_path, png_path, 24, None)
+
+    monkeypatch.setattr(icons, "_mayapy_candidates", lambda: ("mayapy",))
+    monkeypatch.setattr(
+        icons.subprocess,
+        "run",
+        lambda *args, **kwargs: subprocess.CompletedProcess(args[0], 1, "out", "err"),
+    )
+    with pytest.raises(RuntimeError, match="err"):
+        icons._render_png_with_mayapy(svg_path, png_path, 24)
+
+
+def test_mayapy_candidates_are_unique_and_sorted(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeAutodeskRoot:
+        def is_dir(self) -> bool:
+            return True
+
+        def glob(self, pattern: str) -> list[Path]:
+            assert pattern == "Maya*/bin/mayapy.exe"
+            return [
+                Path("C:/Program Files/Autodesk/Maya2026/bin/mayapy.exe"),
+                Path("C:/Program Files/Autodesk/Maya2025/bin/mayapy.exe"),
+            ]
+
+    def fake_path(value: str) -> object:
+        if value == "C:/Program Files/Autodesk":
+            return FakeAutodeskRoot()
+        return Path(value)
+
+    monkeypatch.setattr(icons.shutil, "which", lambda _name: "C:/mayapy.exe")
+    monkeypatch.setattr(icons, "Path", fake_path)
+
+    candidates = icons._mayapy_candidates()
+
+    assert candidates[0] == "C:/mayapy.exe"
+    assert len(candidates) == len(set(candidates))
+
+
+def test_icon_status_reports_manifest_shape_and_entry_issues(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"__manifest_error__": "missing"},))
+    assert icon_status("anything").issue.code == "missing_icon_manifest"
+
+    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"id": "bad.entry"},))
+    assert icon_status("bad.entry").issue.field == "source"
+
+
+def test_validate_icon_manifest_records_invalid_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"id": "bad.entry"},))
+
+    issues = validate_icon_manifest()
+
+    assert issues[0].field == "source"
+
+
+def test_manifest_payload_for_update_handles_missing_and_bad_shapes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "icons" / "manifest.json"
+    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+
+    assert icons._manifest_payload_for_update() == {"icons": []}
+
+    manifest_path.parent.mkdir()
+    manifest_path.write_text('{"icons": ["bad"]}', encoding="utf-8")
+    with pytest.raises(ValueError, match="icons list"):
+        icons._manifest_payload_for_update()
+
+
+def test_manifest_entry_icon_path_rejects_invalid_paths() -> None:
+    assert icons._manifest_entry_icon_path({"path": ""}) is None
+    assert icons._manifest_entry_icon_path({"path": "../escape.svg"}) is None
+
+
+def test_upsert_manifest_entry_appends_new_entries() -> None:
+    entries = [{"id": "existing"}]
+    icons._upsert_manifest_entry(entries, {"id": "new"})
+
+    assert entries == [{"id": "existing"}, {"id": "new"}]
+
+
+def test_fallback_helpers_ignore_non_svg_and_non_string_owner_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
+    entry = {
+        "id": "png.icon",
+        "source": "Local",
+        "license": "Apache-2.0",
+        "url": "local://icon.png",
+        "imported_at": "2026-04-30",
+        "path": "icon.png",
+    }
+
+    assert icons._fallback_issues(entry, require_fallbacks=True) == ()
+    assert icons._fallback_manifest_path_owner(
+        "icons/custom/arrow@1x.png",
+        [{"id": "other", "fallbacks": {"1x": 123}}],
+        icon_id="current",
+    ) == ""
+
+
+def test_import_metadata_and_target_helpers_reject_bad_values(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
+
+    with pytest.raises(ValueError, match="must be a non-empty string"):
+        icons._validate_import_metadata(
+            icon_id="custom.arrow",
+            source="",
+            license_name="Apache-2.0",
+            url="local://arrow.svg",
+            imported_at=None,
+        )
+    assert icons._import_metadata_issue(
+        icon_id="custom.arrow",
+        source="",
+        license_name="Apache-2.0",
+        url="local://arrow.svg",
+        imported_at=None,
+    ).field == "source"
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        icons._resolve_import_target("")
+    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path / "package")
+    with pytest.raises(ValueError, match="inside the ActionRail icons directory"):
+        icons._resolve_import_target("icons/arrow.svg")
+
+
+def test_path_and_snapshot_helpers_cover_absolute_duplicate_and_suffixless_paths(
+    tmp_path: Path,
+) -> None:
+    existing = tmp_path / "existing.txt"
+    missing = tmp_path / "missing.txt"
+    existing.write_text("old", encoding="utf-8")
+
+    snapshots = icons._snapshot_files((existing, existing, missing))
+    existing.write_text("new", encoding="utf-8")
+    missing.write_text("created", encoding="utf-8")
+    icons._restore_file_snapshots(snapshots)
+
+    assert existing.read_text(encoding="utf-8") == "old"
+    assert not missing.exists()
+    assert icons._fallback_manifest_path("icons/custom/icon", 2) == "icons/custom/icon@2x.png"
+    assert icons._resolve_manifest_path(str(existing)) == existing
+
+
+def test_mayapy_candidates_deduplicates_equivalent_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeAutodeskRoot:
+        def is_dir(self) -> bool:
+            return True
+
+        def glob(self, _pattern: str) -> list[Path]:
+            return [Path("C:/mayapy.exe")]
+
+    def fake_path(value: str) -> object:
+        if value == "C:/Program Files/Autodesk":
+            return FakeAutodeskRoot()
+        return Path(value)
+
+    monkeypatch.setattr(icons.shutil, "which", lambda _name: "C:/mayapy.exe")
+    monkeypatch.setattr(icons, "Path", fake_path)
+
+    assert icons._mayapy_candidates() == ("C:/mayapy.exe",)
