@@ -382,6 +382,7 @@ def test_summary_text_includes_overlay_support_counts() -> None:
 
 def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkeypatch) -> None:
     cleared = []
+    hidden = []
     monkeypatch.setattr(diagnostics_ui, "maya_main_window", lambda _qt: "mayaWindow")
     report = DiagnosticReport(
         (
@@ -394,6 +395,7 @@ def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkey
         report,
         "full report",
         on_clear=lambda: cleared.append(True),
+        on_hide_overlays=lambda: hidden.append(True),
         qt_binding=fake_qt,
     )
 
@@ -407,7 +409,9 @@ def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkey
     assert issue_detail.toPlainText().startswith("Severity: error")
     assert report_box.toPlainText() == "full report"
 
-    copy_selected, copy_full, clear_button, close_button = FakeQtWidgets.buttons[-4:]
+    copy_selected, copy_full, hide_overlays, clear_button, close_button = (
+        FakeQtWidgets.buttons[-5:]
+    )
     issue_list.selected = [issue_list.item(1)]
     issue_list.itemSelectionChanged.emit()
     assert issue_detail.toPlainText().startswith("Severity: warning")
@@ -424,6 +428,9 @@ def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkey
 
     copy_full.clicked.emit()
     assert FakeQtWidgets.clipboard.text == "full report"
+
+    hide_overlays.clicked.emit()
+    assert hidden == [True]
 
     clear_button.clicked.emit()
     assert cleared == [True]

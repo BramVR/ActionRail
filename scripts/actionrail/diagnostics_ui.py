@@ -24,6 +24,7 @@ def show_report_window(
     report_text: str,
     *,
     on_clear: Callable[[], None] | None = None,
+    on_hide_overlays: Callable[[], None] | None = None,
     qt_binding: QtBinding | None = None,
     parent: Any | None = None,
 ) -> Any:
@@ -49,7 +50,7 @@ def show_report_window(
     window.setModal(False)
     window.setAttribute(qt.QtCore.Qt.WA_DeleteOnClose, True)
 
-    _build_window(window, qt, report, report_text, on_clear)
+    _build_window(window, qt, report, report_text, on_clear, on_hide_overlays)
     window.destroyed.connect(_forget_window)
     _WINDOW = window
     window.show()
@@ -64,6 +65,7 @@ def _build_window(
     report: DiagnosticReport | None,
     report_text: str,
     on_clear: Callable[[], None] | None,
+    on_hide_overlays: Callable[[], None] | None,
 ) -> None:
     window.setStyleSheet(_style_sheet())
 
@@ -118,9 +120,16 @@ def _build_window(
 
     copy_selected = qt.QtWidgets.QPushButton("Copy Selected")
     copy_full = qt.QtWidgets.QPushButton("Copy Full Report")
+    hide_overlays = (
+        qt.QtWidgets.QPushButton("Hide Overlays") if on_hide_overlays is not None else None
+    )
     clear_button = qt.QtWidgets.QPushButton("Clear")
     close_button = qt.QtWidgets.QPushButton("Close")
-    for button in (copy_selected, copy_full, clear_button, close_button):
+    buttons = [copy_selected, copy_full]
+    if hide_overlays is not None:
+        buttons.append(hide_overlays)
+    buttons.extend((clear_button, close_button))
+    for button in buttons:
         button.setProperty("actionRailRole", "dialogButton")
         button_row.addWidget(button)
 
@@ -153,6 +162,8 @@ def _build_window(
         issue_list.setCurrentRow(0)
     copy_selected.clicked.connect(copy_selected_text)
     copy_full.clicked.connect(copy_full_text)
+    if hide_overlays is not None and on_hide_overlays is not None:
+        hide_overlays.clicked.connect(on_hide_overlays)
     clear_button.clicked.connect(clear_report)
     close_button.clicked.connect(window.close)
 

@@ -117,6 +117,9 @@ Last updated: 2026-05-03
   - `actionrail.show_last_report()` now opens a themed ActionRail Qt diagnostics
     window with a summary, warning/error issue list, selectable full report text,
     and `Copy Selected`, `Copy Full Report`, `Clear`, and `Close` actions.
+  - The diagnostics window now includes a `Hide Overlays` support action wired
+    to the runtime overlay registry, so users can dismiss active ActionRail
+    overlays from the same report surface when diagnosing stuck or broken UI.
   - Diagnostic reports now include published ActionRail runtime-command names,
     the diagnostics window summary shows the published command count, and
     stale generated action/slot runtime commands are reported as warning issues
@@ -210,14 +213,17 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: raised `scripts/actionrail` pure-Python line coverage
-  to 100% and added a coverage gate that fails below 100%.
-- Files changed in this handoff update: focused pytest coverage additions across
-  package tests, `.coveragerc`, and this status file.
-- Behavior verified: coverage report shows `TOTAL 2944 0 100%`; full pytest,
-  full Ruff, and full Maya smoke all passed.
-- Current live state: all package modules report 100% line coverage under
-  coverage.py, and future `coverage report` runs enforce that threshold.
+- Task goal completed: added a diagnostics-window `Hide Overlays` support action
+  and wired `actionrail.show_last_report()` to dismiss all runtime-owned
+  overlays defensively.
+- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
+  `scripts/actionrail/diagnostics_ui.py`, diagnostics tests, and this status
+  file.
+- Behavior verified: coverage-gated full pytest, full Ruff, and full Maya smoke
+  all passed.
+- Current live state: the diagnostics window still exposes copy/full-report and
+  clear actions, and now also provides a visible overlay-dismiss action for
+  stuck UI support.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue Phase 1 declarative MVP work; preserve the 100%
   coverage gate when changing package code.
@@ -238,11 +244,13 @@ Start here:
 
 ## Latest Verification
 
+- Focused diagnostics checks:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
+  -> 47 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 284 passed, `TOTAL 2944 0 100%`.
+  -> 284 passed, `TOTAL 2957 0 100%`.
 - Full local checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest` -> 284 passed;
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on

@@ -335,7 +335,8 @@ viewer, not repeated blocking popups.
 Required features:
 
 - `actionrail.safe_start()`
-- disable all overlays
+- disable all overlays. First visible support pass done through the diagnostics
+  window `Hide Overlays` action.
 - list active overlays
 - list callbacks/event filters
 - list published runtime commands

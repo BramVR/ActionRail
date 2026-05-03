@@ -862,28 +862,34 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
     runtime_module = types.ModuleType("actionrail.runtime")
     calls: list[tuple[str, object]] = []
 
-    def show_report_window(report, message, *, on_clear):
-        calls.append(("window", (report, message, on_clear)))
+    def show_report_window(report, message, *, on_clear, on_hide_overlays):
+        calls.append(("window", (report, message, on_clear, on_hide_overlays)))
         return "window"
 
     def show_example(preset_id, *, panel, registry):
         calls.append(("show", (preset_id, panel, registry)))
         return "host"
 
+    def hide_all():
+        calls.append(("hide_all", None))
+
     diagnostics_ui_module.show_report_window = show_report_window
     runtime_module.show_example = show_example
+    runtime_module.hide_all = hide_all
     monkeypatch.setitem(sys.modules, "actionrail.diagnostics_ui", diagnostics_ui_module)
     monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
 
     report = DiagnosticReport()
 
     assert diagnostics._show_report_window(report, "message") == "window"
+    assert calls[0][0] == "window"
+    calls[0][1][3]()
     assert (
         diagnostics._show_overlay("transform_stack", panel="modelPanel4", registry=None)
         == "host"
     )
-    assert calls[0][0] == "window"
-    assert calls[1] == ("show", ("transform_stack", "modelPanel4", None))
+    assert calls[1] == ("hide_all", None)
+    assert calls[2] == ("show", ("transform_stack", "modelPanel4", None))
 
 
 def test_diagnostics_safe_runtime_helpers_hide_exceptions(
@@ -895,11 +901,13 @@ def test_diagnostics_safe_runtime_helpers_hide_exceptions(
         raise RuntimeError("runtime unavailable")
 
     runtime_module.hide_example = raise_error
+    runtime_module.hide_all = raise_error
     runtime_module.active_overlay_ids = raise_error
     runtime_module.active_overlay_states = raise_error
     monkeypatch.setitem(sys.modules, "actionrail.runtime", runtime_module)
 
     diagnostics._safe_hide_overlay("transform_stack")
+    diagnostics._safe_hide_all_overlays()
 
     assert diagnostics._safe_active_overlay_ids() == ()
     assert diagnostics._safe_active_overlay_states() == ()

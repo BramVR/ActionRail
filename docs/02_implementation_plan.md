@@ -114,6 +114,9 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   active overlay state for support, including panel, widget visibility/validity,
   event-filter target count, and predicate refresh timer state; the diagnostics
   window summary shows aggregate event-filter and refresh-timer counts.
+- Diagnostics overlay cleanup action. First pass done: the themed diagnostics
+  window includes `Hide Overlays`, which defensively dismisses all
+  runtime-owned ActionRail overlays from the same support surface as the report.
 - Maya-facing icon import diagnostics. First pass done: the ActionRail Maya
   menu includes `Diagnose SVG Icon Import...`, which lets a user choose a local
   SVG, enter an icon id, runs the non-writing import preflight, records the

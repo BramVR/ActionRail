@@ -794,7 +794,12 @@ def _safe_published_commands(cmds_module: Any | None) -> tuple[Any, ...]:
 def _show_report_window(report: DiagnosticReport | None, message: str) -> Any:
     from .diagnostics_ui import show_report_window
 
-    return show_report_window(report, message, on_clear=clear_last_report)
+    return show_report_window(
+        report,
+        message,
+        on_clear=clear_last_report,
+        on_hide_overlays=_safe_hide_all_overlays,
+    )
 
 
 def _resolve_cmds_module(cmds_module: Any | None) -> Any | None:
@@ -832,6 +837,15 @@ def _safe_hide_overlay(preset_id: str) -> None:
         from .runtime import hide_example
 
         hide_example(preset_id)
+    except Exception:
+        return
+
+
+def _safe_hide_all_overlays() -> None:
+    try:
+        from .runtime import hide_all
+
+        hide_all()
     except Exception:
         return
 
