@@ -12,7 +12,7 @@ from contextlib import suppress
 from dataclasses import dataclass, replace
 
 from .actions import ActionRegistry
-from .icons import icon_status
+from .icons import IconStatus, icon_status
 from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
 from .qt import load
 from .spec import StackItem, StackSpec
@@ -378,7 +378,7 @@ def _slot_render_state(
 ) -> SlotRenderState:
     item_context = _item_context(item, registry, context)
     diagnostic = _slot_diagnostic(item, registry, item_context)
-    icon = icon_status(item.icon) if item.icon else None
+    icon = _icon_status(item.icon, item_context) if item.icon else None
     locked = not bool(item.action)
     return SlotRenderState(
         label=item.label,
@@ -438,13 +438,16 @@ def _slot_diagnostic(
         return availability_diagnostic
 
     if item.icon:
-        return _icon_diagnostic(item.icon)
+        return _icon_diagnostic(item.icon, context)
 
     return _NO_SLOT_DIAGNOSTIC
 
 
-def _icon_diagnostic(icon_id: str) -> _SlotDiagnostic:
-    status = icon_status(icon_id)
+def _icon_diagnostic(
+    icon_id: str,
+    context: PredicateContext | None = None,
+) -> _SlotDiagnostic:
+    status = _icon_status(icon_id, context)
     if status.ok:
         return _NO_SLOT_DIAGNOSTIC
     if status.issue is not None:
@@ -460,6 +463,12 @@ def _icon_diagnostic(icon_id: str) -> _SlotDiagnostic:
         badge="?",
         message=f"Missing ActionRail icon: {icon_id}",
     )
+
+
+def _icon_status(icon_id: str, context: PredicateContext | None = None) -> IconStatus:
+    if context is None or context.cmds_module is None:
+        return icon_status(icon_id)
+    return icon_status(icon_id, cmds_module=context.cmds_module)
 
 
 def _availability_diagnostic(

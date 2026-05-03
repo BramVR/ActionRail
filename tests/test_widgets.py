@@ -271,6 +271,12 @@ class BuildCmds(AvailabilityCmds):
         self.calls.append(("setKeyframe", ""))
 
 
+class MissingMayaIconResourceCmds(BuildCmds):
+    def resourceManager(self, *, nameFilter: str) -> list[str]:  # noqa: N802
+        _ = nameFilter
+        return []
+
+
 def test_literal_false_visibility_skips_item_before_frame_building() -> None:
     assert _is_item_visible(StackItem(type="button", visible_when="")) is True
     assert _is_item_visible(StackItem(type="button", visible_when="true")) is True
@@ -603,6 +609,36 @@ def test_slot_render_state_resolves_maya_icon_name() -> None:
     assert state.icon_name == "move_M.png"
     assert state.diagnostic_code == ""
     assert state.text == "M"
+
+
+def test_build_transform_stack_validates_maya_icon_resource(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    cmds = MissingMayaIconResourceCmds()
+    spec = StackSpec(
+        id="missing_maya_icon",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="missing_maya_icon.move",
+                label="M",
+                action="maya.tool.move",
+                icon="maya.move",
+            ),
+        ),
+    )
+
+    root = widgets.build_transform_stack(
+        spec,
+        create_default_registry(cmds),
+        cmds_module=cmds,
+    )
+    button = root.findChildren(BuildButton)[0]
+
+    assert button.property("actionRailDiagnosticCode") == "missing_maya_icon_resource"
+    assert button.property("actionRailDiagnosticSeverity") == "warning"
+    assert button.property("actionRailIconName") == ""
+    assert button.text() == "M\n?"
 
 
 def test_slot_render_state_marks_missing_command_predicate_as_warning() -> None:
