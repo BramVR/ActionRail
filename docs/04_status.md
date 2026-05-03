@@ -181,6 +181,8 @@ Last updated: 2026-05-03
     routing, module ownership, icon manifest health, and verification commands.
   - `docs/04_status.md` is now the compact live status file; older verification
     details live in `docs/history/verification_log.md`.
+  - Pure-Python package coverage is now 100% line coverage for
+    `scripts/actionrail` and `.coveragerc` enforces `fail_under = 100`.
 - WoW-style customization direction documented:
   - `docs/06_wow_style_customization.md` defines Edit Mode, action slots, Bind Mode, flyouts, command rings, profiles, visibility rules, schema direction, and phased roadmap.
   - `docs/01_architecture.md` and `docs/02_implementation_plan.md` now reserve room for stable slot ids, runtime-command hotkeys, user/project/studio layers, and later radial/flyout controls.
@@ -208,25 +210,17 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: threaded the icon import `generate_fallbacks` option
-  through report-backed diagnostics and the Maya-facing preflight wrapper.
-- Files changed in this handoff update: `scripts/actionrail/icons.py`,
-  `scripts/actionrail/diagnostics.py`, `scripts/actionrail/maya_ui.py`,
-  `tests/test_icons.py`, `tests/test_diagnostics.py`,
-  `tests/test_maya_ui.py`, `tests/maya_smoke/actionrail_import_recovery_smoke.py`,
-  and `docs/04_status.md`.
-- Behavior verified: import preflight still reports generated fallback target
-  conflicts for the default SVG import path, while callers that opt out with
-  `generate_fallbacks=False` no longer get fallback-target diagnostics that do
-  not match the requested import behavior.
-- Checks run: focused import/diagnostics/Maya UI pytest and Ruff, full pytest,
-  full Ruff, and full Maya smoke passed.
-- Current live state: the Maya-facing import diagnostics path can now mirror
-  both fallback-generating and SVG-only import settings.
+- Task goal completed: raised `scripts/actionrail` pure-Python line coverage
+  to 100% and added a coverage gate that fails below 100%.
+- Files changed in this handoff update: focused pytest coverage additions across
+  package tests, `.coveragerc`, and this status file.
+- Behavior verified: coverage report shows `TOTAL 2944 0 100%`; full pytest,
+  full Ruff, and full Maya smoke all passed.
+- Current live state: all package modules report 100% line coverage under
+  coverage.py, and future `coverage report` runs enforce that threshold.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: continue visible diagnostics hardening as the icon import
-  path expands; preserve import/recovery smoke coverage when touching import,
-  recovery, or diagnostics-window behavior.
+- Exact next step: continue Phase 1 declarative MVP work; preserve the 100%
+  coverage gate when changing package code.
 
 ## Next
 
@@ -244,40 +238,12 @@ Start here:
 
 ## Latest Verification
 
-- Latest targeted checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py tests\\test_maya_ui.py tests\\test_icons.py`
-  -> 63 passed; `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\diagnostics.py scripts\\actionrail\\maya_ui.py tests\\test_diagnostics.py tests\\test_maya_ui.py`
-  -> all checks passed.
-- Latest local checks: `.\\.venv\\Scripts\\python.exe -m pytest` -> 168 passed
-  and `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Latest fallback check:
-  `$env:PYTHONPATH='scripts'; ... generate_png_fallbacks('actionrail.move')`
-  from the repo venv -> generated `move@1x.png`, `move@2x.png`, and
-  `move@3x.png` via discovered `mayapy`.
-- Latest CLI check:
-  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> printed a valid project map with `run_diagnostics_from_maya` in the public
-  API and zero icon manifest issues.
-- Latest Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_maya_ui_smoke.py`
-  -> passed against MayaSessiond on port `7217`; verified the run diagnostics
-  menu item opens the diagnostics window and records `last_report()`, the icon
-  import diagnostics menu item, explicit missing-source preflight flow,
-  menu/shelf commands, toggle show/hide, and uninstall cleanup.
-- Latest import/recovery Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
-  -> passed against MayaSessiond on port `7217`; verified import report
-  `path`/`field`/`hint` detail text, generated fallback path conflict
-  diagnostics, visible selected-issue detail text, copied selected issue hint
-  text, saved
-  `.gg-maya-sessiond/screenshots/actionrail_import_diagnostics_window.png` at
-  `720x520` and verified fallback startup to `transform_stack`.
-- Latest diagnostics Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
-  -> passed against MayaSessiond on port `7217`; verified the selected issue
-  detail pane, copy selected, copy full report, clear, missing
-  command/plugin/action/icon diagnostics, published runtime-command report text,
-  active overlay support-state report text, and safe start.
+- Coverage gate:
+  `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
+  -> 284 passed, `TOTAL 2944 0 100%`.
+- Full local checks:
+  `.\\.venv\\Scripts\\python.exe -m pytest` -> 284 passed;
+  `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Latest full Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,
