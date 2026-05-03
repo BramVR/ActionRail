@@ -15,6 +15,7 @@ ISSUE_LIST_OBJECT_NAME = "ActionRailDiagnosticsIssueList"
 ISSUE_DETAIL_OBJECT_NAME = "ActionRailDiagnosticsIssueDetail"
 REPORT_TEXT_OBJECT_NAME = "ActionRailDiagnosticsReportText"
 SUMMARY_OBJECT_NAME = "ActionRailDiagnosticsSummary"
+ISSUE_FILTER_OBJECT_NAME = "ActionRailDiagnosticsIssueFilter"
 
 _WINDOW: Any | None = None
 
@@ -88,11 +89,27 @@ def _build_window(
     splitter.setChildrenCollapsible(False)
     root.addWidget(splitter, 1)
 
+    filter_row = qt.QtWidgets.QHBoxLayout()
+    filter_row.setContentsMargins(0, 0, 0, 0)
+    filter_row.setSpacing(8)
+    root.addLayout(filter_row)
+
+    filter_label = qt.QtWidgets.QLabel("Show")
+    filter_label.setObjectName("ActionRailDiagnosticsFilterLabel")
+    filter_row.addWidget(filter_label)
+
+    issue_filter = qt.QtWidgets.QComboBox()
+    issue_filter.setObjectName(ISSUE_FILTER_OBJECT_NAME)
+    issue_filter.setProperty("actionRailRole", "dialogControl")
+    issue_filter.addItems(("All Issues", "Errors", "Warnings", "Info"))
+    filter_row.addWidget(issue_filter)
+    filter_row.addStretch(1)
+
     issue_list = qt.QtWidgets.QListWidget()
     issue_list.setObjectName(ISSUE_LIST_OBJECT_NAME)
     issue_list.setSelectionMode(qt.QtWidgets.QAbstractItemView.ExtendedSelection)
     issue_list.setAlternatingRowColors(True)
-    _populate_issue_list(issue_list, qt, report)
+    _populate_issue_list(issue_list, qt, report, _issue_filter_value(issue_filter))
     splitter.addWidget(issue_list)
 
     issue_detail = qt.QtWidgets.QTextEdit()
@@ -142,22 +159,41 @@ def _build_window(
         if selected_text:
             _set_clipboard(qt, selected_text)
 
+    state = {"report": report, "report_text": report_text}
+
     def copy_full_text() -> None:
-        _set_clipboard(qt, report_box.toPlainText())
+        _set_clipboard(qt, str(state["report_text"]))
 
     def update_issue_detail() -> None:
         issue_detail.setPlainText(_current_issue_detail_text(issue_list, qt))
 
+    def refresh_issue_filter(*_args: object) -> None:
+        issue_list.clear()
+        _populate_issue_list(
+            issue_list,
+            qt,
+            state["report"],
+            _issue_filter_value(issue_filter),
+        )
+        if state["report"] is not None and issue_list.count():
+            first_item = issue_list.item(0)
+            if first_item.data(qt.QtCore.Qt.UserRole):
+                issue_list.setCurrentRow(0)
+        update_issue_detail()
+
     def clear_report() -> None:
+        state["report"] = None
+        state["report_text"] = "No ActionRail diagnostic report has been recorded."
         if on_clear is not None:
             on_clear()
         issue_list.clear()
         _add_empty_issue_item(issue_list, qt, "No ActionRail diagnostic report has been recorded.")
         issue_detail.setPlainText("No ActionRail diagnostic report has been recorded.")
         summary.setText(_summary_text(None))
-        report_box.setPlainText("No ActionRail diagnostic report has been recorded.")
+        report_box.setPlainText(str(state["report_text"]))
 
     issue_list.itemSelectionChanged.connect(update_issue_detail)
+    issue_filter.currentIndexChanged.connect(refresh_issue_filter)
     if report is not None and report.issues:
         issue_list.setCurrentRow(0)
     copy_selected.clicked.connect(copy_selected_text)
@@ -168,7 +204,12 @@ def _build_window(
     close_button.clicked.connect(window.close)
 
 
-def _populate_issue_list(issue_list: Any, qt: QtBinding, report: DiagnosticReport | None) -> None:
+def _populate_issue_list(
+    issue_list: Any,
+    qt: QtBinding,
+    report: DiagnosticReport | None,
+    severity_filter: str = "all",
+) -> None:
     if report is None:
         _add_empty_issue_item(issue_list, qt, "No recorded report.")
         return
@@ -176,7 +217,13 @@ def _populate_issue_list(issue_list: Any, qt: QtBinding, report: DiagnosticRepor
         _add_empty_issue_item(issue_list, qt, "No issues found.")
         return
 
-    for issue in report.issues:
+    issues = _filtered_issues(report, severity_filter)
+    if not issues:
+        label = _filter_empty_label(severity_filter)
+        _add_empty_issue_item(issue_list, qt, f"No {label} found.")
+        return
+
+    for issue in issues:
         item = qt.QtWidgets.QListWidgetItem(_issue_title(issue))
         item.setData(qt.QtCore.Qt.UserRole, _issue_detail(issue))
         item.setToolTip(issue.message)
@@ -192,6 +239,36 @@ def _add_empty_issue_item(issue_list: Any, qt: QtBinding, text: str) -> None:
     item = qt.QtWidgets.QListWidgetItem(text)
     item.setFlags(item.flags() & ~qt.QtCore.Qt.ItemIsSelectable)
     issue_list.addItem(item)
+
+
+def _issue_filter_value(issue_filter: Any) -> str:
+    text = str(issue_filter.currentText()).strip().lower()
+    if text.startswith("error"):
+        return "error"
+    if text.startswith("warning"):
+        return "warning"
+    if text.startswith("info"):
+        return "info"
+    return "all"
+
+
+def _filtered_issues(
+    report: DiagnosticReport,
+    severity_filter: str,
+) -> tuple[DiagnosticIssue, ...]:
+    if severity_filter == "all":
+        return report.issues
+    return tuple(issue for issue in report.issues if issue.severity == severity_filter)
+
+
+def _filter_empty_label(severity_filter: str) -> str:
+    if severity_filter == "error":
+        return "errors"
+    if severity_filter == "warning":
+        return "warnings"
+    if severity_filter == "info":
+        return "info issues"
+    return "issues"
 
 
 def _selected_issue_text(issue_list: Any, qt: QtBinding) -> str:
@@ -291,6 +368,21 @@ QLabel#ActionRailDiagnosticsTitle {{
 }}
 QLabel#{SUMMARY_OBJECT_NAME} {{
     color: {theme.button_color};
+    font-size: 12px;
+    letter-spacing: 0px;
+}}
+QLabel#ActionRailDiagnosticsFilterLabel {{
+    color: {theme.button_color};
+    font-size: 12px;
+    letter-spacing: 0px;
+}}
+QComboBox#{ISSUE_FILTER_OBJECT_NAME} {{
+    min-height: 24px;
+    border: {theme.button_border_width}px solid {theme.button_border};
+    border-radius: {theme.button_border_radius}px;
+    background: {theme.button_background};
+    color: {theme.button_color};
+    padding: 3px 8px;
     font-size: 12px;
     letter-spacing: 0px;
 }}

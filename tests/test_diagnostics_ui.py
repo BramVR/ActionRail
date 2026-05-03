@@ -4,7 +4,14 @@ import pytest
 
 import actionrail.diagnostics_ui as diagnostics_ui
 from actionrail.diagnostics import DiagnosticIssue, DiagnosticOverlayState, DiagnosticReport
-from actionrail.diagnostics_ui import _issue_detail, _issue_title, _summary_text
+from actionrail.diagnostics_ui import (
+    _filter_empty_label,
+    _filtered_issues,
+    _issue_detail,
+    _issue_filter_value,
+    _issue_title,
+    _summary_text,
+)
 from actionrail.qt import QtBinding
 
 
@@ -102,6 +109,9 @@ class FakeLayout:
 
     def insertStretch(self, index: int, stretch: int) -> None:  # noqa: N802
         self.children.append(("stretch", index, stretch))
+
+    def addStretch(self, stretch: int) -> None:  # noqa: N802
+        self.children.append(("stretch", stretch))
 
 
 class FakeLabel:
@@ -258,12 +268,38 @@ class FakeButton:
         setattr(self, name, value)
 
 
+class FakeComboBox:
+    def __init__(self) -> None:
+        self.items = []
+        self.current_index = 0
+        self.currentIndexChanged = FakeSignal()
+
+    def setObjectName(self, name: str) -> None:  # noqa: N802
+        self.object_name = name
+
+    def setProperty(self, name: str, value) -> None:  # noqa: N802
+        setattr(self, name, value)
+
+    def addItems(self, items) -> None:  # noqa: N802
+        self.items.extend(items)
+
+    def currentText(self) -> str:  # noqa: N802
+        if not self.items:
+            return ""
+        return self.items[self.current_index]
+
+    def setCurrentIndex(self, index: int) -> None:  # noqa: N802
+        self.current_index = index
+        self.currentIndexChanged.emit()
+
+
 class FakeQtWidgets:
     app = FakeApp()
     clipboard = FakeClipboard()
     lists = []
     text_edits = []
     buttons = []
+    combos = []
     dialogs = []
 
     class QApplication:
@@ -297,6 +333,11 @@ class FakeQtWidgets:
             super().__init__(text)
             FakeQtWidgets.buttons.append(self)
 
+    class QComboBox(FakeComboBox):
+        def __init__(self) -> None:
+            super().__init__()
+            FakeQtWidgets.combos.append(self)
+
     class QAbstractItemView:
         ExtendedSelection = 1
 
@@ -324,6 +365,7 @@ def fake_qt() -> QtBinding:
     FakeQtWidgets.lists = []
     FakeQtWidgets.text_edits = []
     FakeQtWidgets.buttons = []
+    FakeQtWidgets.combos = []
     return QtBinding("Fake", FakeQtCore, FakeQtGui, FakeQtWidgets, lambda pointer, base: base)
 
 
@@ -380,6 +422,35 @@ def test_summary_text_includes_overlay_support_counts() -> None:
     assert "Refresh timers: 1." in summary
 
 
+def test_filtered_issues_selects_severity() -> None:
+    error = DiagnosticIssue("missing_action", "error", "Missing action.")
+    warning = DiagnosticIssue("missing_icon", "warning", "Missing icon.")
+    info = DiagnosticIssue("note", "info", "Note.")
+    report = DiagnosticReport((error, warning, info))
+
+    assert _filtered_issues(report, "all") == (error, warning, info)
+    assert _filtered_issues(report, "error") == (error,)
+    assert _filtered_issues(report, "warning") == (warning,)
+    assert _filtered_issues(report, "info") == (info,)
+
+
+def test_issue_filter_value_and_empty_labels_cover_supported_filters() -> None:
+    combo = FakeComboBox()
+    combo.addItems(("All Issues", "Errors", "Warnings", "Info"))
+
+    assert _issue_filter_value(combo) == "all"
+    assert _filter_empty_label("all") == "issues"
+    combo.setCurrentIndex(1)
+    assert _issue_filter_value(combo) == "error"
+    assert _filter_empty_label("error") == "errors"
+    combo.setCurrentIndex(2)
+    assert _issue_filter_value(combo) == "warning"
+    assert _filter_empty_label("warning") == "warnings"
+    combo.setCurrentIndex(3)
+    assert _issue_filter_value(combo) == "info"
+    assert _filter_empty_label("info") == "info issues"
+
+
 def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkeypatch) -> None:
     cleared = []
     hidden = []
@@ -404,14 +475,25 @@ def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkey
     assert window.raised is True
     assert window.activated is True
     issue_list = FakeQtWidgets.lists[-1]
+    issue_filter = FakeQtWidgets.combos[-1]
     issue_detail, report_box = FakeQtWidgets.text_edits[-2:]
     assert issue_list.count() == 2
     assert issue_detail.toPlainText().startswith("Severity: error")
     assert report_box.toPlainText() == "full report"
 
+    issue_filter.setCurrentIndex(2)
+    assert issue_list.count() == 1
+    assert issue_list.item(0).text().startswith("WARNING missing_plugin")
+    assert issue_detail.toPlainText().startswith("Severity: warning")
+
+    issue_filter.setCurrentIndex(3)
+    assert issue_list.count() == 1
+    assert issue_list.item(0).text() == "No info issues found."
+
     copy_selected, copy_full, hide_overlays, clear_button, close_button = (
         FakeQtWidgets.buttons[-5:]
     )
+    issue_filter.setCurrentIndex(0)
     issue_list.selected = [issue_list.item(1)]
     issue_list.itemSelectionChanged.emit()
     assert issue_detail.toPlainText().startswith("Severity: warning")

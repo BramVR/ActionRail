@@ -122,6 +122,10 @@ Last updated: 2026-05-03
     overlays from the same report surface when diagnosing stuck or broken UI.
     The support action hides each active overlay under its own exception guard,
     so one broken close does not prevent later overlays from being dismissed.
+  - The diagnostics window now includes a severity filter for large reports, so
+    users can switch the visible issue list between all issues, errors,
+    warnings, and info entries while keeping copyable selected-issue details
+    and the full report intact.
   - Diagnostic reports now include published ActionRail runtime-command names,
     the diagnostics window summary shows the published command count, and
     stale generated action/slot runtime commands are reported as warning issues
@@ -215,17 +219,16 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: fixed the diagnostics-window `Hide Overlays` cleanup so
-  a close failure for one runtime-owned overlay does not stop remaining active
-  overlays from being hidden.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics.py`,
-  `tests/test_diagnostics.py`, and this status file.
+- Task goal completed: added diagnostics-window severity filtering for visible
+  issue triage as icon/import reports grow.
+- Files changed in this handoff update: `scripts/actionrail/diagnostics_ui.py`,
+  `tests/test_diagnostics_ui.py`, and this status file.
 - Behavior verified: focused diagnostics tests, coverage-gated full pytest,
-  and full Ruff all passed. Maya smoke was not rerun for this narrow follow-up
-  bugfix; the latest full smoke result below remains the current Maya baseline.
-- Current live state: the diagnostics window still exposes copy/full-report and
-  clear actions, and now also provides a visible overlay-dismiss action for
-  stuck UI support that continues after individual overlay close failures.
+  full Ruff, and focused Maya smoke for diagnostics plus icon import/recovery
+  all passed.
+- Current live state: the diagnostics window still exposes copy/full-report,
+  clear, and hide-overlays actions; the issue list can now be filtered to all
+  issues, errors, warnings, or info entries without changing the stored report.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue Phase 1 declarative MVP work; preserve the 100%
   coverage gate when changing package code.
@@ -247,16 +250,21 @@ Start here:
 ## Latest Verification
 
 - Focused diagnostics checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics.py`
-  -> 40 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
+  -> 50 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 285 passed, `TOTAL 2959 0 100%`.
+  -> 287 passed, `TOTAL 3011 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Maya smoke for latest bugfix:
-  not rerun; this was a pure-Python diagnostics cleanup wrapper change covered
-  by unit tests. Latest full Maya smoke baseline:
+- Maya smoke for latest diagnostics-window change:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
+  -> passed, including import diagnostics report copy/detail checks and fallback
+  preset recovery.
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
+  -> passed, including diagnostics window selected/full copy checks and
+  screenshot capture at `720x520`.
+- Latest full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,
   hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
