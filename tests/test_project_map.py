@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 import actionrail
+import actionrail.project as project_map
+from actionrail.__main__ import main
 from actionrail.project import about
 
 
@@ -43,3 +45,44 @@ def test_module_cli_prints_json_project_map() -> None:
     payload = json.loads(result.stdout)
     assert payload["package"] == "actionrail"
     assert payload["verification"]["workflow_doc"] == "docs/03_maya_sessiond_workflow.md"
+
+
+def test_module_cli_prints_human_project_map(capsys) -> None:
+    assert main([]) == 0
+
+    output = capsys.readouterr().out
+    assert "ActionRail" in output
+    assert "Status: Phase 1 declarative MVP" in output
+    assert "Use --json" in output
+
+
+def test_module_cli_prints_json_project_map_in_process(capsys) -> None:
+    assert main(["--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["package"] == "actionrail"
+
+
+def test_doc_entries_skip_missing_docs_and_handle_plain_markdown(tmp_path, monkeypatch) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    plain_doc = docs_dir / "plain.md"
+    front_matter_doc = docs_dir / "front.md"
+    plain_doc.write_text("# Plain\n", encoding="utf-8")
+    front_matter_doc.write_text(
+        "---\nsummary: Front matter\nread_when:\n  - Testing docs\n---\n# Front\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(project_map, "_PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(
+        project_map,
+        "DOC_PRIORITY",
+        ("docs/missing.md", "docs/plain.md", "docs/front.md"),
+    )
+
+    entries = project_map._doc_entries()
+
+    assert entries == (
+        {"path": "docs/plain.md", "summary": "", "read_when": ()},
+        {"path": "docs/front.md", "summary": "Front matter", "read_when": ("Testing docs",)},
+    )

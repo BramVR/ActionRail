@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 import pytest
 
 from actionrail.actions import (
@@ -9,6 +12,8 @@ from actionrail.actions import (
     Action,
     ActionRegistry,
     create_default_registry,
+    set_tool_context,
+    validate_action_ids,
 )
 from actionrail.runtime import run_action, run_slot
 
@@ -107,3 +112,26 @@ def test_runtime_run_slot_rejects_unknown_slot() -> None:
 
     with pytest.raises(KeyError, match="missing.slot"):
         run_slot("transform_stack", "missing.slot", registry=registry)
+
+
+def test_maya_action_requires_cmds_when_not_in_maya() -> None:
+    with pytest.raises(RuntimeError, match="require maya.cmds"):
+        set_tool_context(MOVE_CONTEXT)
+
+
+def test_maya_action_imports_cmds_when_available(monkeypatch) -> None:
+    cmds = FakeCmds()
+    maya_module = ModuleType("maya")
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)
+
+    assert set_tool_context(ROTATE_CONTEXT) == ROTATE_CONTEXT
+    assert cmds.calls == [("setToolTo", ROTATE_CONTEXT)]
+
+
+def test_validate_action_ids_reports_missing_ids() -> None:
+    registry = ActionRegistry()
+    registry.register(Action("known.action", "Known", lambda: None))
+
+    with pytest.raises(ValueError, match="missing.action"):
+        validate_action_ids(["known.action", "missing.action"], registry=registry)
