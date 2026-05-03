@@ -229,6 +229,75 @@ def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     assert last_report() == report
 
 
+def test_collect_diagnostics_reports_broken_user_presets_as_warnings(tmp_path) -> None:
+    broken_path = tmp_path / "broken.json"
+    broken_path.write_text("{not json", encoding="utf-8")
+
+    report = collect_diagnostics(
+        ("transform_stack",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    user_issues = [issue for issue in report.warnings if issue.code == "broken_user_preset"]
+    assert report.has_errors is False
+    assert len(user_issues) == 1
+    assert user_issues[0].preset_id == "broken"
+    assert user_issues[0].path == str(broken_path)
+    assert user_issues[0].exception_type == "ValueError"
+    assert user_issues[0].hint
+
+
+def test_collect_diagnostics_downgrades_user_preset_spec_issues(tmp_path) -> None:
+    user_path = tmp_path / "bad_action.json"
+    user_path.write_text(
+        """
+{
+  "id": "bad_action",
+  "layout": {"anchor": "viewport.left.center"},
+  "items": [
+    {
+      "type": "button",
+      "id": "bad_action.slot",
+      "label": "X",
+      "action": "maya.missing.action"
+    }
+  ]
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = collect_diagnostics(
+        ("transform_stack",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    user_issues = [
+        issue
+        for issue in report.warnings
+        if issue.code == "missing_action" and issue.preset_id == "bad_action"
+    ]
+    assert report.has_errors is False
+    assert user_issues[0].path == str(user_path)
+    assert user_issues[0].hint
+
+
+def test_collect_diagnostics_can_skip_user_preset_scan(tmp_path) -> None:
+    (tmp_path / "broken.json").write_text("{not json", encoding="utf-8")
+
+    report = collect_diagnostics(
+        ("transform_stack",),
+        cmds_module=AvailabilityCmds(),
+        include_user_presets=False,
+        user_preset_dir=tmp_path,
+    )
+
+    assert [issue.code for issue in report.issues] == []
+
+
 def test_last_report_can_be_cleared_and_formatted() -> None:
     clear_last_report()
 

@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
+from .authoring import user_preset_files
 from .icons import icon_status, validate_icon_manifest, validate_svg_icon_import
 from .predicates import (
     PredicateContext,
@@ -20,6 +22,7 @@ from .predicates import (
     missing_availability_targets,
 )
 from .spec import StackItem, StackSpec, builtin_preset_ids, load_builtin_preset
+from .spec import load_preset as load_preset_file
 
 DiagnosticSeverity = Literal["info", "warning", "error"]
 
@@ -242,6 +245,8 @@ def collect_diagnostics(
     *,
     registry: ActionRegistry | None = None,
     cmds_module: Any | None = None,
+    include_user_presets: bool = True,
+    user_preset_dir: str | Path | None = None,
 ) -> DiagnosticReport:
     """Collect diagnostics for bundled presets without showing an overlay."""
 
@@ -272,6 +277,14 @@ def collect_diagnostics(
                 cmds_module=resolved_cmds,
                 record=False,
             ).issues
+        )
+    if include_user_presets:
+        issues.extend(
+            _user_preset_diagnostics(
+                preset_dir=user_preset_dir,
+                registry=action_registry,
+                cmds_module=resolved_cmds,
+            )
         )
     issues.extend(_runtime_command_diagnostics(action_registry, resolved_cmds))
     return _record_report(
@@ -571,6 +584,53 @@ def _icon_import_issue(issue: object) -> DiagnosticIssue:
         path=getattr(issue, "path", ""),
         field=getattr(issue, "field", ""),
         hint=getattr(issue, "hint", ""),
+    )
+
+
+def _user_preset_diagnostics(
+    *,
+    preset_dir: str | Path | None,
+    registry: ActionRegistry,
+    cmds_module: Any | None,
+) -> tuple[DiagnosticIssue, ...]:
+    issues: list[DiagnosticIssue] = []
+    for path in user_preset_files(preset_dir=preset_dir):
+        try:
+            spec = load_preset_file(path)
+        except Exception as exc:
+            issues.append(
+                DiagnosticIssue(
+                    code="broken_user_preset",
+                    severity="warning",
+                    message=f"Unable to load ActionRail user preset '{path.stem}': {exc}",
+                    preset_id=path.stem,
+                    path=str(path),
+                    exception_type=type(exc).__name__,
+                    hint=(
+                        "Fix or remove the saved user preset; bundled ActionRail "
+                        "presets remain available."
+                    ),
+                )
+            )
+            continue
+        issues.extend(
+            _user_preset_issue(path, issue)
+            for issue in diagnose_spec(
+                spec,
+                registry=registry,
+                cmds_module=cmds_module,
+                record=False,
+            ).issues
+        )
+    return tuple(issues)
+
+
+def _user_preset_issue(path: Path, issue: DiagnosticIssue) -> DiagnosticIssue:
+    return replace(
+        issue,
+        severity="warning",
+        path=issue.path or str(path),
+        hint=issue.hint or "Fix the saved user preset before publishing or showing it.",
     )
 
 

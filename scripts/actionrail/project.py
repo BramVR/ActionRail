@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .actions import create_default_registry
+from .authoring import user_preset_dir, user_preset_ids
 from .icons import validate_icon_manifest
 from .spec import builtin_preset_ids
 
@@ -27,6 +28,11 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/spec.py",
         "owns": "JSON preset loading, schema validation, built-in preset discovery",
         "tests": ("tests/test_spec.py",),
+    },
+    {
+        "path": "scripts/actionrail/authoring.py",
+        "owns": "draft authoring model and safe user preset storage",
+        "tests": ("tests/test_authoring.py",),
     },
     {
         "path": "scripts/actionrail/widgets.py",
@@ -101,8 +107,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 1 complete",
-            "next_slice": "Phase 2 narrow Quick Create and Edit Mode kickoff",
+            "phase": "Phase 2 step 2.1 complete",
+            "next_slice": "Phase 2 Quick Create dockable panel",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(
@@ -113,6 +119,10 @@ def about() -> dict[str, object]:
         "builtins": {
             "preset_ids": builtin_preset_ids(),
             "action_ids": create_default_registry().ids(),
+        },
+        "user_presets": {
+            "directory": str(user_preset_dir()),
+            "preset_ids": user_preset_ids(),
         },
         "icons": {
             "manifest": "icons/manifest.json",

@@ -20,8 +20,10 @@ def test_about_returns_json_safe_agent_map() -> None:
     assert "about" in project["public_api"]
     assert "transform_stack" in project["builtins"]["preset_ids"]
     assert "maya.tool.rotate" in project["builtins"]["action_ids"]
+    assert "directory" in project["user_presets"]
     assert any(entry["path"] == "docs/00_start_here.md" for entry in project["docs"])
     assert any(module["path"] == "scripts/actionrail/icons.py" for module in project["modules"])
+    assert any(module["path"] == "scripts/actionrail/authoring.py" for module in project["modules"])
 
 
 def test_package_exposes_about() -> None:
@@ -52,7 +54,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 1 complete" in output
+    assert "Status: Phase 2 step 2.1 complete" in output
     assert "Use --json" in output
 
 

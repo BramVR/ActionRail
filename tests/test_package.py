@@ -19,6 +19,9 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert actionrail.StackItem is StackItem
     assert actionrail.StackSpec is StackSpec
     assert actionrail.RailLayout is RailLayout
+    assert callable(actionrail.build_draft_spec)
+    assert callable(actionrail.save_user_preset)
+    assert callable(actionrail.load_user_preset)
     assert callable(actionrail.parse_stack_spec)
     assert callable(actionrail.load_preset)
     assert callable(actionrail.collect_diagnostics)
