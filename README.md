@@ -14,6 +14,13 @@ part of Maya instead of a large docked tool window.
   <img src="docs/assets/actionrail_readme_hero.png" alt="ActionRail viewport UI hero image">
 </p>
 
+## In Maya
+
+<p align="center">
+  <img src="docs/assets/actionrail_readme_maya_scene.png" alt="ActionRail bars shown over a Maya viewport scene" width="49%">
+  <img src="docs/assets/actionrail_readme_maya_detail.png" alt="ActionRail transform and tool rails in a Maya scene" width="49%">
+</p>
+
 ## Why
 
 Maya has shelves, hotkeys, hotbox zones, marking menus, and dockable editors.
