@@ -316,6 +316,8 @@ Build the user-facing authoring workflow in medium slices:
 5. Layout editing and direct manipulation: drag handles, anchor pins, safe
    margins, snap/spacing guides, slot add/remove/reorder, and persisted layout
    edits.
+   Future button-style controls should let users independently show/hide,
+   offset, and colorize the slot label and hotkey/key-label overlay.
 6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,
    collapsed-state persistence, validation for missing actions/icons/hotkeys,
    and shelf/hotkey/runtime-command publishing where possible.
