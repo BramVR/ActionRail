@@ -181,18 +181,137 @@ Current state: runtime command publishing, paired nameCommands, conflict-aware h
 
 Goal: let users create rails, palettes, action bars, and hotkey-labeled button layouts without code.
 
-### Tasks
+### Medium Steps
 
-- Dockable workspace-control panel.
-- Template picker.
-- Action picker.
-- Live preview.
-- Global Edit Mode toggle.
-- Drag handles, anchors, snap guides, spacing guides, and safe margins.
-- Per-rail controls for orientation, rows/columns, scale, opacity, lock state, and visibility rules.
-- Collapsible edge-tab rails that can fold against a viewport side and leave a small arrow/handle for reveal.
-- Save/load user presets.
-- Publish to shelf/hotkey/runtime command where possible.
+#### 2.1 Authoring Model And User Preset Storage
+
+- Define the draft authoring model that maps cleanly to `StackSpec`, `RailLayout`,
+  and `StackItem`.
+- Add a user-preset location separate from locked built-in presets.
+- Add safe save/load helpers that validate ids, prevent built-in overwrite, and
+  preserve existing JSON schema guarantees.
+- Extend diagnostics so malformed saved user presets are visible without
+  blocking bundled presets.
+
+Done when a test can build a draft rail, save it as a user preset, reload it,
+and prove locked built-in presets were not modified.
+
+Research hints:
+
+- Review `docs/06_wow_style_customization.md` profile/layer notes before naming
+  the user-preset storage concepts.
+- Look at WoW Edit Mode's named, saved, copied, and shared layout model for the
+  persistence shape; do not copy its visual style.
+- Check Dominos/Bartender4 profile and per-bar option concepts for what should
+  become data, not widget-only state.
+
+#### 2.2 Dockable Quick Create Panel
+
+- Add a Maya workspace-control panel entry point from the ActionRail menu.
+- Provide template choices for vertical stack, horizontal strip, and
+  collapsible edge-tab rail; keep flyout and command-ring templates disabled or
+  absent until Phase 3.
+- Provide an action picker from the registered ActionRail action ids.
+- Let users choose slot labels, key-label text, icons where available, and basic
+  layout values.
+
+Done when an artist can create a valid draft rail from Maya UI without editing
+JSON, even before direct viewport editing exists.
+
+Research hints:
+
+- Start with Autodesk workspace-control examples for restore-safe Maya panels.
+- Compare WoW Edit Mode and Dominos configuration entry points for how users
+  discover "configure UI" without confusing it with normal action execution.
+- Browse Bartender4/Dominos screenshots or docs for compact per-bar settings;
+  keep ActionRail's panel Maya-native and utilitarian.
+
+#### 2.3 Preview And Save Workflow
+
+- Convert the Quick Create draft into a real spec and show it through the
+  existing Qt overlay runtime.
+- Support preview without saving and cleanup of preview overlays.
+- Save the current draft as a user preset with a stable preset id and stable slot
+  ids.
+- Reload and show the saved preset through the same public runtime path as
+  bundled examples.
+
+Done when Quick Create can preview a vertical or horizontal custom rail, save
+it, reload it, and show it after an ActionRail reload.
+
+Research hints:
+
+- Check Maya tool option windows and non-destructive preview patterns for how to
+  separate "preview", "apply", and "save".
+- Use WoW Edit Mode's save/copy/share layout idea as a product reference, but
+  keep this slice limited to local user presets.
+- Inspect existing ActionRail diagnostics and safe-start behavior so failed
+  previews leave a copyable report instead of a stuck overlay.
+
+#### 2.4 Edit Mode Shell And Rail Selection
+
+- Add a global Edit Mode toggle and Maya-facing command/menu entry.
+- In Edit Mode, show rail outlines, hit boxes, selected-state styling, source
+  layer, and lock state.
+- Add a selected-rail inspector for anchor, offset, orientation, rows/columns,
+  scale, opacity, locked state, and visibility rules.
+- Keep normal action execution disabled or clearly separated while editing.
+
+Done when existing and user-created rails can be selected and inspected in Edit
+Mode without changing their saved layout.
+
+Research hints:
+
+- Study WoW Edit Mode for outlines, selected HUD elements, saveable layout state,
+  and the distinction between play/use mode and edit mode.
+- Review DCC UI patterns for manipulators and inspectors, especially Maya's
+  channel box/tool settings split.
+- Keep `docs/07_missing_features_research.md` nearby for source-layer, lock,
+  diagnostics, and future profile constraints.
+
+#### 2.5 Layout Editing And Direct Manipulation
+
+- Add drag handles for moving rails in the active viewport.
+- Add anchor pins, safe margins, snap guides, and spacing guides.
+- Persist edited anchor/offset/layout values to a user preset or user override.
+- Add controls for slot add/remove/reorder and rail layout changes.
+
+Done when an artist can recreate the reference stack and create a distinct rail
+layout from Maya UI only, then save those changes outside locked built-in
+presets.
+
+Research hints:
+
+- Compare WoW Edit Mode and Dominos configuration mode for drag-to-position,
+  per-bar scale/opacity/spacing, and safe unlock behavior.
+- Look at Maya guide/snap UX before designing ActionRail guides; viewport tools
+  should feel precise, quiet, and non-decorative.
+- Revisit the local `research/` reference images when tuning hit boxes and
+  spacing for the transform-stack regression target.
+
+#### 2.6 Collapsible Edge Tabs And Publish Polish
+
+- Add collapsible rail settings: edge, handle icon, reveal trigger, and default
+  collapsed state.
+- Render a small edge handle when collapsed without creating a viewport-sized
+  transparent hit area.
+- Preserve actions, runtime-command publishing, and hotkey labels while a rail
+  is collapsed.
+- Surface validation for missing actions, missing icons, and hotkey conflicts
+  before save or publish.
+- Publish saved user presets to shelf/hotkey/runtime command where possible.
+
+Done when an artist can collapse a custom rail to a side handle, expand it
+again, and keep layout, actions, and bindings intact.
+
+Research hints:
+
+- Study collapsible side panels, shelf tabs, and compact action-bar fade/collapse
+  behavior; keep handles small and obvious without stealing viewport input.
+- Review Bartender4/Dominos hotkey-label and visibility concepts for publish
+  polish, but keep Bind Mode itself in Phase 3.
+- Skim OPie only as a boundary check: rings reduce clutter, but this step should
+  ship collapsible rails, not radial command selection.
 
 ### Acceptance Criteria
 

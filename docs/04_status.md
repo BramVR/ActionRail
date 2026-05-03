@@ -216,10 +216,9 @@ Last updated: 2026-05-03
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: begin Phase 2 with the smallest useful
-   Quick Create/Edit Mode authoring workflow. Read
-   `docs/06_wow_style_customization.md` first, then keep the initial slice to
-   template/action selection, preview, and saving a user preset.
+2. First recommended coding slice: begin Phase 2 step 2.1, Authoring Model And
+   User Preset Storage. Read `docs/06_wow_style_customization.md` first, then
+   proceed through the medium Phase 2 steps in `docs/02_implementation_plan.md`.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -242,7 +241,8 @@ Start here:
 
 ## Next
 
-1. Start Phase 2 with a narrow Quick Create/Edit Mode authoring workflow.
+1. Start Phase 2 step 2.1, then continue through the medium Quick Create/Edit
+   Mode steps in `docs/02_implementation_plan.md`.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.

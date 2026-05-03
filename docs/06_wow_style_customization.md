@@ -301,16 +301,38 @@ Exit criteria: a preset action can be triggered from a Maya hotkey without the o
 
 ### Phase 2 - Edit Mode And Quick Create
 
-Build the user-facing authoring workflow:
+Build the user-facing authoring workflow in medium slices:
 
-- global Edit Mode toggle
-- drag rail position
-- change scale, opacity, orientation, rows, columns, spacing
-- configure collapsible edge-tab behavior, including edge, handle, reveal trigger, and default state
-- add/remove/reorder slots
-- action browser
-- save as user preset
-- validate missing actions/icons/hotkeys
+1. Authoring model and user preset storage: draft rail data, safe user-preset
+   writes, schema validation, and diagnostics for broken user presets.
+2. Dockable Quick Create panel: Maya workspace-control entry point, vertical and
+   horizontal templates, action picker, labels, icons, and basic layout values.
+3. Preview and save workflow: preview without saving, cleanup preview overlays,
+   save stable user preset ids and slot ids, then reload through the normal
+   runtime path.
+4. Edit Mode shell and rail selection: global toggle, rail outlines, hit boxes,
+   selected-rail inspector, source-layer badges, and lock-state display.
+5. Layout editing and direct manipulation: drag handles, anchor pins, safe
+   margins, snap/spacing guides, slot add/remove/reorder, and persisted layout
+   edits.
+6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,
+   collapsed-state persistence, validation for missing actions/icons/hotkeys,
+   and shelf/hotkey/runtime-command publishing where possible.
+
+Research hints by slice:
+
+- 2.1: WoW Edit Mode named layouts, Dominos/Bartender4 profiles, and ActionRail
+  profile/layer notes.
+- 2.2: Autodesk Maya workspace controls, WoW/Dominos configuration entry
+  points, and compact action-bar settings UI.
+- 2.3: Maya preview/apply/save patterns, WoW save/copy/share layout behavior,
+  and ActionRail safe-start diagnostics.
+- 2.4: WoW Edit Mode outlines and selected elements, Maya inspector/tool
+  settings patterns, and ActionRail source-layer/lock constraints.
+- 2.5: WoW/Dominos drag positioning, per-bar scale/opacity/spacing, Maya snap
+  guides, and local `research/` reference images.
+- 2.6: collapsible side panels, action-bar visibility/hotkey labels, and OPie
+  only as a boundary reference for later Phase 3 command rings.
 
 Exit criteria: an artist can recreate the transform stack, create a distinct custom rail, and collapse that rail to an edge tab from Maya UI without editing JSON.
 
