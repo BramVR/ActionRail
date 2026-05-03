@@ -24,13 +24,36 @@ from .maya_ui import (
     uninstall_shelf_toggle,
 )
 from .project import about
-from .runtime import hide_all, reload, run_action, run_slot, show_example, update_slot_key_label
+from .runtime import (
+    hide_all,
+    reload,
+    run_action,
+    run_slot,
+    show_example,
+    show_spec,
+    update_slot_key_label,
+)
+from .spec import (
+    RailLayout,
+    StackItem,
+    StackSpec,
+    action_ids,
+    builtin_preset_ids,
+    load_builtin_preset,
+    load_preset,
+    parse_stack_spec,
+)
 
 __all__ = [
     "DiagnosticIssue",
     "DiagnosticReport",
+    "RailLayout",
+    "StackItem",
+    "StackSpec",
     "__version__",
     "about",
+    "action_ids",
+    "builtin_preset_ids",
     "clear_last_report",
     "collect_diagnostics",
     "diagnose_icon_import",
@@ -41,6 +64,9 @@ __all__ = [
     "install_menu_toggle",
     "install_shelf_toggle",
     "last_report",
+    "load_builtin_preset",
+    "load_preset",
+    "parse_stack_spec",
     "reload",
     "run_action",
     "run_diagnostics_from_maya",
@@ -48,6 +74,7 @@ __all__ = [
     "safe_start",
     "show_example",
     "show_last_report",
+    "show_spec",
     "toggle_default",
     "update_slot_key_label",
     "uninstall_menu_toggle",

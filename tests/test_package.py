@@ -4,6 +4,7 @@ import sys
 from types import ModuleType
 
 import actionrail.runtime as runtime
+from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
 def test_package_imports_without_maya_or_qt() -> None:
@@ -14,6 +15,12 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert callable(actionrail.show_example)
     assert callable(actionrail.hide_all)
     assert callable(actionrail.reload)
+    assert callable(actionrail.show_spec)
+    assert actionrail.StackItem is StackItem
+    assert actionrail.StackSpec is StackSpec
+    assert actionrail.RailLayout is RailLayout
+    assert callable(actionrail.parse_stack_spec)
+    assert callable(actionrail.load_preset)
     assert callable(actionrail.collect_diagnostics)
     assert callable(actionrail.last_report)
     assert callable(actionrail.show_last_report)
@@ -69,6 +76,49 @@ def test_runtime_overlay_lifecycle_uses_overlay_host(monkeypatch) -> None:
 
     assert runtime.active_overlay_ids() == ()
     assert events[-1] == ("close", "transform_stack")
+
+
+def test_runtime_show_spec_supports_user_authored_specs(monkeypatch) -> None:
+    events: list[tuple[str, str]] = []
+
+    class FakeHost:
+        def __init__(self, spec, *, panel=None, registry=None) -> None:
+            self.spec = spec
+            self.panel = panel
+            self.registry = registry
+            self.widget = None
+            self._filter_targets = ()
+            self._predicate_refresh_timer = None
+
+        def show(self) -> None:
+            events.append(("show", f"{self.spec.id}:{self.panel}"))
+
+        def close(self) -> None:
+            events.append(("close", self.spec.id))
+
+    fake_overlay = ModuleType("actionrail.overlay")
+    fake_overlay.ViewportOverlayHost = FakeHost
+    fake_overlay._qt_widget_is_valid = lambda widget: True
+    monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
+    monkeypatch.setattr(runtime, "_OVERLAYS", {})
+
+    spec = StackSpec(
+        id="custom_tools",
+        layout=RailLayout(anchor="viewport.bottom.center", orientation="horizontal"),
+        items=(StackItem(type="button", id="custom_tools.key", label="K"),),
+    )
+
+    first = runtime.show_spec(spec, panel="modelPanel4")
+    replacement = runtime.show_spec(spec, panel="modelPanel5")
+
+    assert isinstance(first, FakeHost)
+    assert isinstance(replacement, FakeHost)
+    assert runtime.active_overlay_ids() == ("custom_tools",)
+    assert events == [
+        ("show", "custom_tools:modelPanel4"),
+        ("close", "custom_tools"),
+        ("show", "custom_tools:modelPanel5"),
+    ]
 
 
 def test_runtime_update_slot_key_label_ignores_missing_overlay(monkeypatch) -> None:

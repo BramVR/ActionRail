@@ -56,7 +56,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
 ### Tasks
 
 - JSON preset loader.
-- Python builder API.
+- Python builder API. Done through public `actionrail.StackSpec`,
+  `actionrail.RailLayout`, `actionrail.StackItem`, `actionrail.parse_stack_spec()`,
+  `actionrail.load_preset()`, and `actionrail.show_spec()` for user-authored
+  rails without changing framework code.
 - Theme tokens and QSS generation.
 - Reusable action registry.
 - Shelf/menu toggle. Done for the default `transform_stack` preset through idempotent menu and shelf installers.

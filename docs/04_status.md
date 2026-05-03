@@ -35,6 +35,11 @@ Last updated: 2026-05-03
 - `docs/03_maya_sessiond_workflow.md` now documents the repo-specific MayaSessiond port rule. Use port `7217` for ActionRail unless it is already in use.
 - Phase 1 declarative MVP started:
   - Built-in examples now load from JSON presets in `presets/`.
+  - The public Python builder API is now exposed from `actionrail`: callers can
+    construct `StackSpec`, `RailLayout`, and `StackItem` objects directly or use
+    `parse_stack_spec()`/`load_preset()`, then render user-authored rails with
+    `show_spec()` through the same runtime cleanup registry as built-in
+    examples.
   - `presets/transform_stack.json` is the source of truth for the reference stack labels, actions, active predicates, tooltips, spacer, and anchor.
   - Preset parsing validates required ids, anchors, item lists, supported item types, button action fields, and spacer sizes.
   - The Qt stack builder now renders from the spec item stream instead of looking up a hard-coded `K` button.
@@ -219,19 +224,21 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: added diagnostics-window severity filtering for visible
-  issue triage as icon/import reports grow.
-- Files changed in this handoff update: `scripts/actionrail/diagnostics_ui.py`,
-  `tests/test_diagnostics_ui.py`, and this status file.
-- Behavior verified: focused diagnostics tests, coverage-gated full pytest,
-  full Ruff, and focused Maya smoke for diagnostics plus icon import/recovery
-  all passed.
-- Current live state: the diagnostics window still exposes copy/full-report,
-  clear, and hide-overlays actions; the issue list can now be filtered to all
-  issues, errors, warnings, or info entries without changing the stored report.
+- Task goal completed: exposed the Python builder/display path for
+  user-authored rails.
+- Files changed in this handoff update: `scripts/actionrail/runtime.py`,
+  `scripts/actionrail/__init__.py`, `tests/test_package.py`,
+  `docs/01_architecture.md`, `docs/02_implementation_plan.md`,
+  `examples/README.md`, and this status file.
+- Behavior verified: focused package/spec tests, coverage-gated full pytest,
+  full Ruff, and full Maya smoke all passed.
+- Current live state: built-in presets still render through
+  `actionrail.show_example(...)`; custom Python `StackSpec` objects can now be
+  rendered with `actionrail.show_spec(...)` and replace any active overlay with
+  the same spec id before showing.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: continue Phase 1 declarative MVP work; preserve the 100%
-  coverage gate when changing package code.
+- Exact next step: audit the Phase 1 deliverables against implementation-plan
+  acceptance criteria before declaring the phase complete.
 
 ## Next
 
@@ -249,21 +256,14 @@ Start here:
 
 ## Latest Verification
 
-- Focused diagnostics checks:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_diagnostics_ui.py tests\\test_diagnostics.py`
-  -> 50 passed.
+- Focused builder/API checks:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_package.py tests\\test_spec.py`
+  -> 32 passed.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 287 passed, `TOTAL 3011 0 100%`.
+  -> 288 passed, `TOTAL 3014 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Maya smoke for latest diagnostics-window change:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_import_recovery_smoke.py`
-  -> passed, including import diagnostics report copy/detail checks and fallback
-  preset recovery.
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py`
-  -> passed, including diagnostics window selected/full copy checks and
-  screenshot capture at `720x520`.
 - Latest full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,

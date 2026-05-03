@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .actions import ActionRegistry, create_default_registry
-from .spec import TRANSFORM_STACK_ID, get_example_spec
+from .spec import TRANSFORM_STACK_ID, StackSpec, get_example_spec
 
 _OVERLAYS: dict[str, Any] = {}
 
@@ -18,6 +18,7 @@ __all__ = [
     "run_action",
     "run_slot",
     "show_example",
+    "show_spec",
     "update_slot_key_label",
 ]
 
@@ -31,13 +32,24 @@ def show_example(
     """Show a built-in ActionRail example overlay."""
 
     spec = get_example_spec(example_id)
-    hide_example(example_id)
+    return show_spec(spec, panel=panel, registry=registry)
+
+
+def show_spec(
+    spec: StackSpec,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+) -> Any:
+    """Show a user-authored ActionRail spec through the runtime registry."""
+
+    hide_example(spec.id)
 
     from .overlay import ViewportOverlayHost
 
     host = ViewportOverlayHost(spec, panel=panel, registry=registry)
     host.show()
-    _OVERLAYS[example_id] = host
+    _OVERLAYS[spec.id] = host
     return host
 
 

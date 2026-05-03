@@ -55,7 +55,9 @@ The customization layer is planned after the declarative MVP, but the spec and a
 
 - Locate Maya main window and active model panel.
 - Create/recreate overlay safely.
-- Expose `actionrail.reload()`, `actionrail.show_example()`, `actionrail.hide_all()`, `actionrail.run_action()`, and `actionrail.run_slot()`.
+- Expose `actionrail.reload()`, `actionrail.show_example()`,
+  `actionrail.show_spec()`, `actionrail.hide_all()`, `actionrail.run_action()`,
+  and `actionrail.run_slot()`.
 - Probe Maya 2026 `moverlay` as a possible helper/reference, but keep the MVP overlay host custom until the probe proves fit.
 
 ### Qt Overlay
@@ -149,7 +151,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable.
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
 
 Later phases should evolve the public naming toward user-authored rail/slot data:
 
