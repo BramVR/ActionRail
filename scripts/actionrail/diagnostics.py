@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .authoring import user_preset_files
+from .authoring import load_user_preset, user_preset_files
 from .icons import icon_status, validate_icon_manifest, validate_svg_icon_import
 from .predicates import (
     PredicateContext,
@@ -22,7 +22,6 @@ from .predicates import (
     missing_availability_targets,
 )
 from .spec import StackItem, StackSpec, builtin_preset_ids, load_builtin_preset
-from .spec import load_preset as load_preset_file
 
 DiagnosticSeverity = Literal["info", "warning", "error"]
 
@@ -255,7 +254,32 @@ def collect_diagnostics(
     issues: list[DiagnosticIssue] = [
         _icon_manifest_issue(issue) for issue in validate_icon_manifest()
     ]
+    explicit_user_preset_ids: set[str] = set()
+    known_builtin_preset_ids = set(builtin_preset_ids())
     for preset_id in tuple(preset_ids) if preset_ids is not None else builtin_preset_ids():
+        user_preset_path = (
+            _user_preset_file_for_id(preset_id, preset_dir=user_preset_dir)
+            if include_user_presets and preset_id not in known_builtin_preset_ids
+            else None
+        )
+        if user_preset_path is not None:
+            explicit_user_preset_ids.add(preset_id)
+            try:
+                spec = load_user_preset(preset_id, preset_dir=user_preset_path.parent)
+            except Exception as exc:
+                issues.append(_broken_user_preset_issue(user_preset_path, exc))
+                continue
+
+            issues.extend(
+                _diagnose_user_preset_spec(
+                    user_preset_path,
+                    spec,
+                    registry=action_registry,
+                    cmds_module=resolved_cmds,
+                )
+            )
+            continue
+
         try:
             spec = load_builtin_preset(preset_id)
         except Exception as exc:
@@ -284,6 +308,7 @@ def collect_diagnostics(
                 preset_dir=user_preset_dir,
                 registry=action_registry,
                 cmds_module=resolved_cmds,
+                exclude_ids=explicit_user_preset_ids,
             )
         )
     issues.extend(_runtime_command_diagnostics(action_registry, resolved_cmds))
@@ -592,37 +617,71 @@ def _user_preset_diagnostics(
     preset_dir: str | Path | None,
     registry: ActionRegistry,
     cmds_module: Any | None,
+    exclude_ids: Iterable[str] = (),
 ) -> tuple[DiagnosticIssue, ...]:
     issues: list[DiagnosticIssue] = []
+    excluded = set(exclude_ids)
     for path in user_preset_files(preset_dir=preset_dir):
+        if path.stem in excluded:
+            continue
         try:
-            spec = load_preset_file(path)
+            spec = load_user_preset(path.stem, preset_dir=path.parent)
         except Exception as exc:
-            issues.append(
-                DiagnosticIssue(
-                    code="broken_user_preset",
-                    severity="warning",
-                    message=f"Unable to load ActionRail user preset '{path.stem}': {exc}",
-                    preset_id=path.stem,
-                    path=str(path),
-                    exception_type=type(exc).__name__,
-                    hint=(
-                        "Fix or remove the saved user preset; bundled ActionRail "
-                        "presets remain available."
-                    ),
-                )
-            )
+            issues.append(_broken_user_preset_issue(path, exc))
             continue
         issues.extend(
-            _user_preset_issue(path, issue)
-            for issue in diagnose_spec(
+            _diagnose_user_preset_spec(
+                path,
                 spec,
                 registry=registry,
                 cmds_module=cmds_module,
-                record=False,
-            ).issues
+            )
         )
     return tuple(issues)
+
+
+def _user_preset_file_for_id(
+    preset_id: str,
+    *,
+    preset_dir: str | Path | None,
+) -> Path | None:
+    for path in user_preset_files(preset_dir=preset_dir):
+        if path.stem == preset_id:
+            return path
+    return None
+
+
+def _broken_user_preset_issue(path: Path, exc: Exception) -> DiagnosticIssue:
+    return DiagnosticIssue(
+        code="broken_user_preset",
+        severity="warning",
+        message=f"Unable to load ActionRail user preset '{path.stem}': {exc}",
+        preset_id=path.stem,
+        path=str(path),
+        exception_type=type(exc).__name__,
+        hint=(
+            "Fix or remove the saved user preset; bundled ActionRail "
+            "presets remain available."
+        ),
+    )
+
+
+def _diagnose_user_preset_spec(
+    path: Path,
+    spec: StackSpec,
+    *,
+    registry: ActionRegistry,
+    cmds_module: Any | None,
+) -> tuple[DiagnosticIssue, ...]:
+    return tuple(
+        _user_preset_issue(path, issue)
+        for issue in diagnose_spec(
+            spec,
+            registry=registry,
+            cmds_module=cmds_module,
+            record=False,
+        ).issues
+    )
 
 
 def _user_preset_issue(path: Path, issue: DiagnosticIssue) -> DiagnosticIssue:

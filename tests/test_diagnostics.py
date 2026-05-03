@@ -7,6 +7,7 @@ import pytest
 
 import actionrail.diagnostics as diagnostics
 from actionrail.actions import Action, ActionRegistry, create_default_registry
+from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.diagnostics import (
     DiagnosticIssue,
     DiagnosticOverlayState,
@@ -229,6 +230,25 @@ def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     assert last_report() == report
 
 
+def test_collect_diagnostics_resolves_explicit_user_preset_ids(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    report = collect_diagnostics(
+        ("artist_tools",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    assert report.has_errors is False
+    assert not any(issue.code == "broken_preset" for issue in report.issues)
+
+
 def test_collect_diagnostics_reports_broken_user_presets_as_warnings(tmp_path) -> None:
     broken_path = tmp_path / "broken.json"
     broken_path.write_text("{not json", encoding="utf-8")
@@ -246,6 +266,43 @@ def test_collect_diagnostics_reports_broken_user_presets_as_warnings(tmp_path) -
     assert user_issues[0].path == str(broken_path)
     assert user_issues[0].exception_type == "ValueError"
     assert user_issues[0].hint
+
+
+def test_collect_diagnostics_reports_user_preset_id_mismatch(tmp_path) -> None:
+    mismatch_path = tmp_path / "artist_tools.json"
+    mismatch_path.write_text(
+        """
+{
+  "id": "transform_stack",
+  "layout": {"anchor": "viewport.left.center"},
+  "items": [
+    {
+      "type": "button",
+      "id": "transform_stack.move",
+      "label": "M",
+      "action": "maya.tool.move"
+    }
+  ]
+}
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = collect_diagnostics(
+        ("artist_tools",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    user_issues = [issue for issue in report.warnings if issue.code == "broken_user_preset"]
+    assert report.has_errors is False
+    assert len(user_issues) == 1
+    assert user_issues[0].preset_id == "artist_tools"
+    assert user_issues[0].path == str(mismatch_path)
+    assert user_issues[0].exception_type == "ValueError"
+    assert "declares id 'transform_stack'" in user_issues[0].message
+    assert not any(issue.code == "broken_preset" for issue in report.issues)
 
 
 def test_collect_diagnostics_downgrades_user_preset_spec_issues(tmp_path) -> None:

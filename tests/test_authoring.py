@@ -89,6 +89,29 @@ def test_save_user_preset_accepts_stack_spec_and_canonicalizes_payload(tmp_path)
     assert load_user_preset("manual_spec", preset_dir=tmp_path) == spec
 
 
+def test_load_user_preset_rejects_mismatched_payload_id(tmp_path) -> None:
+    (tmp_path / "artist_tools.json").write_text(
+        json.dumps(
+            {
+                "id": "transform_stack",
+                "layout": {"anchor": "viewport.left.center"},
+                "items": [
+                    {
+                        "type": "button",
+                        "id": "transform_stack.move",
+                        "label": "M",
+                        "action": "maya.tool.move",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="declares id 'transform_stack'"):
+        load_user_preset("artist_tools", preset_dir=tmp_path)
+
+
 def test_user_preset_storage_rejects_builtin_overwrite_and_bad_ids(tmp_path) -> None:
     with pytest.raises(ValueError, match="locked built-in"):
         save_user_preset(
@@ -98,6 +121,9 @@ def test_user_preset_storage_rejects_builtin_overwrite_and_bad_ids(tmp_path) -> 
             ),
             preset_dir=tmp_path,
         )
+
+    with pytest.raises(ValueError, match="locked built-in"):
+        load_user_preset("transform_stack", preset_dir=tmp_path)
 
     with pytest.raises(ValueError, match="preset ids"):
         validate_preset_id("../bad")

@@ -103,11 +103,21 @@ def load_user_preset(
     """Load a user preset by id from the user preset location."""
 
     validate_preset_id(preset_id)
+    if preset_id in builtin_preset_ids():
+        msg = f"User preset '{preset_id}' would shadow a locked built-in preset."
+        raise ValueError(msg)
     path = user_preset_dir(preset_dir) / f"{preset_id}.json"
     if not path.is_file():
         msg = f"Unknown ActionRail user preset: {preset_id}"
         raise KeyError(msg)
-    return load_preset(path)
+    spec = load_preset(path)
+    if spec.id != preset_id:
+        msg = (
+            f"ActionRail user preset file '{path.name}' declares id '{spec.id}' "
+            f"but was requested as '{preset_id}'."
+        )
+        raise ValueError(msg)
+    return spec
 
 
 def user_preset_ids(*, preset_dir: str | Path | None = None) -> tuple[str, ...]:
