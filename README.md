@@ -145,6 +145,9 @@ preset helpers.
   reported as warnings so bundled presets remain available.
 - Visible diagnostic badges for missing actions, missing icons, and missing
   command/plugin predicate dependencies.
+- Provider-backed icon catalog for picker/search UI, including manifest icons
+  and curated Maya resource icons such as `maya.move`, `maya.rotate`,
+  `maya.scale`, and `maya.set_key`.
 - Icon manifest validation for required metadata, duplicate ids, invalid local
   paths, missing files, invalid SVG files, unsafe SVG content, and unknown icon
   ids.
