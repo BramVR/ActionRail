@@ -12,6 +12,7 @@ class FakeCmds:
         self.menu_items: dict[str, dict[str, object]] = {}
         self.shelves: dict[str, dict[str, object]] = {}
         self.shelf_buttons: dict[str, dict[str, object]] = {}
+        self.workspace_controls: dict[str, dict[str, object]] = {}
         self.deleted: list[tuple[str, dict[str, object]]] = []
         self.file_dialog_selection: list[str] = []
         self.prompt_result = "Diagnose"
@@ -54,6 +55,15 @@ class FakeCmds:
         self.shelf_buttons[name] = dict(kwargs)
         return name
 
+    def workspaceControl(self, name: str, **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("exists"):
+            return name in self.workspace_controls
+        if kwargs.get("edit"):
+            self.workspace_controls.setdefault(name, {}).update(kwargs)
+            return name
+        self.workspace_controls[name] = dict(kwargs)
+        return name
+
     def deleteUI(self, name: str, **kwargs: object) -> None:  # noqa: N802
         self.deleted.append((name, dict(kwargs)))
         if kwargs.get("menuItem"):
@@ -91,6 +101,12 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     )
     assert maya_ui.run_diagnostics_from_maya_command() == (
         "import actionrail; actionrail.run_diagnostics_from_maya()"
+    )
+    assert maya_ui.show_quick_create_panel_command() == (
+        "import actionrail; actionrail.show_quick_create_panel()"
+    )
+    assert maya_ui.restore_quick_create_panel_command() == (
+        "import actionrail; actionrail.restore_quick_create_panel()"
     )
     assert maya_ui._toggle_label("horizontal_tools") == "Toggle Horizontal Tools"
 
@@ -134,11 +150,15 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert tuple(cmds.menus) == (maya_ui.MENU_NAME,)
     assert tuple(cmds.menu_items) == (
         maya_ui.MENU_ITEM_NAME,
+        maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
         maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
     )
     assert cmds.menu_items[maya_ui.MENU_ITEM_NAME]["command"] == maya_ui.toggle_command()
+    assert cmds.menu_items[maya_ui.MENU_QUICK_CREATE_ITEM_NAME][
+        "command"
+    ] == maya_ui.show_quick_create_panel_command()
     assert cmds.menu_items[maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME][
         "command"
     ] == maya_ui.run_diagnostics_from_maya_command()
@@ -150,6 +170,7 @@ def test_install_menu_toggle_is_idempotent() -> None:
     )
     assert cmds.deleted == [
         (maya_ui.MENU_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
@@ -165,6 +186,7 @@ def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
     assert cmds.menu_items == {}
     assert cmds.menus == {}
     assert (maya_ui.MENU_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (
@@ -387,6 +409,129 @@ def test_run_diagnostics_from_maya_collects_and_shows_report(monkeypatch) -> Non
     assert result == "report"
     assert calls["shown"] is True
     assert calls["collect"] == {"cmds_module": cmds}
+
+
+def test_show_quick_create_panel_creates_workspace_control(monkeypatch) -> None:
+    cmds = FakeCmds()
+    calls: list[str] = []
+
+    def restore_quick_create_panel() -> str:
+        calls.append("restore")
+        return "panel"
+
+    monkeypatch.setattr(maya_ui, "restore_quick_create_panel", restore_quick_create_panel)
+
+    assert maya_ui.show_quick_create_panel(cmds_module=cmds) == "panel"
+
+    assert calls == ["restore"]
+    assert cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL] == {
+        "label": "ActionRail Quick Create",
+        "retain": False,
+        "floating": True,
+        "initialWidth": 900,
+        "initialHeight": 680,
+        "uiScript": maya_ui.restore_quick_create_panel_command(),
+    }
+
+
+def test_show_quick_create_panel_reopens_existing_workspace_control(monkeypatch) -> None:
+    cmds = FakeCmds()
+    cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL] = {"label": "Existing"}
+    monkeypatch.setattr(maya_ui, "restore_quick_create_panel", lambda: "panel")
+
+    assert maya_ui.show_quick_create_panel(cmds_module=cmds) == "panel"
+
+    assert cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL]["edit"] is True
+    assert cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL]["visible"] is True
+
+
+def test_restore_quick_create_panel_uses_workspace_parent(monkeypatch) -> None:
+    calls: dict[str, object] = {}
+
+    def show_quick_create_panel(**kwargs: object) -> str:
+        calls["show"] = kwargs
+        return "panel"
+
+    monkeypatch.setattr(maya_ui, "_workspace_control_parent", lambda name: f"parent:{name}")
+    monkeypatch.setattr(
+        maya_ui.quick_create_ui,
+        "show_quick_create_panel",
+        show_quick_create_panel,
+    )
+
+    assert maya_ui.restore_quick_create_panel() == "panel"
+    assert calls["show"] == {
+        "parent": f"parent:{maya_ui.QUICK_CREATE_WORKSPACE_CONTROL}",
+    }
+
+
+def test_workspace_control_parent_handles_missing_maya_ui(monkeypatch) -> None:
+    monkeypatch.setattr(maya_ui, "load", lambda: object())
+    sys.modules.pop("maya.OpenMayaUI", None)
+    sys.modules.pop("maya", None)
+
+    assert maya_ui._workspace_control_parent("Missing") is None
+
+
+def test_workspace_control_parent_wraps_found_control(monkeypatch) -> None:
+    class FakeQtWidgets:
+        QWidget = object
+
+    class FakeQt:
+        QtWidgets = FakeQtWidgets
+
+        @staticmethod
+        def wrap_instance(pointer: int, base: object) -> str:
+            return f"{pointer}:{base}"
+
+    class FakeMQtUtil:
+        @staticmethod
+        def findControl(name: str) -> int:  # noqa: N802
+            assert name == "Workspace"
+            return 123
+
+    maya_module = ModuleType("maya")
+    omui_module = ModuleType("maya.OpenMayaUI")
+    omui_module.MQtUtil = FakeMQtUtil
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.OpenMayaUI", omui_module)
+    monkeypatch.setattr(maya_ui, "load", lambda: FakeQt)
+
+    assert maya_ui._workspace_control_parent("Workspace") == f"123:{object}"
+
+
+def test_workspace_control_parent_handles_missing_pointer(monkeypatch) -> None:
+    class FakeMQtUtil:
+        @staticmethod
+        def findControl(name: str) -> None:  # noqa: N802
+            assert name == "Workspace"
+            return None
+
+    maya_module = ModuleType("maya")
+    omui_module = ModuleType("maya.OpenMayaUI")
+    omui_module.MQtUtil = FakeMQtUtil
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.OpenMayaUI", omui_module)
+    monkeypatch.setattr(maya_ui, "load", lambda: object())
+
+    assert maya_ui._workspace_control_parent("Workspace") is None
+
+
+def test_workspace_control_parent_handles_find_control_error(monkeypatch) -> None:
+    class FakeMQtUtil:
+        @staticmethod
+        def findControl(name: str) -> None:  # noqa: N802
+            assert name == "Workspace"
+            raise RuntimeError("deleted")
+
+    maya_module = ModuleType("maya")
+    omui_module = ModuleType("maya.OpenMayaUI")
+    omui_module.MQtUtil = FakeMQtUtil
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.OpenMayaUI", omui_module)
+    monkeypatch.setattr(maya_ui, "load", lambda: object())
+
+    assert maya_ui._workspace_control_parent("Workspace") is None
 
 
 def test_install_shelf_toggle_is_idempotent() -> None:

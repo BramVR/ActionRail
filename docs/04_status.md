@@ -276,44 +276,61 @@ Last updated: 2026-05-04
     `PublishedCommand`/`unpublish()` paths instead of a private cache reset.
   - Maya UI and diagnostics smoke tests assert overlay visibility/validity
     through public overlay state instead of runtime `_OVERLAYS`.
+- Phase 2 step 2.2 Dockable Quick Create Panel complete:
+  - `scripts/actionrail/quick_create.py` defines Phase 2.2 template choices,
+    picker-facing action/icon data, editable Quick Create values, and conversion
+    into the existing `DraftRail`/`DraftSlot` authoring model.
+  - Templates cover vertical stack, horizontal strip, and an edge-tab rail
+    starter without adding flyout, command-ring, or collapse runtime behavior.
+  - `scripts/actionrail/quick_create_ui.py` provides the Maya-hosted Qt Quick
+    Create panel for preset id, template, anchor, orientation, rows/columns,
+    offset, scale, opacity, lock state, slot labels, key labels, actions, icons,
+    and draft validation.
+  - The ActionRail Maya menu now includes `Quick Create...`, which opens a
+    workspace-control panel through `actionrail.show_quick_create_panel()`;
+    workspace-control restore uses `actionrail.restore_quick_create_panel()`.
+  - `tests/maya_smoke/actionrail_quick_create_smoke.py` opens the new UI in
+    Maya, switches templates, validates the produced draft, and saves panel
+    screenshots for the General, Layout, and Slots tabs under
+    `.gg-maya-sessiond/screenshots/`.
 
 ## In Progress
 
-- Phase 2 step 2.2 Dockable Quick Create Panel is next; not started yet.
+- Phase 2 step 2.3 Preview And Save Workflow is next; not started yet.
 
 ## Next Agent Start
 
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: begin Phase 2 step 2.2, Dockable Quick
-   Create Panel. Use the `DraftRail`/`DraftSlot` helpers from
-   `scripts/actionrail/authoring.py` instead of inventing another draft model.
+2. First recommended coding slice: begin Phase 2 step 2.3, Preview And Save
+   Workflow. Use the `DraftRail`/`DraftSlot` helpers from
+   `scripts/actionrail/authoring.py` and the `quick_create.py` values instead
+   of inventing another draft model.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 ## Latest Handoff
 
-- Task goal completed: `scripts/actionrail/icons.py` was reduced to a public
-  compatibility facade and the implementation was split into focused icon
-  modules for catalog, manifest, import, SVG safety, fallback rendering, shared
-  types, and shared paths.
-- Files changed in this handoff update: new `icon_catalog.py`,
-  `icon_manifest.py`, `icon_import.py`, `icon_svg.py`, `icon_fallbacks.py`,
-  `icon_types.py`, and `icon_paths.py`; `slot_state.py`, `diagnostics.py`, and
-  `project.py` now import narrower icon modules where useful; icon tests and
-  architecture/status docs were updated.
+- Task goal completed: Phase 2 step 2.2 dockable Quick Create panel was added,
+  including template/action/icon picker data, Maya workspace-control entry
+  points, draft validation, unit coverage, and a Maya screenshot smoke.
+- Files changed in this handoff update: new `quick_create.py`,
+  `quick_create_ui.py`, `tests/test_quick_create.py`, and
+  `tests/maya_smoke/actionrail_quick_create_smoke.py`; `maya_ui.py`,
+  `__init__.py`, `project.py`, Maya UI tests, and docs were updated.
 - Behavior verified: full pytest and coverage report pass at 100%, Ruff passes,
-  and `scripts/maya-smoke.ps1 -Script all` passes against MayaSessiond.
-- Current live state: public callers can continue using `actionrail.icons`;
-  Quick Create and later picker UI should use `actionrail.icon_catalog` for
-  descriptor browsing/search and keep import/fallback workflows separate.
+  and `scripts/maya-smoke.ps1 -Script all` passes against MayaSessiond with
+  Quick Create screenshots for every tab.
+- Current live state: ActionRail has a dockable Quick Create panel that can
+  choose vertical/horizontal/edge-tab templates, edit basic layout and slot
+  values, pick registered actions/icons, and produce a valid `DraftRail`.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: continue Phase 2 step 2.2 dockable Quick Create work.
+- Exact next step: continue Phase 2 step 2.3 preview and save workflow.
 
 ## Next
 
-1. Start Phase 2 step 2.2, then continue through the medium Quick Create/Edit
+1. Start Phase 2 step 2.3, then continue through the medium Quick Create/Edit
    Mode steps in `docs/02_implementation_plan.md`.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
@@ -332,16 +349,20 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 338 passed, `TOTAL 3659 0 100%`.
+  -> 354 passed, `TOTAL 3780 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- Quick Create Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` ->
+  passed against MayaSessiond on port `7217`; saved General, Layout, Slots, and
+  final panel screenshots at `900x680`.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,
   hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
   import/recovery diagnostics, Maya icons, menu/shelf UI, missing Maya icon
-  resources, overlay cleanup, phase 0, predicates, StackItem ABI, and
-  transform-stack state.
+  resources, overlay cleanup, phase 0, predicates, Quick Create tab screenshots,
+  StackItem ABI, and transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

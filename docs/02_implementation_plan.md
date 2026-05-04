@@ -230,13 +230,16 @@ Research hints:
 
 #### 2.2 Dockable Quick Create Panel
 
+Status: complete for the first Maya-facing authoring slice.
+
 - Add a Maya workspace-control panel entry point from the ActionRail menu.
 - Provide template choices for vertical stack, horizontal strip, and
   collapsible edge-tab rail; keep flyout and command-ring templates disabled or
-  absent until Phase 3.
-- Provide an action picker from the registered ActionRail action ids.
+  absent until Phase 3. Done through `scripts/actionrail/quick_create.py` and
+  the dockable Qt panel.
+- Provide an action picker from the registered ActionRail action ids. Done.
 - Let users choose slot labels, key-label text, icons where available, and basic
-  layout values.
+  layout values. Done for the draft validation panel.
 
 Done when an artist can create a valid draft rail from Maya UI without editing
 JSON, even before direct viewport editing exists.
@@ -393,13 +396,13 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 2 step 2.1 is complete and verified locally. The draft authoring model,
-safe user-preset storage, and shared preset resolver are ready for the first
-Maya-facing Quick Create UI.
+Phase 2 steps 2.1-2.2 are complete and verified locally. The draft authoring
+model, safe user-preset storage, shared preset resolver, and dockable Quick
+Create panel are ready for preview/save work.
 
-Next implementation slice: Phase 2 step 2.2, a dockable Quick Create panel that
-can choose a vertical or horizontal template, pick registered actions, edit
-basic labels/icons/layout values, and produce a valid draft. Keep
+Next implementation slice: Phase 2 step 2.3, a Quick Create workflow that can
+preview a vertical or horizontal custom rail, clean up previews, save stable
+user preset ids and slot ids, and show the saved preset after reload. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.

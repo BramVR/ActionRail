@@ -36,6 +36,16 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "tests": ("tests/test_authoring.py",),
     },
     {
+        "path": "scripts/actionrail/quick_create.py",
+        "owns": "Quick Create templates, action/icon picker data, and draft conversion",
+        "tests": ("tests/test_quick_create.py",),
+    },
+    {
+        "path": "scripts/actionrail/quick_create_ui.py",
+        "owns": "dockable Qt Quick Create panel",
+        "tests": ("tests/maya_smoke/actionrail_quick_create_smoke.py",),
+    },
+    {
         "path": "scripts/actionrail/preset_store.py",
         "owns": "shared built-in/user preset id resolution",
         "tests": ("tests/test_preset_store.py",),
@@ -154,8 +164,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.1 complete",
-            "next_slice": "Phase 2 Quick Create dockable panel",
+            "phase": "Phase 2 step 2.2 complete",
+            "next_slice": "Phase 2 Quick Create preview and save workflow",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

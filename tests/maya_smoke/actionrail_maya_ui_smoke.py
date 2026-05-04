@@ -48,6 +48,10 @@ run_diagnostics_menu_exists_after_install = _exists(
     maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
     cmds.menuItem,
 )
+quick_create_menu_exists_after_install = _exists(
+    maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
+    cmds.menuItem,
+)
 icon_import_menu_exists_after_install = _exists(
     maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
     cmds.menuItem,
@@ -69,6 +73,11 @@ run_diagnostics_menu_command = cmds.menuItem(
     query=True,
     command=True,
 )
+quick_create_menu_command = cmds.menuItem(
+    maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
+    query=True,
+    command=True,
+)
 shelf_command = cmds.shelfButton(maya_ui.SHELF_BUTTON_NAME, query=True, command=True)
 
 run_diagnostics_report = actionrail.run_diagnostics_from_maya()
@@ -85,6 +94,10 @@ if run_diagnostics_menu_command != maya_ui.run_diagnostics_from_maya_command():
     raise AssertionError(f"Unexpected diagnostics command: {run_diagnostics_menu_command}")
 if not run_diagnostics_menu_exists_after_install:
     raise AssertionError("Run Diagnostics menu item was not installed.")
+if quick_create_menu_command != maya_ui.show_quick_create_panel_command():
+    raise AssertionError(f"Unexpected Quick Create command: {quick_create_menu_command}")
+if not quick_create_menu_exists_after_install:
+    raise AssertionError("Quick Create menu item was not installed.")
 if actionrail.last_report() != run_diagnostics_report:
     raise AssertionError("Run Diagnostics did not record last_report().")
 if run_diagnostics_window is None:
@@ -157,6 +170,12 @@ result = {
     "icon_import_menu_exists_after_install": icon_import_menu_exists_after_install,
     "icon_import_menu_exists_after_uninstall": _exists(
         maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
+        cmds.menuItem,
+    ),
+    "quick_create_menu_command": quick_create_menu_command,
+    "quick_create_menu_exists_after_install": quick_create_menu_exists_after_install,
+    "quick_create_menu_exists_after_uninstall": _exists(
+        maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
         cmds.menuItem,
     ),
     "ids_after_hide": ids_after_hide,

@@ -29,7 +29,9 @@ from .maya_ui import (
     diagnose_icon_import_from_maya,
     install_menu_toggle,
     install_shelf_toggle,
+    restore_quick_create_panel,
     run_diagnostics_from_maya,
+    show_quick_create_panel,
     toggle_default,
     uninstall_menu_toggle,
     uninstall_shelf_toggle,
@@ -104,6 +106,7 @@ __all__ = [
     "show_example",
     "show_last_report",
     "show_preset",
+    "show_quick_create_panel",
     "show_spec",
     "spec_to_payload",
     "toggle_default",
@@ -112,6 +115,7 @@ __all__ = [
     "uninstall_shelf_toggle",
     "user_preset_dir",
     "user_preset_ids",
+    "restore_quick_create_panel",
 ]
 
 __version__ = "0.1.0"

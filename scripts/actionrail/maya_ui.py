@@ -5,16 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from . import diagnostics, runtime
+from . import diagnostics, quick_create_ui, runtime
+from .qt import load
 from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
+MENU_QUICK_CREATE_ITEM_NAME = "ActionRailQuickCreateMenuItem"
 MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
 SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
+QUICK_CREATE_WORKSPACE_CONTROL = "ActionRailQuickCreateWorkspaceControl"
 
 ToggleResult = Literal["shown", "hidden"]
 
@@ -48,6 +51,8 @@ def install_menu_toggle(
 
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_RUN_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_RUN_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -64,6 +69,14 @@ def install_menu_toggle(
             parent=MENU_NAME,
             sourceType="python",
         )
+    )
+    cmds.menuItem(
+        MENU_QUICK_CREATE_ITEM_NAME,
+        label="Quick Create...",
+        annotation="Open the dockable ActionRail Quick Create panel.",
+        command=show_quick_create_panel_command(),
+        parent=MENU_NAME,
+        sourceType="python",
     )
     cmds.menuItem(
         MENU_RUN_DIAGNOSTICS_ITEM_NAME,
@@ -96,6 +109,8 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
     """Remove the ActionRail menu toggle created by :func:`install_menu_toggle`."""
 
     cmds = _require_cmds(cmds_module)
+    if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -214,6 +229,36 @@ def diagnose_icon_import_from_maya(
     return report
 
 
+def show_quick_create_panel(
+    *,
+    cmds_module: Any | None = None,
+) -> Any:
+    """Open the dockable Maya workspace-control Quick Create panel."""
+
+    cmds = _require_cmds(cmds_module)
+    if not cmds.workspaceControl(QUICK_CREATE_WORKSPACE_CONTROL, exists=True):
+        cmds.workspaceControl(
+            QUICK_CREATE_WORKSPACE_CONTROL,
+            label="ActionRail Quick Create",
+            retain=False,
+            floating=True,
+            initialWidth=900,
+            initialHeight=680,
+            uiScript=restore_quick_create_panel_command(),
+        )
+    else:
+        cmds.workspaceControl(QUICK_CREATE_WORKSPACE_CONTROL, edit=True, visible=True)
+    return restore_quick_create_panel()
+
+
+def restore_quick_create_panel() -> Any:
+    """Restore the Quick Create Qt contents inside Maya's workspace control."""
+
+    return quick_create_ui.show_quick_create_panel(
+        parent=_workspace_control_parent(QUICK_CREATE_WORKSPACE_CONTROL),
+    )
+
+
 def run_diagnostics_from_maya(
     *,
     cmds_module: Any | None = None,
@@ -236,6 +281,18 @@ def diagnose_icon_import_from_maya_command() -> str:
     """Return the Python command string for the Maya icon import diagnostics item."""
 
     return "import actionrail; actionrail.diagnose_icon_import_from_maya()"
+
+
+def show_quick_create_panel_command() -> str:
+    """Return the Python command string for the Maya Quick Create menu item."""
+
+    return "import actionrail; actionrail.show_quick_create_panel()"
+
+
+def restore_quick_create_panel_command() -> str:
+    """Return the Python command string used by Maya workspace-control restore."""
+
+    return "import actionrail; actionrail.restore_quick_create_panel()"
 
 
 def _toggle_label(preset_id: str) -> str:
@@ -286,6 +343,22 @@ def _default_import_icon_id(source_path: str) -> str:
     stem = Path(source_path).stem.lower()
     safe = "".join(char if char.isalnum() else "-" for char in stem).strip("-")
     return f"custom.{safe or 'icon'}"
+
+
+def _workspace_control_parent(control_name: str) -> Any | None:
+    qt = load()
+    try:
+        from maya import OpenMayaUI as omui  # type: ignore[import-not-found]
+    except Exception:
+        return None
+
+    try:
+        pointer = omui.MQtUtil.findControl(control_name)
+    except Exception:
+        pointer = None
+    if not pointer:
+        return None
+    return qt.wrap_instance(int(pointer), qt.QtWidgets.QWidget)
 
 
 def _require_cmds(cmds_module: Any | None = None) -> Any:
