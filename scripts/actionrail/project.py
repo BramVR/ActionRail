@@ -37,7 +37,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/quick_create.py",
-        "owns": "Quick Create templates, action/icon picker data, and draft conversion",
+        "owns": (
+            "Quick Create templates, picker data, draft conversion, preview, "
+            "save, and load workflow"
+        ),
         "tests": ("tests/test_quick_create.py",),
     },
     {
@@ -164,8 +167,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.2 complete",
-            "next_slice": "Phase 2 Quick Create preview and save workflow",
+            "phase": "Phase 2 step 2.3 preview/save/load workflow implemented",
+            "next_slice": "Phase 2 Edit Mode shell and rail selection",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

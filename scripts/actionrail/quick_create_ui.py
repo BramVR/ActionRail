@@ -13,8 +13,12 @@ from .quick_create import (
     QuickCreateSlotInput,
     action_choices,
     build_quick_create_draft,
+    clear_quick_create_previews,
     icon_choices,
+    load_quick_create_preset,
     make_default_input,
+    preview_quick_create_draft,
+    save_quick_create_preset,
     template_choices,
 )
 from .theme import DEFAULT_THEME
@@ -23,6 +27,11 @@ PANEL_OBJECT_NAME = "ActionRailQuickCreatePanel"
 STATUS_OBJECT_NAME = "ActionRailQuickCreateStatus"
 TEMPLATE_COMBO_OBJECT_NAME = "ActionRailQuickCreateTemplateCombo"
 TABS_OBJECT_NAME = "ActionRailQuickCreateTabs"
+PREVIEW_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePreviewButton"
+CLEAR_PREVIEW_BUTTON_OBJECT_NAME = "ActionRailQuickCreateClearPreviewButton"
+SAVE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateSaveButton"
+LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
+OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
 
 _PANEL: Any | None = None
 _SLOT_COLUMNS = (
@@ -35,6 +44,11 @@ _SLOT_COLUMNS = (
 
 __all__ = [
     "PANEL_OBJECT_NAME",
+    "CLEAR_PREVIEW_BUTTON_OBJECT_NAME",
+    "LOAD_BUTTON_OBJECT_NAME",
+    "OVERWRITE_BUTTON_OBJECT_NAME",
+    "PREVIEW_BUTTON_OBJECT_NAME",
+    "SAVE_BUTTON_OBJECT_NAME",
     "STATUS_OBJECT_NAME",
     "TABS_OBJECT_NAME",
     "TEMPLATE_COMBO_OBJECT_NAME",
@@ -231,7 +245,22 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
     status.setObjectName(STATUS_OBJECT_NAME)
     status.setWordWrap(True)
 
+    def set_template_selection(template_id: str) -> None:
+        for index, template in enumerate(templates):
+            if template.id != template_id:
+                continue
+            old_combo_blocked = template_combo.blockSignals(True)
+            old_list_blocked = template_list.blockSignals(True)
+            try:
+                template_combo.setCurrentIndex(index)
+                template_list.setCurrentRow(index)
+            finally:
+                template_combo.blockSignals(old_combo_blocked)
+                template_list.blockSignals(old_list_blocked)
+            return
+
     def apply_values(values: QuickCreateDraftInput) -> None:
+        set_template_selection(values.template_id)
         preset_id.setText(values.preset_id)
         _set_combo_text(anchor_combo, values.anchor)
         _set_combo_text(orientation_combo, values.orientation)
@@ -269,11 +298,45 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
             draft = current_draft()
             text = _valid_draft_status_text(draft)
         except Exception as exc:
-            status.setProperty("actionRailStatus", "error")
-            status.setText(str(exc))
+            _set_status(qt, status, "error", str(exc))
             return
-        status.setProperty("actionRailStatus", "ok")
-        status.setText(text)
+        _set_status(qt, status, "ok", text)
+
+    def preview_draft() -> None:
+        try:
+            draft = current_draft()
+            preview_quick_create_draft(draft)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
+
+    def clear_preview() -> None:
+        cleared = clear_quick_create_previews()
+        _set_status(qt, status, "ok", f"Cleared Quick Create previews: {cleared}")
+
+    def load_existing() -> None:
+        preset_text = preset_id.text().strip()
+        try:
+            values = load_quick_create_preset(preset_text)
+            apply_values(values)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        _set_status(qt, status, "ok", f"Loaded user preset: {preset_text}")
+
+    def save_draft(*, overwrite: bool = False) -> None:
+        try:
+            result = save_quick_create_preset(current_draft(), overwrite=overwrite)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        _set_status(
+            qt,
+            status,
+            "ok",
+            f"Saved and showing user preset: {result.preset_id} ({result.path})",
+        )
 
     def refresh_template(index: int) -> None:
         if template_list.currentRow() != index:
@@ -288,7 +351,26 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
     add_slot = qt.QtWidgets.QPushButton("Add Slot")
     remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
     validate = qt.QtWidgets.QPushButton("Validate Draft")
-    for button in (add_slot, remove_slot, validate):
+    preview = qt.QtWidgets.QPushButton("Preview")
+    clear_preview_button = qt.QtWidgets.QPushButton("Clear Preview")
+    save = qt.QtWidgets.QPushButton("Save Preset")
+    overwrite = qt.QtWidgets.QPushButton("Overwrite Preset")
+    load_existing_button = qt.QtWidgets.QPushButton("Load Existing")
+    preview.setObjectName(PREVIEW_BUTTON_OBJECT_NAME)
+    clear_preview_button.setObjectName(CLEAR_PREVIEW_BUTTON_OBJECT_NAME)
+    save.setObjectName(SAVE_BUTTON_OBJECT_NAME)
+    overwrite.setObjectName(OVERWRITE_BUTTON_OBJECT_NAME)
+    load_existing_button.setObjectName(LOAD_BUTTON_OBJECT_NAME)
+    for button in (
+        add_slot,
+        remove_slot,
+        validate,
+        preview,
+        clear_preview_button,
+        save,
+        overwrite,
+        load_existing_button,
+    ):
         button.setProperty("actionRailRole", "dialogButton")
         button_row.addWidget(button)
     button_row.addStretch(1)
@@ -296,11 +378,15 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
 
     panel._actionrail_current_draft = current_draft
     panel._actionrail_validate_draft = validate_draft
+    panel._actionrail_preview_draft = preview_draft
+    panel._actionrail_clear_preview = clear_preview
+    panel._actionrail_save_draft = save_draft
+    panel._actionrail_load_existing = load_existing
 
     template_combo.currentIndexChanged.connect(refresh_template)
     template_list.currentRowChanged.connect(template_combo.setCurrentIndex)
-    add_slot.clicked.connect(
-        lambda: _add_slot_row(
+    def add_and_validate() -> None:
+        _add_slot_row(
             qt,
             slots_layout,
             slot_rows,
@@ -308,11 +394,22 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
             actions,
             icons,
         )
-    )
-    remove_slot.clicked.connect(lambda: _remove_last_slot_row(slot_rows, slots_layout))
+        validate_draft()
+
+    def remove_and_validate() -> None:
+        _remove_last_slot_row(slot_rows, slots_layout)
+        validate_draft()
+
+    add_slot.clicked.connect(add_and_validate)
+    remove_slot.clicked.connect(remove_and_validate)
     reset_values.clicked.connect(lambda: refresh_template(template_combo.currentIndex()))
     validate_top.clicked.connect(validate_draft)
     validate.clicked.connect(validate_draft)
+    preview.clicked.connect(preview_draft)
+    clear_preview_button.clicked.connect(clear_preview)
+    save.clicked.connect(lambda: save_draft(overwrite=False))
+    overwrite.clicked.connect(lambda: save_draft(overwrite=True))
+    load_existing_button.clicked.connect(load_existing)
     template_list.setCurrentRow(0)
     tabs.setCurrentIndex(1)
     apply_values(make_default_input())
@@ -498,6 +595,14 @@ def _valid_draft_status_text(draft: DraftRail) -> str:
     return f"Valid draft: {spec.id} ({len(spec.items)} slots)"
 
 
+def _set_status(qt: QtBinding, status: Any, state: str, text: str) -> None:  # pragma: no cover
+    status.setProperty("actionRailStatus", state)
+    status.setText(text)
+    status.style().unpolish(status)
+    status.style().polish(status)
+    status.update()
+
+
 def _widget_to_slider_value(widget: Any, scale_factor: int) -> int:  # pragma: no cover
     return round(float(widget.value()) * scale_factor)
 
@@ -552,6 +657,12 @@ QLabel#{STATUS_OBJECT_NAME} {{
     color: {theme.button_color};
     font-size: 12px;
     letter-spacing: 0px;
+}}
+QLabel#{STATUS_OBJECT_NAME}[actionRailStatus="ok"] {{
+    color: #9bd8c8;
+}}
+QLabel#{STATUS_OBJECT_NAME}[actionRailStatus="error"] {{
+    color: #ff9a9a;
 }}
 QLabel#ActionRailQuickCreateNavTitle {{
     color: {theme.button_color};

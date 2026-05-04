@@ -159,6 +159,17 @@ The schema is still named `StackSpec` in code for compatibility, but current pre
 
 Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. `actionrail.preset_store` is the shared resolver for bundled and saved user presets; runtime overlay startup, no-overlay slot execution, hotkey publishing/sync, diagnostics, Maya menu toggles, and the project map should resolve preset ids through it instead of directly assuming `presets/` built-ins. This is a local user-preset layer only; project/studio/profile layering is still reserved for a later phase.
 
+Phase 2 steps 2.2-2.3 add `actionrail.quick_create` and
+`actionrail.quick_create_ui` as the first Maya-facing authoring surface. Quick
+Create owns template defaults, picker-facing action/icon choices, editable draft
+input, preview cleanup, load-existing conversion, and save/show helpers.
+Preview uses `show_spec()` with a validated draft spec and tracks preview ids
+for cleanup; save uses the same user-preset writer as other authoring code with
+explicit overwrite required for existing files, then shows the saved preset
+through the normal runtime resolver without closing unrelated overlays. Saved
+user presets can be loaded back into editable Quick Create values; locked
+built-in presets remain read-only.
+
 Icon fields should store stable logical ids, not raw file paths. The icon
 provider layer currently resolves manifest-backed ids such as
 `actionrail.move` and curated Maya resource ids such as `maya.move`. This keeps

@@ -254,16 +254,29 @@ Research hints:
 
 #### 2.3 Preview And Save Workflow
 
+Status: complete for the first Quick Create workflow slice.
+
 - Convert the Quick Create draft into a real spec and show it through the
-  existing Qt overlay runtime.
-- Support preview without saving and cleanup of preview overlays.
+  existing Qt overlay runtime. Done through
+  `preview_quick_create_draft()`.
+- Support preview without saving and cleanup of preview overlays. Done through
+  session-tracked Quick Create preview ids and
+  `clear_quick_create_previews()`.
 - Save the current draft as a user preset with a stable preset id and stable slot
-  ids.
+  ids. Done through `save_quick_create_preset()`, which saves through the
+  existing user-preset writer and requires explicit overwrite for existing
+  files.
+- Load existing saved user presets back into Quick Create for editing. Done
+  through `load_quick_create_preset()` and the panel's Load Existing action for
+  user presets only.
 - Reload and show the saved preset through the same public runtime path as
-  bundled examples.
+  bundled examples. Done by saving through the shared user-preset resolver,
+  showing the saved preset with targeted overlay replacement, and smoke-testing
+  that the saved preset can still be shown after `actionrail.reload(...)`.
 
 Done when Quick Create can preview a vertical or horizontal custom rail, save
-it, reload it, and show it after an ActionRail reload.
+it, load an existing saved user rail for editing, reload it, and show it after
+an ActionRail reload.
 
 Research hints:
 
@@ -396,16 +409,16 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 2 steps 2.1-2.2 are complete and verified locally. The draft authoring
-model, safe user-preset storage, shared preset resolver, and dockable Quick
-Create panel are ready for preview/save work.
+Phase 2 steps 2.1-2.3 are complete and verified locally. The draft authoring
+model, safe user-preset storage, shared preset resolver, dockable Quick Create
+panel, preview cleanup, load-existing support, and save/reload workflow are
+ready for the first Edit Mode shell.
 
-Next implementation slice: Phase 2 step 2.3, a Quick Create workflow that can
-preview a vertical or horizontal custom rail, clean up previews, save stable
-user preset ids and slot ids, and show the saved preset after reload. Keep
-`docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
-flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
-yet.
+Next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail selection:
+global toggle, rail outlines, selected-rail inspector, source-layer badges, and
+lock-state display. Keep `docs/06_wow_style_customization.md` in mind, but do
+not start Bind Mode, flyouts, command rings, profile layers, marking-menu
+export, or Viewport 2.0 yet.
 
 ## Research Backlog
 

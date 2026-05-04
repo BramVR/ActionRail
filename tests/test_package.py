@@ -52,6 +52,10 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert callable(actionrail.last_report)
     assert callable(actionrail.show_last_report)
     assert callable(actionrail.safe_start)
+    assert callable(actionrail.preview_quick_create_draft)
+    assert callable(actionrail.clear_quick_create_previews)
+    assert callable(actionrail.save_quick_create_preset)
+    assert callable(actionrail.load_quick_create_preset)
     assert callable(actionrail.diagnose_icon_import_from_maya)
 
 

@@ -3,23 +3,37 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from .actions import ActionRegistry, create_default_registry
-from .authoring import DraftRail, DraftSlot
+from .authoring import (
+    DraftRail,
+    DraftSlot,
+    build_draft_spec,
+    save_user_preset,
+    validate_preset_id,
+)
 from .icon_catalog import list_icon_descriptors
 from .icon_types import IconDescriptor
-from .spec import RailLayout
+from .preset_store import resolve_preset
+from .spec import RailLayout, builtin_preset_ids
 
 __all__ = [
     "ANCHOR_CHOICES",
     "QuickCreateDraftInput",
+    "QuickCreateSaveResult",
     "QuickCreateSlotInput",
     "QuickCreateTemplate",
     "TEMPLATE_IDS",
     "action_choices",
     "build_quick_create_draft",
+    "clear_quick_create_previews",
     "icon_choices",
+    "load_quick_create_preset",
     "make_default_input",
+    "preview_quick_create_draft",
+    "save_quick_create_preset",
     "template_by_id",
     "template_choices",
 ]
@@ -71,6 +85,17 @@ class QuickCreateDraftInput:
     opacity: float = 1.0
     locked: bool = False
 
+
+@dataclass(frozen=True)
+class QuickCreateSaveResult:
+    """Result from saving and optionally showing a Quick Create preset."""
+
+    preset_id: str
+    path: Path
+    host: Any | None = None
+
+
+_PREVIEW_IDS: set[str] = set()
 
 _TEMPLATES = (
     QuickCreateTemplate(
@@ -191,6 +216,103 @@ def build_quick_create_draft(values: QuickCreateDraftInput) -> DraftRail:
     return draft
 
 
+def preview_quick_create_draft(
+    draft: DraftRail,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+) -> Any:
+    """Preview a Quick Create draft through the normal overlay runtime."""
+
+    spec = build_draft_spec(draft)
+    _validate_quick_create_id(spec.id)
+
+    from . import diagnostics, runtime
+
+    report = diagnostics.diagnose_spec(spec, registry=registry)
+    if report.has_errors:
+        msg = (
+            "ActionRail Quick Create preview has diagnostic errors; "
+            "run actionrail.show_last_report() for details."
+        )
+        raise ValueError(msg)
+
+    clear_quick_create_previews()
+    host = runtime.show_spec(spec, panel=panel, registry=registry)
+    _PREVIEW_IDS.add(spec.id)
+    return host
+
+
+def clear_quick_create_previews(preset_id: str = "") -> int:
+    """Hide active Quick Create preview overlays tracked by this session."""
+
+    from . import runtime
+
+    preview_ids = (preset_id,) if preset_id else tuple(_PREVIEW_IDS)
+    cleared = 0
+    active_ids = set(runtime.active_overlay_ids())
+    for preview_id in preview_ids:
+        if preview_id in active_ids:
+            cleared += 1
+        runtime.hide_example(preview_id)
+        _PREVIEW_IDS.discard(preview_id)
+    return cleared
+
+
+def save_quick_create_preset(
+    draft: DraftRail,
+    *,
+    preset_dir: str | Path | None = None,
+    overwrite: bool = False,
+    show: bool = True,
+    panel: str | None = None,
+) -> QuickCreateSaveResult:
+    """Save a Quick Create draft as a user preset and optionally show it."""
+
+    spec = build_draft_spec(draft)
+    _validate_quick_create_id(spec.id)
+    path = save_user_preset(spec, preset_dir=preset_dir, overwrite=overwrite)
+    clear_quick_create_previews(spec.id)
+
+    host = None
+    if show:
+        from . import runtime
+
+        host = runtime.show_preset(spec.id, panel=panel, user_preset_dir=preset_dir)
+    return QuickCreateSaveResult(spec.id, path, host)
+
+
+def load_quick_create_preset(
+    preset_id: str,
+    *,
+    preset_dir: str | Path | None = None,
+) -> QuickCreateDraftInput:
+    """Return editable Quick Create values for an existing saved user preset."""
+
+    spec = resolve_preset(preset_id, user_preset_dir=preset_dir)
+    if spec.id in builtin_preset_ids():
+        msg = f"Quick Create can only load saved user presets for editing: {spec.id}"
+        raise ValueError(msg)
+
+    return QuickCreateDraftInput(
+        preset_id=spec.id,
+        template_id=_template_id_for_layout(spec.layout, len(spec.items)),
+        slots=tuple(
+            _slot_input_from_item(spec.id, item)
+            for item in spec.items
+            if item.type != "spacer"
+        ),
+        anchor=spec.layout.anchor,
+        orientation=spec.layout.orientation,
+        rows=spec.layout.rows,
+        columns=spec.layout.columns,
+        offset=spec.layout.offset,
+        scale=spec.layout.scale,
+        opacity=spec.layout.opacity,
+        locked=spec.layout.locked,
+    )
+
+
 def action_choices(
     registry: ActionRegistry | None = None,
 ) -> tuple[tuple[str, str, str], ...]:
@@ -226,6 +348,39 @@ def _slot_tooltip(slot: QuickCreateSlotInput) -> str:
     return slot.label
 
 
+def _slot_input_from_item(preset_id: str, item: Any) -> QuickCreateSlotInput:
+    return QuickCreateSlotInput(
+        id=_unqualified_slot_id(preset_id, item.id),
+        label=item.label,
+        action=item.action,
+        key_label=item.key_label,
+        icon=item.icon,
+    )
+
+
+def _unqualified_slot_id(preset_id: str, slot_id: str) -> str:
+    prefix = f"{preset_id}."
+    if slot_id.startswith(prefix):
+        return slot_id.removeprefix(prefix)
+    return slot_id
+
+
+def _template_id_for_layout(layout: RailLayout, item_count: int) -> str:
+    if layout.orientation == "horizontal":
+        return "horizontal_strip"
+    if item_count == 1 and layout.opacity < 1.0:
+        return "edge_tab_rail"
+    return "vertical_stack"
+
+
 def _default_preset_id(template_id: str) -> str:
     suffix = template_id.replace("_", "-")
     return f"quick-{suffix}"
+
+
+def _validate_quick_create_id(preset_id: str) -> str:
+    validate_preset_id(preset_id)
+    if preset_id in builtin_preset_ids():
+        msg = f"Quick Create preset id '{preset_id}' would overwrite a locked built-in preset."
+        raise ValueError(msg)
+    return preset_id

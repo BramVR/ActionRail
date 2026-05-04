@@ -293,41 +293,66 @@ Last updated: 2026-05-04
     Maya, switches templates, validates the produced draft, and saves panel
     screenshots for the General, Layout, and Slots tabs under
     `.gg-maya-sessiond/screenshots/`.
+- Phase 2 step 2.3 Preview And Save Workflow complete:
+  - `actionrail.preview_quick_create_draft()` converts a Quick Create draft into
+    a validated runtime spec, records diagnostics for broken drafts, previews it
+    through the normal Qt overlay runtime, and tracks preview ids for cleanup.
+  - `actionrail.clear_quick_create_previews()` hides active preview overlays
+    without requiring the draft to be saved.
+  - `actionrail.save_quick_create_preset()` saves the current draft through the
+    existing user-preset writer, preserves stable preset and slot ids, clears
+    matching previews, and shows the saved preset through the normal user preset
+    resolver without closing unrelated overlays.
+  - User-preset saves now require explicit overwrite for existing files; Quick
+    Create exposes separate Save Preset and Overwrite Preset actions.
+  - `actionrail.load_quick_create_preset()` loads saved user presets back into
+    editable Quick Create values without allowing locked built-in presets to be
+    edited.
+  - The Quick Create panel now has Preview, Clear Preview, Save Preset,
+    Overwrite Preset, and Load Existing actions, and smoke coverage verifies
+    preview, save, explicit overwrite, load, reload, and screenshot capture in
+    Maya.
 
 ## In Progress
 
-- Phase 2 step 2.3 Preview And Save Workflow is next; not started yet.
+- Phase 2 step 2.4 Edit Mode Shell And Rail Selection is next; not started yet.
 
 ## Next Agent Start
 
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: begin Phase 2 step 2.3, Preview And Save
-   Workflow. Use the `DraftRail`/`DraftSlot` helpers from
-   `scripts/actionrail/authoring.py` and the `quick_create.py` values instead
-   of inventing another draft model.
+2. First recommended coding slice: begin Phase 2 step 2.4, Edit Mode Shell And
+   Rail Selection. Add the global Edit Mode toggle, rail outlines, selected-rail
+   inspector, source-layer badges, and lock-state display without starting Bind
+   Mode or flyouts.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 ## Latest Handoff
 
-- Task goal completed: Quick Create review fixes landed for schema-backed draft
-  validation and integer-preserving layout slider sync.
-- Files changed in this handoff update: `quick_create_ui.py`,
-  `tests/test_quick_create.py`, and this status note.
-- Behavior verified: full pytest and coverage report pass at 100%, Ruff passes,
-  and `scripts/maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` passes
+- Task goal completed: Phase 2 step 2.3 Quick Create preview/save/load workflow
+  landed.
+- Files changed in this handoff update: `scripts/actionrail/__init__.py`,
+  `scripts/actionrail/authoring.py`,
+  `scripts/actionrail/project.py`, `scripts/actionrail/quick_create.py`,
+  `scripts/actionrail/quick_create_ui.py`,
+  `tests/maya_smoke/actionrail_quick_create_smoke.py`,
+  `tests/test_authoring.py`, `tests/test_package.py`, `tests/test_project_map.py`,
+  `tests/test_quick_create.py`, and docs.
+- Behavior verified: full pytest with coverage passes at 100%, Ruff passes, and
+  `scripts/maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` passes
   against MayaSessiond.
-- Current live state: Validate Draft now runs drafts through the runtime schema
-  before reporting success, and unscaled layout sliders feed integers back into
-  integer spin boxes.
+- Current live state: Quick Create can preview a draft without saving, clear
+  preview overlays, save or explicitly overwrite a stable user preset, load that
+  preset back into the panel, and reload/show it through the normal runtime path
+  while preserving unrelated overlays on save.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: continue Phase 2 step 2.3 preview and save workflow.
+- Exact next step: begin Phase 2 step 2.4 Edit Mode shell and rail selection.
 
 ## Next
 
-1. Start Phase 2 step 2.3, then continue through the medium Quick Create/Edit
+1. Start Phase 2 step 2.4, then continue through the medium Quick Create/Edit
    Mode steps in `docs/02_implementation_plan.md`.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
@@ -346,14 +371,16 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 356 passed, `TOTAL 3788 0 100%`.
+  -> 372 passed, `TOTAL 3890 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` ->
-  passed against MayaSessiond on port `7217`; reported
-  `Valid draft: quick-horizontal-strip (4 slots)` and saved General, Layout,
-  Slots, and final panel screenshots at `900x680`.
+  passed against MayaSessiond on port `7217`; previewed, saved, verified
+  duplicate saves require explicit overwrite, loaded, and reloaded
+  `quick-horizontal-strip`, reported
+  `Saved and showing user preset: quick-horizontal-strip (...)`, and saved
+  General, Layout, Slots, and final panel screenshots at `900x680`.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,

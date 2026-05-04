@@ -89,6 +89,29 @@ def test_save_user_preset_accepts_stack_spec_and_canonicalizes_payload(tmp_path)
     assert load_user_preset("manual_spec", preset_dir=tmp_path) == spec
 
 
+def test_save_user_preset_rejects_existing_file_without_overwrite(tmp_path) -> None:
+    first = DraftRail(
+        id="artist_tools",
+        slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+    )
+    second = DraftRail(
+        id="artist_tools",
+        slots=(DraftSlot(id="key", label="K", action="maya.anim.set_key"),),
+    )
+
+    saved_path = save_user_preset(first, preset_dir=tmp_path)
+    first_payload = saved_path.read_text(encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="overwrite=True"):
+        save_user_preset(second, preset_dir=tmp_path)
+
+    assert saved_path.read_text(encoding="utf-8") == first_payload
+
+    save_user_preset(second, preset_dir=tmp_path, overwrite=True)
+
+    assert "maya.anim.set_key" in saved_path.read_text(encoding="utf-8")
+
+
 def test_load_user_preset_rejects_mismatched_payload_id(tmp_path) -> None:
     (tmp_path / "artist_tools.json").write_text(
         json.dumps(

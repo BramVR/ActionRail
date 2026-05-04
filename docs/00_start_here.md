@@ -29,8 +29,8 @@ Snapshot:
 
 - Phase 0 prototype is verified; Phase 1 declarative MVP is complete and
   verified; Phase 2 step 2.1 authoring model/user-preset storage/shared preset
-  resolver and Phase 2 step 2.2 dockable Quick Create panel are complete and
-  locally verified.
+  resolver, Phase 2 step 2.2 dockable Quick Create panel, and Phase 2 step 2.3
+  Quick Create preview/save/load workflow are complete and locally verified.
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
@@ -44,9 +44,9 @@ Snapshot:
   should use the provider catalog instead of import/write/fallback code.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
-- Current next implementation slice: Phase 2 step 2.3, preview and save workflow
-  for Quick Create drafts; do not start Bind Mode, flyouts, command rings,
-  profile layers, marking-menu export, or Viewport 2.0 yet.
+- Current next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail
+  selection; do not start Bind Mode, flyouts, command rings, profile layers,
+  marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -85,12 +85,12 @@ Build PySide6/Qt overlay first.
 
 ## Current Priority
 
-Phase 1 declarative MVP and Phase 2 steps 2.1-2.2 are complete. Continue Phase 2
-with the smallest useful Maya-facing Quick Create/Edit Mode slice:
+Phase 1 declarative MVP and Phase 2 steps 2.1-2.3 are complete. Continue Phase 2
+with the smallest useful Maya-facing Edit Mode slice:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Add Quick Create preview and save workflow: preview drafts without saving,
-   clean up preview overlays, then save stable user preset ids and slot ids.
+2. Add the Edit Mode shell and rail selection: global toggle, rail outlines,
+   selected-rail inspector, source-layer badges, and lock-state display.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

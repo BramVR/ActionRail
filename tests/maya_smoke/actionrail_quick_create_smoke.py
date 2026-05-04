@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -18,6 +19,12 @@ output_path = Path(
     )
 )
 output_path.parent.mkdir(parents=True, exist_ok=True)
+user_preset_dir = output_path.parent / "quick_create_user_presets"
+user_preset_dir.mkdir(parents=True, exist_ok=True)
+os.environ["ACTIONRAIL_USER_PRESET_DIR"] = str(user_preset_dir)
+saved_path = user_preset_dir / "quick-horizontal-strip.json"
+if saved_path.exists():
+    saved_path.unlink()
 
 from maya import cmds  # noqa: E402
 from PySide6 import QtWidgets  # noqa: E402
@@ -60,7 +67,8 @@ if visible_panel is None:
 status_label = visible_panel.findChild(QtWidgets.QLabel, STATUS_OBJECT_NAME)
 template_combo = visible_panel.findChild(QtWidgets.QComboBox, TEMPLATE_COMBO_OBJECT_NAME)
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
-if status_label is None or template_combo is None or tabs is None:
+preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
+if status_label is None or template_combo is None or tabs is None or preset_id_edit is None:
     raise AssertionError("Quick Create panel is missing expected child widgets.")
 
 if template_combo.count() != 3:
@@ -79,6 +87,58 @@ app.processEvents()
 horizontal_draft = visible_panel._actionrail_current_draft()
 if horizontal_draft.layout.orientation != "horizontal":
     raise AssertionError(f"Template switch did not update orientation: {horizontal_draft}")
+
+visible_panel._actionrail_preview_draft()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if "quick-horizontal-strip" not in actionrail.active_overlay_ids():
+    raise AssertionError(
+        f"Quick Create preview did not show overlay: {actionrail.active_overlay_ids()}"
+    )
+
+visible_panel._actionrail_save_draft()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if not saved_path.is_file():
+    raise AssertionError(f"Quick Create save did not write preset: {saved_path}")
+if actionrail.active_overlay_ids() != ("quick-horizontal-strip",):
+    raise AssertionError(
+        f"Quick Create save did not show saved preset: {actionrail.active_overlay_ids()}"
+    )
+
+visible_panel._actionrail_save_draft()
+app.processEvents()
+if "overwrite=True" not in status_label.text():
+    raise AssertionError(
+        f"Duplicate Quick Create save did not require explicit overwrite: {status_label.text()}"
+    )
+
+visible_panel._actionrail_save_draft(overwrite=True)
+app.processEvents()
+if "Saved and showing user preset: quick-horizontal-strip" not in status_label.text():
+    raise AssertionError(f"Explicit overwrite did not save preset: {status_label.text()}")
+
+template_combo.setCurrentIndex(0)
+app.processEvents()
+preset_id_edit.setText("quick-horizontal-strip")
+app.processEvents()
+visible_panel._actionrail_load_existing()
+app.processEvents()
+loaded_draft = visible_panel._actionrail_current_draft()
+if loaded_draft.id != "quick-horizontal-strip" or loaded_draft.layout.orientation != "horizontal":
+    raise AssertionError(f"Load Existing did not restore saved bar: {loaded_draft}")
+
+actionrail.reload("quick-horizontal-strip")
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if actionrail.active_overlay_ids() != ("quick-horizontal-strip",):
+    raise AssertionError(
+        f"Saved Quick Create preset did not survive ActionRail reload: "
+        f"{actionrail.active_overlay_ids()}"
+    )
 
 tab_screenshots = {}
 for index in range(tabs.count()):
@@ -105,8 +165,11 @@ result = {
     "current_template": template_combo.currentText(),
     "default_slot_count": len(current_draft.slots),
     "horizontal_orientation": horizontal_draft.layout.orientation,
+    "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
     "quick_create_menu_command": maya_ui.show_quick_create_panel_command(),
+    "saved_preset": str(saved_path),
+    "saved_preset_exists": saved_path.is_file(),
     "screenshot": str(output_path),
     "screenshot_saved": bool(screenshot_saved),
     "screenshot_size": [pixmap.width(), pixmap.height()],
@@ -116,6 +179,7 @@ result = {
 }
 
 visible_panel.close()
+actionrail.hide_all()
 app.processEvents()
 if cmds.workspaceControl(maya_ui.QUICK_CREATE_WORKSPACE_CONTROL, exists=True):
     cmds.deleteUI(maya_ui.QUICK_CREATE_WORKSPACE_CONTROL, control=True)

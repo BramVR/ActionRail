@@ -75,6 +75,7 @@ def save_user_preset(
     draft_or_spec: DraftRail | StackSpec,
     *,
     preset_dir: str | Path | None = None,
+    overwrite: bool = False,
 ) -> Path:
     """Validate and save a draft or spec into the user preset location."""
 
@@ -87,6 +88,12 @@ def save_user_preset(
     directory = user_preset_dir(preset_dir)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{spec.id}.json"
+    if path.exists() and not overwrite:
+        msg = (
+            f"User preset '{spec.id}' already exists. "
+            "Pass overwrite=True to replace it."
+        )
+        raise FileExistsError(msg)
     payload = spec_to_payload(spec)
     parse_stack_spec(payload, source=f"<save:{spec.id}>")
     temp_path = path.with_name(f"{path.name}.tmp")
