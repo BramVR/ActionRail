@@ -31,7 +31,6 @@ from actionrail.diagnostics_ui import (  # noqa: E402
     SUMMARY_OBJECT_NAME,
     WINDOW_OBJECT_NAME,
 )
-from actionrail.runtime import _OVERLAYS, active_overlay_ids  # noqa: E402
 from actionrail.spec import RailLayout, StackItem, StackSpec  # noqa: E402
 
 app = QtWidgets.QApplication.instance()
@@ -181,20 +180,30 @@ if last_report != start_report:
 last_report_text = actionrail.format_report()
 if "Status: ok" not in last_report_text or "Overlay id: transform_stack" not in last_report_text:
     raise AssertionError(f"Last report text missing safe_start state: {last_report_text}")
-if active_overlay_ids() != ("transform_stack",):
-    raise AssertionError(f"Unexpected active overlays after safe start: {active_overlay_ids()}")
+if actionrail.active_overlay_ids() != ("transform_stack",):
+    raise AssertionError(
+        f"Unexpected active overlays after safe start: {actionrail.active_overlay_ids()}"
+    )
 
-widget = _OVERLAYS.get("transform_stack")
-widget_size = []
-if widget is not None and getattr(widget, "widget", None) is not None:
-    widget_size = [widget.widget.width(), widget.widget.height()]
+overlay_states = actionrail.active_overlay_states()
+overlay_state = next(
+    (
+        state
+        for state in overlay_states
+        if state.get("preset_id") == "transform_stack"
+    ),
+    {},
+)
+if not overlay_state.get("widget_visible") or not overlay_state.get("widget_valid"):
+    raise AssertionError(f"Unexpected safe-start overlay state: {overlay_states}")
 
 result = {
     "availability_warning_codes": availability_codes,
     "broken_error_codes": [issue.code for issue in broken_report.errors],
     "builtin_issue_count": len(builtin_report.issues),
     "missing_icon_warning_codes": [issue.code for issue in missing_icon_report.warnings],
-    "safe_start_active_ids": active_overlay_ids(),
+    "safe_start_active_ids": actionrail.active_overlay_ids(),
+    "safe_start_overlay_state": overlay_state,
     "safe_start_overlay_started": start_report.overlay_started,
     "last_report_text": last_report_text,
     "diagnostics_window_selected_detail": "Code: missing_action" in selected_detail_text,
@@ -205,7 +214,6 @@ result = {
         window_pixmap.width(),
         window_pixmap.height(),
     ],
-    "widget_size": widget_size,
 }
 
 actionrail.hide_all()

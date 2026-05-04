@@ -30,7 +30,7 @@ def toggle_default(
         runtime.hide_example(preset_id)
         return "hidden"
 
-    runtime.show_example(preset_id, panel=panel)
+    runtime.show_preset(preset_id, panel=panel)
     return "shown"
 
 

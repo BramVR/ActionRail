@@ -15,7 +15,6 @@ from PySide6 import QtWidgets  # noqa: E402
 import actionrail  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
 from actionrail.diagnostics_ui import WINDOW_OBJECT_NAME  # noqa: E402
-from actionrail.runtime import _OVERLAYS, active_overlay_ids  # noqa: E402
 
 app = QtWidgets.QApplication.instance()
 if app is None:
@@ -114,14 +113,26 @@ toggle_show = actionrail.toggle_default()
 app.processEvents()
 cmds.refresh(force=True)
 
-ids_after_show = active_overlay_ids()
-host = _OVERLAYS["transform_stack"]
-visible_after_show = bool(host.widget.isVisible())
-size_after_show = [host.widget.width(), host.widget.height()]
+ids_after_show = actionrail.active_overlay_ids()
+states_after_show = actionrail.active_overlay_states()
+state_after_show = next(
+    (
+        state
+        for state in states_after_show
+        if state.get("preset_id") == "transform_stack"
+    ),
+    {},
+)
+visible_after_show = bool(state_after_show.get("widget_visible"))
+valid_after_show = bool(state_after_show.get("widget_valid"))
+if ids_after_show != ("transform_stack",):
+    raise AssertionError(f"Unexpected active overlays after toggle show: {ids_after_show}")
+if not visible_after_show or not valid_after_show:
+    raise AssertionError(f"Unexpected overlay state after toggle show: {states_after_show}")
 
 toggle_hide = actionrail.toggle_default()
 app.processEvents()
-ids_after_hide = active_overlay_ids()
+ids_after_hide = actionrail.active_overlay_ids()
 
 maya_ui.uninstall_menu_toggle()
 maya_ui.uninstall_shelf_toggle()
@@ -160,9 +171,10 @@ result = {
     "shelf_exists_after_uninstall": _exists(maya_ui.SHELF_BUTTON_NAME, cmds.shelfButton),
     "shelf_first": shelf_first,
     "shelf_second": shelf_second,
-    "size_after_show": size_after_show,
+    "state_after_show": state_after_show,
     "toggle_hide": toggle_hide,
     "toggle_show": toggle_show,
+    "valid_after_show": valid_after_show,
     "visible_after_show": visible_after_show,
 }
 

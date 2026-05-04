@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .actions import ActionRegistry, create_default_registry
-from .spec import TRANSFORM_STACK_ID, StackSpec, get_example_spec
+from .preset_store import resolve_preset
+from .spec import TRANSFORM_STACK_ID, StackSpec
 
 _OVERLAYS: dict[str, Any] = {}
 
@@ -18,6 +20,7 @@ __all__ = [
     "run_action",
     "run_slot",
     "show_example",
+    "show_preset",
     "show_spec",
     "update_slot_key_label",
 ]
@@ -29,9 +32,21 @@ def show_example(
     panel: str | None = None,
     registry: ActionRegistry | None = None,
 ) -> Any:
-    """Show a built-in ActionRail example overlay."""
+    """Show a built-in or saved user ActionRail preset overlay."""
 
-    spec = get_example_spec(example_id)
+    return show_preset(example_id, panel=panel, registry=registry)
+
+
+def show_preset(
+    preset_id: str = TRANSFORM_STACK_ID,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+    user_preset_dir: str | Path | None = None,
+) -> Any:
+    """Show a resolved ActionRail preset overlay by id."""
+
+    spec = resolve_preset(preset_id, user_preset_dir=user_preset_dir)
     return show_spec(spec, panel=panel, registry=registry)
 
 
@@ -66,11 +81,16 @@ def hide_all() -> None:
         hide_example(example_id)
 
 
-def reload(example_id: str = TRANSFORM_STACK_ID, *, panel: str | None = None) -> Any:
+def reload(
+    example_id: str = TRANSFORM_STACK_ID,
+    *,
+    panel: str | None = None,
+    user_preset_dir: str | Path | None = None,
+) -> Any:
     """Rebuild the default overlay after cleaning up existing widgets."""
 
     hide_all()
-    return show_example(example_id, panel=panel)
+    return show_preset(example_id, panel=panel, user_preset_dir=user_preset_dir)
 
 
 def active_overlay_ids() -> tuple[str, ...]:
@@ -108,10 +128,11 @@ def run_slot(
     slot_id: str,
     *,
     registry: ActionRegistry | None = None,
+    user_preset_dir: str | Path | None = None,
 ) -> Any:
-    """Run the action attached to a slot in a built-in preset."""
+    """Run the action attached to a slot in a resolved preset."""
 
-    spec = get_example_spec(preset_id)
+    spec = resolve_preset(preset_id, user_preset_dir=user_preset_dir)
     qualified_slot_id = _qualified_slot_id(preset_id, slot_id)
     for item in spec.items:
         if item.id == qualified_slot_id:

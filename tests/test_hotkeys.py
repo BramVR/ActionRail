@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
 from types import ModuleType
 
 import pytest
 
+from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.hotkeys import (
     HotkeyConflictError,
     PublishedCommand,
-    _clear_published_cache,
     assign_hotkey,
     assign_published_hotkey,
     assign_slot_hotkey,
@@ -29,11 +30,6 @@ from actionrail.hotkeys import (
     sync_visible_key_label,
     unpublish,
 )
-
-
-@pytest.fixture(autouse=True)
-def clear_published_cache() -> None:
-    _clear_published_cache()
 
 
 class FakeCmds:
@@ -103,6 +99,58 @@ class BrokenQueryCmds(FakeCmds):
 class FailingNameCommandCmds(FakeCmds):
     def nameCommand(self, name: str, **kwargs: object) -> str:  # noqa: N802
         raise RuntimeError("permission denied")
+
+
+@pytest.fixture(autouse=True)
+def forget_cached_published_commands() -> Iterator[None]:
+    _forget_known_published_commands()
+    yield
+    _forget_known_published_commands()
+
+
+def _forget_known_published_commands() -> None:
+    cmds = FakeCmds()
+    for command in _known_published_commands():
+        unpublish(command, cmds_module=cmds)
+
+
+def _known_published_commands() -> tuple[PublishedCommand, ...]:
+    action_ids = (
+        "maya.tool.move",
+        "maya.tool.translate",
+        "maya.tool.rotate",
+        "maya.tool.scale",
+        "maya.anim.set_key",
+        "maya.tool.removed",
+    )
+    slot_ids = (
+        ("transform_stack", "move"),
+        ("transform_stack", "rotate"),
+        ("transform_stack", "scale"),
+        ("transform_stack", "set_key"),
+        ("transform_stack", "removed_slot"),
+        ("horizontal_tools", "rotate"),
+        ("unknown", "slot"),
+    )
+    actions = tuple(
+        PublishedCommand(
+            "action",
+            action_id,
+            runtime_command_name("action", action_id),
+            name_command_name(runtime_command_name("action", action_id)),
+        )
+        for action_id in action_ids
+    )
+    slots = tuple(
+        PublishedCommand(
+            "slot",
+            slot_target_id(preset_id, slot_id),
+            runtime_command_name("slot", slot_target_id(preset_id, slot_id)),
+            name_command_name(runtime_command_name("slot", slot_target_id(preset_id, slot_id))),
+        )
+        for preset_id, slot_id in slot_ids
+    )
+    return (*actions, *slots)
 
 
 def test_runtime_command_names_are_stable_maya_identifiers() -> None:
@@ -187,6 +235,32 @@ def test_publish_preset_slots_skips_spacers() -> None:
         "transform_stack.set_key",
     ]
     assert "gap" not in " ".join(cmds.runtime_commands)
+
+
+def test_publish_preset_slots_resolves_saved_user_preset(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(
+                DraftSlot(id="move", label="M", action="maya.tool.move"),
+                DraftSlot(id="gap", type="spacer", size=8),
+                DraftSlot(id="empty", label="E"),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+
+    published = publish_preset_slots(
+        "artist_tools",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )
+
+    assert [command.target_id for command in published] == ["artist_tools.move"]
+    assert cmds.runtime_commands["ActionRail_slot_artist_tools_move"]["command"] == (
+        "import actionrail; actionrail.run_slot('artist_tools', 'artist_tools.move')"
+    )
 
 
 def test_publish_slot_command_uses_normalized_slot_id() -> None:
@@ -339,6 +413,32 @@ def test_clear_visible_key_label_resolves_persisted_builtin_slot_name_command(
     assert updates == [("transform_stack", "set_key", "")]
 
 
+def test_clear_visible_key_label_resolves_persisted_user_slot_name_command(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    monkeypatch.setenv("ACTIONRAIL_USER_PRESET_DIR", str(tmp_path))
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    cleared = clear_visible_key_label("ActionRail_slot_artist_tools_move_NameCommand")
+
+    assert cleared == 1
+    assert updates == [("artist_tools", "move", "")]
+
+
 def test_clear_visible_key_label_uses_published_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -379,6 +479,35 @@ def test_assign_slot_hotkey_publishes_assigns_and_syncs_label(
     assert binding.name == "ActionRail_slot_transform_stack_set_key_NameCommand"
     assert "ActionRail_slot_transform_stack_set_key" in cmds.runtime_commands
     assert updates == [("transform_stack", "set_key", "S Up")]
+
+
+def test_assign_slot_hotkey_binds_saved_user_slot_by_id(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    binding = assign_slot_hotkey("artist_tools", "move", "M", cmds_module=cmds)
+
+    assert binding.name == "ActionRail_slot_artist_tools_move_NameCommand"
+    assert cmds.runtime_commands["ActionRail_slot_artist_tools_move"]["command"] == (
+        "import actionrail; actionrail.run_slot('artist_tools', 'artist_tools.move')"
+    )
+    assert updates == [("artist_tools", "move", "M")]
 
 
 def test_assign_published_hotkey_leaves_action_labels_alone(
@@ -508,6 +637,29 @@ def test_sync_preset_slots_removes_stale_slot_command() -> None:
     assert result.unpublished == (stale,)
     assert stale.runtime_command not in cmds.runtime_commands
     assert "ActionRail_slot_transform_stack_set_key" in cmds.runtime_commands
+
+
+def test_sync_preset_slots_removes_stale_user_slot_command(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    stale = publish_slot("artist_tools", "removed", label="Removed", cmds_module=cmds)
+
+    result = sync_preset_slots(
+        "artist_tools",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )
+
+    assert stale not in result.published
+    assert result.unpublished == (stale,)
+    assert "ActionRail_slot_artist_tools_move" in cmds.runtime_commands
+    assert stale.runtime_command not in cmds.runtime_commands
 
 
 def test_sync_preset_slots_leaves_unparseable_prefixed_command_alone() -> None:

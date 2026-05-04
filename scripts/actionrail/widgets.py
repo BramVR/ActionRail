@@ -38,6 +38,7 @@ __all__ = [
     "SlotRenderState",
     "build_transform_stack",
     "refresh_predicate_state",
+    "resolve_slot_render_state",
     "set_slot_key_label",
 ]
 
@@ -370,6 +371,18 @@ def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
         updated += 1
 
     return updated
+
+
+def resolve_slot_render_state(
+    item: StackItem,
+    registry: ActionRegistry,
+    context: PredicateContext | None = None,
+    *,
+    key_label: str | None = None,
+) -> SlotRenderState:
+    """Resolve the public render-state contract for one action slot."""
+
+    return _slot_render_state(item, registry, context, key_label=key_label)
 
 
 def refresh_predicate_state(

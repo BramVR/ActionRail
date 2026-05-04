@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from .actions import create_default_registry
-from .authoring import user_preset_dir, user_preset_ids
 from .icons import list_icon_descriptors, validate_icon_manifest
+from .preset_store import PresetStore
 from .spec import builtin_preset_ids
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +33,11 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/authoring.py",
         "owns": "draft authoring model and safe user preset storage",
         "tests": ("tests/test_authoring.py",),
+    },
+    {
+        "path": "scripts/actionrail/preset_store.py",
+        "owns": "shared built-in/user preset id resolution",
+        "tests": ("tests/test_preset_store.py",),
     },
     {
         "path": "scripts/actionrail/widgets.py",
@@ -102,6 +107,7 @@ def about() -> dict[str, object]:
 
     package = _loaded_package()
     icon_issues = validate_icon_manifest()
+    preset_store = PresetStore()
     return {
         "product": "ActionRail",
         "package": "actionrail",
@@ -120,9 +126,12 @@ def about() -> dict[str, object]:
             "preset_ids": builtin_preset_ids(),
             "action_ids": create_default_registry().ids(),
         },
+        "presets": {
+            "preset_ids": preset_store.ids(),
+        },
         "user_presets": {
-            "directory": str(user_preset_dir()),
-            "preset_ids": user_preset_ids(),
+            "directory": str(preset_store.user_preset_dir),
+            "preset_ids": preset_store.user_ids(),
         },
         "icons": {
             "manifest": "icons/manifest.json",

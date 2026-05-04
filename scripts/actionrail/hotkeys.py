@@ -12,10 +12,12 @@ from __future__ import annotations
 import ast
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .spec import StackSpec, get_example_spec
+from .preset_store import preset_ids, resolve_preset
+from .spec import StackSpec
 
 COMMAND_PREFIX = "ActionRail"
 COMMAND_CATEGORY = "ActionRail"
@@ -161,11 +163,12 @@ def publish_preset_slots(
     preset_id: str,
     *,
     spec: StackSpec | None = None,
+    user_preset_dir: str | Path | None = None,
     cmds_module: Any | None = None,
 ) -> tuple[PublishedCommand, ...]:
-    """Publish action-bearing slots from a built-in preset as Maya commands."""
+    """Publish action-bearing slots from a resolved preset as Maya commands."""
 
-    stack_spec = spec or get_example_spec(preset_id)
+    stack_spec = spec or resolve_preset(preset_id, user_preset_dir=user_preset_dir)
     return tuple(
         publish_slot(preset_id, item.id, label=item.label, cmds_module=cmds_module)
         for item in stack_spec.items
@@ -177,11 +180,12 @@ def sync_preset_slots(
     preset_id: str,
     *,
     spec: StackSpec | None = None,
+    user_preset_dir: str | Path | None = None,
     cmds_module: Any | None = None,
 ) -> CommandSyncResult:
     """Publish current preset slots and remove stale slot runtime commands."""
 
-    stack_spec = spec or get_example_spec(preset_id)
+    stack_spec = spec or resolve_preset(preset_id, user_preset_dir=user_preset_dir)
     published = publish_preset_slots(preset_id, spec=stack_spec, cmds_module=cmds_module)
     expected_runtime_commands = {command.runtime_command for command in published}
     stale = tuple(
@@ -526,6 +530,11 @@ def _binding_label(binding: HotkeyBinding) -> str:
 
 
 def _split_slot_target_id(target_id: str) -> tuple[str, str]:
+    for preset_id in sorted(preset_ids(), key=len, reverse=True):
+        prefix = f"{preset_id}."
+        if target_id.startswith(prefix):
+            return preset_id, target_id.removeprefix(prefix)
+
     preset_id, separator, slot_suffix = target_id.partition(".")
     if not separator:
         return "", ""
@@ -597,19 +606,12 @@ def _published_slot_from_runtime_fallback(
         slot_id = "_".join(target_parts[split_index:])
         target_id = slot_target_id(preset_id, slot_id)
         try:
-            spec = get_example_spec(preset_id)
-        except KeyError:
+            spec = resolve_preset(preset_id)
+        except Exception:
             continue
         if any(item.id == target_id for item in spec.items):
             return PublishedCommand("slot", target_id, runtime_name, name_command)
     return None
-
-
-def _clear_published_cache() -> None:
-    """Clear published command memory for tests."""
-
-    _PUBLISHED_BY_NAME_COMMAND.clear()
-    _PUBLISHED_BY_HOTKEY.clear()
 
 
 def _publish_runtime_command(

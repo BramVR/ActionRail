@@ -28,12 +28,13 @@ document.
 Snapshot:
 
 - Phase 0 prototype is verified; Phase 1 declarative MVP is complete and
-  verified; Phase 2 step 2.1 authoring model and user-preset storage is
-  complete and locally verified.
+  verified; Phase 2 step 2.1 authoring model, user-preset storage, and shared
+  preset resolver are complete and locally verified.
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
-  safe-mode diagnostics, menu/shelf toggles, the diagnostics Qt window, and the
-  SVG import helper with generated PNG fallbacks.
+  safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
+  the diagnostics Qt window, and the SVG import helper with generated PNG
+  fallbacks.
 - Built-in preset ids currently include `transform_stack`,
   `horizontal_tools`, and `maya_tools`.
 - Icons now support provider-backed logical ids: manifest/local icons such as

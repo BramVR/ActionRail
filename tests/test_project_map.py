@@ -19,12 +19,17 @@ def test_about_returns_json_safe_agent_map() -> None:
     assert project["product"] == "ActionRail"
     assert "about" in project["public_api"]
     assert "transform_stack" in project["builtins"]["preset_ids"]
+    assert "transform_stack" in project["presets"]["preset_ids"]
     assert "maya.tool.rotate" in project["builtins"]["action_ids"]
     assert "directory" in project["user_presets"]
     assert {"id": "maya", "icon_count": 36} in project["icons"]["providers"]
     assert any(entry["path"] == "docs/00_start_here.md" for entry in project["docs"])
     assert any(module["path"] == "scripts/actionrail/icons.py" for module in project["modules"])
     assert any(module["path"] == "scripts/actionrail/authoring.py" for module in project["modules"])
+    assert any(
+        module["path"] == "scripts/actionrail/preset_store.py"
+        for module in project["modules"]
+    )
 
 
 def test_package_exposes_about() -> None:

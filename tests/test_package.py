@@ -1,10 +1,29 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
 from types import ModuleType
 
+import pytest
+
 import actionrail.runtime as runtime
+from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.spec import RailLayout, StackItem, StackSpec
+
+
+@pytest.fixture(autouse=True)
+def clear_runtime_overlays() -> Iterator[None]:
+    runtime.hide_all()
+    yield
+    runtime.hide_all()
+
+
+def _empty_spec(preset_id: str) -> StackSpec:
+    return StackSpec(
+        id=preset_id,
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id=f"{preset_id}.slot", label="S"),),
+    )
 
 
 def test_package_imports_without_maya_or_qt() -> None:
@@ -13,8 +32,11 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert actionrail.__version__ == "0.1.0"
     assert callable(actionrail.about)
     assert callable(actionrail.show_example)
+    assert callable(actionrail.show_preset)
     assert callable(actionrail.hide_all)
     assert callable(actionrail.reload)
+    assert callable(actionrail.active_overlay_ids)
+    assert callable(actionrail.active_overlay_states)
     assert callable(actionrail.show_spec)
     assert actionrail.StackItem is StackItem
     assert actionrail.StackSpec is StackSpec
@@ -22,6 +44,8 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert callable(actionrail.build_draft_spec)
     assert callable(actionrail.save_user_preset)
     assert callable(actionrail.load_user_preset)
+    assert callable(actionrail.resolve_preset)
+    assert callable(actionrail.preset_ids)
     assert callable(actionrail.parse_stack_spec)
     assert callable(actionrail.load_preset)
     assert callable(actionrail.collect_diagnostics)
@@ -57,7 +81,6 @@ def test_runtime_overlay_lifecycle_uses_overlay_host(monkeypatch) -> None:
     fake_overlay.ViewportOverlayHost = FakeHost
     fake_overlay._qt_widget_is_valid = lambda widget: True
     monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
-    monkeypatch.setattr(runtime, "_OVERLAYS", {})
 
     host = runtime.show_example("transform_stack", panel="modelPanel4")
 
@@ -103,7 +126,6 @@ def test_runtime_show_spec_supports_user_authored_specs(monkeypatch) -> None:
     fake_overlay.ViewportOverlayHost = FakeHost
     fake_overlay._qt_widget_is_valid = lambda widget: True
     monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
-    monkeypatch.setattr(runtime, "_OVERLAYS", {})
 
     spec = StackSpec(
         id="custom_tools",
@@ -124,9 +146,47 @@ def test_runtime_show_spec_supports_user_authored_specs(monkeypatch) -> None:
     ]
 
 
-def test_runtime_update_slot_key_label_ignores_missing_overlay(monkeypatch) -> None:
-    monkeypatch.setattr(runtime, "_OVERLAYS", {})
+def test_runtime_show_preset_and_reload_resolve_user_presets(tmp_path, monkeypatch) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    events: list[tuple[str, str]] = []
 
+    class FakeHost:
+        def __init__(self, spec, *, panel=None, registry=None) -> None:
+            self.spec = spec
+            self.panel = panel
+            self.registry = registry
+            self.widget = None
+            self._filter_targets = ()
+            self._predicate_refresh_timer = None
+
+        def show(self) -> None:
+            events.append(("show", f"{self.spec.id}:{self.panel}"))
+
+        def close(self) -> None:
+            events.append(("close", self.spec.id))
+
+    fake_overlay = ModuleType("actionrail.overlay")
+    fake_overlay.ViewportOverlayHost = FakeHost
+    fake_overlay._qt_widget_is_valid = lambda widget: True
+    monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
+
+    runtime.show_preset("artist_tools", panel="modelPanel4", user_preset_dir=tmp_path)
+    runtime.reload("artist_tools", panel="modelPanel5", user_preset_dir=tmp_path)
+
+    assert events == [
+        ("show", "artist_tools:modelPanel4"),
+        ("close", "artist_tools"),
+        ("show", "artist_tools:modelPanel5"),
+    ]
+
+
+def test_runtime_update_slot_key_label_ignores_missing_overlay() -> None:
     assert runtime.update_slot_key_label("transform_stack", "set_key", "K") == 0
 
 
@@ -145,20 +205,38 @@ def test_runtime_active_overlay_states_are_defensive(monkeypatch) -> None:
         _filter_targets = ("viewport", "window")
         _predicate_refresh_timer = object()
 
+        def show(self) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
     class RaisingHost:
         panel = "modelPanel5"
         widget = RaisingWidget()
         _filter_targets = None
         _predicate_refresh_timer = RaisingTimer()
 
+        def show(self) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
     fake_overlay = ModuleType("actionrail.overlay")
+    hosts = [PassiveHost(), RaisingHost()]
+
+    class FakeHost:
+        def __new__(cls, *_args, **_kwargs):
+            _ = cls
+            return hosts.pop(0)
+
     fake_overlay._qt_widget_is_valid = lambda widget: widget is not PassiveHost.widget
+    fake_overlay.ViewportOverlayHost = FakeHost
     monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
-    monkeypatch.setattr(
-        runtime,
-        "_OVERLAYS",
-        {"passive": PassiveHost(), "raising": RaisingHost()},
-    )
+
+    runtime.show_spec(_empty_spec("passive"))
+    runtime.show_spec(_empty_spec("raising"))
 
     assert runtime.active_overlay_states() == (
         {
@@ -187,23 +265,41 @@ def test_runtime_active_overlay_states_handle_missing_and_invalid_qt(monkeypatch
         _filter_targets = ()
         _predicate_refresh_timer = None
 
+        def show(self) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
     class HostWithInvalidWidget:
         panel = ""
         widget = object()
         _filter_targets = ()
         _predicate_refresh_timer = None
 
+        def show(self) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
     def raise_invalid(widget) -> bool:
         raise RuntimeError("Qt wrapper deleted")
 
     fake_overlay = ModuleType("actionrail.overlay")
+    hosts = [HostWithoutWidget(), HostWithInvalidWidget()]
+
+    class FakeHost:
+        def __new__(cls, *_args, **_kwargs):
+            _ = cls
+            return hosts.pop(0)
+
     fake_overlay._qt_widget_is_valid = raise_invalid
+    fake_overlay.ViewportOverlayHost = FakeHost
     monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
-    monkeypatch.setattr(
-        runtime,
-        "_OVERLAYS",
-        {"missing": HostWithoutWidget(), "invalid": HostWithInvalidWidget()},
-    )
+
+    runtime.show_spec(_empty_spec("missing"))
+    runtime.show_spec(_empty_spec("invalid"))
 
     assert runtime.active_overlay_states() == (
         {

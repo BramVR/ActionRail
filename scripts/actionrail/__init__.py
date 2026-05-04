@@ -34,13 +34,17 @@ from .maya_ui import (
     uninstall_menu_toggle,
     uninstall_shelf_toggle,
 )
+from .preset_store import PresetEntry, PresetStore, preset_entries, preset_ids, resolve_preset
 from .project import about
 from .runtime import (
+    active_overlay_ids,
+    active_overlay_states,
     hide_all,
     reload,
     run_action,
     run_slot,
     show_example,
+    show_preset,
     show_spec,
     update_slot_key_label,
 )
@@ -58,6 +62,8 @@ from .spec import (
 __all__ = [
     "DiagnosticIssue",
     "IconDescriptor",
+    "PresetEntry",
+    "PresetStore",
     "DiagnosticReport",
     "DraftRail",
     "DraftSlot",
@@ -65,6 +71,8 @@ __all__ = [
     "StackItem",
     "StackSpec",
     "__version__",
+    "active_overlay_ids",
+    "active_overlay_states",
     "about",
     "action_ids",
     "build_draft_spec",
@@ -84,7 +92,10 @@ __all__ = [
     "load_preset",
     "load_user_preset",
     "parse_stack_spec",
+    "preset_entries",
+    "preset_ids",
     "reload",
+    "resolve_preset",
     "run_action",
     "run_diagnostics_from_maya",
     "run_slot",
@@ -92,6 +103,7 @@ __all__ = [
     "save_user_preset",
     "show_example",
     "show_last_report",
+    "show_preset",
     "show_spec",
     "spec_to_payload",
     "toggle_default",

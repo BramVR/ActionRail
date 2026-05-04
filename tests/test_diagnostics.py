@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import types
+from pathlib import Path
 
 import pytest
 
@@ -22,6 +23,7 @@ from actionrail.diagnostics import (
     show_last_report,
 )
 from actionrail.hotkeys import publish_action, publish_slot
+from actionrail.preset_store import PresetEntry
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -261,6 +263,31 @@ def test_collect_diagnostics_reports_unknown_builtin_preset() -> None:
     assert report.errors[0].code == "broken_preset"
     assert report.errors[0].preset_id == "missing_preset"
     assert last_report() == report
+
+
+def test_collect_diagnostics_reports_broken_builtin_load(monkeypatch) -> None:
+    def load_entry(self, entry):
+        _ = self
+        if entry.source == "builtin":
+            raise ValueError("broken bundled preset")
+        raise AssertionError(f"Unexpected entry: {entry}")
+
+    monkeypatch.setattr(diagnostics.PresetStore, "load_entry", load_entry)
+
+    report = collect_diagnostics(
+        ("transform_stack",),
+        cmds_module=AvailabilityCmds(),
+        include_user_presets=False,
+    )
+
+    assert report.has_errors is True
+    assert report.errors[0].code == "broken_preset"
+    assert report.errors[0].preset_id == "transform_stack"
+    assert report.errors[0].exception_type == "ValueError"
+
+
+def test_diagnostics_entry_path_handles_virtual_entries() -> None:
+    assert diagnostics._entry_path(PresetEntry("virtual", "user")) == Path("virtual.json")
 
 
 def test_collect_diagnostics_resolves_explicit_user_preset_ids(tmp_path) -> None:
@@ -577,6 +604,30 @@ def test_collect_diagnostics_reports_unknown_slot_runtime_commands() -> None:
     ]
 
 
+def test_collect_diagnostics_accepts_saved_user_preset_runtime_commands(tmp_path) -> None:
+    cmds = RuntimeCmds()
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    published = publish_slot("artist_tools", "move", label="Move", cmds_module=cmds)
+
+    report = collect_diagnostics(
+        ("transform_stack",),
+        cmds_module=cmds,
+        user_preset_dir=tmp_path,
+    )
+
+    orphaned = [
+        issue for issue in report.warnings if issue.code == "orphaned_runtime_command"
+    ]
+    assert orphaned == []
+    assert published.runtime_command in report.published_runtime_commands
+
+
 def test_collect_diagnostics_hides_published_command_query_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -813,18 +864,22 @@ def test_safe_start_uses_importable_maya_cmds_for_availability_diagnostics(
         ),
     )
     started: list[str] = []
-    monkeypatch.setattr(diagnostics, "load_builtin_preset", lambda _preset_id: spec)
+    monkeypatch.setattr(
+        diagnostics.PresetStore,
+        "load_entry",
+        lambda self, entry: spec,
+    )
     monkeypatch.setattr(
         diagnostics,
         "_show_overlay",
         lambda preset_id, *, panel, registry: started.append(preset_id),
     )
 
-    report = safe_start("availability")
+    report = safe_start("transform_stack")
 
     assert report.has_errors is False
     assert report.overlay_started is True
-    assert started == ["availability"]
+    assert started == ["transform_stack"]
     assert [(issue.code, issue.target) for issue in report.warnings] == [
         ("missing_command", "missingCommand"),
         ("missing_plugin", "missingPlugin"),
@@ -995,6 +1050,45 @@ def test_safe_start_reports_started_overlay(
     assert report.active_overlay_ids == ("transform_stack",)
 
 
+def test_safe_start_resolves_saved_user_preset_for_overlay_start(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    started: list[tuple[str, object]] = []
+
+    def show_overlay(
+        preset_id: str,
+        *,
+        panel: str | None,
+        registry: ActionRegistry | None,
+        user_preset_dir: object = None,
+    ) -> object:
+        started.append((preset_id, user_preset_dir))
+        return object()
+
+    monkeypatch.setattr(diagnostics, "_show_overlay", show_overlay)
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("artist_tools",))
+
+    report = safe_start(
+        "artist_tools",
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    assert report.has_errors is False
+    assert report.overlay_started is True
+    assert report.overlay_id == "artist_tools"
+    assert started == [("artist_tools", tmp_path)]
+
+
 def test_diagnostics_private_runtime_boundaries_are_defensive(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1025,8 +1119,8 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
         calls.append(("window", (report, message, on_clear, on_hide_overlays)))
         return "window"
 
-    def show_example(preset_id, *, panel, registry):
-        calls.append(("show", (preset_id, panel, registry)))
+    def show_preset(preset_id, *, panel, registry, user_preset_dir=None):
+        calls.append(("show", (preset_id, panel, registry, user_preset_dir)))
         return "host"
 
     def active_overlay_ids():
@@ -1036,7 +1130,7 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
         calls.append(("hide_example", preset_id))
 
     diagnostics_ui_module.show_report_window = show_report_window
-    runtime_module.show_example = show_example
+    runtime_module.show_preset = show_preset
     runtime_module.active_overlay_ids = active_overlay_ids
     runtime_module.hide_example = hide_example
     monkeypatch.setitem(sys.modules, "actionrail.diagnostics_ui", diagnostics_ui_module)
@@ -1052,7 +1146,7 @@ def test_diagnostics_show_window_and_overlay_wrappers_import_runtime(
         == "host"
     )
     assert calls[1] == ("hide_example", "transform_stack")
-    assert calls[2] == ("show", ("transform_stack", "modelPanel4", None))
+    assert calls[2] == ("show", ("transform_stack", "modelPanel4", None, None))
 
 
 def test_diagnostics_hide_all_overlays_continues_after_close_failure(

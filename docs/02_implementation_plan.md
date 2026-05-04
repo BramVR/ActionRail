@@ -205,6 +205,11 @@ Status: complete for the first Quick Create foundation slice.
 - Extend diagnostics so malformed saved user presets are visible without
   blocking bundled presets. Done by reporting saved user-preset parse and spec
   issues as warnings during `collect_diagnostics()`.
+- Resolve saved user presets through the same id path as bundled presets for
+  runtime preview/startup, no-overlay slot execution, hotkey publishing/sync,
+  runtime-command diagnostics, and Maya menu toggles. Done through
+  `actionrail.PresetStore`, `actionrail.resolve_preset()`,
+  `actionrail.preset_ids()`, and `actionrail.show_preset()`.
 
 Done when a test can build a draft rail, save it as a user preset, reload it,
 and prove locked built-in presets were not modified.
@@ -383,8 +388,9 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 2 step 2.1 is complete and verified locally. The draft authoring model and
-safe user-preset storage are ready for the first Maya-facing Quick Create UI.
+Phase 2 step 2.1 is complete and verified locally. The draft authoring model,
+safe user-preset storage, and shared preset resolver are ready for the first
+Maya-facing Quick Create UI.
 
 Next implementation slice: Phase 2 step 2.2, a dockable Quick Create panel that
 can choose a vertical or horizontal template, pick registered actions, edit

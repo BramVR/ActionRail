@@ -104,7 +104,7 @@ def test_toggle_default_shows_when_hidden_and_hides_when_visible(
     def active_overlay_ids() -> tuple[str, ...]:
         return tuple(active_ids)
 
-    def show_example(preset_id: str, *, panel: str | None = None) -> None:
+    def show_preset(preset_id: str, *, panel: str | None = None) -> None:
         calls.append(("show", f"{preset_id}:{panel}"))
         active_ids.add(preset_id)
 
@@ -113,7 +113,7 @@ def test_toggle_default_shows_when_hidden_and_hides_when_visible(
         active_ids.discard(preset_id)
 
     monkeypatch.setattr(maya_ui.runtime, "active_overlay_ids", active_overlay_ids)
-    monkeypatch.setattr(maya_ui.runtime, "show_example", show_example)
+    monkeypatch.setattr(maya_ui.runtime, "show_preset", show_preset)
     monkeypatch.setattr(maya_ui.runtime, "hide_example", hide_example)
 
     assert maya_ui.toggle_default(panel="modelPanel4") == "shown"

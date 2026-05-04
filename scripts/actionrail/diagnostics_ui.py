@@ -162,7 +162,8 @@ def _build_window(
     state = {"report": report, "report_text": report_text}
 
     def copy_full_text() -> None:
-        _set_clipboard(qt, str(state["report_text"]))
+        text = report_box.toPlainText() or str(state["report_text"])
+        _set_clipboard(qt, text)
 
     def update_issue_detail() -> None:
         issue_detail.setPlainText(_current_issue_detail_text(issue_list, qt))

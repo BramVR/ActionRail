@@ -15,6 +15,7 @@ from actionrail.actions import (
     set_tool_context,
     validate_action_ids,
 )
+from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.runtime import run_action, run_slot
 
 
@@ -95,6 +96,23 @@ def test_runtime_run_slot_accepts_unqualified_slot_id() -> None:
     registry = create_default_registry(cmds)
 
     result = run_slot("transform_stack", "set_key", registry=registry)
+
+    assert result == "setKeyframe"
+    assert cmds.calls == [("setKeyframe", None)]
+
+
+def test_runtime_run_slot_resolves_saved_user_preset(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="key", label="K", action="maya.anim.set_key"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    registry = create_default_registry(cmds)
+
+    result = run_slot("artist_tools", "key", registry=registry, user_preset_dir=tmp_path)
 
     assert result == "setKeyframe"
     assert cmds.calls == [("setKeyframe", None)]

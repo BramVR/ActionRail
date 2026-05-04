@@ -8,18 +8,8 @@ from actionrail.spec import RailLayout, StackItem, StackSpec
 from actionrail.state import MayaStateSnapshot
 from actionrail.widgets import (
     SlotRenderState,
-    _apply_button_icon,
-    _apply_slot_render_state,
-    _button_label,
-    _button_secondary,
-    _button_text,
-    _diagnostic_tooltip,
-    _icon_diagnostic,
-    _is_item_active,
-    _is_item_visible,
-    _scaled_theme,
-    _slot_render_state,
     refresh_predicate_state,
+    resolve_slot_render_state,
     set_slot_key_label,
 )
 
@@ -65,7 +55,7 @@ class FakeButton:
         self.enabled = enabled
         self.style_object = FakeStyle()
         self.updated = 0
-        self.text_value = _button_text(label, key_label)
+        self.text_value = widgets._button_text(label, key_label)
         self.tooltip_value = tooltip
 
     def property(self, name: str) -> object:
@@ -279,10 +269,41 @@ class MissingMayaIconResourceCmds(BuildCmds):
         return []
 
 
-def test_literal_false_visibility_skips_item_before_frame_building() -> None:
-    assert _is_item_visible(StackItem(type="button", visible_when="")) is True
-    assert _is_item_visible(StackItem(type="button", visible_when="true")) is True
-    assert _is_item_visible(StackItem(type="button", visible_when="false")) is False
+def _built_buttons(
+    monkeypatch,
+    spec: StackSpec,
+    *,
+    state_snapshot: MayaStateSnapshot | None = None,
+    cmds_module: object | None = None,
+) -> list[BuildButton]:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    cmds = cmds_module or BuildCmds()
+    root = widgets.build_transform_stack(
+        spec,
+        create_default_registry(cmds),
+        state_snapshot=state_snapshot,
+        cmds_module=cmds,
+    )
+    return root.findChildren(BuildButton)
+
+
+def test_literal_false_visibility_skips_item_before_frame_building(monkeypatch) -> None:
+    spec = StackSpec(
+        id="visibility",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(type="button", id="visibility.default", label="D"),
+            StackItem(type="button", id="visibility.true", label="T", visible_when="true"),
+            StackItem(type="button", id="visibility.false", label="F", visible_when="false"),
+        ),
+    )
+
+    buttons = _built_buttons(monkeypatch, spec)
+
+    assert [button.property("actionRailSlotId") for button in buttons] == [
+        "visibility.default",
+        "visibility.true",
+    ]
 
 
 def test_action_rail_root_ignores_mouse_and_wheel_events(monkeypatch) -> None:
@@ -399,105 +420,157 @@ def test_refresh_predicate_state_skips_missing_button_after_visibility_match(mon
     assert result.refreshed == 0
 
 
-def test_state_visibility_skips_item_before_frame_building() -> None:
-    item = StackItem(type="button", visible_when="selection.count > 0")
-
-    assert _is_item_visible(item) is False
-    assert (
-        _is_item_visible(
-            item,
-            PredicateContext(state=MayaStateSnapshot(current_tool="", selection_count=1)),
-        )
-        is True
-    )
-
-
-def test_missing_visible_dependency_keeps_item_visible_for_badge() -> None:
-    item = StackItem(
-        type="button",
-        visible_when="plugin.exists('missingPlugin')",
-    )
-
-    assert (
-        _is_item_visible(
-            item,
-            PredicateContext(cmds_module=AvailabilityCmds()),
-        )
-        is True
-    )
-
-
-def test_missing_visible_dependency_preserves_other_visibility_clauses() -> None:
-    item = StackItem(
-        type="button",
-        visible_when="selection.count > 0 and plugin.exists('missingPlugin')",
-    )
-
-    assert (
-        _is_item_visible(
-            item,
-            PredicateContext(
-                state=MayaStateSnapshot(current_tool="", selection_count=0),
-                cmds_module=AvailabilityCmds(),
+def test_state_visibility_skips_item_before_frame_building(monkeypatch) -> None:
+    spec = StackSpec(
+        id="selection_visibility",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="selection_visibility.slot",
+                label="S",
+                visible_when="selection.count > 0",
             ),
-        )
-        is False
+        ),
     )
+
     assert (
-        _is_item_visible(
-            item,
-            PredicateContext(
-                state=MayaStateSnapshot(current_tool="", selection_count=1),
-                cmds_module=AvailabilityCmds(),
+        _built_buttons(
+            monkeypatch,
+            spec,
+            state_snapshot=MayaStateSnapshot(current_tool="", selection_count=0),
+        )
+        == []
+    )
+    buttons = _built_buttons(
+        monkeypatch,
+        spec,
+        state_snapshot=MayaStateSnapshot(current_tool="", selection_count=1),
+    )
+
+    assert [button.property("actionRailSlotId") for button in buttons] == [
+        "selection_visibility.slot"
+    ]
+
+
+def test_missing_visible_dependency_keeps_item_visible_for_badge(monkeypatch) -> None:
+    spec = StackSpec(
+        id="missing_visible_dependency",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="missing_visible_dependency.plugin",
+                label="P",
+                action="maya.anim.set_key",
+                visible_when="plugin.exists('missingPlugin')",
             ),
-        )
-        is True
+        ),
     )
 
+    button = _built_buttons(monkeypatch, spec, cmds_module=AvailabilityCmds())[0]
 
-def test_negated_missing_visible_dependency_does_not_get_forced_badge_state() -> None:
-    item = StackItem(
-        type="button",
-        visible_when="not plugin.exists('missingPlugin')",
+    assert button.property("actionRailSlotId") == "missing_visible_dependency.plugin"
+    assert button.property("actionRailDiagnosticCode") == "missing_plugin"
+
+
+def test_missing_visible_dependency_preserves_other_visibility_clauses(monkeypatch) -> None:
+    spec = StackSpec(
+        id="compound_visibility",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="compound_visibility.plugin",
+                label="P",
+                action="maya.anim.set_key",
+                visible_when="selection.count > 0 and plugin.exists('missingPlugin')",
+            ),
+        ),
     )
 
     assert (
-        _is_item_visible(
-            item,
-            PredicateContext(cmds_module=AvailabilityCmds()),
+        _built_buttons(
+            monkeypatch,
+            spec,
+            state_snapshot=MayaStateSnapshot(current_tool="", selection_count=0),
+            cmds_module=AvailabilityCmds(),
         )
-        is True
+        == []
+    )
+    buttons = _built_buttons(
+        monkeypatch,
+        spec,
+        state_snapshot=MayaStateSnapshot(current_tool="", selection_count=1),
+        cmds_module=AvailabilityCmds(),
     )
 
+    assert [button.property("actionRailDiagnosticCode") for button in buttons] == [
+        "missing_plugin"
+    ]
+
+
+def test_negated_missing_visible_dependency_does_not_get_forced_badge_state(
+    monkeypatch,
+) -> None:
+    spec = StackSpec(
+        id="negated_visibility",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="negated_visibility.plugin",
+                label="P",
+                action="maya.anim.set_key",
+                visible_when="not plugin.exists('missingPlugin')",
+            ),
+        ),
+    )
+
+    button = _built_buttons(monkeypatch, spec, cmds_module=AvailabilityCmds())[0]
+
+    assert button.property("actionRailSlotId") == "negated_visibility.plugin"
+    assert button.property("actionRailDiagnosticCode") == ""
 
 def test_empty_active_predicate_is_inactive_by_default() -> None:
-    assert _is_item_active(StackItem(type="button", active_when="")) is False
-    assert _is_item_active(StackItem(type="button", active_when="true")) is True
+    registry = create_default_registry(object())
+
+    inactive = resolve_slot_render_state(
+        StackItem(type="button", action="maya.anim.set_key", active_when=""),
+        registry,
+    )
+    active = resolve_slot_render_state(
+        StackItem(type="button", action="maya.anim.set_key", active_when="true"),
+        registry,
+    )
+
+    assert inactive.active is False
+    assert active.active is True
 
 
 def test_button_text_adds_key_label_on_second_line() -> None:
-    assert _button_text("K", "") == "K"
-    assert _button_text("K", "Ctrl+S") == "K\nCtrl+S"
-    assert _button_text("K", "Ctrl+S", "?") == "K\nCtrl+S?"
+    assert widgets._button_text("K", "") == "K"
+    assert widgets._button_text("K", "Ctrl+S") == "K\nCtrl+S"
+    assert widgets._button_text("K", "Ctrl+S", "?") == "K\nCtrl+S?"
 
 
 def test_button_paint_text_helpers_use_properties_and_text_fallback() -> None:
     button = FakeButton("slot", label="", key_label="7")
     button.setProperty("actionRailDiagnosticBadge", "?")
 
-    assert _button_label(button) == ""
-    assert _button_secondary(button) == "7?"
+    assert widgets._button_label(button) == ""
+    assert widgets._button_secondary(button) == "7?"
 
     button.setProperty("actionRailLabel", "Move\nCtrl+M")
-    assert _button_label(button) == "Move"
+    assert widgets._button_label(button) == "Move"
 
     button.setProperty("actionRailLabel", None)
     button.setText("Move\nCtrl+M")
     button.setProperty("actionRailKeyLabel", None)
     button.setProperty("actionRailDiagnosticBadge", None)
 
-    assert _button_label(button) == "Move"
-    assert _button_secondary(button) == ""
+    assert widgets._button_label(button) == "Move"
+    assert widgets._button_secondary(button) == ""
 
     class BrokenButton:
         def property(self, _name: str) -> object:
@@ -508,8 +581,8 @@ def test_button_paint_text_helpers_use_properties_and_text_fallback() -> None:
 
     broken = BrokenButton()
 
-    assert _button_label(broken) == ""
-    assert _button_secondary(broken) == ""
+    assert widgets._button_label(broken) == ""
+    assert widgets._button_secondary(broken) == ""
 
 
 def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
@@ -781,7 +854,7 @@ def test_slot_render_state_uses_action_tooltip_fallback() -> None:
         action="maya.anim.set_key",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.tooltip == "Set keyframe"
 
@@ -795,7 +868,7 @@ def test_slot_render_state_marks_missing_action_as_error() -> None:
         action="maya.missing.action",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.enabled is False
     assert state.diagnostic_code == "missing_action"
@@ -813,7 +886,7 @@ def test_slot_render_state_locks_unassigned_slot_without_error() -> None:
         tooltip="Unassigned slot",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.locked is True
     assert state.enabled is False
@@ -834,7 +907,7 @@ def test_slot_render_state_marks_missing_icon_as_warning() -> None:
         icon="missing.icon",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.enabled is True
     assert state.icon == "missing.icon"
@@ -851,7 +924,7 @@ def test_icon_diagnostic_handles_status_without_issue(monkeypatch) -> None:
         lambda _icon_id: type("Status", (), {"ok": False, "issue": None})(),
     )
 
-    assert _icon_diagnostic("missing.icon").code == "missing_icon"
+    assert widgets._icon_diagnostic("missing.icon").code == "missing_icon"
 
 
 def test_slot_diagnostic_ignores_availability_without_context() -> None:
@@ -873,7 +946,7 @@ def test_slot_render_state_resolves_manifest_icon_path() -> None:
         icon="actionrail.move",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.enabled is True
     assert state.icon == "actionrail.move"
@@ -894,7 +967,7 @@ def test_slot_render_state_resolves_maya_icon_name() -> None:
         icon="maya.move",
     )
 
-    state = _slot_render_state(item, registry)
+    state = resolve_slot_render_state(item, registry)
 
     assert state.enabled is True
     assert state.icon == "maya.move"
@@ -944,7 +1017,7 @@ def test_slot_render_state_marks_missing_command_predicate_as_warning() -> None:
         enabled_when="command.exists('missingCommand')",
     )
 
-    state = _slot_render_state(
+    state = resolve_slot_render_state(
         item,
         registry,
         PredicateContext(cmds_module=AvailabilityCmds()),
@@ -967,7 +1040,7 @@ def test_slot_render_state_marks_missing_visible_plugin_as_warning() -> None:
         visible_when="plugin.exists('missingPlugin')",
     )
 
-    state = _slot_render_state(
+    state = resolve_slot_render_state(
         item,
         registry,
         PredicateContext(cmds_module=AvailabilityCmds()),
@@ -990,7 +1063,7 @@ def test_slot_render_state_ignores_negated_missing_availability_predicates() -> 
         enabled_when="not command.exists('missingCommand')",
     )
 
-    state = _slot_render_state(
+    state = resolve_slot_render_state(
         item,
         registry,
         PredicateContext(cmds_module=AvailabilityCmds()),
@@ -1154,7 +1227,7 @@ def test_apply_slot_render_state_handles_partial_and_raising_buttons(monkeypatch
         def setEnabled(self, _enabled: bool) -> None:  # noqa: N802
             raise RuntimeError("deleted")
 
-    refreshed = _apply_slot_render_state(
+    refreshed = widgets._apply_slot_render_state(
         PartialButton(),
         SlotRenderState(
             label="L",
@@ -1183,7 +1256,7 @@ def test_apply_slot_render_state_ignores_tooltip_access_errors(monkeypatch) -> N
         def setToolTip(self, _tooltip: str) -> None:  # noqa: N802
             raise RuntimeError("deleted")
 
-    refreshed = _apply_slot_render_state(
+    refreshed = widgets._apply_slot_render_state(
         TooltipButton("L"),
         SlotRenderState(
             label="L",
@@ -1206,15 +1279,15 @@ def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monke
     button = BuildButton("Icon")
     button.setProperty("actionRailButtonIconSize", 32)
 
-    assert _apply_button_icon(button, "") == 1
-    assert _apply_button_icon(button, "") == 0
-    assert _apply_button_icon(button, "icons/test.svg") == 1
+    assert widgets._apply_button_icon(button, "") == 1
+    assert widgets._apply_button_icon(button, "") == 0
+    assert widgets._apply_button_icon(button, "icons/test.svg") == 1
     assert button.icon_size.width == 32
     assert button.icon_size.height == 32
-    assert _apply_button_icon(button, "", "move_M.png") == 1
+    assert widgets._apply_button_icon(button, "", "move_M.png") == 1
     assert button.icons[-1].path == ":/move_M.png"
     assert button.property("actionRailAppliedIconSource") == ":/move_M.png"
-    assert _apply_button_icon(button, "", ":/rotate_M.png") == 1
+    assert widgets._apply_button_icon(button, "", ":/rotate_M.png") == 1
     assert button.icons[-1].path == ":/rotate_M.png"
 
     class FailingIconButton(BuildButton):
@@ -1224,7 +1297,7 @@ def test_apply_button_icon_handles_repeated_missing_and_failing_icon_paths(monke
         def setIcon(self, _icon) -> None:  # noqa: N802
             raise RuntimeError("deleted")
 
-    assert _apply_button_icon(FailingIconButton("Icon"), "icons/test.svg") == 0
+    assert widgets._apply_button_icon(FailingIconButton("Icon"), "icons/test.svg") == 0
 
 
 def test_set_button_property_and_diagnostic_tooltip_helpers() -> None:
@@ -1236,5 +1309,8 @@ def test_set_button_property_and_diagnostic_tooltip_helpers() -> None:
             raise RuntimeError("deleted")
 
     assert widgets._set_button_property(BrokenPropertyButton(), "name", "value") == 0
-    assert _diagnostic_tooltip("", widgets._SlotDiagnostic(message="Problem")) == "Problem"
-    assert _scaled_theme(widgets.DEFAULT_THEME, 1.0) is widgets.DEFAULT_THEME
+    assert (
+        widgets._diagnostic_tooltip("", widgets._SlotDiagnostic(message="Problem"))
+        == "Problem"
+    )
+    assert widgets._scaled_theme(widgets.DEFAULT_THEME, 1.0) is widgets.DEFAULT_THEME

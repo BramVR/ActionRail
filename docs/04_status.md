@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Done
 
@@ -232,6 +232,31 @@ Last updated: 2026-05-03
     preset diagnostics and startup are not blocked by a bad saved user file.
   - `actionrail.about()` now lists the authoring module and current user preset
     storage summary.
+- User presets are now first-class runtime/hotkey targets:
+  - `scripts/actionrail/preset_store.py` provides `PresetStore`,
+    `resolve_preset()`, `preset_ids()`, and `preset_entries()` for shared
+    bundled/user preset id resolution.
+  - `actionrail.show_preset()`, `show_example()`, `reload()`, and `run_slot()`
+    resolve saved user presets by id; `toggle_default()` uses the same runtime
+    preset path.
+  - `actionrail.hotkeys.publish_preset_slots()` and `sync_preset_slots()` can
+    publish/sync saved user preset slots by id, and persisted slot nameCommand
+    fallback can resolve saved user slots in the current user preset store.
+  - Diagnostics now use the shared store for explicit preset ids, saved-user
+    scans, `safe_start(..., user_preset_dir=...)`, and stale runtime-command
+    checks, so a published saved-user slot is not reported as orphaned.
+  - `actionrail.about()` now includes the shared preset store module and a
+    combined preset id summary.
+- Public-contract test hardening:
+  - `actionrail.widgets.resolve_slot_render_state()` exposes the public
+    `SlotRenderState` contract without requiring tests to import the private
+    resolver.
+  - `actionrail.active_overlay_ids()` and `actionrail.active_overlay_states()`
+    are now top-level public helpers for tests, diagnostics, and smoke scripts.
+  - Hotkey tests isolate published-command memory through public
+    `PublishedCommand`/`unpublish()` paths instead of a private cache reset.
+  - Maya UI and diagnostics smoke tests assert overlay visibility/validity
+    through public overlay state instead of runtime `_OVERLAYS`.
 
 ## In Progress
 
@@ -250,23 +275,26 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: README in-Maya showcase regenerated as a single
-  minimal scene image with multiple ActionRail bars, then review-fixed so
-  multi-character visible hotkey labels no longer clip in a fixed-width badge.
-- Files changed in this handoff update: README asset reference, generated
-  README Maya screenshot, screenshot smoke script, Maya icon descriptor catalog,
-  widget hotkey-badge painting, and focused tests.
-- Behavior verified: the showcase keeps the README hero image, uses centered
-  `A-I` labels on the left rail, uses unique Maya resource icons on the
-  remaining bars, and paints hotkey badges with fit-aware lower-right text that
-  can show labels such as `Ctrl+K`, compact long modifier chords, and elide only
-  as a last resort.
-- Current live state: `actionrail.list_icon_descriptors(provider="maya")`
-  exposes 36 curated Maya resource icons; the README "In Maya" section points
-  at `docs/assets/actionrail_readme_maya_icons_showcase.png`.
+- Task goal completed: saved user presets now resolve through shared runtime,
+  hotkey, diagnostics, and Maya UI paths instead of being limited to authoring
+  save/load helpers.
+- Files changed in this handoff update: new shared preset store, public
+  resolver/runtime APIs, hotkey slot publishing/sync resolution, diagnostics
+  preset/runtime-command checks, Maya toggle routing, diagnostics-window copy
+  robustness, project map, docs, public widget/runtime exports, and focused
+  Python/Maya regressions.
+- Behavior verified: a saved user rail can be resolved by id, shown/reloaded,
+  run by slot id without an overlay, published/synced as Maya runtime commands,
+  bind-label fallback can resolve a saved user slot, `safe_start()` can start a
+  saved user preset with an injected store path, and diagnostics do not mark a
+  published saved-user slot as orphaned.
+- Current live state: `actionrail.PresetStore`, `actionrail.resolve_preset()`,
+  `actionrail.preset_ids()`, and `actionrail.show_preset()` are public; built-in
+  `show_example()` remains as a compatibility wrapper over the shared resolver,
+  and active overlay state is also package-level public API.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: commit/push the screenshot update if desired, or continue
-  with the Phase 2 step 2.2 dockable Quick Create panel.
+- Exact next step: continue with the Phase 2 step 2.2 dockable Quick Create
+  panel using saved user preset ids for preview/save/publish/bind flows.
 
 ## Next
 
@@ -287,28 +315,19 @@ Start here:
 
 ## Latest Verification
 
-- README screenshot smoke:
-  `GG_MayaSessiond call script.execute tests/maya_smoke/actionrail_readme_screenshots.py`
-  -> passed on dedicated port `7218`; wrote
-  `docs/assets/actionrail_readme_maya_icons_showcase.png`.
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 318 passed, `TOTAL 3398 0 100%`.
+  -> 332 passed, `TOTAL 3475 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Latest full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script all` -> passed against the
+- Full Maya smoke baseline:
+  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against the
   already-running MayaSessiond on port `7217`; verified capture, diagnostic
-  badges, diagnostics window, hidden visibility, manifest-backed horizontal
-  icon rail, hotkey bridge, hotkey label sync, import/recovery diagnostics,
-  curated Maya built-in icon rendering, Maya menu/shelf UI, overlay cleanup,
-  phase 0, predicates, StackItem ABI, and transform-stack state.
-- Latest focused Maya icon checks:
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_maya_icons_smoke.py`
-  -> passed with non-null `32x32` Maya resource pixmaps and a saved widget
-  screenshot;
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_missing_maya_icon_resource_smoke.py`
-  -> passed with a visible missing-resource warning badge.
+  badges, diagnostics window copy/full-report behavior, hidden visibility,
+  manifest-backed horizontal icon rail, hotkey bridge, hotkey label sync,
+  import/recovery diagnostics, curated Maya built-in icon rendering, Maya
+  menu/shelf UI, overlay cleanup, phase 0, predicates, StackItem ABI, and
+  transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

@@ -14,14 +14,14 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .authoring import load_user_preset, user_preset_files
 from .icons import icon_status, validate_icon_manifest, validate_svg_icon_import
 from .predicates import (
     PredicateContext,
     evaluate_predicate,
     missing_availability_targets,
 )
-from .spec import StackItem, StackSpec, builtin_preset_ids, load_builtin_preset
+from .preset_store import PresetEntry, PresetStore
+from .spec import StackItem, StackSpec
 
 DiagnosticSeverity = Literal["info", "warning", "error"]
 
@@ -247,32 +247,41 @@ def collect_diagnostics(
     include_user_presets: bool = True,
     user_preset_dir: str | Path | None = None,
 ) -> DiagnosticReport:
-    """Collect diagnostics for bundled presets without showing an overlay."""
+    """Collect diagnostics for bundled and saved user presets without showing an overlay."""
 
     resolved_cmds = _resolve_cmds_module(cmds_module)
     action_registry = registry or create_default_registry(resolved_cmds)
+    preset_store = PresetStore(user_preset_dir=user_preset_dir)
     issues: list[DiagnosticIssue] = [
         _icon_manifest_issue(issue) for issue in validate_icon_manifest()
     ]
     explicit_user_preset_ids: set[str] = set()
-    known_builtin_preset_ids = set(builtin_preset_ids())
-    for preset_id in tuple(preset_ids) if preset_ids is not None else builtin_preset_ids():
-        user_preset_path = (
-            _user_preset_file_for_id(preset_id, preset_dir=user_preset_dir)
-            if include_user_presets and preset_id not in known_builtin_preset_ids
-            else None
-        )
-        if user_preset_path is not None:
+    for preset_id in tuple(preset_ids) if preset_ids is not None else preset_store.builtin_ids():
+        try:
+            preset_entry = preset_store.entry(preset_id)
+        except Exception as exc:
+            issues.append(
+                DiagnosticIssue(
+                    code="broken_preset",
+                    severity="error",
+                    message=f"Unable to load ActionRail preset '{preset_id}': {exc}",
+                    preset_id=preset_id,
+                    exception_type=type(exc).__name__,
+                )
+            )
+            continue
+
+        if preset_entry.source == "user" and include_user_presets:
             explicit_user_preset_ids.add(preset_id)
             try:
-                spec = load_user_preset(preset_id, preset_dir=user_preset_path.parent)
+                spec = preset_store.load_entry(preset_entry)
             except Exception as exc:
-                issues.append(_broken_user_preset_issue(user_preset_path, exc))
+                issues.append(_broken_user_preset_issue(_entry_path(preset_entry), exc))
                 continue
 
             issues.extend(
                 _diagnose_user_preset_spec(
-                    user_preset_path,
+                    _entry_path(preset_entry),
                     spec,
                     registry=action_registry,
                     cmds_module=resolved_cmds,
@@ -281,7 +290,7 @@ def collect_diagnostics(
             continue
 
         try:
-            spec = load_builtin_preset(preset_id)
+            spec = preset_store.load_entry(preset_entry)
         except Exception as exc:
             issues.append(
                 DiagnosticIssue(
@@ -305,13 +314,19 @@ def collect_diagnostics(
     if include_user_presets:
         issues.extend(
             _user_preset_diagnostics(
-                preset_dir=user_preset_dir,
+                preset_store=preset_store,
                 registry=action_registry,
                 cmds_module=resolved_cmds,
                 exclude_ids=explicit_user_preset_ids,
             )
         )
-    issues.extend(_runtime_command_diagnostics(action_registry, resolved_cmds))
+    issues.extend(
+        _runtime_command_diagnostics(
+            action_registry,
+            resolved_cmds,
+            user_preset_dir=user_preset_dir,
+        )
+    )
     return _record_report(
         DiagnosticReport(
             tuple(issues),
@@ -420,6 +435,7 @@ def safe_start(
     panel: str | None = None,
     registry: ActionRegistry | None = None,
     cmds_module: Any | None = None,
+    user_preset_dir: str | Path | None = None,
     fallback_preset_id: str = "",
 ) -> DiagnosticReport:
     """Validate a preset, start it if safe, and report recoverable failures."""
@@ -428,6 +444,7 @@ def safe_start(
         (preset_id,),
         registry=registry,
         cmds_module=cmds_module,
+        user_preset_dir=user_preset_dir,
     )
     if report.has_errors:
         if fallback_preset_id and fallback_preset_id != preset_id:
@@ -438,6 +455,7 @@ def safe_start(
                 panel=panel,
                 registry=registry,
                 cmds_module=cmds_module,
+                user_preset_dir=user_preset_dir,
             )
         return _record_report(
             report.with_runtime(
@@ -448,7 +466,12 @@ def safe_start(
         )
 
     try:
-        _show_overlay(preset_id, panel=panel, registry=registry)
+        _show_resolved_overlay(
+            preset_id,
+            panel=panel,
+            registry=registry,
+            user_preset_dir=user_preset_dir,
+        )
     except Exception as exc:
         _safe_hide_overlay(preset_id)
         issue = DiagnosticIssue(
@@ -619,18 +642,19 @@ def _icon_import_issue(issue: object) -> DiagnosticIssue:
 
 def _user_preset_diagnostics(
     *,
-    preset_dir: str | Path | None,
+    preset_store: PresetStore,
     registry: ActionRegistry,
     cmds_module: Any | None,
     exclude_ids: Iterable[str] = (),
 ) -> tuple[DiagnosticIssue, ...]:
     issues: list[DiagnosticIssue] = []
     excluded = set(exclude_ids)
-    for path in user_preset_files(preset_dir=preset_dir):
-        if path.stem in excluded:
+    for entry in preset_store.user_entries():
+        path = _entry_path(entry)
+        if entry.id in excluded:
             continue
         try:
-            spec = load_user_preset(path.stem, preset_dir=path.parent)
+            spec = preset_store.load_entry(entry)
         except Exception as exc:
             issues.append(_broken_user_preset_issue(path, exc))
             continue
@@ -645,15 +669,10 @@ def _user_preset_diagnostics(
     return tuple(issues)
 
 
-def _user_preset_file_for_id(
-    preset_id: str,
-    *,
-    preset_dir: str | Path | None,
-) -> Path | None:
-    for path in user_preset_files(preset_dir=preset_dir):
-        if path.stem == preset_id:
-            return path
-    return None
+def _entry_path(entry: PresetEntry) -> Path:
+    if entry.path is not None:
+        return entry.path
+    return Path(f"{entry.id}.json")
 
 
 def _broken_user_preset_issue(path: Path, exc: Exception) -> DiagnosticIssue:
@@ -706,11 +725,13 @@ def _recover_with_fallback_preset(
     panel: str | None,
     registry: ActionRegistry | None,
     cmds_module: Any | None,
+    user_preset_dir: str | Path | None,
 ) -> DiagnosticReport:
     fallback_report = collect_diagnostics(
         (fallback_preset_id,),
         registry=registry,
         cmds_module=cmds_module,
+        user_preset_dir=user_preset_dir,
     )
     issues = list(report.issues)
     issues.extend(fallback_report.issues)
@@ -738,7 +759,12 @@ def _recover_with_fallback_preset(
         )
 
     try:
-        _show_overlay(fallback_preset_id, panel=panel, registry=registry)
+        _show_resolved_overlay(
+            fallback_preset_id,
+            panel=panel,
+            registry=registry,
+            user_preset_dir=user_preset_dir,
+        )
     except Exception as exc:
         _safe_hide_overlay(fallback_preset_id)
         issues.append(
@@ -826,12 +852,15 @@ def _format_overlay_state(state: DiagnosticOverlayState) -> str:
 def _runtime_command_diagnostics(
     registry: ActionRegistry,
     cmds_module: Any | None,
+    *,
+    user_preset_dir: str | Path | None = None,
 ) -> tuple[DiagnosticIssue, ...]:
     if cmds_module is None:
         return ()
 
     issues: list[DiagnosticIssue] = []
     action_ids = set(registry.ids())
+    preset_store = PresetStore(user_preset_dir=user_preset_dir)
     for command in _safe_published_commands(cmds_module):
         if command.target_kind == "action":
             if command.target_id not in action_ids:
@@ -854,13 +883,13 @@ def _runtime_command_diagnostics(
                 )
             continue
 
-        preset_id, slot_id = _split_runtime_slot_target(command.target_id)
+        preset_id, slot_id = _split_runtime_slot_target(command.target_id, preset_store)
         if not preset_id or not slot_id:
             issues.append(_orphaned_slot_command_issue(command, "", ""))
             continue
 
         try:
-            spec = load_builtin_preset(preset_id)
+            spec = preset_store.load(preset_id)
         except Exception:
             issues.append(_orphaned_slot_command_issue(command, preset_id, slot_id))
             continue
@@ -893,7 +922,16 @@ def _orphaned_slot_command_issue(
     )
 
 
-def _split_runtime_slot_target(target_id: str) -> tuple[str, str]:
+def _split_runtime_slot_target(
+    target_id: str,
+    preset_store: PresetStore | None = None,
+) -> tuple[str, str]:
+    if preset_store is not None:
+        for preset_id in sorted(preset_store.ids(), key=len, reverse=True):
+            prefix = f"{preset_id}."
+            if target_id.startswith(prefix):
+                return preset_id, target_id.removeprefix(prefix)
+
     preset_id, separator, slot_id = target_id.partition(".")
     if not separator:
         return "", ""
@@ -950,10 +988,33 @@ def _show_overlay(
     *,
     panel: str | None,
     registry: ActionRegistry | None,
+    user_preset_dir: str | Path | None = None,
 ) -> Any:
-    from .runtime import show_example
+    from .runtime import show_preset
 
-    return show_example(preset_id, panel=panel, registry=registry)
+    return show_preset(
+        preset_id,
+        panel=panel,
+        registry=registry,
+        user_preset_dir=user_preset_dir,
+    )
+
+
+def _show_resolved_overlay(
+    preset_id: str,
+    *,
+    panel: str | None,
+    registry: ActionRegistry | None,
+    user_preset_dir: str | Path | None,
+) -> Any:
+    if user_preset_dir is None:
+        return _show_overlay(preset_id, panel=panel, registry=registry)
+    return _show_overlay(
+        preset_id,
+        panel=panel,
+        registry=registry,
+        user_preset_dir=user_preset_dir,
+    )
 
 
 def _safe_hide_overlay(preset_id: str) -> None:
