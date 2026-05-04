@@ -289,15 +289,22 @@ Research hints:
 
 #### 2.4 Edit Mode Shell And Rail Selection
 
+Status: complete for the first shell slice.
+
 - Add a global Edit Mode toggle and Maya-facing command/menu entry.
+  Done through `actionrail.toggle_edit_mode()`, `enter_edit_mode()`,
+  `exit_edit_mode()`, `edit_mode_state()`, and the ActionRail Maya menu.
 - In Edit Mode, show a layout-map view of rails/frames as labeled translucent
   rectangles over the viewport, plus rail outlines, hit boxes, selected-state
-  styling, source layer, and lock state.
+  styling, source layer, and lock state. Done for active runtime rails.
 - Add a selected-rail inspector for anchor, offset, orientation, rows/columns,
-  scale, opacity, locked state, and visibility rules.
+  scale, opacity, locked state, and visibility rules. Done as the first compact
+  Edit Mode control panel and position popover.
 - Add user-visible Edit Mode options for showing a placement grid overlay and
   configuring grid size, sticky-frame snapping, and snap-to-grid later; the
   first shell may show the grid and settings without moving or saving rails yet.
+  Done for grid visibility, Grid Size, Snap to Grid, and Sticky Frames controls;
+  real persisted snap/sticky behavior remains in 2.5.
 - Keep normal action execution disabled or clearly separated while editing.
 
 Done when existing and user-created rails can be selected and inspected in Edit
@@ -429,14 +436,12 @@ panel, preview cleanup, load-existing support, and save/reload workflow are
 ready for the first Edit Mode shell.
 
 Next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail selection:
-global toggle, layout-map rail/frame view, rail outlines, selected-rail
-inspector, source-layer badges, and lock-state display. Include user-visible
-grid overlay and snap-to-grid options as Edit Mode settings, plus grid size and
-Sticky Frames controls, but keep actual drag persistence for the layout-editing
-slice. Keep
-`docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
-flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
-yet.
+complete for the first Maya-facing shell. Next slice: Phase 2 step 2.5 layout
+editing and direct manipulation, especially persisted offset edits,
+sticky-frame snapping behavior, snap/spacing guides, and right-click routing
+into a fuller options surface. Keep `docs/06_wow_style_customization.md` in
+mind, but do not start Bind Mode, flyouts, command rings, profile layers,
+marking-menu export, or Viewport 2.0 yet.
 
 ## Research Backlog
 

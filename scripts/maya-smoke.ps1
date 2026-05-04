@@ -242,7 +242,13 @@ function Invoke-ApprovedScript {
         if ($structured) {
             $successProperty = $structured.PSObject.Properties["success"]
         }
-        if (-not $structured -or -not $successProperty -or -not $successProperty.Value) {
+        $errorsProperty = $null
+        if ($structured) {
+            $errorsProperty = $structured.PSObject.Properties["errors"]
+        }
+        $hasExplicitSuccess = $successProperty -and $successProperty.Value
+        $hasNoReportedErrors = $errorsProperty -and $null -eq $errorsProperty.Value
+        if (-not $structured -or (-not $hasExplicitSuccess -and -not $hasNoReportedErrors)) {
             throw "Script failed for ${Label}: $($structured | ConvertTo-Json -Depth 8)"
         }
 

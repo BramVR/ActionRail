@@ -346,7 +346,7 @@ Build the user-facing authoring workflow in medium slices:
 4. Edit Mode shell and rail selection: global toggle, layout-map frame view,
    rail outlines, hit boxes, selected-rail inspector, source-layer badges,
    lock-state display, and optional grid overlay visibility for placement
-   preview.
+   preview. Status: first shell implemented and Maya-smoke verified.
 5. Layout editing and direct manipulation: drag handles, anchor pins, safe
    margins, left-click position popover with X/Y and Reset, right-click
    frame-specific options routing, optional snap-to-grid, optional sticky-frame

@@ -312,55 +312,71 @@ Last updated: 2026-05-04
     Overwrite Preset, and Load Existing actions, and smoke coverage verifies
     preview, save, explicit overwrite, load, reload, and screenshot capture in
     Maya.
+- Phase 2 step 2.4 Edit Mode Shell And Rail Selection complete for the first
+  shell slice:
+  - `scripts/actionrail/edit_mode.py` adds the public Edit Mode state model,
+    global toggle, edit-only layout-map overlay, grid settings, rail frame
+    discovery, selected-rail state, and compact X/Y position popover.
+  - Public APIs now include `actionrail.toggle_edit_mode()`,
+    `enter_edit_mode()`, `exit_edit_mode()`, `edit_mode_state()`,
+    `set_edit_mode_options()`, and `select_edit_mode_rail()`.
+  - The ActionRail Maya menu includes `Toggle Edit Mode`.
+  - Edit Mode draws active rails as labeled translucent frame rectangles over a
+    grid, shows Grid, Grid Size, Snap to Grid, Sticky Frames, and locked state,
+    supports left-click frame selection, records right-click frame options
+    routing, and allows non-persistent X/Y nudging/reset for unlocked active
+    rails.
+  - `tests/maya_smoke/actionrail_edit_mode_smoke.py` verifies the Maya-facing
+    layout-map overlay, grid/settings controls, left-click selection, X
+    coordinate movement, right-click options routing, and screenshot capture.
+  - `scripts/maya-smoke.ps1` now accepts Sessiond structured payloads that omit
+    `success` when they explicitly report `errors: null`, matching the current
+    cleanup payload shape.
 
 ## In Progress
 
-- Phase 2 step 2.4 Edit Mode Shell And Rail Selection is next; not started yet.
+- Phase 2 step 2.5 Layout Editing And Direct Manipulation is next.
 
 ## Next Agent Start
 
 Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
-2. First recommended coding slice: begin Phase 2 step 2.4, Edit Mode Shell And
-   Rail Selection. Add the global Edit Mode toggle, layout-map rail/frame view,
-   rail outlines, selected-rail inspector, source-layer badges, lock-state
-   display, and optional grid overlay/snap-to-grid settings, including Grid
-   Size and Sticky Frames controls, without starting Bind Mode or flyouts.
+2. First recommended coding slice: begin Phase 2 step 2.5 Layout Editing And
+   Direct Manipulation. Persist edited rail offsets to user presets or user
+   overrides, implement real sticky-frame snapping and snap/spacing guides, and
+   expand right-click frame routing into the options surface without starting
+   Bind Mode or flyouts.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
 ## Latest Handoff
 
-- Task goal completed: the QA run at
-  `actionrail_qa_hunt_20260504_203501` is handled.
-- Fixed QA issues:
-  - Quick Create now loads saved user presets back into the panel.
-  - User-preset saves require explicit overwrite, and Quick Create exposes
-    separate Save/Overwrite actions.
-  - Saving a Quick Create preset no longer closes unrelated active overlays.
-  - Runtime-command publishing avoids collisions for legal ids that sanitize to
-    the same Maya command name.
-  - Set Key skips cleanly when Maya has no active selection.
-  - Quick Create status text refreshes after slot edits and reports loaded
-    presets after load.
-- Verification hardening: diagnostics copy actions now flush the Qt clipboard in
-  Maya, smoke cleanup removes generated ActionRail runtime commands between
-  scripts, and `scripts/maya-smoke.ps1` tolerates Sessiond payloads without a
-  `script` field.
-- Current live state: Quick Create can preview, save, explicitly overwrite,
-  load, and reload saved user presets while preserving unrelated overlays; the
-  hotkey bridge handles sanitized-name collisions; Set Key is no-op safe on an
-  empty selection.
+- Task goal completed: Phase 2 step 2.4 Edit Mode shell and rail selection has
+  its first implementation and Maya screenshot verification.
+- Implemented Edit Mode shell:
+  - Public state/options APIs and Maya menu toggle.
+  - Edit-only layout-map overlay with visible grid, Grid Size, Snap to Grid,
+    Sticky Frames, source-layer/lock display, and translucent rail frame
+    footprints.
+  - Left-click selection, selected-frame X/Y popover with arrow nudges and
+    Reset, and right-click options routing marker.
+  - Non-persistent in-session offset movement for unlocked active rails.
+- Verification hardening: `scripts/maya-smoke.ps1` now accepts Sessiond
+  structured payloads without `success` when they explicitly report
+  `errors: null`, matching the current cleanup payload shape.
+- Current live state: Quick Create can preview/save/load; Edit Mode can inspect
+  and temporarily position active rails in the viewport layout-map view; saved
+  layout persistence and real sticky-frame snapping are next.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: begin Phase 2 step 2.4 Edit Mode shell and rail selection,
-  including the layout-map rail/frame view, user-visible grid overlay, Grid
-  Size, Sticky Frames, and snap-to-grid options for later layout editing.
+- Exact next step: begin Phase 2 step 2.5 layout editing/direct manipulation
+  on top of the verified Edit Mode shell.
 
 ## Next
 
-1. Start Phase 2 step 2.4, then continue through the medium Quick Create/Edit
-   Mode steps in `docs/02_implementation_plan.md`.
+1. Start Phase 2 step 2.5 layout editing/direct manipulation, then continue
+   through the medium Quick Create/Edit Mode steps in
+   `docs/02_implementation_plan.md`.
 2. Keep `actionrail_import_recovery_smoke.py` in the smoke set when changing
    import diagnostics, diagnostics-window behavior, or safe-start recovery.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
@@ -378,25 +394,33 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 373 passed, `TOTAL 3897 0 100%`.
+  -> 394 passed, `TOTAL 4109 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+- Edit Mode Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script actionrail_edit_mode_smoke.py -Timeout 240 -NoStart`
+  -> passed; verified the Edit Mode layout-map overlay, Grid Size 64,
+  Snap to Grid and Sticky Frames settings, left-click selection, X coordinate
+  movement, right-click options routing, and screenshot capture at
+  `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-fix -Port 7218 -Script all`
-  -> passed against a separate MayaSessiond on port `7218`; verified capture,
+  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script all -Timeout 240 -NoStart`
+  -> passed against a separate MayaSessiond on port `7219`; verified capture,
   diagnostic badges, diagnostics window copy actions, hidden visibility,
-  horizontal icon rail, hotkey bridge, hotkey label sync, import/recovery
-  diagnostics, Maya icons, menu/shelf UI, missing Maya icon resources, overlay
-  cleanup, phase 0, predicates, Quick Create save/overwrite/load screenshots,
-  StackItem ABI, and transform-stack state.
+  Edit Mode layout-map screenshot, horizontal icon rail, hotkey bridge, hotkey
+  label sync, import/recovery diagnostics, Maya icons, menu/shelf UI, missing
+  Maya icon resources, overlay cleanup, phase 0, predicates, Quick Create
+  save/overwrite/load screenshots, StackItem ABI, and transform-stack state.
 - Screenshot inspection:
+  `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_horizontal_tools_widget.png`
   rendered correctly after the full smoke run.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
-  compatibility blocker is resolved.
+  compatibility blocker is resolved. The `.gg-maya-sessiond-edit` daemon used
+  for this verification was stopped after the run.
 - Full historical verification log moved to `docs/history/verification_log.md`.
 
 ## Decisions

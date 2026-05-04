@@ -31,6 +31,8 @@ Snapshot:
   verified; Phase 2 step 2.1 authoring model/user-preset storage/shared preset
   resolver, Phase 2 step 2.2 dockable Quick Create panel, and Phase 2 step 2.3
   Quick Create preview/save/load workflow are complete and locally verified.
+  Phase 2 step 2.4 Edit Mode shell is implemented and Maya-smoke verified for
+  the first layout-map view.
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
@@ -44,9 +46,9 @@ Snapshot:
   should use the provider catalog instead of import/write/fallback code.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
-- Current next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail
-  selection; do not start Bind Mode, flyouts, command rings, profile layers,
-  marking-menu export, or Viewport 2.0 yet.
+- Current next implementation slice: Phase 2 step 2.5 layout editing and direct
+  manipulation polish; do not start Bind Mode, flyouts, command rings, profile
+  layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -85,14 +87,14 @@ Build PySide6/Qt overlay first.
 
 ## Current Priority
 
-Phase 1 declarative MVP and Phase 2 steps 2.1-2.3 are complete. Continue Phase 2
-with the smallest useful Maya-facing Edit Mode slice:
+Phase 1 declarative MVP and Phase 2 steps 2.1-2.4 are complete for their first
+useful slices. Continue Phase 2 with focused layout editing/direct manipulation
+work:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Add the Edit Mode shell and rail selection: global toggle, layout-map
-   rail/frame view, rail outlines, selected-rail inspector, source-layer badges,
-   lock-state display, and user-visible grid overlay/snap-to-grid options,
-   including Grid Size and Sticky Frames controls.
+2. Build on the Edit Mode shell: persist layout edits to user presets or
+   overrides, implement real sticky-frame snapping behavior, add snap/spacing
+   guides, and keep the existing layout-map frame view stable.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

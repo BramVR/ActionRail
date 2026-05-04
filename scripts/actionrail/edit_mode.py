@@ -483,7 +483,7 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                     locked = False
                 else:
                     text = (
-                        f"{selected.label} | {selected.anchor} | "
+                        f"{selected.label} | {selected.source_layer} | {selected.anchor} | "
                         f"{selected.x}, {selected.y}"
                     )
                     locked = selected.locked
@@ -739,12 +739,19 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     painter.setPen(qt.QtGui.QColor(0, 184, 255, 255))
     font = painter.font()
     font.setBold(True)
-    font.setPointSize(max(7, min(11, int(frame.height / 3))))
+    font.setPointSize(_frame_label_font_size(frame))
     painter.setFont(font)
-    label = frame.label
+    label = f"{frame.label}\n{frame.source_layer.title()}"
     if frame.locked:
-        label = f"{label} | Locked"
+        label = f"{label}\nLocked"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
+
+
+def _frame_label_font_size(frame: RailFrameInfo) -> int:
+    longest_word = max((len(word) for word in frame.label.split()), default=1)
+    width_limited = int((frame.width / max(longest_word, 1)) * 1.4)
+    height_limited = int(frame.height / 3)
+    return max(6, min(10, width_limited, height_limited))
 
 
 def _popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int) -> Any:

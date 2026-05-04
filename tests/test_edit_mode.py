@@ -464,6 +464,8 @@ def test_popover_position_and_panel_style() -> None:
 
     assert edit_mode._popover_position(Canvas(), frame, 80, 60).value == (92, 72)
     assert "Sticky" not in edit_mode._panel_style_sheet()
+    assert edit_mode._frame_label_font_size(frame) == 10
+    assert edit_mode._frame_label_font_size(replace(frame, label="Very Long Label", width=20)) == 6
 
 
 def test_require_cmds_uses_supplied_module() -> None:
