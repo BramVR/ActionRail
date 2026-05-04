@@ -89,8 +89,10 @@ Phase 1 declarative MVP and Phase 2 steps 2.1-2.3 are complete. Continue Phase 2
 with the smallest useful Maya-facing Edit Mode slice:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Add the Edit Mode shell and rail selection: global toggle, rail outlines,
-   selected-rail inspector, source-layer badges, and lock-state display.
+2. Add the Edit Mode shell and rail selection: global toggle, layout-map
+   rail/frame view, rail outlines, selected-rail inspector, source-layer badges,
+   lock-state display, and user-visible grid overlay/snap-to-grid options,
+   including Grid Size and Sticky Frames controls.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

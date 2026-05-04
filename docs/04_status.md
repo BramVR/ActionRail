@@ -323,9 +323,10 @@ Start here:
 
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
 2. First recommended coding slice: begin Phase 2 step 2.4, Edit Mode Shell And
-   Rail Selection. Add the global Edit Mode toggle, rail outlines, selected-rail
-   inspector, source-layer badges, and lock-state display without starting Bind
-   Mode or flyouts.
+   Rail Selection. Add the global Edit Mode toggle, layout-map rail/frame view,
+   rail outlines, selected-rail inspector, source-layer badges, lock-state
+   display, and optional grid overlay/snap-to-grid settings, including Grid
+   Size and Sticky Frames controls, without starting Bind Mode or flyouts.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -352,7 +353,9 @@ Start here:
   hotkey bridge handles sanitized-name collisions; Set Key is no-op safe on an
   empty selection.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: begin Phase 2 step 2.4 Edit Mode shell and rail selection.
+- Exact next step: begin Phase 2 step 2.4 Edit Mode shell and rail selection,
+  including the layout-map rail/frame view, user-visible grid overlay, Grid
+  Size, Sticky Frames, and snap-to-grid options for later layout editing.
 
 ## Next
 

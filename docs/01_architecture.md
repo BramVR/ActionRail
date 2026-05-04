@@ -49,7 +49,9 @@ Conceptual states:
 - **Normal Mode**: rails execute actions; the overlay host avoids viewport-sized
   transparent hit areas so normal Maya viewport interaction remains available
   outside visible controls.
-- **Edit Mode**: rails show outlines, anchors, handles, snap guides, safe margins, and per-rail settings.
+- **Edit Mode**: rails switch into a layout-map view with labeled translucent
+  frame rectangles, outlines, anchors, handles, optional placement grid overlay,
+  optional snap-to-grid, snap guides, safe margins, and per-rail settings.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.
 
 The customization layer is planned after the declarative MVP, but the spec and action registry should be designed so stable slot ids, key labels, flyouts, command rings, and preset layers can be added without replacing the core model.

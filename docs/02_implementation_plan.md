@@ -290,10 +290,14 @@ Research hints:
 #### 2.4 Edit Mode Shell And Rail Selection
 
 - Add a global Edit Mode toggle and Maya-facing command/menu entry.
-- In Edit Mode, show rail outlines, hit boxes, selected-state styling, source
-  layer, and lock state.
+- In Edit Mode, show a layout-map view of rails/frames as labeled translucent
+  rectangles over the viewport, plus rail outlines, hit boxes, selected-state
+  styling, source layer, and lock state.
 - Add a selected-rail inspector for anchor, offset, orientation, rows/columns,
   scale, opacity, locked state, and visibility rules.
+- Add user-visible Edit Mode options for showing a placement grid overlay and
+  configuring grid size, sticky-frame snapping, and snap-to-grid later; the
+  first shell may show the grid and settings without moving or saving rails yet.
 - Keep normal action execution disabled or clearly separated while editing.
 
 Done when existing and user-created rails can be selected and inspected in Edit
@@ -311,7 +315,13 @@ Research hints:
 #### 2.5 Layout Editing And Direct Manipulation
 
 - Add drag handles for moving rails in the active viewport.
-- Add anchor pins, safe margins, snap guides, and spacing guides.
+- Add anchor pins, safe margins, optional snap-to-grid behavior, snap guides,
+  and spacing guides.
+- Add left-click selected-rail position controls with arrow nudges, numeric X/Y
+  coordinates, and Reset.
+- Add right-click routing from a rail/frame to that rail's options section.
+- Add Sticky Frames behavior so dragged rails can snap to other rails for quick
+  alignment.
 - Persist edited anchor/offset/layout values to a user preset or user override.
 - Add controls for slot add/remove/reorder and rail layout changes.
 
@@ -323,8 +333,12 @@ Research hints:
 
 - Compare WoW Edit Mode and Dominos configuration mode for drag-to-position,
   per-bar scale/opacity/spacing, and safe unlock behavior.
-- Look at Maya guide/snap UX before designing ActionRail guides; viewport tools
-  should feel precise, quiet, and non-decorative.
+- Look at Maya guide/snap UX before designing ActionRail grid and snap guides;
+  viewport tools should feel precise, quiet, optional, and non-decorative.
+- Use the attached edit-mode reference for frame selection semantics:
+  left-click opens precise X/Y placement controls, right-click opens
+  frame-specific options, Sticky Frames snaps frames together, and Grid Size
+  controls the edit-only grid.
 - Revisit the local `research/` reference images when tuning hit boxes and
   spacing for the transform-stack regression target.
 
@@ -415,10 +429,14 @@ panel, preview cleanup, load-existing support, and save/reload workflow are
 ready for the first Edit Mode shell.
 
 Next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail selection:
-global toggle, rail outlines, selected-rail inspector, source-layer badges, and
-lock-state display. Keep `docs/06_wow_style_customization.md` in mind, but do
-not start Bind Mode, flyouts, command rings, profile layers, marking-menu
-export, or Viewport 2.0 yet.
+global toggle, layout-map rail/frame view, rail outlines, selected-rail
+inspector, source-layer badges, and lock-state display. Include user-visible
+grid overlay and snap-to-grid options as Edit Mode settings, plus grid size and
+Sticky Frames controls, but keep actual drag persistence for the layout-editing
+slice. Keep
+`docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
+flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
+yet.
 
 ## Research Backlog
 

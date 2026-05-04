@@ -153,11 +153,17 @@ The first artist-facing authoring workflow should stay narrow:
 Edit Mode should add direct manipulation:
 
 - rail outlines and hit boxes
+- layout-map view of bars/frames as labeled translucent rectangles
 - drag handles
 - anchor pins
+- optional grid overlay
+- optional snap-to-grid
+- optional sticky-frame snapping between rails
 - snap guides
 - safe margins
 - scale and opacity controls
+- selected-frame position popover with arrow nudges, numeric X/Y, and Reset
+- right-click jump to frame-specific options
 - collapsible side-tab controls
 - lock state
 - source layer badges

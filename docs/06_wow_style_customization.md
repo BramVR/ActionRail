@@ -44,9 +44,14 @@ Edit Mode is a global authoring state. Normal mode executes tools; Edit Mode edi
 
 Edit Mode should show:
 
+- a layout-map view where each rail/frame is shown as a labeled translucent
+  rectangle over the viewport
 - rail outlines and hit boxes
 - drag handles
 - anchor pins
+- optional grid overlay for precise placement
+- optional snap-to-grid while dragging rails
+- optional sticky-frame snapping so dragged rails can align to nearby rails
 - snap guides
 - spacing guides
 - safe margins
@@ -60,6 +65,27 @@ Required commands:
 - `actionrail.edit_mode.toggle`
 - `actionrail.edit_mode.enter`
 - `actionrail.edit_mode.exit`
+
+Edit Mode grid behavior should be user-controlled. Users can show or hide the
+grid overlay independently from enabling snap-to-grid, and snapping should only
+affect authoring gestures such as dragging or nudging rails. Normal mode should
+not show the grid or alter viewport interaction.
+
+Frame-level Edit Mode interaction should stay direct:
+
+- left-click a rail/frame to select it and open a compact position popover with
+  arrow nudge controls, numeric X/Y coordinates, and Reset
+- right-click a rail/frame to open that rail's settings section in the options
+  panel
+- `Sticky Frames` makes dragged rails snap to other rails for quick alignment
+- `Grid Size` controls the visible edit-only grid spacing used for precise
+  placement
+
+The visual treatment should make placement obvious at a glance: rails/frames
+should render as dark translucent blocks with thin high-contrast outlines and
+compact centered names, even when their normal buttons are not the focus. This
+is an edit-only overview of layout footprints and hit boxes, not the Normal Mode
+look of the final rail.
 
 ### Collapsible Rails
 
@@ -233,6 +259,12 @@ Draft shape:
     "opacity": 1.0,
     "locked": false
   },
+  "edit_mode": {
+    "show_grid": false,
+    "snap_to_grid": false,
+    "sticky_frames": false,
+    "grid_size": 12
+  },
   "collapse": {
     "enabled": true,
     "mode": "edge_tab",
@@ -311,11 +343,15 @@ Build the user-facing authoring workflow in medium slices:
 3. Preview and save workflow: preview without saving, cleanup preview overlays,
    save stable user preset ids and slot ids, then reload through the normal
    runtime path.
-4. Edit Mode shell and rail selection: global toggle, rail outlines, hit boxes,
-   selected-rail inspector, source-layer badges, and lock-state display.
+4. Edit Mode shell and rail selection: global toggle, layout-map frame view,
+   rail outlines, hit boxes, selected-rail inspector, source-layer badges,
+   lock-state display, and optional grid overlay visibility for placement
+   preview.
 5. Layout editing and direct manipulation: drag handles, anchor pins, safe
-   margins, snap/spacing guides, slot add/remove/reorder, and persisted layout
-   edits.
+   margins, left-click position popover with X/Y and Reset, right-click
+   frame-specific options routing, optional snap-to-grid, optional sticky-frame
+   snapping to nearby rails, snap/spacing guides, slot add/remove/reorder, and
+   persisted layout edits.
    Future button-style controls should let users independently show/hide,
    offset, and colorize the slot label and hotkey/key-label overlay.
 6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,
@@ -332,8 +368,9 @@ Research hints by slice:
   and ActionRail safe-start diagnostics.
 - 2.4: WoW Edit Mode outlines and selected elements, Maya inspector/tool
   settings patterns, and ActionRail source-layer/lock constraints.
-- 2.5: WoW/Dominos drag positioning, per-bar scale/opacity/spacing, Maya snap
-  guides, and local `research/` reference images.
+- 2.5: WoW/Dominos drag positioning, per-bar scale/opacity/spacing, optional
+  grid snapping, sticky-frame alignment, Maya snap guides, and local
+  `research/` reference images.
 - 2.6: collapsible side panels, action-bar visibility/hotkey labels, and OPie
   only as a boundary reference for later Phase 3 command rings.
 
