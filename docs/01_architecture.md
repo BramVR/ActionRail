@@ -166,6 +166,18 @@ runtime rendering simple while giving Quick Create a picker-friendly
 `IconDescriptor` model with provider, label, category, keywords, source, and
 resolved Qt resource/file data.
 
+The icon implementation is intentionally split by workflow. `actionrail.icons`
+is the public compatibility facade; new internal code should prefer narrower
+imports. `actionrail.icon_catalog` owns provider descriptors and read-only icon
+lookup for picker/search UI. `actionrail.icon_manifest` owns manifest storage,
+path normalization, and validation. `actionrail.icon_import` owns SVG import
+preflight, manifest writes, target conflict checks, and rollback. `actionrail.icon_svg`
+owns SVG parse/safety rules. `actionrail.icon_fallbacks` owns generated PNG
+fallback checks and mayapy rendering. `actionrail.icon_types` and
+`actionrail.icon_paths` hold shared value objects and storage paths. Quick
+Create icon browsing should depend on `icon_catalog`, not import/write or
+fallback-rendering modules.
+
 Maya resource icons intentionally keep their raw resource names in descriptor
 metadata and diagnostics, for example `move_M.png`, because that is what
 `cmds.resourceManager(nameFilter=...)` validates. The Qt widget render path

@@ -14,7 +14,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 from .actions import ActionRegistry, create_default_registry
-from .icons import icon_status, validate_icon_manifest, validate_svg_icon_import
+from .icon_catalog import icon_status
+from .icon_import import validate_svg_icon_import
+from .icon_manifest import validate_icon_manifest
 from .predicates import (
     PredicateContext,
     evaluate_predicate,

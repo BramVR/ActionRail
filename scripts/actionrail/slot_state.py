@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .actions import ActionRegistry
-from .icons import IconStatus, icon_status
+from .icon_catalog import icon_status
+from .icon_types import IconStatus
 from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
 from .spec import StackItem, StackSpec
 

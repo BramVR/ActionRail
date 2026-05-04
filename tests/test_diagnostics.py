@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import actionrail.diagnostics as diagnostics
+from actionrail import icon_paths
 from actionrail.actions import Action, ActionRegistry, create_default_registry
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.diagnostics import (
@@ -748,11 +749,9 @@ def test_diagnose_icon_import_records_copyable_report(
     source_path.write_text("not svg", encoding="utf-8")
     monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("existing",))
 
-    import actionrail.icons as icons
-
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     report = diagnose_icon_import(
         str(source_path),
@@ -792,11 +791,9 @@ def test_diagnose_icon_import_reports_fallback_target_details(
         encoding="utf-8",
     )
 
-    import actionrail.icons as icons
-
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     report = diagnose_icon_import(
         str(source_path),
@@ -833,11 +830,9 @@ def test_diagnose_icon_import_honors_disabled_fallback_generation(
         encoding="utf-8",
     )
 
-    import actionrail.icons as icons
-
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     report = diagnose_icon_import(
         str(source_path),

@@ -85,6 +85,11 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   picker-facing `IconDescriptor` metadata, Maya resource diagnostics,
   Qt `:/` resource rendering, full-slot icon underlays, and a `maya_tools`
   preset.
+- Icon subsystem split. First pass done behind the public `actionrail.icons`
+  facade: provider descriptors/read-only lookup live in `icon_catalog`,
+  manifest storage/validation in `icon_manifest`, SVG import/preflight and
+  writes in `icon_import`, SVG safety in `icon_svg`, and generated PNG
+  fallback/mayapy rendering in `icon_fallbacks`.
 - SVG import helper. First pass done through
   `actionrail.icons.import_svg_icon()`, which validates local SVG sources,
   rejects external resources in style blocks, writes safe assets under

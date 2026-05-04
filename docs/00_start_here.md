@@ -39,6 +39,8 @@ Snapshot:
   `horizontal_tools`, and `maya_tools`.
 - Icons now support provider-backed logical ids: manifest/local icons such as
   `actionrail.move` and curated Maya resource icons such as `maya.move`.
+- The icon implementation is split behind `actionrail.icons`; picker/search UI
+  should use the provider catalog instead of import/write/fallback code.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.2, a dockable Quick Create

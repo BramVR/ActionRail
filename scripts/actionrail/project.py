@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from .actions import create_default_registry
-from .icons import list_icon_descriptors, validate_icon_manifest
+from .icon_catalog import list_icon_descriptors
+from .icon_manifest import validate_icon_manifest
 from .preset_store import PresetStore
 from .spec import builtin_preset_ids
 
@@ -74,7 +75,42 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/icons.py",
-        "owns": "icon manifest validation, SVG safety checks, local import, PNG fallbacks",
+        "owns": "public icon compatibility facade",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_types.py",
+        "owns": "shared icon descriptor, status, issue, import, and fallback value objects",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_catalog.py",
+        "owns": "provider catalog, picker-facing descriptors, and runtime icon id lookup",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_manifest.py",
+        "owns": "icon manifest store, metadata validation, and asset validation",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_import.py",
+        "owns": "SVG icon import preflight, manifest writes, target conflicts, and rollback",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_fallbacks.py",
+        "owns": "PNG fallback validation, generation, rollback, and mayapy rendering",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_svg.py",
+        "owns": "SVG parse validation and safety checks",
+        "tests": ("tests/test_icons.py",),
+    },
+    {
+        "path": "scripts/actionrail/icon_paths.py",
+        "owns": "shared icon storage paths and manifest path normalization",
         "tests": ("tests/test_icons.py",),
     },
     {

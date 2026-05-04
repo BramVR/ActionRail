@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import actionrail.icons as icons
+from actionrail import icon_fallbacks, icon_manifest, icon_paths
 from actionrail.icons import (
     generate_png_fallbacks,
     icon_status,
@@ -21,6 +22,17 @@ from actionrail.icons import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PNG_BYTES = b"\x89PNG\r\n\x1a\n"
 OLD_PNG_BYTES = b"\x89PNG\r\n\x1a\nold"
+
+
+def patch_icon_store(
+    monkeypatch: pytest.MonkeyPatch,
+    package_root: Path,
+    icon_dir: Path,
+    manifest_path: Path | None = None,
+) -> None:
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path or icon_dir / "manifest.json")
 
 
 def fake_png_renderer(_svg_path: Path, png_path: Path, _size_px: int) -> None:
@@ -189,8 +201,8 @@ def test_manifest_icon_descriptors_skip_invalid_manifest_entries(monkeypatch) ->
         "path": "missing.svg",
     }
     monkeypatch.setattr(
-        icons,
-        "_manifest_icons",
+        icon_manifest,
+        "manifest_icons",
         lambda: (valid_entry, missing_field_entry, missing_asset_entry),
     )
 
@@ -199,7 +211,7 @@ def test_manifest_icon_descriptors_skip_invalid_manifest_entries(monkeypatch) ->
             return icons.IconManifestIssue("missing_icon_file", "Missing.")
         return None
 
-    monkeypatch.setattr(icons, "_asset_issue", fake_asset_issue)
+    monkeypatch.setattr(icon_manifest, "asset_issue", fake_asset_issue)
 
     descriptors = icons._manifest_icon_descriptors()
 
@@ -209,8 +221,8 @@ def test_manifest_icon_descriptors_skip_invalid_manifest_entries(monkeypatch) ->
 
 def test_manifest_icon_descriptors_skip_invalid_manifest_shape(monkeypatch) -> None:
     monkeypatch.setattr(
-        icons,
-        "_manifest_icons",
+        icon_manifest,
+        "manifest_icons",
         lambda: ({"__manifest_error__": "missing"},),
     )
 
@@ -226,9 +238,9 @@ def test_validate_icon_manifest_reports_duplicate_ids(monkeypatch: pytest.Monkey
         "imported_at": "2026-04-30",
         "path": "duplicate.svg",
     }
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry, entry))
-    monkeypatch.setattr(icons, "_asset_issue", lambda *_args: None)
-    monkeypatch.setattr(icons, "_fallback_issues", lambda *_args, **_kwargs: ())
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: (entry, entry))
+    monkeypatch.setattr(icon_manifest, "asset_issue", lambda *_args: None)
+    monkeypatch.setattr(icon_fallbacks, "fallback_issues", lambda *_args, **_kwargs: ())
 
     issues = validate_icon_manifest()
 
@@ -253,8 +265,8 @@ def test_validate_icon_manifest_reports_unsafe_svg(
         "imported_at": "2026-04-30",
         "path": "unsafe.svg",
     }
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry,))
-    monkeypatch.setattr(icons, "_resolve_manifest_path", lambda _path: svg_path)
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: (entry,))
+    monkeypatch.setattr(icon_paths, "resolve_manifest_path", lambda _path: svg_path)
 
     issues = validate_icon_manifest()
 
@@ -278,9 +290,9 @@ def test_import_svg_icon_copies_asset_and_updates_manifest(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     result = import_svg_icon(
         source_path,
@@ -324,9 +336,9 @@ def test_import_svg_icon_generates_png_fallbacks_and_updates_manifest(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     result = import_svg_icon(
         source_path,
@@ -371,9 +383,9 @@ def test_validate_svg_icon_import_reports_multiple_preflight_issues(
     )
     manifest_path.write_text('{"icons": []}\n', encoding="utf-8")
     source_path.write_text("not svg", encoding="utf-8")
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     issues = validate_svg_icon_import(
         source_path,
@@ -412,9 +424,9 @@ def test_validate_svg_icon_import_reports_existing_fallback_targets(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     issues = validate_svg_icon_import(
         source_path,
@@ -452,9 +464,9 @@ def test_validate_svg_icon_import_ignores_fallback_targets_when_disabled(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     issues = validate_svg_icon_import(
         source_path,
@@ -505,9 +517,9 @@ def test_validate_svg_icon_import_reports_fallback_manifest_path_conflict(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     issues = validate_svg_icon_import(
         source_path,
@@ -544,9 +556,9 @@ def test_import_svg_icon_rolls_back_new_asset_when_fallback_generation_fails(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(RuntimeError, match="renderer failed"):
         import_svg_icon(
@@ -596,9 +608,9 @@ def test_generate_png_fallbacks_updates_existing_manifest_entry(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     result = generate_png_fallbacks("test.arrow", png_renderer=fake_png_renderer)
 
@@ -622,7 +634,7 @@ def test_render_png_uses_mayapy_renderer(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_render_png_with_mayapy", fake_png_renderer)
+    monkeypatch.setattr(icon_fallbacks, "render_png_with_mayapy", fake_png_renderer)
 
     icons._render_png(svg_path, png_path, 24, None)
 
@@ -636,7 +648,7 @@ def test_render_png_with_mayapy_invokes_discovered_executable(
     svg_path = tmp_path / "source.svg"
     png_path = tmp_path / "source.png"
     commands: list[list[str]] = []
-    monkeypatch.setattr(icons, "_mayapy_candidates", lambda: ("C:/Maya/bin/mayapy.exe",))
+    monkeypatch.setattr(icon_fallbacks, "mayapy_candidates", lambda: ("C:/Maya/bin/mayapy.exe",))
 
     def fake_run(
         command: list[str],
@@ -674,9 +686,9 @@ def test_import_svg_icon_rejects_unsafe_svg_without_manifest_change(
         "<script>alert(1)</script></svg>",
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(ValueError, match="unsafe"):
         import_svg_icon(
@@ -708,9 +720,9 @@ def test_import_svg_icon_rejects_external_style_block_without_manifest_change(
         '<path d="M4 12h16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(ValueError, match="external stylesheet reference"):
         import_svg_icon(
@@ -756,9 +768,9 @@ def test_import_svg_icon_refuses_duplicate_without_overwrite(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(ValueError, match="already exists"):
         import_svg_icon(
@@ -806,9 +818,9 @@ def test_import_svg_icon_overwrites_existing_entry(
         '<path d="M12 4v16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     result = import_svg_icon(
         source_path,
@@ -868,9 +880,9 @@ def test_import_svg_icon_restores_overwritten_asset_when_fallback_generation_fai
         '<path d="M12 4v16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(RuntimeError, match="renderer failed"):
         import_svg_icon(
@@ -921,9 +933,9 @@ def test_import_svg_icon_rejects_equivalent_manifest_path_conflict(
         '<path d="M12 4v16"/></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", package_root)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", package_root)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(ValueError, match="already used by icon 'other.arrow'"):
         import_svg_icon(
@@ -977,8 +989,8 @@ def test_validate_icon_manifest_reports_missing_fallback_metadata(
         "imported_at": "2026-04-30",
         "path": "source.svg",
     }
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry,))
-    monkeypatch.setattr(icons, "_resolve_manifest_path", lambda _path: svg_path)
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: (entry,))
+    monkeypatch.setattr(icon_paths, "resolve_manifest_path", lambda _path: svg_path)
 
     issues = validate_icon_manifest()
 
@@ -1021,8 +1033,8 @@ def test_validate_icon_manifest_reports_missing_and_stale_fallbacks(
         "source@2x.png": fallback_2x,
         "source@3x.png": tmp_path / "source@3x.png",
     }
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry,))
-    monkeypatch.setattr(icons, "_resolve_manifest_path", lambda path: paths[path])
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: (entry,))
+    monkeypatch.setattr(icon_paths, "resolve_manifest_path", lambda path: paths[path])
 
     issues = validate_icon_manifest()
 
@@ -1055,7 +1067,7 @@ def test_manifest_shape_errors_cover_missing_invalid_and_bad_entries(
     tmp_path: Path,
 ) -> None:
     manifest_path = tmp_path / "icons" / "manifest.json"
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     assert validate_icon_manifest()[0].code == "missing_icon_manifest"
 
@@ -1101,9 +1113,9 @@ def test_icon_status_reports_manifest_shape_and_asset_issues(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", tmp_path / "icons")
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     assert icon_status("").issue is None
     assert icon_status("broken.path").issue.code == "invalid_icon_path"
@@ -1122,9 +1134,9 @@ def test_validate_svg_icon_import_reports_invalid_manifest_and_duplicate(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>',
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     manifest_path.write_text("{not json", encoding="utf-8")
     assert validate_svg_icon_import(
@@ -1171,9 +1183,9 @@ def test_validate_svg_icon_import_reports_invalid_sources_and_targets(
     manifest_path.write_text('{"icons": []}', encoding="utf-8")
     source_path = tmp_path / "source.svg"
     source_path.write_text("<svg></svg>", encoding="utf-8")
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     assert validate_svg_icon_import(
         tmp_path / "missing.svg",
@@ -1220,8 +1232,8 @@ def test_validate_icon_manifest_reports_fallback_metadata_shapes(
         "fallback_source_sha256": "",
         "fallback_base_size": 0,
     }
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: (entry,))
-    monkeypatch.setattr(icons, "_resolve_manifest_path", lambda path: tmp_path / path)
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: (entry,))
+    monkeypatch.setattr(icon_paths, "resolve_manifest_path", lambda path: tmp_path / path)
 
     issues = validate_icon_manifest()
 
@@ -1279,9 +1291,9 @@ def test_generate_png_fallbacks_rejects_invalid_manifest_entries(
     icon_dir = tmp_path / "icons"
     manifest_path = icon_dir / "manifest.json"
     icon_dir.mkdir()
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     manifest_path.write_text('{"icons": []}', encoding="utf-8")
     with pytest.raises(ValueError, match="not listed"):
@@ -1365,9 +1377,9 @@ def test_generate_png_fallbacks_restores_existing_files_on_renderer_failure(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", icon_dir)
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", icon_dir)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     with pytest.raises(RuntimeError, match="renderer failed"):
         generate_png_fallbacks("test.source", png_renderer=failing_png_renderer)
@@ -1383,14 +1395,14 @@ def test_render_png_reports_missing_or_failing_mayapy(
 ) -> None:
     svg_path = tmp_path / "source.svg"
     png_path = tmp_path / "source.png"
-    monkeypatch.setattr(icons, "_mayapy_candidates", lambda: ())
+    monkeypatch.setattr(icon_fallbacks, "mayapy_candidates", lambda: ())
 
     with pytest.raises(RuntimeError, match="mayapy"):
         icons._render_png_with_mayapy(svg_path, png_path, 24)
     with pytest.raises(RuntimeError, match="Unable to generate PNG"):
         icons._render_png(svg_path, png_path, 24, None)
 
-    monkeypatch.setattr(icons, "_mayapy_candidates", lambda: ("mayapy",))
+    monkeypatch.setattr(icon_fallbacks, "mayapy_candidates", lambda: ("mayapy",))
     monkeypatch.setattr(
         icons.subprocess,
         "run",
@@ -1418,7 +1430,7 @@ def test_mayapy_candidates_are_unique_and_sorted(monkeypatch: pytest.MonkeyPatch
         return Path(value)
 
     monkeypatch.setattr(icons.shutil, "which", lambda _name: "C:/mayapy.exe")
-    monkeypatch.setattr(icons, "Path", fake_path)
+    monkeypatch.setattr(icon_fallbacks, "Path", fake_path)
 
     candidates = icons._mayapy_candidates()
 
@@ -1429,17 +1441,21 @@ def test_mayapy_candidates_are_unique_and_sorted(monkeypatch: pytest.MonkeyPatch
 def test_icon_status_reports_manifest_shape_and_entry_issues(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"__manifest_error__": "missing"},))
+    monkeypatch.setattr(
+        icon_manifest,
+        "manifest_icons",
+        lambda: ({"__manifest_error__": "missing"},),
+    )
     assert icon_status("anything").issue.code == "missing_icon_manifest"
 
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"id": "bad.entry"},))
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: ({"id": "bad.entry"},))
     assert icon_status("bad.entry").issue.field == "source"
 
 
 def test_validate_icon_manifest_records_invalid_entries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(icons, "_manifest_icons", lambda: ({"id": "bad.entry"},))
+    monkeypatch.setattr(icon_manifest, "manifest_icons", lambda: ({"id": "bad.entry"},))
 
     issues = validate_icon_manifest()
 
@@ -1451,7 +1467,7 @@ def test_manifest_payload_for_update_handles_missing_and_bad_shapes(
     tmp_path: Path,
 ) -> None:
     manifest_path = tmp_path / "icons" / "manifest.json"
-    monkeypatch.setattr(icons, "_MANIFEST_PATH", manifest_path)
+    monkeypatch.setattr(icon_paths, "MANIFEST_PATH", manifest_path)
 
     assert icons._manifest_payload_for_update() == {"icons": []}
 
@@ -1477,8 +1493,8 @@ def test_fallback_helpers_ignore_non_svg_and_non_string_owner_paths(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", tmp_path / "icons")
     entry = {
         "id": "png.icon",
         "source": "Local",
@@ -1500,8 +1516,8 @@ def test_import_metadata_and_target_helpers_reject_bad_values(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path)
-    monkeypatch.setattr(icons, "_ICON_DIR", tmp_path / "icons")
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path)
+    monkeypatch.setattr(icon_paths, "ICON_DIR", tmp_path / "icons")
 
     with pytest.raises(ValueError, match="must be a non-empty string"):
         icons._validate_import_metadata(
@@ -1521,7 +1537,7 @@ def test_import_metadata_and_target_helpers_reject_bad_values(
 
     with pytest.raises(ValueError, match="non-empty string"):
         icons._resolve_import_target("")
-    monkeypatch.setattr(icons, "_PACKAGE_ROOT", tmp_path / "package")
+    monkeypatch.setattr(icon_paths, "PACKAGE_ROOT", tmp_path / "package")
     with pytest.raises(ValueError, match="inside the ActionRail icons directory"):
         icons._resolve_import_target("icons/arrow.svg")
 
@@ -1558,6 +1574,6 @@ def test_mayapy_candidates_deduplicates_equivalent_paths(monkeypatch: pytest.Mon
         return Path(value)
 
     monkeypatch.setattr(icons.shutil, "which", lambda _name: "C:/mayapy.exe")
-    monkeypatch.setattr(icons, "Path", fake_path)
+    monkeypatch.setattr(icon_fallbacks, "Path", fake_path)
 
     assert icons._mayapy_candidates() == ("C:/mayapy.exe",)

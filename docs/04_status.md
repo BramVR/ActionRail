@@ -78,6 +78,14 @@ Last updated: 2026-05-04
     picker UIs. It supports manifest-backed ids such as `actionrail.move` and
     curated Maya built-in resource ids such as `maya.move`, `maya.rotate`,
     `maya.scale`, and `maya.set_key`.
+  - The icon subsystem is split behind the public `actionrail.icons` facade:
+    `icon_catalog` owns provider descriptors and read-only lookup,
+    `icon_manifest` owns manifest storage/validation, `icon_import` owns SVG
+    import preflight and writes, `icon_svg` owns SVG safety,
+    `icon_fallbacks` owns PNG fallback generation/mayapy rendering, and
+    `icon_types`/`icon_paths` own shared contracts and storage paths. Quick
+    Create icon picker work should depend on the catalog, not import/write or
+    fallback rendering code.
   - `maya_tools` is a bundled horizontal rail proving Maya resource icons can
     render without copying Autodesk assets into the ActionRail icon manifest.
   - Maya icon descriptors and diagnostics keep raw resource names such as
@@ -286,21 +294,20 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: slot render-state resolution was extracted from
-  `widgets.py` into pure `actionrail.slot_state`, and `widgets.py` now focuses
-  on Qt rail building, custom painting, property application, and refresh
-  plumbing.
-- Files changed in this handoff update: new pure slot-state module, widget
-  builder rename to `build_rail()`, compatibility wrappers for
-  `build_transform_stack()` and `resolve_slot_render_state()`, project map,
-  architecture/status docs, and focused widget/project-map regressions.
-- Behavior verified: widget unit coverage still exercises render-state
-  resolution, missing action/icon/availability diagnostics, predicate refresh,
-  hotkey badge preservation, and the legacy `build_transform_stack()` smoke/test
-  entry point.
-- Current live state: `actionrail.slot_state.resolve_slot_render_state()` is the
-  pure implementation; `actionrail.widgets.resolve_slot_render_state()` remains
-  a compatibility wrapper for existing tests/smokes.
+- Task goal completed: `scripts/actionrail/icons.py` was reduced to a public
+  compatibility facade and the implementation was split into focused icon
+  modules for catalog, manifest, import, SVG safety, fallback rendering, shared
+  types, and shared paths.
+- Files changed in this handoff update: new `icon_catalog.py`,
+  `icon_manifest.py`, `icon_import.py`, `icon_svg.py`, `icon_fallbacks.py`,
+  `icon_types.py`, and `icon_paths.py`; `slot_state.py`, `diagnostics.py`, and
+  `project.py` now import narrower icon modules where useful; icon tests and
+  architecture/status docs were updated.
+- Behavior verified: full pytest and coverage report pass at 100%, Ruff passes,
+  and `scripts/maya-smoke.ps1 -Script all` passes against MayaSessiond.
+- Current live state: public callers can continue using `actionrail.icons`;
+  Quick Create and later picker UI should use `actionrail.icon_catalog` for
+  descriptor browsing/search and keep import/fallback workflows separate.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue Phase 2 step 2.2 dockable Quick Create work.
 
@@ -325,7 +332,7 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 338 passed, `TOTAL 3562 0 100%`.
+  -> 338 passed, `TOTAL 3659 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Full Maya smoke baseline:
