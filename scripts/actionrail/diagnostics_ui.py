@@ -301,6 +301,13 @@ def _current_issue_detail_text(issue_list: Any, qt: QtBinding) -> str:
 def _set_clipboard(qt: QtBinding, text: str) -> None:
     clipboard = qt.QtWidgets.QApplication.clipboard()
     clipboard.setText(text)
+    supports_selection = getattr(clipboard, "supportsSelection", None)
+    if callable(supports_selection) and supports_selection():
+        clipboard.setText(text, clipboard.Selection)
+    app = qt.QtWidgets.QApplication.instance()
+    process_events = getattr(app, "processEvents", None)
+    if callable(process_events):
+        process_events()
 
 
 def _summary_text(report: DiagnosticReport | None) -> str:

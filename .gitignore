@@ -1,5 +1,6 @@
 .venv/
 .gg-maya-sessiond/
+.gg-maya-sessiond-*/
 .pytest_cache/
 .ruff_cache/
 research/

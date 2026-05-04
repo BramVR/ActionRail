@@ -222,8 +222,12 @@ function Invoke-ApprovedScript {
 
         $structured = $result.structured
         $actualPath = ""
-        if ($structured -and $structured.script) {
-            $actualPath = [System.IO.Path]::GetFullPath([string] $structured.script)
+        $scriptProperty = $null
+        if ($structured) {
+            $scriptProperty = $structured.PSObject.Properties["script"]
+        }
+        if ($scriptProperty -and $scriptProperty.Value) {
+            $actualPath = [System.IO.Path]::GetFullPath([string] $scriptProperty.Value)
         }
         if ($actualPath -and $actualPath -ine $expectedPath) {
             if ($attempt -lt 3) {
@@ -234,7 +238,11 @@ function Invoke-ApprovedScript {
             throw "script.execute returned stale payload for ${Label}: $($result | ConvertTo-Json -Depth 8)"
         }
 
-        if (-not $structured -or -not $structured.success) {
+        $successProperty = $null
+        if ($structured) {
+            $successProperty = $structured.PSObject.Properties["success"]
+        }
+        if (-not $structured -or -not $successProperty -or -not $successProperty.Value) {
             throw "Script failed for ${Label}: $($structured | ConvertTo-Json -Depth 8)"
         }
 

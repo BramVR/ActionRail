@@ -72,6 +72,23 @@ def _purge_actionrail_modules() -> int:
     return len(module_names)
 
 
+def _delete_actionrail_runtime_commands() -> int:
+    names = cmds.runTimeCommand(query=True, userCommandArray=True) or ()
+    if isinstance(names, str):
+        names = (names,)
+
+    deleted = 0
+    for name in tuple(str(item) for item in names):
+        if not name.startswith("ActionRail_"):
+            continue
+        try:
+            cmds.runTimeCommand(name, edit=True, delete=True)
+            deleted += 1
+        except Exception:
+            pass
+    return deleted
+
+
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
@@ -79,6 +96,7 @@ if app is None:
 actionrail.hide_all()
 closed_hosts = _close_smoke_hosts()
 deleted_widgets = _delete_actionrail_widgets(app)
+deleted_runtime_commands = _delete_actionrail_runtime_commands()
 cmds.file(new=True, force=True)
 cmds.select(clear=True)
 app.processEvents()
@@ -89,6 +107,7 @@ print(
         {
             "closed_smoke_hosts": closed_hosts,
             "deleted_widgets": deleted_widgets,
+            "deleted_runtime_commands": deleted_runtime_commands,
             "purged_modules": purged_modules,
             "scene": cmds.file(query=True, sceneName=True) or None,
         },

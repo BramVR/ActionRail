@@ -525,6 +525,40 @@ def test_show_report_window_builds_interactive_window(fake_qt: QtBinding, monkey
     assert diagnostics_ui._WINDOW is None
 
 
+def test_set_clipboard_updates_selection_clipboard_and_processes_events(
+    fake_qt: QtBinding,
+) -> None:
+    class SelectionClipboard:
+        Selection = "selection"
+
+        def __init__(self) -> None:
+            self.values = []
+
+        def supportsSelection(self) -> bool:  # noqa: N802
+            return True
+
+        def setText(self, text: str, mode: str = "clipboard") -> None:  # noqa: N802
+            self.values.append((mode, text))
+
+    class ProcessingApp(FakeApp):
+        def __init__(self) -> None:
+            super().__init__()
+            self.processed = False
+
+        def processEvents(self) -> None:  # noqa: N802
+            self.processed = True
+
+    clipboard = SelectionClipboard()
+    app = ProcessingApp()
+    FakeQtWidgets.clipboard = clipboard
+    FakeQtWidgets.app = app
+
+    diagnostics_ui._set_clipboard(fake_qt, "copied")
+
+    assert clipboard.values == [("clipboard", "copied"), ("selection", "copied")]
+    assert app.processed is True
+
+
 def test_show_report_window_requires_qapplication(fake_qt: QtBinding) -> None:
     FakeQtWidgets.app = None
 
