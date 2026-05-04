@@ -93,8 +93,8 @@ work:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
 2. Build on the Edit Mode shell: persist layout edits to user presets or
-   overrides, implement real sticky-frame snapping behavior, add snap/spacing
-   guides, and keep the existing layout-map frame view stable.
+   overrides, add snap/spacing guides, expand right-click options routing, and
+   keep the existing layout-map frame view stable.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

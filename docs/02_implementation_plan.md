@@ -304,7 +304,8 @@ Status: complete for the first shell slice.
   configuring grid size, sticky-frame snapping, and snap-to-grid later; the
   first shell may show the grid and settings without moving or saving rails yet.
   Done for grid visibility, Grid Size, Snap to Grid, and Sticky Frames controls;
-  real persisted snap/sticky behavior remains in 2.5.
+  in-session snap/sticky movement is implemented, while saved persistence
+  remains in 2.5.
 - Keep normal action execution disabled or clearly separated while editing.
 
 Done when existing and user-created rails can be selected and inspected in Edit
@@ -438,9 +439,9 @@ ready for the first Edit Mode shell.
 Next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail selection:
 complete for the first Maya-facing shell. Next slice: Phase 2 step 2.5 layout
 editing and direct manipulation, especially persisted offset edits,
-sticky-frame snapping behavior, snap/spacing guides, and right-click routing
-into a fuller options surface. Keep `docs/06_wow_style_customization.md` in
-mind, but do not start Bind Mode, flyouts, command rings, profile layers,
+snap/spacing guides, saved handling for snap/sticky edits, and right-click
+routing into a fuller options surface. Keep `docs/06_wow_style_customization.md`
+in mind, but do not start Bind Mode, flyouts, command rings, profile layers,
 marking-menu export, or Viewport 2.0 yet.
 
 ## Research Backlog

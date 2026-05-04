@@ -41,6 +41,49 @@ def test_rail_frame_contains_and_topmost_selection() -> None:
     assert edit_mode._topmost_frame_at((back, front), 121, 121) is None
 
 
+def test_snap_to_grid_and_sticky_frame_alignment() -> None:
+    moving = edit_mode.RailFrameInfo(
+        preset_id="moving",
+        label="Moving",
+        x=10,
+        y=10,
+        width=40,
+        height=40,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="horizontal",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    target = replace(moving, preset_id="target", x=100, y=200)
+
+    assert edit_mode._snap_value_to_grid(30, 16) == 32
+    assert edit_mode._snapped_position(
+        moving,
+        30,
+        47,
+        edit_mode.EditModeSettings(snap_to_grid=True, grid_size=16),
+        (moving, target),
+    ) == (32, 48)
+    assert edit_mode._snapped_position(
+        moving,
+        61,
+        161,
+        edit_mode.EditModeSettings(sticky_frames=True),
+        (moving, target),
+    ) == (60, 160)
+    assert edit_mode._snapped_position(
+        moving,
+        40,
+        140,
+        edit_mode.EditModeSettings(sticky_frames=True),
+        (moving, target),
+    ) == (40, 140)
+
+
 def test_widget_position_prefers_parent_mapped_global_position() -> None:
     class Point:
         def __init__(self, x_pos: int, y_pos: int) -> None:

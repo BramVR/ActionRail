@@ -64,9 +64,35 @@ custom_spec = actionrail.StackSpec(
         ),
     ),
 )
+target_spec = actionrail.StackSpec(
+    id="edit_mode_target",
+    layout=actionrail.RailLayout(
+        anchor="viewport.bottom.center",
+        orientation="horizontal",
+        rows=1,
+        columns=2,
+        offset=(180, -120),
+        locked=False,
+    ),
+    items=(
+        actionrail.StackItem(
+            type="button",
+            id="edit_mode_target.one",
+            label="One",
+            action="maya.tool.move",
+        ),
+        actionrail.StackItem(
+            type="button",
+            id="edit_mode_target.two",
+            label="Two",
+            action="maya.tool.rotate",
+        ),
+    ),
+)
 
 actionrail.show_preset("transform_stack")
 actionrail.show_spec(custom_spec)
+actionrail.show_spec(target_spec)
 app.processEvents()
 cmds.refresh(force=True)
 app.processEvents()
@@ -83,7 +109,7 @@ app.processEvents()
 cmds.refresh(force=True)
 app.processEvents()
 
-if not state.enabled or state.rail_count < 2:
+if not state.enabled or state.rail_count < 3:
     raise AssertionError(f"Edit Mode did not see active rails: {state}")
 
 edit_widget = next(
@@ -111,6 +137,12 @@ custom_frame = next(
 )
 if custom_frame is None:
     raise AssertionError(f"Custom rail frame was not present: {host.frames}")
+target_frame = next(
+    (frame for frame in host.frames if frame.preset_id == "edit_mode_target"),
+    None,
+)
+if target_frame is None:
+    raise AssertionError(f"Target rail frame was not present: {host.frames}")
 
 click_point = QtCore.QPoint(custom_frame.x + 4, custom_frame.y + 4)
 QtTest.QTest.mouseClick(edit_widget, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier, click_point)
@@ -142,9 +174,26 @@ if custom_frame_after_nudge.x != old_x + 5:
         f"X coordinate control did not move frame: {old_x} -> {custom_frame_after_nudge.x}"
     )
 
+actionrail.set_edit_mode_options(snap_to_grid=False, sticky_frames=True)
+app.processEvents()
+host.set_selected_position(
+    target_frame.x - custom_frame_after_nudge.width + 5,
+    custom_frame_after_nudge.y,
+    apply_snapping=True,
+)
+app.processEvents()
+custom_frame_after_sticky = next(
+    frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
+)
+if custom_frame_after_sticky.right != target_frame.x:
+    raise AssertionError(
+        "Sticky Frames did not align the moved rail to the target rail: "
+        f"{custom_frame_after_sticky.right} != {target_frame.x}"
+    )
+
 right_click_point = QtCore.QPoint(
-    custom_frame_after_nudge.x + 4,
-    custom_frame_after_nudge.y + 4,
+    custom_frame_after_sticky.x + 4,
+    custom_frame_after_sticky.y + 4,
 )
 QtTest.QTest.mouseClick(
     edit_widget,
@@ -175,6 +224,8 @@ result = {
     "screenshot_size": [pixmap.width(), pixmap.height()],
     "selected_preset_id": actionrail.edit_mode_state().selected_preset_id,
     "snap_to_grid": actionrail.edit_mode_state().settings.snap_to_grid,
+    "sticky_aligned_right_edge": custom_frame_after_sticky.right,
+    "sticky_target_left_edge": target_frame.x,
     "sticky_frames": actionrail.edit_mode_state().settings.sticky_frames,
 }
 

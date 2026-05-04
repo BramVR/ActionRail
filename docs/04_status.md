@@ -324,8 +324,9 @@ Last updated: 2026-05-04
   - Edit Mode draws active rails as labeled translucent frame rectangles over a
     grid, shows Grid, Grid Size, Snap to Grid, Sticky Frames, and locked state,
     supports left-click frame selection, records right-click frame options
-    routing, and allows non-persistent X/Y nudging/reset for unlocked active
-    rails.
+    routing, allows non-persistent X/Y nudging/reset for unlocked active rails,
+    and applies in-session snap-to-grid/sticky-frame alignment during edit
+    movement.
   - `tests/maya_smoke/actionrail_edit_mode_smoke.py` verifies the Maya-facing
     layout-map overlay, grid/settings controls, left-click selection, X
     coordinate movement, right-click options routing, and screenshot capture.
@@ -344,9 +345,8 @@ Start here:
 1. Read `../bram-agent-scripts/AGENTS.MD`, then `docs/00_start_here.md`, then this file.
 2. First recommended coding slice: begin Phase 2 step 2.5 Layout Editing And
    Direct Manipulation. Persist edited rail offsets to user presets or user
-   overrides, implement real sticky-frame snapping and snap/spacing guides, and
-   expand right-click frame routing into the options surface without starting
-   Bind Mode or flyouts.
+   overrides, add snap/spacing guides, and expand right-click frame routing into
+   the options surface without starting Bind Mode or flyouts.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 4. Do not start full Edit Mode, Bind Mode, flyouts, command rings, or Viewport 2.0 yet.
 
@@ -361,13 +361,15 @@ Start here:
     footprints.
   - Left-click selection, selected-frame X/Y popover with arrow nudges and
     Reset, and right-click options routing marker.
-  - Non-persistent in-session offset movement for unlocked active rails.
+  - Non-persistent in-session offset movement for unlocked active rails,
+    including snap-to-grid and sticky-frame edge alignment.
 - Verification hardening: `scripts/maya-smoke.ps1` now accepts Sessiond
   structured payloads without `success` when they explicitly report
   `errors: null`, matching the current cleanup payload shape.
 - Current live state: Quick Create can preview/save/load; Edit Mode can inspect
-  and temporarily position active rails in the viewport layout-map view; saved
-  layout persistence and real sticky-frame snapping are next.
+  and temporarily position active rails in the viewport layout-map view with
+  snap-to-grid and sticky-frame alignment; saved layout persistence and fuller
+  frame options are next.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: begin Phase 2 step 2.5 layout editing/direct manipulation
   on top of the verified Edit Mode shell.
@@ -394,23 +396,25 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 394 passed, `TOTAL 4109 0 100%`.
+  -> 395 passed, `TOTAL 4145 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script actionrail_edit_mode_smoke.py -Timeout 240 -NoStart`
   -> passed; verified the Edit Mode layout-map overlay, Grid Size 64,
   Snap to Grid and Sticky Frames settings, left-click selection, X coordinate
-  movement, right-click options routing, and screenshot capture at
+  movement, sticky-frame edge alignment, right-click options routing, and
+  screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script all -Timeout 240 -NoStart`
   -> passed against a separate MayaSessiond on port `7219`; verified capture,
   diagnostic badges, diagnostics window copy actions, hidden visibility,
-  Edit Mode layout-map screenshot, horizontal icon rail, hotkey bridge, hotkey
-  label sync, import/recovery diagnostics, Maya icons, menu/shelf UI, missing
-  Maya icon resources, overlay cleanup, phase 0, predicates, Quick Create
-  save/overwrite/load screenshots, StackItem ABI, and transform-stack state.
+  Edit Mode layout-map screenshot and sticky-frame alignment, horizontal icon
+  rail, hotkey bridge, hotkey label sync, import/recovery diagnostics, Maya
+  icons, menu/shelf UI, missing Maya icon resources, overlay cleanup, phase 0,
+  predicates, Quick Create save/overwrite/load screenshots, StackItem ABI, and
+  transform-stack state.
 - Screenshot inspection:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,

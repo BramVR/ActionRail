@@ -16,6 +16,7 @@ from typing import Any
 from .qt import load
 
 DEFAULT_GRID_SIZE = 64
+STICKY_SNAP_THRESHOLD = 8
 MIN_GRID_SIZE = 4
 MAX_GRID_SIZE = 512
 EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
@@ -30,6 +31,7 @@ __all__ = [
     "EditModeSettings",
     "EditModeState",
     "RailFrameInfo",
+    "STICKY_SNAP_THRESHOLD",
     "edit_mode_state",
     "enter_edit_mode",
     "exit_edit_mode",
@@ -321,13 +323,27 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             return
         self.set_selected_position(selected.x + dx, selected.y + dy)
 
-    def set_selected_position(self, x_pos: int, y_pos: int) -> None:
+    def set_selected_position(
+        self,
+        x_pos: int,
+        y_pos: int,
+        *,
+        apply_snapping: bool = False,
+    ) -> None:
         selected = self.selected_frame()
         if selected is None or selected.locked:
             return
         host = _runtime_hosts().get(selected.preset_id)
         if host is None:
             return
+        if apply_snapping:
+            x_pos, y_pos = _snapped_position(
+                selected,
+                int(x_pos),
+                int(y_pos),
+                self.settings,
+                self.frames,
+            )
         base_x = selected.x - selected.offset[0]
         base_y = selected.y - selected.offset[1]
         new_offset = (int(x_pos) - base_x, int(y_pos) - base_y)
@@ -362,6 +378,8 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
             def __init__(self, edit_host: EditModeOverlayHost) -> None:
                 super().__init__()
                 self._host = edit_host
+                self._drag_preset_id = ""
+                self._drag_offset = (0, 0)
                 self.setAttribute(qt.QtCore.Qt.WA_TranslucentBackground, True)
                 self.setMouseTracking(True)
                 self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
@@ -390,12 +408,33 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                 frame = self._frame_at_event(event)
                 if frame is None:
                     self._host.select_rail("")
+                    self._drag_preset_id = ""
                     event.accept()
                     return
                 if event.button() == qt.QtCore.Qt.RightButton:
                     self._host.open_options(frame.preset_id)
                 else:
                     self._host.select_rail(frame.preset_id)
+                    if not frame.locked:
+                        point = event.pos()
+                        self._drag_preset_id = frame.preset_id
+                        self._drag_offset = (point.x() - frame.x, point.y() - frame.y)
+                event.accept()
+
+            def mouseMoveEvent(self, event: Any) -> None:  # noqa: N802
+                if not self._drag_preset_id:
+                    event.accept()
+                    return
+                point = event.pos()
+                self._host.set_selected_position(
+                    point.x() - self._drag_offset[0],
+                    point.y() - self._drag_offset[1],
+                    apply_snapping=True,
+                )
+                event.accept()
+
+            def mouseReleaseEvent(self, event: Any) -> None:  # noqa: N802
+                self._drag_preset_id = ""
                 event.accept()
 
             def resizeEvent(self, event: Any) -> None:  # noqa: N802
@@ -703,6 +742,69 @@ def _topmost_frame_at(
         if frame.contains(x_pos, y_pos):
             return frame
     return None
+
+
+def _snapped_position(
+    frame: RailFrameInfo,
+    x_pos: int,
+    y_pos: int,
+    settings: EditModeSettings,
+    frames: tuple[RailFrameInfo, ...],
+) -> tuple[int, int]:
+    if settings.snap_to_grid:
+        x_pos = _snap_value_to_grid(x_pos, settings.grid_size)
+        y_pos = _snap_value_to_grid(y_pos, settings.grid_size)
+    if settings.sticky_frames:
+        x_pos, y_pos = _sticky_snap_position(frame, x_pos, y_pos, frames)
+    return x_pos, y_pos
+
+
+def _snap_value_to_grid(value: int, grid_size: int) -> int:
+    grid_size = max(MIN_GRID_SIZE, int(grid_size))
+    return int(round(value / grid_size) * grid_size)
+
+
+def _sticky_snap_position(
+    frame: RailFrameInfo,
+    x_pos: int,
+    y_pos: int,
+    frames: tuple[RailFrameInfo, ...],
+) -> tuple[int, int]:
+    x_candidates = _edge_candidates(x_pos, frame.width)
+    y_candidates = _edge_candidates(y_pos, frame.height)
+    other_x_edges: list[int] = []
+    other_y_edges: list[int] = []
+    for other in frames:
+        if other.preset_id == frame.preset_id:
+            continue
+        other_x_edges.extend(_edge_candidates(other.x, other.width))
+        other_y_edges.extend(_edge_candidates(other.y, other.height))
+    return (
+        _snap_axis_position(x_pos, x_candidates, other_x_edges),
+        _snap_axis_position(y_pos, y_candidates, other_y_edges),
+    )
+
+
+def _edge_candidates(position: int, size: int) -> tuple[int, int, int]:
+    return (position, position + int(size / 2), position + size)
+
+
+def _snap_axis_position(
+    position: int,
+    candidates: tuple[int, int, int],
+    targets: list[int],
+) -> int:
+    best_delta = 0
+    best_distance = STICKY_SNAP_THRESHOLD + 1
+    for candidate in candidates:
+        for target in targets:
+            distance = abs(candidate - target)
+            if distance < best_distance:
+                best_distance = distance
+                best_delta = target - candidate
+    if best_distance <= STICKY_SNAP_THRESHOLD:
+        return position + best_delta
+    return position
 
 
 def _paint_grid(  # pragma: no cover - covered by Maya smoke screenshots.
