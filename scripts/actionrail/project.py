@@ -178,8 +178,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.4 Edit Mode shell in progress",
-            "next_slice": "Edit Mode Maya validation and layout editing polish",
+            "phase": "Phase 2 step 2.4 Edit Mode shell implemented",
+            "next_slice": "Phase 2 step 2.5 layout editing and persistence",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

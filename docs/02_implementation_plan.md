@@ -431,18 +431,17 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 2 steps 2.1-2.3 are complete and verified locally. The draft authoring
+Phase 2 steps 2.1-2.4 are complete and verified locally. The draft authoring
 model, safe user-preset storage, shared preset resolver, dockable Quick Create
-panel, preview cleanup, load-existing support, and save/reload workflow are
-ready for the first Edit Mode shell.
+panel, preview cleanup, load-existing support, save/reload workflow, and first
+Edit Mode layout-map shell are in place.
 
-Next implementation slice: Phase 2 step 2.4, Edit Mode shell and rail selection:
-complete for the first Maya-facing shell. Next slice: Phase 2 step 2.5 layout
-editing and direct manipulation, especially persisted offset edits,
-snap/spacing guides, saved handling for snap/sticky edits, and right-click
-routing into a fuller options surface. Keep `docs/06_wow_style_customization.md`
-in mind, but do not start Bind Mode, flyouts, command rings, profile layers,
-marking-menu export, or Viewport 2.0 yet.
+Next implementation slice: Phase 2 step 2.5 layout editing and direct
+manipulation, especially persisted offset edits, snap/spacing guides, saved
+handling for snap/sticky edits, and right-click routing into a fuller options
+surface. Keep `docs/06_wow_style_customization.md` in mind, but do not start
+Bind Mode, flyouts, command rings, profile layers, marking-menu export, or
+Viewport 2.0 yet.
 
 ## Research Backlog
 
