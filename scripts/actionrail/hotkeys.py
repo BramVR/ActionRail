@@ -10,6 +10,7 @@ Tests: `tests/test_hotkeys.py` and hotkey smoke scripts.
 from __future__ import annotations
 
 import ast
+import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -151,7 +152,8 @@ def publish_action(
 ) -> PublishedCommand:
     """Publish one ActionRail action as a Maya runtime command and nameCommand."""
 
-    runtime_name = runtime_command_name("action", action_id)
+    cmds = _require_cmds(cmds_module)
+    runtime_name = _runtime_command_name_for_publish("action", action_id, cmds)
     name_command = name_command_name(runtime_name)
     annotation = label or f"Run ActionRail action {action_id}"
     command = f"import actionrail; actionrail.run_action({action_id!r})"
@@ -160,13 +162,13 @@ def publish_action(
         command=command,
         annotation=annotation,
         label=label or action_id,
-        cmds_module=cmds_module,
+        cmds_module=cmds,
     )
     _publish_name_command(
         name_command,
         command=runtime_name,
         annotation=annotation,
-        cmds_module=cmds_module,
+        cmds_module=cmds,
     )
     return _remember_published(PublishedCommand("action", action_id, runtime_name, name_command))
 
@@ -236,7 +238,8 @@ def publish_slot(
     """Publish one preset slot as a Maya runtime command and nameCommand."""
 
     target_id = slot_target_id(preset_id, slot_id)
-    runtime_name = runtime_command_name("slot", target_id)
+    cmds = _require_cmds(cmds_module)
+    runtime_name = _runtime_command_name_for_publish("slot", target_id, cmds)
     name_command = name_command_name(runtime_name)
     annotation = label or f"Run ActionRail slot {preset_id}/{slot_id}"
     command = _run_slot_command_text(
@@ -249,13 +252,13 @@ def publish_slot(
         command=command,
         annotation=annotation,
         label=label or slot_id,
-        cmds_module=cmds_module,
+        cmds_module=cmds,
     )
     _publish_name_command(
         name_command,
         command=runtime_name,
         annotation=annotation,
-        cmds_module=cmds_module,
+        cmds_module=cmds,
     )
     return _remember_published(
         PublishedCommand(
@@ -528,6 +531,41 @@ def runtime_command_name(kind: TargetKind, target_id: str) -> str:
     return f"{COMMAND_PREFIX}_{kind}_{safe_target}"
 
 
+def _runtime_command_name_for_publish(kind: TargetKind, target_id: str, cmds: Any) -> str:
+    base_name = runtime_command_name(kind, target_id)
+    if not _runtime_command_exists(base_name, cmds):
+        return base_name
+
+    existing = _published_command_from_runtime(base_name, cmds)
+    if (
+        existing is None
+        or (existing.target_kind == kind and existing.target_id == target_id)
+    ):
+        return base_name
+
+    hashed_name = _hashed_runtime_command_name(kind, target_id)
+    if not _runtime_command_exists(hashed_name, cmds):
+        return hashed_name
+
+    hashed_existing = _published_command_from_runtime(hashed_name, cmds)
+    if (
+        hashed_existing is None
+        or (
+            hashed_existing.target_kind == kind
+            and hashed_existing.target_id == target_id
+        )
+    ):
+        return hashed_name
+
+    msg = f"ActionRail runtime command collision could not be resolved: {target_id}"
+    raise RuntimeError(msg)
+
+
+def _hashed_runtime_command_name(kind: TargetKind, target_id: str) -> str:
+    digest = hashlib.sha1(target_id.encode("utf-8")).hexdigest()[:8]
+    return f"{runtime_command_name(kind, target_id)}_h{digest}"
+
+
 def name_command_name(runtime_name: str) -> str:
     """Return the paired Maya nameCommand used for direct hotkey assignment."""
 
@@ -794,8 +832,11 @@ def _published_command_from_runtime(runtime_name: str, cmds: Any) -> PublishedCo
     if parsed is None:
         return None
 
-    expected_name = runtime_command_name(parsed.target_kind, parsed.target_id)
-    if runtime_name != expected_name:
+    if not _runtime_name_matches_target(
+        runtime_name,
+        parsed.target_kind,
+        parsed.target_id,
+    ):
         return None
     return PublishedCommand(
         parsed.target_kind,
@@ -805,6 +846,18 @@ def _published_command_from_runtime(runtime_name: str, cmds: Any) -> PublishedCo
         parsed.preset_id,
         parsed.slot_id,
         parsed.user_preset_dir,
+    )
+
+
+def _runtime_name_matches_target(
+    runtime_name: str,
+    kind: TargetKind,
+    target_id: str,
+) -> bool:
+    base_name = runtime_command_name(kind, target_id)
+    return runtime_name == base_name or runtime_name == _hashed_runtime_command_name(
+        kind,
+        target_id,
     )
 
 

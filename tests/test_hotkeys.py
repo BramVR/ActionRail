@@ -6,6 +6,7 @@ from types import ModuleType
 
 import pytest
 
+import actionrail.hotkeys as hotkeys
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.hotkeys import (
     HotkeyConflictError,
@@ -269,6 +270,65 @@ def test_publish_preset_slots_resolves_saved_user_preset(tmp_path) -> None:
         "import actionrail; actionrail.run_slot("
         f"'artist_tools', 'artist_tools.move', user_preset_dir={str(tmp_path)!r})"
     )
+
+
+def test_publish_preset_slots_disambiguates_sanitized_name_collisions(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="foo.bar",
+            slots=(DraftSlot(id="baz", label="A", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    save_user_preset(
+        DraftRail(
+            id="foo",
+            slots=(DraftSlot(id="bar_baz", label="B", action="maya.tool.rotate"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+
+    first = publish_preset_slots("foo.bar", user_preset_dir=tmp_path, cmds_module=cmds)[0]
+    second = publish_preset_slots("foo", user_preset_dir=tmp_path, cmds_module=cmds)[0]
+
+    assert first.runtime_command == "ActionRail_slot_foo_bar_baz"
+    assert second.runtime_command.startswith("ActionRail_slot_foo_bar_baz_h")
+    assert first.runtime_command != second.runtime_command
+    assert list_published_commands(cmds_module=cmds) == (first, second)
+    assert cmds.runtime_commands[first.runtime_command]["command"] == (
+        "import actionrail; actionrail.run_slot("
+        f"'foo.bar', 'foo.bar.baz', user_preset_dir={str(tmp_path)!r})"
+    )
+    assert cmds.runtime_commands[second.runtime_command]["command"] == (
+        "import actionrail; actionrail.run_slot("
+        f"'foo', 'foo.bar_baz', user_preset_dir={str(tmp_path)!r})"
+    )
+
+
+def test_publish_slot_reuses_existing_hashed_command_for_same_target() -> None:
+    cmds = FakeCmds()
+
+    publish_slot("foo.bar", "baz", cmds_module=cmds)
+    hashed = publish_slot("foo", "bar_baz", cmds_module=cmds)
+    republished = publish_slot("foo", "bar_baz", cmds_module=cmds)
+
+    assert republished.runtime_command == hashed.runtime_command
+
+
+def test_publish_slot_reports_unresolvable_runtime_name_collision(monkeypatch) -> None:
+    cmds = FakeCmds()
+    monkeypatch.setattr(
+        hotkeys,
+        "_hashed_runtime_command_name",
+        lambda _kind, _target_id: "ActionRail_slot_shared_hash",
+    )
+
+    publish_slot("foo.bar", "baz", cmds_module=cmds)
+    publish_slot("foo", "bar_baz", cmds_module=cmds)
+
+    with pytest.raises(RuntimeError, match="collision could not be resolved"):
+        publish_slot("foo", "bar-baz", cmds_module=cmds)
 
 
 def test_publish_slot_command_uses_normalized_slot_id() -> None:
