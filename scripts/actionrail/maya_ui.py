@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from . import diagnostics, quick_create_ui, runtime
+from . import diagnostics, edit_mode, quick_create_ui, runtime
 from .qt import load
 from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
+MENU_EDIT_MODE_ITEM_NAME = "ActionRailEditModeMenuItem"
 MENU_QUICK_CREATE_ITEM_NAME = "ActionRailQuickCreateMenuItem"
 MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
@@ -51,6 +52,8 @@ def install_menu_toggle(
 
     if cmds.menuItem(MENU_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_EDIT_MODE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_EDIT_MODE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_RUN_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -69,6 +72,14 @@ def install_menu_toggle(
             parent=MENU_NAME,
             sourceType="python",
         )
+    )
+    cmds.menuItem(
+        MENU_EDIT_MODE_ITEM_NAME,
+        label="Toggle Edit Mode",
+        annotation="Show or hide ActionRail Edit Mode layout-map controls.",
+        command=toggle_edit_mode_command(),
+        parent=MENU_NAME,
+        sourceType="python",
     )
     cmds.menuItem(
         MENU_QUICK_CREATE_ITEM_NAME,
@@ -111,6 +122,8 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
     cmds = _require_cmds(cmds_module)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_EDIT_MODE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_EDIT_MODE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -183,6 +196,21 @@ def toggle_command(preset_id: str = TRANSFORM_STACK_ID) -> str:
     if preset_id == TRANSFORM_STACK_ID:
         return "import actionrail; actionrail.toggle_default()"
     return f"import actionrail; actionrail.toggle_default({preset_id!r})"
+
+
+def toggle_edit_mode_command() -> str:
+    """Return the Python command string for the Maya Edit Mode toggle."""
+
+    return "import actionrail; actionrail.toggle_edit_mode()"
+
+
+def toggle_edit_mode(
+    *,
+    panel: str | None = None,
+) -> edit_mode.EditModeState:
+    """Toggle the edit-only layout-map overlay from Maya UI."""
+
+    return edit_mode.toggle_edit_mode(panel=panel)
 
 
 def diagnose_icon_import_from_maya(

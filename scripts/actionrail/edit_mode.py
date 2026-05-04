@@ -1,0 +1,794 @@
+"""Edit Mode layout-map overlay for ActionRail rails.
+
+Purpose: show edit-only grid, rail footprints, selection, and placement controls.
+Owns: global Edit Mode state, layout-map painting, and non-persistent rail nudging.
+Used by: public ActionRail API and Maya menu commands.
+Tests: `tests/test_edit_mode.py` and `tests/maya_smoke/actionrail_edit_mode_smoke.py`.
+"""
+
+from __future__ import annotations
+
+from contextlib import suppress
+from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
+from typing import Any
+
+from .qt import load
+
+DEFAULT_GRID_SIZE = 64
+MIN_GRID_SIZE = 4
+MAX_GRID_SIZE = 512
+EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
+EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
+POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
+
+__all__ = [
+    "DEFAULT_GRID_SIZE",
+    "EDIT_OVERLAY_OBJECT_NAME",
+    "EDIT_PANEL_OBJECT_NAME",
+    "POSITION_POPOVER_OBJECT_NAME",
+    "EditModeSettings",
+    "EditModeState",
+    "RailFrameInfo",
+    "edit_mode_state",
+    "enter_edit_mode",
+    "exit_edit_mode",
+    "refresh_edit_mode",
+    "select_edit_mode_rail",
+    "set_edit_mode_options",
+    "toggle_edit_mode",
+]
+
+
+@dataclass(frozen=True)
+class EditModeSettings:
+    """User-visible edit-mode placement options."""
+
+    show_grid: bool = True
+    snap_to_grid: bool = False
+    sticky_frames: bool = False
+    grid_size: int = DEFAULT_GRID_SIZE
+
+    def normalized(self) -> EditModeSettings:
+        return dataclass_replace(
+            self,
+            grid_size=max(MIN_GRID_SIZE, min(MAX_GRID_SIZE, int(self.grid_size))),
+        )
+
+
+@dataclass(frozen=True)
+class RailFrameInfo:
+    """Viewport-local edit footprint for one active rail."""
+
+    preset_id: str
+    label: str
+    x: int
+    y: int
+    width: int
+    height: int
+    anchor: str
+    offset: tuple[int, int]
+    orientation: str
+    rows: int
+    columns: int
+    scale: float
+    opacity: float
+    locked: bool
+    source_layer: str = "runtime"
+
+    @property
+    def right(self) -> int:
+        return self.x + self.width
+
+    @property
+    def bottom(self) -> int:
+        return self.y + self.height
+
+    def contains(self, x_pos: int, y_pos: int) -> bool:
+        return self.x <= x_pos <= self.right and self.y <= y_pos <= self.bottom
+
+
+@dataclass(frozen=True)
+class EditModeState:
+    """Public summary of the current Edit Mode session."""
+
+    enabled: bool
+    selected_preset_id: str
+    settings: EditModeSettings
+    rail_count: int
+    options_preset_id: str = ""
+
+
+_EDIT_HOST: EditModeOverlayHost | None = None
+_SETTINGS = EditModeSettings()
+_SELECTED_PRESET_ID = ""
+_OPTIONS_PRESET_ID = ""
+
+
+def enter_edit_mode(
+    *,
+    panel: str | None = None,
+    settings: EditModeSettings | None = None,
+) -> EditModeState:
+    """Enter the edit-only layout-map overlay."""
+
+    global _EDIT_HOST, _SETTINGS
+    if settings is not None:
+        _SETTINGS = settings.normalized()
+
+    if _EDIT_HOST is not None:
+        _EDIT_HOST.close()
+
+    _EDIT_HOST = EditModeOverlayHost(panel=panel, settings=_SETTINGS)
+    _EDIT_HOST.show()
+    return edit_mode_state()
+
+
+def exit_edit_mode() -> EditModeState:
+    """Close the Edit Mode overlay and return to normal action execution."""
+
+    global _EDIT_HOST, _SELECTED_PRESET_ID, _OPTIONS_PRESET_ID
+    if _EDIT_HOST is not None:
+        _EDIT_HOST.close()
+    _EDIT_HOST = None
+    _SELECTED_PRESET_ID = ""
+    _OPTIONS_PRESET_ID = ""
+    return edit_mode_state()
+
+
+def toggle_edit_mode(
+    *,
+    panel: str | None = None,
+    settings: EditModeSettings | None = None,
+) -> EditModeState:
+    """Toggle ActionRail Edit Mode."""
+
+    if _EDIT_HOST is None:
+        return enter_edit_mode(panel=panel, settings=settings)
+    return exit_edit_mode()
+
+
+def set_edit_mode_options(
+    *,
+    show_grid: bool | None = None,
+    snap_to_grid: bool | None = None,
+    sticky_frames: bool | None = None,
+    grid_size: int | None = None,
+) -> EditModeState:
+    """Update user-visible Edit Mode grid and snapping options."""
+
+    global _SETTINGS
+    _SETTINGS = EditModeSettings(
+        show_grid=_SETTINGS.show_grid if show_grid is None else bool(show_grid),
+        snap_to_grid=_SETTINGS.snap_to_grid if snap_to_grid is None else bool(snap_to_grid),
+        sticky_frames=(
+            _SETTINGS.sticky_frames if sticky_frames is None else bool(sticky_frames)
+        ),
+        grid_size=_SETTINGS.grid_size if grid_size is None else int(grid_size),
+    ).normalized()
+    if _EDIT_HOST is not None:
+        _EDIT_HOST.set_settings(_SETTINGS)
+    return edit_mode_state()
+
+
+def refresh_edit_mode() -> EditModeState:
+    """Refresh the Edit Mode overlay after rail runtime changes."""
+
+    if _EDIT_HOST is not None:
+        _EDIT_HOST.refresh()
+    return edit_mode_state()
+
+
+def select_edit_mode_rail(preset_id: str) -> EditModeState:
+    """Select an active rail in Edit Mode."""
+
+    global _SELECTED_PRESET_ID
+    _SELECTED_PRESET_ID = preset_id
+    if _EDIT_HOST is not None:
+        _EDIT_HOST.select_rail(preset_id)
+    return edit_mode_state()
+
+
+def edit_mode_state() -> EditModeState:
+    """Return a compact summary of the current Edit Mode state."""
+
+    rail_count = 0
+    if _EDIT_HOST is not None:
+        rail_count = len(_EDIT_HOST.frames)
+    return EditModeState(
+        enabled=_EDIT_HOST is not None,
+        selected_preset_id=_SELECTED_PRESET_ID,
+        settings=_SETTINGS,
+        rail_count=rail_count,
+        options_preset_id=_OPTIONS_PRESET_ID,
+    )
+
+
+class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
+    """Owns the full-viewport edit-only layout-map widget."""
+
+    def __init__(
+        self,
+        *,
+        panel: str | None = None,
+        settings: EditModeSettings | None = None,
+        cmds_module: Any | None = None,
+    ) -> None:
+        from .overlay import (
+            _floating_window_flags,
+            _map_to_global,
+            _qt_widget_is_valid,
+            _ResizeEventFilter,
+            active_model_panel,
+            maya_main_window,
+            model_panel_widget,
+        )
+
+        self.qt = load()
+        self.cmds = _require_cmds(cmds_module)
+        self.panel = panel or active_model_panel(self.cmds)
+        self.parent = model_panel_widget(self.panel, self.cmds)
+        self.window_parent = maya_main_window(self.qt)
+        self.settings = (settings or _SETTINGS).normalized()
+        self.frames: tuple[RailFrameInfo, ...] = ()
+        self._original_offsets: dict[str, tuple[int, int]] = {}
+        self._qt_widget_is_valid = _qt_widget_is_valid
+        self._map_to_global = _map_to_global
+        self._floating = self.window_parent is not None
+        self.widget = _EditModeCanvas(self)
+        self.widget.setObjectName(EDIT_OVERLAY_OBJECT_NAME)
+        self.widget.hide()
+        if self._floating:
+            self.widget.setParent(self.window_parent)
+            self.widget.setWindowFlags(_floating_window_flags(self.qt))
+            self.widget.setAttribute(self.qt.QtCore.Qt.WA_ShowWithoutActivating, True)
+        else:
+            self.widget.setParent(self.parent)
+            self.widget.setWindowFlags(self.qt.QtCore.Qt.Widget)
+        self._resize_filter = _ResizeEventFilter(self)
+        self._filter_targets: list[Any] = []
+        self._install_event_filter(self.parent)
+        self._install_event_filter(self.window_parent)
+
+    def _install_event_filter(self, target: Any | None) -> None:
+        if target is None or not self._qt_widget_is_valid(target):
+            return
+        with suppress(Exception):
+            target.installEventFilter(self._resize_filter.object)
+            self._filter_targets.append(target)
+
+    def show(self) -> None:
+        self.refresh()
+        self.position()
+        self.widget.show()
+        self.widget.raise_()
+        self.position()
+
+    def close(self) -> None:
+        for target in self._filter_targets:
+            if target is not None and self._qt_widget_is_valid(target):
+                with suppress(Exception):
+                    target.removeEventFilter(self._resize_filter.object)
+        self._filter_targets = []
+        if self.widget is not None and self._qt_widget_is_valid(self.widget):
+            self.widget.hide()
+            self.widget.setParent(None)
+            self.widget.deleteLater()
+        self.widget = None
+        self.parent = None
+        self.window_parent = None
+
+    def position(self) -> None:
+        if self.widget is None or self.parent is None:
+            return
+        if not self._qt_widget_is_valid(self.widget) or not self._qt_widget_is_valid(
+            self.parent
+        ):
+            return
+        rect = self.parent.rect()
+        self.widget.resize(rect.width(), rect.height())
+        if self._floating:
+            self.widget.move(self._map_to_global(self.parent, 0, 0, self.qt))
+        else:
+            self.widget.move(0, 0)
+        self.refresh()
+
+    def refresh(self) -> None:
+        self.frames = tuple(_rail_frame_infos(self.qt, self.parent))
+        for frame in self.frames:
+            self._original_offsets.setdefault(frame.preset_id, frame.offset)
+        self.widget.refresh_from_host()
+
+    def set_settings(self, settings: EditModeSettings) -> None:
+        self.settings = settings.normalized()
+        self.widget.refresh_from_host()
+
+    def select_rail(self, preset_id: str) -> None:
+        global _SELECTED_PRESET_ID
+        _SELECTED_PRESET_ID = (
+            preset_id if any(frame.preset_id == preset_id for frame in self.frames) else ""
+        )
+        self.widget.refresh_from_host()
+
+    def open_options(self, preset_id: str) -> None:
+        global _OPTIONS_PRESET_ID
+        _OPTIONS_PRESET_ID = preset_id
+        self.select_rail(preset_id)
+
+    def nudge_selected(self, dx: int, dy: int) -> None:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return
+        self.set_selected_position(selected.x + dx, selected.y + dy)
+
+    def set_selected_position(self, x_pos: int, y_pos: int) -> None:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return
+        host = _runtime_hosts().get(selected.preset_id)
+        if host is None:
+            return
+        base_x = selected.x - selected.offset[0]
+        base_y = selected.y - selected.offset[1]
+        new_offset = (int(x_pos) - base_x, int(y_pos) - base_y)
+        _set_host_offset(host, new_offset)
+        self.refresh()
+
+    def reset_selected_position(self) -> None:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return
+        original = self._original_offsets.get(selected.preset_id, (0, 0))
+        host = _runtime_hosts().get(selected.preset_id)
+        if host is None:
+            return
+        _set_host_offset(host, original)
+        self.refresh()
+
+    def selected_frame(self) -> RailFrameInfo | None:
+        for frame in self.frames:
+            if frame.preset_id == _SELECTED_PRESET_ID:
+                return frame
+        return None
+
+
+class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
+    """Factory wrapper around the Qt canvas class."""
+
+    def __new__(cls, host: EditModeOverlayHost) -> Any:
+        qt = load()
+
+        class _Canvas(qt.QtWidgets.QWidget):
+            def __init__(self, edit_host: EditModeOverlayHost) -> None:
+                super().__init__()
+                self._host = edit_host
+                self.setAttribute(qt.QtCore.Qt.WA_TranslucentBackground, True)
+                self.setMouseTracking(True)
+                self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
+                self._panel = _EditModePanel(self)
+                self._popover = _PositionPopover(self)
+                self._popover.hide()
+
+            def refresh_from_host(self) -> None:
+                self._panel.sync()
+                self._sync_popover()
+                self.update()
+
+            def paintEvent(self, event: Any) -> None:  # noqa: N802
+                painter = qt.QtGui.QPainter(self)
+                try:
+                    painter.setRenderHint(qt.QtGui.QPainter.Antialiasing, False)
+                    if self._host.settings.show_grid:
+                        _paint_grid(qt, painter, self.rect(), self._host.settings.grid_size)
+                    for frame in self._host.frames:
+                        _paint_frame(qt, painter, frame, frame.preset_id == _SELECTED_PRESET_ID)
+                finally:
+                    painter.end()
+                    _ = event
+
+            def mousePressEvent(self, event: Any) -> None:  # noqa: N802
+                frame = self._frame_at_event(event)
+                if frame is None:
+                    self._host.select_rail("")
+                    event.accept()
+                    return
+                if event.button() == qt.QtCore.Qt.RightButton:
+                    self._host.open_options(frame.preset_id)
+                else:
+                    self._host.select_rail(frame.preset_id)
+                event.accept()
+
+            def resizeEvent(self, event: Any) -> None:  # noqa: N802
+                self._panel.move(
+                    max(8, int((self.width() - self._panel.width()) / 2)),
+                    18,
+                )
+                self._sync_popover()
+                super().resizeEvent(event)
+
+            def _frame_at_event(self, event: Any) -> RailFrameInfo | None:
+                point = event.pos()
+                return _topmost_frame_at(self._host.frames, point.x(), point.y())
+
+            def _sync_popover(self) -> None:
+                frame = self._host.selected_frame()
+                self._popover.sync(frame)
+
+        return _Canvas(host)
+
+
+class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
+    def __new__(cls, canvas: Any) -> Any:
+        qt = load()
+
+        class _Panel(qt.QtWidgets.QFrame):
+            def __init__(self, owner: Any) -> None:
+                super().__init__(owner)
+                self._owner = owner
+                self.setObjectName(EDIT_PANEL_OBJECT_NAME)
+                self.setFrameShape(qt.QtWidgets.QFrame.StyledPanel)
+                self.setStyleSheet(_panel_style_sheet())
+                layout = qt.QtWidgets.QGridLayout(self)
+                layout.setContentsMargins(12, 8, 12, 8)
+                layout.setHorizontalSpacing(8)
+                layout.setVerticalSpacing(4)
+
+                self.title = qt.QtWidgets.QLabel("ActionRail Edit Mode")
+                self.title.setAlignment(qt.QtCore.Qt.AlignCenter)
+                self.summary = qt.QtWidgets.QLabel("")
+                self.summary.setAlignment(qt.QtCore.Qt.AlignCenter)
+                self.grid_check = qt.QtWidgets.QCheckBox("Grid")
+                self.snap_check = qt.QtWidgets.QCheckBox("Snap to Grid")
+                self.sticky_check = qt.QtWidgets.QCheckBox("Sticky Frames")
+                self.grid_size = qt.QtWidgets.QSpinBox()
+                self.grid_size.setRange(MIN_GRID_SIZE, MAX_GRID_SIZE)
+                self.grid_size.setSingleStep(4)
+                self.lock_button = qt.QtWidgets.QPushButton("Lock")
+                self.lock_button.setEnabled(False)
+
+                layout.addWidget(self.title, 0, 0, 1, 4)
+                layout.addWidget(self.summary, 1, 0, 1, 4)
+                layout.addWidget(self.grid_check, 2, 0)
+                layout.addWidget(qt.QtWidgets.QLabel("Grid Size"), 2, 1)
+                layout.addWidget(self.grid_size, 2, 2)
+                layout.addWidget(self.lock_button, 2, 3)
+                layout.addWidget(self.snap_check, 3, 0, 1, 2)
+                layout.addWidget(self.sticky_check, 3, 2, 1, 2)
+                self.adjustSize()
+                self.setFixedSize(max(380, self.sizeHint().width()), self.sizeHint().height())
+
+                self.grid_check.toggled.connect(
+                    lambda checked: set_edit_mode_options(show_grid=checked)
+                )
+                self.snap_check.toggled.connect(
+                    lambda checked: set_edit_mode_options(snap_to_grid=checked)
+                )
+                self.sticky_check.toggled.connect(
+                    lambda checked: set_edit_mode_options(sticky_frames=checked)
+                )
+                self.grid_size.valueChanged.connect(
+                    lambda value: set_edit_mode_options(grid_size=value)
+                )
+                self.sync()
+
+            def sync(self) -> None:
+                settings = self._owner._host.settings
+                selected = self._owner._host.selected_frame()
+                self._set_checked(self.grid_check, settings.show_grid)
+                self._set_checked(self.snap_check, settings.snap_to_grid)
+                self._set_checked(self.sticky_check, settings.sticky_frames)
+                self._set_spin_value(self.grid_size, settings.grid_size)
+                if selected is None:
+                    text = f"{len(self._owner._host.frames)} rail frame(s)"
+                    locked = False
+                else:
+                    text = (
+                        f"{selected.label} | {selected.anchor} | "
+                        f"{selected.x}, {selected.y}"
+                    )
+                    locked = selected.locked
+                if _OPTIONS_PRESET_ID:
+                    text = f"{text} | options: {_OPTIONS_PRESET_ID}"
+                self.summary.setText(text)
+                self.lock_button.setText("Locked" if locked else "Unlocked")
+
+            def _set_checked(self, checkbox: Any, checked: bool) -> None:
+                blocked = checkbox.blockSignals(True)
+                checkbox.setChecked(checked)
+                checkbox.blockSignals(blocked)
+
+            def _set_spin_value(self, spinbox: Any, value: int) -> None:
+                blocked = spinbox.blockSignals(True)
+                spinbox.setValue(value)
+                spinbox.blockSignals(blocked)
+
+        return _Panel(canvas)
+
+
+class _PositionPopover:  # pragma: no cover - covered by Maya smoke tests.
+    def __new__(cls, canvas: Any) -> Any:
+        qt = load()
+
+        class _Popover(qt.QtWidgets.QFrame):
+            def __init__(self, owner: Any) -> None:
+                super().__init__(owner)
+                self._owner = owner
+                self._syncing = False
+                self.setObjectName(POSITION_POPOVER_OBJECT_NAME)
+                self.setFrameShape(qt.QtWidgets.QFrame.StyledPanel)
+                self.setStyleSheet(_panel_style_sheet())
+                layout = qt.QtWidgets.QGridLayout(self)
+                layout.setContentsMargins(8, 6, 8, 6)
+                layout.setHorizontalSpacing(5)
+                layout.setVerticalSpacing(4)
+                self.name_label = qt.QtWidgets.QLabel("")
+                self.name_label.setAlignment(qt.QtCore.Qt.AlignCenter)
+                self.up = qt.QtWidgets.QToolButton()
+                self.left = qt.QtWidgets.QToolButton()
+                self.right = qt.QtWidgets.QToolButton()
+                self.down = qt.QtWidgets.QToolButton()
+                self.up.setText("^")
+                self.left.setText("<")
+                self.right.setText(">")
+                self.down.setText("v")
+                self.x_spin = qt.QtWidgets.QSpinBox()
+                self.y_spin = qt.QtWidgets.QSpinBox()
+                for spin in (self.x_spin, self.y_spin):
+                    spin.setRange(-10000, 10000)
+                self.reset = qt.QtWidgets.QPushButton("Reset")
+                layout.addWidget(self.name_label, 0, 0, 1, 4)
+                layout.addWidget(self.up, 1, 1)
+                layout.addWidget(self.left, 2, 0)
+                layout.addWidget(self.right, 2, 2)
+                layout.addWidget(self.down, 3, 1)
+                layout.addWidget(qt.QtWidgets.QLabel("X"), 1, 3)
+                layout.addWidget(self.x_spin, 2, 3)
+                layout.addWidget(qt.QtWidgets.QLabel("Y"), 3, 3)
+                layout.addWidget(self.y_spin, 4, 3)
+                layout.addWidget(self.reset, 4, 0, 1, 3)
+                self.adjustSize()
+                self.setFixedSize(max(210, self.sizeHint().width()), self.sizeHint().height())
+                self.up.clicked.connect(lambda: self._owner._host.nudge_selected(0, -1))
+                self.down.clicked.connect(lambda: self._owner._host.nudge_selected(0, 1))
+                self.left.clicked.connect(lambda: self._owner._host.nudge_selected(-1, 0))
+                self.right.clicked.connect(lambda: self._owner._host.nudge_selected(1, 0))
+                self.reset.clicked.connect(self._owner._host.reset_selected_position)
+                self.x_spin.valueChanged.connect(self._spin_changed)
+                self.y_spin.valueChanged.connect(self._spin_changed)
+
+            def sync(self, frame: RailFrameInfo | None) -> None:
+                if frame is None:
+                    self.hide()
+                    return
+                self._syncing = True
+                self.name_label.setText(frame.label)
+                self.x_spin.setValue(frame.x)
+                self.y_spin.setValue(frame.y)
+                self._syncing = False
+                locked = frame.locked
+                for control in (
+                    self.up,
+                    self.down,
+                    self.left,
+                    self.right,
+                    self.x_spin,
+                    self.y_spin,
+                    self.reset,
+                ):
+                    control.setEnabled(not locked)
+                self.move(_popover_position(self._owner, frame, self.width(), self.height()))
+                self.show()
+                self.raise_()
+
+            def _spin_changed(self) -> None:
+                if self._syncing:
+                    return
+                self._owner._host.set_selected_position(
+                    self.x_spin.value(),
+                    self.y_spin.value(),
+                )
+
+        return _Popover(canvas)
+
+
+def _rail_frame_infos(qt: Any, edit_parent: Any) -> tuple[RailFrameInfo, ...]:
+    frames: list[RailFrameInfo] = []
+    for preset_id, host in _runtime_hosts().items():
+        frame = _rail_frame_info(qt, edit_parent, preset_id, host)
+        if frame is not None:
+            frames.append(frame)
+    return tuple(frames)
+
+
+def _rail_frame_info(
+    qt: Any,
+    edit_parent: Any,
+    preset_id: str,
+    host: Any,
+) -> RailFrameInfo | None:
+    widget = getattr(host, "widget", None)
+    if widget is None or not _safe_widget_visible(widget):
+        return None
+
+    width = _safe_widget_dimension(widget, "width")
+    height = _safe_widget_dimension(widget, "height")
+    if width <= 0 or height <= 0:
+        return None
+
+    x_pos, y_pos = _widget_position_in_parent(qt, edit_parent, widget)
+    spec = getattr(host, "spec", None)
+    layout = getattr(spec, "layout", None)
+    if spec is None or layout is None:
+        return None
+    return RailFrameInfo(
+        preset_id=preset_id,
+        label=_frame_label(preset_id),
+        x=x_pos,
+        y=y_pos,
+        width=width,
+        height=height,
+        anchor=str(getattr(layout, "anchor", "")),
+        offset=tuple(getattr(layout, "offset", (0, 0))),
+        orientation=str(getattr(layout, "orientation", "")),
+        rows=int(getattr(layout, "rows", 1)),
+        columns=int(getattr(layout, "columns", 1)),
+        scale=float(getattr(layout, "scale", 1.0)),
+        opacity=float(getattr(layout, "opacity", 1.0)),
+        locked=bool(getattr(layout, "locked", False)),
+    )
+
+
+def _runtime_hosts() -> dict[str, Any]:
+    from . import runtime
+
+    return dict(runtime._active_overlay_hosts())
+
+
+def _set_host_offset(host: Any, offset: tuple[int, int]) -> None:
+    update = getattr(host, "update_layout_offset", None)
+    if callable(update):
+        update(offset)
+        return
+    spec = getattr(host, "spec", None)
+    layout = getattr(spec, "layout", None)
+    if spec is None or layout is None:
+        return
+    host.spec = dataclass_replace(spec, layout=dataclass_replace(layout, offset=offset))
+    position = getattr(host, "position", None)
+    if callable(position):
+        position()
+
+
+def _widget_position_in_parent(qt: Any, parent: Any, widget: Any) -> tuple[int, int]:
+    try:
+        origin = qt.QtCore.QPoint(0, 0)
+        global_pos = widget.mapToGlobal(origin)
+        local_pos = parent.mapFromGlobal(global_pos)
+        return int(local_pos.x()), int(local_pos.y())
+    except Exception:
+        pass
+    try:
+        geometry = widget.geometry()
+        return int(geometry.x()), int(geometry.y())
+    except Exception:
+        return (0, 0)
+
+
+def _safe_widget_visible(widget: Any) -> bool:
+    visible = getattr(widget, "isVisible", None)
+    if not callable(visible):
+        return False
+    try:
+        return bool(visible())
+    except Exception:
+        return False
+
+
+def _safe_widget_dimension(widget: Any, method_name: str) -> int:
+    method = getattr(widget, method_name, None)
+    if not callable(method):
+        return 0
+    try:
+        return int(method())
+    except Exception:
+        return 0
+
+
+def _topmost_frame_at(
+    frames: tuple[RailFrameInfo, ...],
+    x_pos: int,
+    y_pos: int,
+) -> RailFrameInfo | None:
+    for frame in reversed(frames):
+        if frame.contains(x_pos, y_pos):
+            return frame
+    return None
+
+
+def _paint_grid(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    rect: Any,
+    grid_size: int,
+) -> None:
+    minor = qt.QtGui.QColor(20, 80, 110, 105)
+    major = qt.QtGui.QColor(42, 167, 227, 145)
+    grid_size = max(MIN_GRID_SIZE, int(grid_size))
+    painter.setPen(qt.QtGui.QPen(minor, 1))
+    for x_pos in range(0, rect.width() + grid_size, grid_size):
+        painter.setPen(qt.QtGui.QPen(major if x_pos % (grid_size * 4) == 0 else minor, 1))
+        painter.drawLine(x_pos, 0, x_pos, rect.height())
+    for y_pos in range(0, rect.height() + grid_size, grid_size):
+        painter.setPen(qt.QtGui.QPen(major if y_pos % (grid_size * 4) == 0 else minor, 1))
+        painter.drawLine(0, y_pos, rect.width(), y_pos)
+
+
+def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    frame: RailFrameInfo,
+    selected: bool,
+) -> None:
+    rect = qt.QtCore.QRect(frame.x, frame.y, frame.width, frame.height)
+    painter.fillRect(rect, qt.QtGui.QColor(2, 8, 12, 178))
+    outline = qt.QtGui.QColor(0, 176, 255, 235)
+    if selected:
+        outline = qt.QtGui.QColor(255, 211, 0, 255)
+    painter.setPen(qt.QtGui.QPen(outline, 2 if selected else 1))
+    painter.drawRect(rect.adjusted(0, 0, -1, -1))
+    painter.setPen(qt.QtGui.QColor(0, 184, 255, 255))
+    font = painter.font()
+    font.setBold(True)
+    font.setPointSize(max(7, min(11, int(frame.height / 3))))
+    painter.setFont(font)
+    label = frame.label
+    if frame.locked:
+        label = f"{label} | Locked"
+    painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
+
+
+def _popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int) -> Any:
+    x_pos = min(max(8, frame.right + 8), max(8, canvas.width() - width - 8))
+    y_pos = min(max(8, frame.y), max(8, canvas.height() - height - 8))
+    return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
+
+
+def _frame_label(preset_id: str) -> str:
+    return preset_id.replace("_", " ").title()
+
+
+def _panel_style_sheet() -> str:
+    return """
+    QFrame {
+        background: rgba(4, 8, 11, 205);
+        border: 1px solid #00a8f5;
+        color: #dff7ff;
+    }
+    QLabel {
+        color: #dff7ff;
+        border: 0;
+        background: transparent;
+    }
+    QCheckBox {
+        color: #ffd400;
+        border: 0;
+        background: transparent;
+    }
+    QSpinBox, QPushButton, QToolButton {
+        background: #111820;
+        border: 1px solid #00a8f5;
+        color: #ffffff;
+        min-height: 18px;
+    }
+    """
+
+
+def _require_cmds(cmds_module: Any | None = None) -> Any:
+    if cmds_module is not None:
+        return cmds_module
+    try:
+        import maya.cmds as cmds  # type: ignore[import-not-found]
+    except Exception as exc:  # pragma: no cover - exercised only inside Maya.
+        msg = "ActionRail Edit Mode requires maya.cmds inside Maya."
+        raise RuntimeError(msg) from exc
+    return cmds

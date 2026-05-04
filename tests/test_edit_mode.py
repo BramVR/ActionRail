@@ -1,0 +1,496 @@
+from __future__ import annotations
+
+import sys
+from dataclasses import replace
+from types import ModuleType
+
+import actionrail.edit_mode as edit_mode
+import actionrail.overlay as overlay
+import actionrail.runtime as runtime
+from actionrail.spec import RailLayout, StackSpec
+
+
+def test_edit_mode_settings_clamp_grid_size() -> None:
+    assert edit_mode.EditModeSettings(grid_size=-1).normalized().grid_size == 4
+    assert edit_mode.EditModeSettings(grid_size=999).normalized().grid_size == 512
+    assert edit_mode.EditModeSettings(grid_size=32).normalized().grid_size == 32
+
+
+def test_rail_frame_contains_and_topmost_selection() -> None:
+    back = edit_mode.RailFrameInfo(
+        preset_id="back",
+        label="Back",
+        x=0,
+        y=0,
+        width=100,
+        height=100,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    front = replace(back, preset_id="front", label="Front", x=20, y=20)
+
+    assert back.contains(100, 100) is True
+    assert back.contains(101, 100) is False
+    assert edit_mode._topmost_frame_at((back, front), 25, 25) is front
+    assert edit_mode._topmost_frame_at((back, front), 121, 121) is None
+
+
+def test_widget_position_prefers_parent_mapped_global_position() -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x = x_pos
+            self._y = y_pos
+
+        def x(self) -> int:
+            return self._x
+
+        def y(self) -> int:
+            return self._y
+
+    class Qt:
+        class QtCore:
+            QPoint = Point
+
+    class Widget:
+        def mapToGlobal(self, _point: Point) -> Point:  # noqa: N802
+            return Point(130, 240)
+
+    class Parent:
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return Point(point.x() - 100, point.y() - 200)
+
+    assert edit_mode._widget_position_in_parent(Qt, Parent(), Widget()) == (30, 40)
+
+
+def test_widget_position_falls_back_to_geometry_and_origin() -> None:
+    class Geometry:
+        def x(self) -> int:
+            return 7
+
+        def y(self) -> int:
+            return 9
+
+    class GeometryWidget:
+        def mapToGlobal(self, _point: object) -> object:  # noqa: N802
+            raise RuntimeError("not mapped")
+
+        def geometry(self) -> Geometry:
+            return Geometry()
+
+    class BrokenWidget:
+        def geometry(self) -> object:
+            raise RuntimeError("deleted")
+
+    class Qt:
+        class QtCore:
+            class QPoint:
+                def __init__(self, *_args: object) -> None:
+                    pass
+
+    assert edit_mode._widget_position_in_parent(Qt, object(), GeometryWidget()) == (7, 9)
+    assert edit_mode._widget_position_in_parent(Qt, object(), BrokenWidget()) == (0, 0)
+
+
+def test_rail_frame_info_extracts_runtime_host_geometry() -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x = x_pos
+            self._y = y_pos
+
+        def x(self) -> int:
+            return self._x
+
+        def y(self) -> int:
+            return self._y
+
+    class Qt:
+        class QtCore:
+            QPoint = Point
+
+    class Parent:
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+    class Widget:
+        def isVisible(self) -> bool:  # noqa: N802
+            return True
+
+        def width(self) -> int:
+            return 46
+
+        def height(self) -> int:
+            return 214
+
+        def mapToGlobal(self, _point: Point) -> Point:  # noqa: N802
+            return Point(12, 34)
+
+    class Host:
+        widget = Widget()
+        spec = StackSpec(
+            id="transform_stack",
+            layout=RailLayout(
+                anchor="viewport.left.center",
+                offset=(3, 4),
+                rows=5,
+                columns=1,
+                locked=True,
+            ),
+            items=(),
+        )
+
+    frame = edit_mode._rail_frame_info(Qt, Parent(), "transform_stack", Host())
+
+    assert frame is not None
+    assert frame.label == "Transform Stack"
+    assert frame.x == 12
+    assert frame.y == 34
+    assert frame.width == 46
+    assert frame.height == 214
+    assert frame.offset == (3, 4)
+    assert frame.locked is True
+
+
+def test_rail_frame_infos_filters_missing_or_invalid_hosts(monkeypatch) -> None:
+    class Widget:
+        def __init__(self, *, visible: bool = True, width: int = 10, height: int = 20) -> None:
+            self._visible = visible
+            self._width = width
+            self._height = height
+
+        def isVisible(self) -> bool:  # noqa: N802
+            return self._visible
+
+        def width(self) -> int:
+            return self._width
+
+        def height(self) -> int:
+            return self._height
+
+        def geometry(self) -> object:
+            return type("Geometry", (), {"x": lambda self: 1, "y": lambda self: 2})()
+
+    valid_spec = StackSpec(
+        id="valid",
+        layout=RailLayout(anchor="viewport.left.top"),
+        items=(),
+    )
+    hosts = {
+        "none": type("Host", (), {"widget": None, "spec": valid_spec})(),
+        "hidden": type("Host", (), {"widget": Widget(visible=False), "spec": valid_spec})(),
+        "zero": type("Host", (), {"widget": Widget(width=0), "spec": valid_spec})(),
+        "nospec": type("Host", (), {"widget": Widget(), "spec": None})(),
+        "valid": type("Host", (), {"widget": Widget(), "spec": valid_spec})(),
+    }
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: hosts)
+
+    frames = edit_mode._rail_frame_infos(object(), object())
+
+    assert [frame.preset_id for frame in frames] == ["valid"]
+
+
+def test_safe_widget_helpers_handle_missing_and_raising_methods() -> None:
+    class Raising:
+        def isVisible(self) -> bool:  # noqa: N802
+            raise RuntimeError("deleted")
+
+        def width(self) -> int:
+            raise RuntimeError("deleted")
+
+    assert edit_mode._safe_widget_visible(object()) is False
+    assert edit_mode._safe_widget_visible(Raising()) is False
+    assert edit_mode._safe_widget_dimension(object(), "width") == 0
+    assert edit_mode._safe_widget_dimension(Raising(), "width") == 0
+
+
+def test_set_edit_mode_options_refreshes_active_host(monkeypatch) -> None:
+    class Host:
+        frames = ()
+
+        def __init__(self) -> None:
+            self.settings = None
+
+        def set_settings(self, settings: edit_mode.EditModeSettings) -> None:
+            self.settings = settings
+
+    host = Host()
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", host)
+
+    state = edit_mode.set_edit_mode_options(
+        show_grid=False,
+        snap_to_grid=True,
+        sticky_frames=True,
+        grid_size=1000,
+    )
+
+    assert state.enabled is True
+    assert state.settings.show_grid is False
+    assert state.settings.snap_to_grid is True
+    assert state.settings.sticky_frames is True
+    assert state.settings.grid_size == 512
+    assert host.settings == state.settings
+
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", None)
+    edit_mode.set_edit_mode_options(
+        show_grid=True,
+        snap_to_grid=False,
+        sticky_frames=False,
+        grid_size=edit_mode.DEFAULT_GRID_SIZE,
+    )
+
+
+def test_enter_exit_and_toggle_edit_mode_use_host(monkeypatch) -> None:
+    events: list[tuple[str, object]] = []
+
+    class FakeHost:
+        def __init__(self, **kwargs: object) -> None:
+            events.append(("init", kwargs))
+            self.frames = ("frame",)
+
+        def show(self) -> None:
+            events.append(("show", None))
+
+        def close(self) -> None:
+            events.append(("close", None))
+
+        def refresh(self) -> None:
+            events.append(("refresh", None))
+
+    monkeypatch.setattr(edit_mode, "EditModeOverlayHost", FakeHost)
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", None)
+
+    state = edit_mode.enter_edit_mode(
+        panel="modelPanel4",
+        settings=edit_mode.EditModeSettings(grid_size=10),
+    )
+    assert state.enabled is True
+    assert state.rail_count == 1
+
+    state = edit_mode.enter_edit_mode(panel="modelPanel2")
+    assert state.enabled is True
+    assert events.count(("close", None)) == 1
+
+    assert edit_mode.toggle_edit_mode().enabled is False
+    assert edit_mode.toggle_edit_mode(panel="modelPanel3").enabled is True
+    assert edit_mode.refresh_edit_mode().enabled is True
+
+    edit_mode.exit_edit_mode()
+    edit_mode.set_edit_mode_options(grid_size=edit_mode.DEFAULT_GRID_SIZE)
+
+
+def test_select_edit_mode_rail_forwards_to_active_host(monkeypatch) -> None:
+    class Host:
+        frames = ()
+
+        def __init__(self) -> None:
+            self.selected = ""
+
+        def select_rail(self, preset_id: str) -> None:
+            self.selected = preset_id
+
+    host = Host()
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", host)
+
+    state = edit_mode.select_edit_mode_rail("transform_stack")
+
+    assert state.selected_preset_id == "transform_stack"
+    assert host.selected == "transform_stack"
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", None)
+    edit_mode.select_edit_mode_rail("")
+
+
+def test_select_and_nudge_unlocked_frame_updates_host(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="custom",
+        label="Custom",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(10, 20),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    updates = []
+
+    class RuntimeHost:
+        def update_layout_offset(self, offset: tuple[int, int]) -> None:
+            updates.append(offset)
+
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host._original_offsets = {"custom": (10, 20)}
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.select_rail("custom")
+    host.refresh = lambda: None
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"custom": RuntimeHost()})
+
+    host.nudge_selected(5, -2)
+    host.reset_selected_position()
+
+    assert updates == [(15, 18), (10, 20)]
+
+
+def test_set_host_offset_falls_back_to_spec_replacement() -> None:
+    positioned = []
+
+    class RuntimeHost:
+        def __init__(self) -> None:
+            self.spec = StackSpec(
+                id="fallback",
+                layout=RailLayout(anchor="viewport.left.top", offset=(0, 0)),
+                items=(),
+            )
+
+        def position(self) -> None:
+            positioned.append(True)
+
+    host = RuntimeHost()
+
+    edit_mode._set_host_offset(host, (3, 4))
+    edit_mode._set_host_offset(object(), (5, 6))
+
+    assert host.spec.layout.offset == (3, 4)
+    assert positioned == [True]
+
+
+def test_locked_frame_does_not_nudge(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="locked",
+        label="Locked",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(10, 20),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=True,
+    )
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host._original_offsets = {"locked": (10, 20)}
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.select_rail("locked")
+    monkeypatch.setattr(
+        edit_mode,
+        "_runtime_hosts",
+        lambda: {"locked": object()},
+    )
+
+    host.nudge_selected(5, -2)
+
+    assert frame.offset == (10, 20)
+
+
+def test_runtime_hosts_uses_runtime_registry(monkeypatch) -> None:
+    monkeypatch.setattr(
+        runtime,
+        "_active_overlay_hosts",
+        lambda: (("one", object()),),
+    )
+
+    assert tuple(edit_mode._runtime_hosts()) == ("one",)
+
+
+def test_runtime_refresh_edit_mode_ignores_refresh_errors(monkeypatch) -> None:
+    refreshed = []
+    monkeypatch.setattr(edit_mode, "refresh_edit_mode", lambda: refreshed.append(True))
+
+    runtime._refresh_edit_mode()
+    assert refreshed == [True]
+
+    monkeypatch.setattr(
+        edit_mode,
+        "refresh_edit_mode",
+        lambda: (_ for _ in ()).throw(RuntimeError("closed")),
+    )
+    runtime._refresh_edit_mode()
+
+
+def test_runtime_active_overlay_hosts_returns_current_registry(monkeypatch) -> None:
+    host = object()
+    monkeypatch.setattr(runtime, "_OVERLAYS", {"preset": host})
+
+    assert runtime._active_overlay_hosts() == (("preset", host),)
+
+
+def test_popover_position_and_panel_style() -> None:
+    class Qt:
+        class QtCore:
+            class QPoint:
+                def __init__(self, x_pos: int, y_pos: int) -> None:
+                    self.value = (x_pos, y_pos)
+
+    class Canvas:
+        _host = type("Host", (), {"qt": Qt})()
+
+        def width(self) -> int:
+            return 180
+
+        def height(self) -> int:
+            return 140
+
+    frame = edit_mode.RailFrameInfo(
+        preset_id="frame",
+        label="Frame",
+        x=150,
+        y=120,
+        width=40,
+        height=30,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+
+    assert edit_mode._popover_position(Canvas(), frame, 80, 60).value == (92, 72)
+    assert "Sticky" not in edit_mode._panel_style_sheet()
+
+
+def test_require_cmds_uses_supplied_module() -> None:
+    cmds = object()
+
+    assert edit_mode._require_cmds(cmds) is cmds
+
+
+def test_require_cmds_imports_maya_cmds(monkeypatch) -> None:
+    maya_module = ModuleType("maya")
+    cmds = object()
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)
+
+    assert edit_mode._require_cmds() is cmds
+
+
+def test_overlay_host_update_layout_offset_repositions() -> None:
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.spec = StackSpec(
+        id="offset",
+        layout=RailLayout(anchor="viewport.left.top", offset=(0, 0)),
+        items=(),
+    )
+    positioned = []
+    host.position = lambda: positioned.append(True)
+
+    assert host.update_layout_offset((8, 9)) == (8, 9)
+    assert host.spec.layout.offset == (8, 9)
+    assert positioned == [True]

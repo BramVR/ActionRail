@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import suppress
+from dataclasses import replace as dataclass_replace
 from typing import Any
 from weakref import ref
 
@@ -508,6 +509,17 @@ class ViewportOverlayHost:
         if self.widget is None:
             return 0
         return set_slot_key_label(self.widget, slot_id, key_label)
+
+    def update_layout_offset(self, offset: tuple[int, int]) -> tuple[int, int]:
+        """Move this rail by updating its in-memory layout offset."""
+
+        normalized = (int(offset[0]), int(offset[1]))
+        self.spec = dataclass_replace(
+            self.spec,
+            layout=dataclass_replace(self.spec.layout, offset=normalized),
+        )
+        self.position()
+        return normalized
 
     def _start_predicate_refresh_timer(self) -> None:
         if self.predicate_refresh_interval_ms <= 0 or self._predicate_refresh_timer is not None:

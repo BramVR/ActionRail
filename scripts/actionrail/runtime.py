@@ -65,6 +65,7 @@ def show_spec(
     host = ViewportOverlayHost(spec, panel=panel, registry=registry)
     host.show()
     _OVERLAYS[spec.id] = host
+    _refresh_edit_mode()
     return host
 
 
@@ -72,6 +73,7 @@ def hide_example(example_id: str) -> None:
     host = _OVERLAYS.pop(example_id, None)
     if host is not None:
         host.close()
+    _refresh_edit_mode()
 
 
 def hide_all() -> None:
@@ -163,6 +165,19 @@ def _overlay_state(preset_id: str, host: Any) -> dict[str, object]:
         "filter_target_count": len(getattr(host, "_filter_targets", ()) or ()),
         "predicate_timer_active": _safe_timer_active(timer),
     }
+
+
+def _active_overlay_hosts() -> tuple[tuple[str, Any], ...]:
+    return tuple(_OVERLAYS.items())
+
+
+def _refresh_edit_mode() -> None:
+    try:
+        from . import edit_mode
+
+        edit_mode.refresh_edit_mode()
+    except Exception:
+        return
 
 
 def _safe_widget_visible(widget: Any) -> bool:

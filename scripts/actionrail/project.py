@@ -137,6 +137,17 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "tests": ("tests/maya_smoke/actionrail_diagnostics_smoke.py",),
     },
     {
+        "path": "scripts/actionrail/edit_mode.py",
+        "owns": (
+            "Edit Mode layout-map overlay, grid settings, rail selection, "
+            "and placement popover"
+        ),
+        "tests": (
+            "tests/test_edit_mode.py",
+            "tests/maya_smoke/actionrail_edit_mode_smoke.py",
+        ),
+    },
+    {
         "path": "scripts/actionrail/maya_ui.py",
         "owns": "Maya menu, shelf, and icon import diagnostics entry points",
         "tests": ("tests/test_maya_ui.py", "tests/maya_smoke/actionrail_maya_ui_smoke.py"),
@@ -167,8 +178,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.3 preview/save/load workflow implemented",
-            "next_slice": "Phase 2 Edit Mode shell and rail selection",
+            "phase": "Phase 2 step 2.4 Edit Mode shell in progress",
+            "next_slice": "Edit Mode Maya validation and layout editing polish",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(
