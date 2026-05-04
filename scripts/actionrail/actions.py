@@ -90,6 +90,9 @@ def set_keyframe(cmds_module: Any | None = None) -> str:
     """Set a keyframe on the current Maya selection."""
 
     cmds = _require_cmds(cmds_module)
+    list_selection = getattr(cmds, "ls", None)
+    if callable(list_selection) and not (list_selection(selection=True) or []):
+        return "setKeyframeSkipped:noSelection"
     cmds.setKeyframe()
     return "setKeyframe"
 

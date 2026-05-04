@@ -30,6 +30,17 @@ class FakeCmds:
         self.calls.append(("setKeyframe", None))
 
 
+class FakeSelectionCmds(FakeCmds):
+    def __init__(self, selection: list[str]) -> None:
+        super().__init__()
+        self.selection = selection
+
+    def ls(self, selection: bool = False) -> list[str]:
+        if selection:
+            return self.selection
+        return []
+
+
 def test_default_registry_contains_phase_zero_actions() -> None:
     registry = create_default_registry(FakeCmds())
 
@@ -113,6 +124,26 @@ def test_runtime_run_slot_resolves_saved_user_preset(tmp_path) -> None:
     registry = create_default_registry(cmds)
 
     result = run_slot("artist_tools", "key", registry=registry, user_preset_dir=tmp_path)
+
+    assert result == "setKeyframe"
+    assert cmds.calls == [("setKeyframe", None)]
+
+
+def test_set_keyframe_skips_empty_selection_without_throwing() -> None:
+    cmds = FakeSelectionCmds([])
+    registry = create_default_registry(cmds)
+
+    result = registry.run("maya.anim.set_key")
+
+    assert result == "setKeyframeSkipped:noSelection"
+    assert cmds.calls == []
+
+
+def test_set_keyframe_runs_for_selected_targets() -> None:
+    cmds = FakeSelectionCmds(["pCube1"])
+    registry = create_default_registry(cmds)
+
+    result = registry.run("maya.anim.set_key")
 
     assert result == "setKeyframe"
     assert cmds.calls == [("setKeyframe", None)]
