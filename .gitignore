@@ -3,5 +3,6 @@
 .pytest_cache/
 .ruff_cache/
 research/
+actionrail_qa_hunt_*/
 __pycache__/
 *.py[cod]
