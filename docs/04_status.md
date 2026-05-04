@@ -331,22 +331,26 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: Phase 2 step 2.3 Quick Create preview/save/load workflow
-  landed.
-- Files changed in this handoff update: `scripts/actionrail/__init__.py`,
-  `scripts/actionrail/authoring.py`,
-  `scripts/actionrail/project.py`, `scripts/actionrail/quick_create.py`,
-  `scripts/actionrail/quick_create_ui.py`,
-  `tests/maya_smoke/actionrail_quick_create_smoke.py`,
-  `tests/test_authoring.py`, `tests/test_package.py`, `tests/test_project_map.py`,
-  `tests/test_quick_create.py`, and docs.
-- Behavior verified: full pytest with coverage passes at 100%, Ruff passes, and
-  `scripts/maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` passes
-  against MayaSessiond.
-- Current live state: Quick Create can preview a draft without saving, clear
-  preview overlays, save or explicitly overwrite a stable user preset, load that
-  preset back into the panel, and reload/show it through the normal runtime path
-  while preserving unrelated overlays on save.
+- Task goal completed: the QA run at
+  `actionrail_qa_hunt_20260504_203501` is handled.
+- Fixed QA issues:
+  - Quick Create now loads saved user presets back into the panel.
+  - User-preset saves require explicit overwrite, and Quick Create exposes
+    separate Save/Overwrite actions.
+  - Saving a Quick Create preset no longer closes unrelated active overlays.
+  - Runtime-command publishing avoids collisions for legal ids that sanitize to
+    the same Maya command name.
+  - Set Key skips cleanly when Maya has no active selection.
+  - Quick Create status text refreshes after slot edits and reports loaded
+    presets after load.
+- Verification hardening: diagnostics copy actions now flush the Qt clipboard in
+  Maya, smoke cleanup removes generated ActionRail runtime commands between
+  scripts, and `scripts/maya-smoke.ps1` tolerates Sessiond payloads without a
+  `script` field.
+- Current live state: Quick Create can preview, save, explicitly overwrite,
+  load, and reload saved user presets while preserving unrelated overlays; the
+  hotkey bridge handles sanitized-name collisions; Set Key is no-op safe on an
+  empty selection.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: begin Phase 2 step 2.4 Edit Mode shell and rail selection.
 
@@ -371,23 +375,22 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 372 passed, `TOTAL 3890 0 100%`.
+  -> 373 passed, `TOTAL 3897 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
-- Quick Create Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` ->
-  passed against MayaSessiond on port `7217`; previewed, saved, verified
-  duplicate saves require explicit overwrite, loaded, and reloaded
-  `quick-horizontal-strip`, reported
-  `Saved and showing user preset: quick-horizontal-strip (...)`, and saved
-  General, Layout, Slots, and final panel screenshots at `900x680`.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
-  port `7217`; verified capture, diagnostic badges, diagnostics window,
-  hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
-  import/recovery diagnostics, Maya icons, menu/shelf UI, missing Maya icon
-  resources, overlay cleanup, phase 0, predicates, Quick Create tab screenshots,
+  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-fix -Port 7218 -Script all`
+  -> passed against a separate MayaSessiond on port `7218`; verified capture,
+  diagnostic badges, diagnostics window copy actions, hidden visibility,
+  horizontal icon rail, hotkey bridge, hotkey label sync, import/recovery
+  diagnostics, Maya icons, menu/shelf UI, missing Maya icon resources, overlay
+  cleanup, phase 0, predicates, Quick Create save/overwrite/load screenshots,
   StackItem ABI, and transform-stack state.
+- Screenshot inspection:
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_diagnostics_window.png`, and
+  `.gg-maya-sessiond/screenshots/actionrail_horizontal_tools_widget.png`
+  rendered correctly after the full smoke run.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

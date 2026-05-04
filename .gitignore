@@ -3,6 +3,7 @@
 .gg-maya-sessiond-*/
 .pytest_cache/
 .ruff_cache/
+.coverage
 research/
 actionrail_qa_hunt_*/
 __pycache__/
