@@ -23,7 +23,7 @@ from actionrail.diagnostics import (
     show_last_report,
 )
 from actionrail.hotkeys import publish_action, publish_slot
-from actionrail.preset_store import PresetEntry
+from actionrail.preset_store import PresetEntry, PresetStore
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -628,6 +628,32 @@ def test_collect_diagnostics_accepts_saved_user_preset_runtime_commands(tmp_path
     assert published.runtime_command in report.published_runtime_commands
 
 
+def test_collect_diagnostics_uses_runtime_command_user_preset_dir(tmp_path) -> None:
+    cmds = RuntimeCmds()
+    save_user_preset(
+        DraftRail(
+            id="studio.tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    published = publish_slot(
+        "studio.tools",
+        "move",
+        label="Move",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )
+
+    report = collect_diagnostics(("transform_stack",), cmds_module=cmds)
+
+    orphaned = [
+        issue for issue in report.warnings if issue.code == "orphaned_runtime_command"
+    ]
+    assert orphaned == []
+    assert published.runtime_command in report.published_runtime_commands
+
+
 def test_collect_diagnostics_hides_published_command_query_failures(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -664,6 +690,11 @@ def test_runtime_command_diagnostics_reports_malformed_slot_target(
 
 def test_split_runtime_slot_target_handles_malformed_target() -> None:
     assert diagnostics._split_runtime_slot_target("malformed") == ("", "")
+    assert diagnostics._split_runtime_slot_target("custom.move") == ("custom", "move")
+    assert diagnostics._split_runtime_slot_target(
+        "transform_stack.set_key",
+        PresetStore(),
+    ) == ("transform_stack", "set_key")
 
 
 def test_diagnostic_issue_preserves_positional_exception_type_order() -> None:

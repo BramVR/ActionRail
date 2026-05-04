@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import ast
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
@@ -67,6 +67,18 @@ class PublishedCommand:
     target_id: str
     runtime_command: str
     name_command: str
+    preset_id: str = field(default="", compare=False)
+    slot_id: str = field(default="", compare=False)
+    user_preset_dir: str = field(default="", compare=False)
+
+
+@dataclass(frozen=True)
+class _ParsedPublishedCommand:
+    target_kind: TargetKind
+    target_id: str
+    preset_id: str = ""
+    slot_id: str = ""
+    user_preset_dir: str = ""
 
 
 @dataclass(frozen=True)
@@ -170,7 +182,13 @@ def publish_preset_slots(
 
     stack_spec = spec or resolve_preset(preset_id, user_preset_dir=user_preset_dir)
     return tuple(
-        publish_slot(preset_id, item.id, label=item.label, cmds_module=cmds_module)
+        publish_slot(
+            preset_id,
+            item.id,
+            label=item.label,
+            user_preset_dir=user_preset_dir,
+            cmds_module=cmds_module,
+        )
         for item in stack_spec.items
         if item.action
     )
@@ -186,7 +204,12 @@ def sync_preset_slots(
     """Publish current preset slots and remove stale slot runtime commands."""
 
     stack_spec = spec or resolve_preset(preset_id, user_preset_dir=user_preset_dir)
-    published = publish_preset_slots(preset_id, spec=stack_spec, cmds_module=cmds_module)
+    published = publish_preset_slots(
+        preset_id,
+        spec=stack_spec,
+        user_preset_dir=user_preset_dir,
+        cmds_module=cmds_module,
+    )
     expected_runtime_commands = {command.runtime_command for command in published}
     stale = tuple(
         command
@@ -207,6 +230,7 @@ def publish_slot(
     slot_id: str,
     *,
     label: str = "",
+    user_preset_dir: str | Path | None = None,
     cmds_module: Any | None = None,
 ) -> PublishedCommand:
     """Publish one preset slot as a Maya runtime command and nameCommand."""
@@ -215,7 +239,11 @@ def publish_slot(
     runtime_name = runtime_command_name("slot", target_id)
     name_command = name_command_name(runtime_name)
     annotation = label or f"Run ActionRail slot {preset_id}/{slot_id}"
-    command = f"import actionrail; actionrail.run_slot({preset_id!r}, {target_id!r})"
+    command = _run_slot_command_text(
+        preset_id,
+        target_id,
+        user_preset_dir=user_preset_dir,
+    )
     _publish_runtime_command(
         runtime_name,
         command=command,
@@ -229,7 +257,17 @@ def publish_slot(
         annotation=annotation,
         cmds_module=cmds_module,
     )
-    return _remember_published(PublishedCommand("slot", target_id, runtime_name, name_command))
+    return _remember_published(
+        PublishedCommand(
+            "slot",
+            target_id,
+            runtime_name,
+            name_command,
+            preset_id,
+            _slot_suffix(preset_id, slot_id),
+            _user_preset_dir_string(user_preset_dir),
+        )
+    )
 
 
 def unpublish(command: PublishedCommand | str, *, cmds_module: Any | None = None) -> None:
@@ -261,10 +299,8 @@ def list_published_commands(
             continue
         if target_kind is not None and published.target_kind != target_kind:
             continue
-        if preset_id and (
-            published.target_kind != "slot"
-            or _split_slot_target_id(published.target_id)[0] != preset_id
-        ):
+        published_preset_id, _slot_id = _published_slot_parts(published)
+        if preset_id and (published.target_kind != "slot" or published_preset_id != preset_id):
             continue
         commands.append(published)
     return tuple(commands)
@@ -392,7 +428,7 @@ def assign_published_hotkey(
         ):
             clear_visible_published_key_label(previous_published)
         elif previous is not None and previous.name != published.name_command:
-            clear_visible_key_label(previous.name)
+            clear_visible_key_label(previous.name, cmds_module=cmds_module)
         sync_visible_key_label(published, binding)
     return binding
 
@@ -410,11 +446,18 @@ def assign_slot_hotkey(
     overwrite: bool = False,
     label: str = "",
     sync_visible: bool = True,
+    user_preset_dir: str | Path | None = None,
     cmds_module: Any | None = None,
 ) -> HotkeyBinding:
     """Publish a preset slot, assign its hotkey, and refresh its visible key label."""
 
-    published = publish_slot(preset_id, slot_id, label=label, cmds_module=cmds_module)
+    published = publish_slot(
+        preset_id,
+        slot_id,
+        label=label,
+        user_preset_dir=user_preset_dir,
+        cmds_module=cmds_module,
+    )
     return assign_published_hotkey(
         published,
         key,
@@ -438,7 +481,7 @@ def sync_visible_key_label(
     if published.target_kind != "slot":
         return 0
 
-    preset_id, slot_id = _split_slot_target_id(published.target_id)
+    preset_id, slot_id = _published_slot_parts(published)
     if not preset_id or not slot_id:
         return 0
 
@@ -447,10 +490,17 @@ def sync_visible_key_label(
     return update_slot_key_label(preset_id, slot_id, _binding_label(binding))
 
 
-def clear_visible_key_label(name_command: str) -> int:
+def clear_visible_key_label(
+    name_command: str,
+    *,
+    cmds_module: Any | None = None,
+) -> int:
     """Clear visible overlay key labels for a previously bound ActionRail slot."""
 
-    published = _published_command_from_name_command(name_command)
+    published = _published_command_from_name_command(
+        name_command,
+        cmds_module=cmds_module,
+    )
     if published is None:
         return 0
     return clear_visible_published_key_label(published)
@@ -462,7 +512,7 @@ def clear_visible_published_key_label(published: PublishedCommand) -> int:
     if published is None or published.target_kind != "slot":
         return 0
 
-    preset_id, slot_id = _split_slot_target_id(published.target_id)
+    preset_id, slot_id = _published_slot_parts(published)
     if not preset_id or not slot_id:
         return 0
 
@@ -491,6 +541,25 @@ def slot_target_id(preset_id: str, slot_id: str) -> str:
     if slot_id.startswith(prefix):
         return slot_id
     return f"{preset_id}.{slot_id}"
+
+
+def _run_slot_command_text(
+    preset_id: str,
+    target_id: str,
+    *,
+    user_preset_dir: str | Path | None = None,
+) -> str:
+    command = f"import actionrail; actionrail.run_slot({preset_id!r}, {target_id!r}"
+    user_dir = _user_preset_dir_string(user_preset_dir)
+    if user_dir:
+        command = f"{command}, user_preset_dir={user_dir!r}"
+    return f"{command})"
+
+
+def _user_preset_dir_string(user_preset_dir: str | Path | None) -> str:
+    if user_preset_dir is None:
+        return ""
+    return str(user_preset_dir)
 
 
 def format_hotkey(
@@ -541,6 +610,21 @@ def _split_slot_target_id(target_id: str) -> tuple[str, str]:
     return preset_id, slot_suffix
 
 
+def _slot_suffix(preset_id: str, slot_id: str) -> str:
+    prefix = f"{preset_id}."
+    if slot_id.startswith(prefix):
+        return slot_id.removeprefix(prefix)
+    return slot_id
+
+
+def _published_slot_parts(command: PublishedCommand) -> tuple[str, str]:
+    if command.target_kind != "slot":
+        return "", ""
+    if command.preset_id and command.slot_id:
+        return command.preset_id, command.slot_id
+    return _split_slot_target_id(command.target_id)
+
+
 def _remember_published(command: PublishedCommand) -> PublishedCommand:
     _PUBLISHED_BY_NAME_COMMAND[command.name_command] = command
     return command
@@ -578,7 +662,11 @@ def _hotkey_cache_key(
     return (key, ctrl, alt, shift, command, release)
 
 
-def _published_command_from_name_command(name_command: str) -> PublishedCommand | None:
+def _published_command_from_name_command(
+    name_command: str,
+    *,
+    cmds_module: Any | None = None,
+) -> PublishedCommand | None:
     if name_command in _PUBLISHED_BY_NAME_COMMAND:
         return _PUBLISHED_BY_NAME_COMMAND[name_command]
 
@@ -586,6 +674,13 @@ def _published_command_from_name_command(name_command: str) -> PublishedCommand 
         return None
 
     runtime_name = name_command[: -len(NAME_COMMAND_SUFFIX)]
+    published = _published_command_from_runtime_if_available(
+        runtime_name,
+        cmds_module=cmds_module,
+    )
+    if published is not None:
+        return published
+
     slot_prefix = f"{COMMAND_PREFIX}_slot_"
     if not runtime_name.startswith(slot_prefix):
         return None
@@ -593,13 +688,29 @@ def _published_command_from_name_command(name_command: str) -> PublishedCommand 
     return _published_slot_from_runtime_fallback(runtime_name, name_command, slot_prefix)
 
 
+def _published_command_from_runtime_if_available(
+    runtime_name: str,
+    *,
+    cmds_module: Any | None = None,
+) -> PublishedCommand | None:
+    cmds = _optional_cmds(cmds_module)
+    if cmds is None:
+        return None
+    try:
+        if not _runtime_command_exists(runtime_name, cmds):
+            return None
+    except RuntimeError:
+        return None
+    return _published_command_from_runtime(runtime_name, cmds)
+
+
 def _published_slot_from_runtime_fallback(
     runtime_name: str,
     name_command: str,
     slot_prefix: str,
 ) -> PublishedCommand | None:
-    # Fallback for persisted generated commands when the current Python session
-    # did not publish them first. Try all underscore splits against built-in specs.
+    # Last-resort compatibility path when Maya cannot provide the persisted
+    # runtime-command payload. The runtime payload path above is lossless.
     target_parts = runtime_name.removeprefix(slot_prefix).split("_")
     for split_index in range(1, len(target_parts)):
         preset_id = "_".join(target_parts[:split_index])
@@ -610,7 +721,14 @@ def _published_slot_from_runtime_fallback(
         except Exception:
             continue
         if any(item.id == target_id for item in spec.items):
-            return PublishedCommand("slot", target_id, runtime_name, name_command)
+            return PublishedCommand(
+                "slot",
+                target_id,
+                runtime_name,
+                name_command,
+                preset_id,
+                slot_id,
+            )
     return None
 
 
@@ -676,19 +794,21 @@ def _published_command_from_runtime(runtime_name: str, cmds: Any) -> PublishedCo
     if parsed is None:
         return None
 
-    target_kind, target_id = parsed
-    expected_name = runtime_command_name(target_kind, target_id)
+    expected_name = runtime_command_name(parsed.target_kind, parsed.target_id)
     if runtime_name != expected_name:
         return None
     return PublishedCommand(
-        target_kind,
-        target_id,
+        parsed.target_kind,
+        parsed.target_id,
         runtime_name,
         name_command_name(runtime_name),
+        parsed.preset_id,
+        parsed.slot_id,
+        parsed.user_preset_dir,
     )
 
 
-def _parse_published_command_text(command_text: str) -> tuple[TargetKind, str] | None:
+def _parse_published_command_text(command_text: str) -> _ParsedPublishedCommand | None:
     try:
         module = ast.parse(command_text)
     except SyntaxError:
@@ -704,18 +824,31 @@ def _parse_published_command_text(command_text: str) -> tuple[TargetKind, str] |
         if node.func.attr == "run_action" and len(node.args) == 1:
             action_id = _literal_string(node.args[0])
             if action_id:
-                return "action", action_id
+                return _ParsedPublishedCommand("action", action_id)
         if node.func.attr == "run_slot" and len(node.args) == 2:
             preset_id = _literal_string(node.args[0])
             slot_id = _literal_string(node.args[1])
             if preset_id and slot_id:
-                return "slot", slot_target_id(preset_id, slot_id)
+                return _ParsedPublishedCommand(
+                    "slot",
+                    slot_target_id(preset_id, slot_id),
+                    preset_id,
+                    _slot_suffix(preset_id, slot_id),
+                    _literal_keyword_string(node, "user_preset_dir"),
+                )
     return None
 
 
 def _literal_string(node: ast.AST) -> str:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
+    return ""
+
+
+def _literal_keyword_string(node: ast.Call, keyword_name: str) -> str:
+    for keyword in node.keywords:
+        if keyword.arg == keyword_name:
+            return _literal_string(keyword.value)
     return ""
 
 
@@ -736,3 +869,10 @@ def _require_cmds(cmds_module: Any | None = None) -> Any:
         msg = "ActionRail hotkey publishing requires maya.cmds inside Maya."
         raise RuntimeError(msg) from exc
     return cmds
+
+
+def _optional_cmds(cmds_module: Any | None = None) -> Any | None:
+    try:
+        return _require_cmds(cmds_module)
+    except RuntimeError:
+        return None

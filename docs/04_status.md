@@ -242,6 +242,13 @@ Last updated: 2026-05-04
   - `actionrail.hotkeys.publish_preset_slots()` and `sync_preset_slots()` can
     publish/sync saved user preset slots by id, and persisted slot nameCommand
     fallback can resolve saved user slots in the current user preset store.
+  - Published slot runtime commands now preserve explicit `user_preset_dir`
+    values in the generated `actionrail.run_slot(...)` command, and persisted
+    nameCommand fallback parses the saved runtime-command payload before using
+    legacy runtime-name splitting. Custom stores and dotted/hyphenated preset
+    ids therefore survive Maya restart and hotkey overwrite flows.
+  - Runtime-command diagnostics honor a stored `user_preset_dir` on published
+    slot commands when checking saved-user slots for stale/orphaned targets.
   - Diagnostics now use the shared store for explicit preset ids, saved-user
     scans, `safe_start(..., user_preset_dir=...)`, and stale runtime-command
     checks, so a published saved-user slot is not reported as orphaned.
@@ -318,17 +325,16 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 332 passed, `TOTAL 3496 0 100%`.
+  -> 338 passed, `TOTAL 3562 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against the
-  already-running MayaSessiond on port `7217`; verified capture, diagnostic
-  badges, diagnostics window copy/full-report behavior, hidden visibility,
-  manifest-backed horizontal icon rail, hotkey bridge, hotkey label sync,
-  import/recovery diagnostics, curated Maya built-in icon rendering, Maya
-  menu/shelf UI, missing Maya icon resources, overlay cleanup, phase 0,
-  predicates, StackItem ABI, and transform-stack state.
+  `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
+  port `7217`; verified capture, diagnostic badges, diagnostics window,
+  hidden visibility, horizontal icon rail, hotkey bridge, hotkey label sync,
+  import/recovery diagnostics, Maya icons, menu/shelf UI, missing Maya icon
+  resources, overlay cleanup, phase 0, predicates, StackItem ABI, and
+  transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

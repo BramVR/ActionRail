@@ -883,13 +883,14 @@ def _runtime_command_diagnostics(
                 )
             continue
 
-        preset_id, slot_id = _split_runtime_slot_target(command.target_id, preset_store)
+        command_store = _runtime_command_preset_store(command, preset_store)
+        preset_id, slot_id = _runtime_command_slot_parts(command, command_store)
         if not preset_id or not slot_id:
             issues.append(_orphaned_slot_command_issue(command, "", ""))
             continue
 
         try:
-            spec = preset_store.load(preset_id)
+            spec = command_store.load(preset_id)
         except Exception:
             issues.append(_orphaned_slot_command_issue(command, preset_id, slot_id))
             continue
@@ -920,6 +921,24 @@ def _orphaned_slot_command_issue(
             "or unpublish the stale generated command."
         ),
     )
+
+
+def _runtime_command_preset_store(command: Any, default_store: PresetStore) -> PresetStore:
+    user_preset_dir = getattr(command, "user_preset_dir", "")
+    if user_preset_dir:
+        return PresetStore(user_preset_dir=user_preset_dir)
+    return default_store
+
+
+def _runtime_command_slot_parts(
+    command: Any,
+    preset_store: PresetStore,
+) -> tuple[str, str]:
+    preset_id = getattr(command, "preset_id", "")
+    slot_id = getattr(command, "slot_id", "")
+    if preset_id and slot_id:
+        return preset_id, slot_id
+    return _split_runtime_slot_target(command.target_id, preset_store)
 
 
 def _split_runtime_slot_target(

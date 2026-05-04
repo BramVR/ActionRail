@@ -101,6 +101,13 @@ class FailingNameCommandCmds(FakeCmds):
         raise RuntimeError("permission denied")
 
 
+class RaisingExistsCmds(FakeCmds):
+    def runTimeCommand(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("exists"):
+            raise RuntimeError("runtime command query failed")
+        return super().runTimeCommand(name, **kwargs)
+
+
 @pytest.fixture(autouse=True)
 def forget_cached_published_commands() -> Iterator[None]:
     _forget_known_published_commands()
@@ -259,7 +266,8 @@ def test_publish_preset_slots_resolves_saved_user_preset(tmp_path) -> None:
 
     assert [command.target_id for command in published] == ["artist_tools.move"]
     assert cmds.runtime_commands["ActionRail_slot_artist_tools_move"]["command"] == (
-        "import actionrail; actionrail.run_slot('artist_tools', 'artist_tools.move')"
+        "import actionrail; actionrail.run_slot("
+        f"'artist_tools', 'artist_tools.move', user_preset_dir={str(tmp_path)!r})"
     )
 
 
@@ -439,6 +447,38 @@ def test_clear_visible_key_label_resolves_persisted_user_slot_name_command(
     assert updates == [("artist_tools", "move", "")]
 
 
+def test_clear_visible_key_label_reads_persisted_runtime_payload_for_dotted_user_ids(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="studio.tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    published = publish_preset_slots(
+        "studio.tools",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )[0]
+    unpublish(published, cmds_module=FakeCmds())
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    cleared = clear_visible_key_label(published.name_command, cmds_module=cmds)
+
+    assert cleared == 1
+    assert updates == [("studio.tools", "move", "")]
+
+
 def test_clear_visible_key_label_uses_published_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -454,6 +494,55 @@ def test_clear_visible_key_label_uses_published_cache(
 
     assert clear_visible_key_label(published.name_command) == 1
     assert updates == [("transform_stack", "set_key", "")]
+
+
+def test_clear_visible_published_key_label_splits_legacy_slot_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assert (
+        clear_visible_published_key_label(
+            PublishedCommand(
+                "slot",
+                "transform_stack.set_key",
+                "ActionRail_slot_transform_stack_set_key",
+                "ActionRail_slot_transform_stack_set_key_NameCommand",
+            )
+        )
+        == 1
+    )
+    assert (
+        clear_visible_published_key_label(
+            PublishedCommand(
+                "slot",
+                "custom.move",
+                "ActionRail_slot_custom_move",
+                "ActionRail_slot_custom_move_NameCommand",
+            )
+        )
+        == 1
+    )
+    assert updates == [
+        ("transform_stack", "set_key", ""),
+        ("custom", "move", ""),
+    ]
+
+
+def test_clear_visible_key_label_ignores_runtime_command_exists_errors() -> None:
+    assert (
+        clear_visible_key_label(
+            "ActionRail_slot_custom_move_NameCommand",
+            cmds_module=RaisingExistsCmds(),
+        )
+        == 0
+    )
 
 
 def test_assign_slot_hotkey_publishes_assigns_and_syncs_label(
@@ -508,6 +597,78 @@ def test_assign_slot_hotkey_binds_saved_user_slot_by_id(
         "import actionrail; actionrail.run_slot('artist_tools', 'artist_tools.move')"
     )
     assert updates == [("artist_tools", "move", "M")]
+
+
+def test_assign_slot_hotkey_can_publish_saved_user_slot_with_custom_store(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    binding = assign_slot_hotkey(
+        "artist_tools",
+        "move",
+        "M",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )
+
+    assert binding.name == "ActionRail_slot_artist_tools_move_NameCommand"
+    assert cmds.runtime_commands["ActionRail_slot_artist_tools_move"]["command"] == (
+        "import actionrail; actionrail.run_slot("
+        f"'artist_tools', 'artist_tools.move', user_preset_dir={str(tmp_path)!r})"
+    )
+    assert updates == [("artist_tools", "move", "M")]
+
+
+def test_assign_published_hotkey_clears_persisted_dotted_user_slot_label(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    save_user_preset(
+        DraftRail(
+            id="studio.tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+    previous = publish_preset_slots(
+        "studio.tools",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )[0]
+    unpublish(previous, cmds_module=FakeCmds())
+    cmds.hotkeys[("S", False, False, False, False, False)] = previous.name_command
+    replacement = publish_slot("transform_stack", "set_key", label="Set Key", cmds_module=cmds)
+    updates: list[tuple[str, str, str]] = []
+
+    def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
+        updates.append((preset_id, slot_id, key_label))
+        return 1
+
+    monkeypatch.setattr("actionrail.runtime.update_slot_key_label", update_slot_key_label)
+
+    assign_published_hotkey(replacement, "S", overwrite=True, cmds_module=cmds)
+
+    assert updates == [
+        ("studio.tools", "move", ""),
+        ("transform_stack", "set_key", "S"),
+    ]
 
 
 def test_assign_published_hotkey_leaves_action_labels_alone(
