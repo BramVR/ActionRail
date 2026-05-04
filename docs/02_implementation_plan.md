@@ -69,10 +69,10 @@ Goal: make the prototype reusable so examples and user-authored rails can be cre
   predicates, and recoverable overlay startup failures. First pass done through
   `actionrail.collect_diagnostics()`, `actionrail.diagnose_spec()`, and
   `actionrail.safe_start()`.
-- Reusable per-slot render state. First pass done through `SlotRenderState`,
-  which centralizes label, hotkey badge, tone, tooltip, enabled, and active
-  updates for action-bearing buttons without rebuilding the rail when
-  visibility is unchanged.
+- Reusable per-slot render state. First pass done through pure
+  `actionrail.slot_state.SlotRenderState`, which centralizes label, hotkey
+  badge, tone, tooltip, enabled, and active updates for action-bearing buttons
+  without rebuilding the rail when visibility is unchanged.
 - Active color is generic theme state. Presets should use `active_when` for
   persistent buttons; one-shot macro buttons should omit it.
 - Icon and diagnostic badge inputs for `SlotRenderState`. First pass done for

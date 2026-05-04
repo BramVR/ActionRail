@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import actionrail.slot_state as slot_state
 import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
 from actionrail.predicates import PredicateContext
@@ -919,7 +920,7 @@ def test_slot_render_state_marks_missing_icon_as_warning() -> None:
 
 def test_icon_diagnostic_handles_status_without_issue(monkeypatch) -> None:
     monkeypatch.setattr(
-        widgets,
+        slot_state,
         "icon_status",
         lambda _icon_id: type("Status", (), {"ok": False, "issue": None})(),
     )

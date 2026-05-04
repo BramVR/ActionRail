@@ -23,6 +23,7 @@ ActionRail/
       runtime.py
       overlay.py
       widgets.py
+      slot_state.py
       actions.py
       hotkeys.py
       state.py
@@ -90,7 +91,7 @@ MVP widgets:
 
 Widgets must have stable dimensions. Hover/active/disabled states must not shift layout.
 
-State belongs to slots, not to a specific built-in button. A user-authored slot may be a persistent tool, a one-shot macro, a disabled-until-valid command, a locked studio control, a flyout, or a command ring. Presets declare state predicates such as `active_when`, `enabled_when`, and `visible_when`; themes decide how those states render. For example, a scale slot can declare `active_when: "maya.tool == scale"`, while a Set Key macro has no `active_when` because clicking it performs one immediate action.
+State belongs to slots, not to a specific built-in button. A user-authored slot may be a persistent tool, a one-shot macro, a disabled-until-valid command, a locked studio control, a flyout, or a command ring. Presets declare state predicates such as `active_when`, `enabled_when`, and `visible_when`; themes decide how those states render. `actionrail.slot_state` resolves those predicates, icons, action availability, diagnostics, and tooltip fallbacks without importing Qt, while `widgets.py` applies the resolved state to Qt controls. For example, a scale slot can declare `active_when: "maya.tool == scale"`, while a Set Key macro has no `active_when` because clicking it performs one immediate action.
 
 Planned widgets after the reusable rail schema:
 

@@ -40,8 +40,13 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "tests": ("tests/test_preset_store.py",),
     },
     {
+        "path": "scripts/actionrail/slot_state.py",
+        "owns": "pure slot render-state resolution, predicate/icon diagnostics, visibility",
+        "tests": ("tests/test_widgets.py",),
+    },
+    {
         "path": "scripts/actionrail/widgets.py",
-        "owns": "Qt rail/widget construction, slot render state, diagnostic badges",
+        "owns": "Qt rail/widget construction, custom button painting, diagnostic badge display",
         "tests": (
             "tests/test_widgets.py",
             "tests/maya_smoke/actionrail_diagnostic_badges_smoke.py",

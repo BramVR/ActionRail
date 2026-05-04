@@ -251,6 +251,10 @@ Last updated: 2026-05-04
   - `actionrail.widgets.resolve_slot_render_state()` exposes the public
     `SlotRenderState` contract without requiring tests to import the private
     resolver.
+  - Slot render-state resolution now lives in pure `actionrail.slot_state`;
+    `widgets.py` keeps Qt construction/painting focused while preserving
+    compatibility wrappers for `build_transform_stack()` and
+    `resolve_slot_render_state()`.
   - `actionrail.active_overlay_ids()` and `actionrail.active_overlay_states()`
     are now top-level public helpers for tests, diagnostics, and smoke scripts.
   - Hotkey tests isolate published-command memory through public
@@ -275,26 +279,23 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: saved user presets now resolve through shared runtime,
-  hotkey, diagnostics, and Maya UI paths instead of being limited to authoring
-  save/load helpers.
-- Files changed in this handoff update: new shared preset store, public
-  resolver/runtime APIs, hotkey slot publishing/sync resolution, diagnostics
-  preset/runtime-command checks, Maya toggle routing, diagnostics-window copy
-  robustness, project map, docs, public widget/runtime exports, and focused
-  Python/Maya regressions.
-- Behavior verified: a saved user rail can be resolved by id, shown/reloaded,
-  run by slot id without an overlay, published/synced as Maya runtime commands,
-  bind-label fallback can resolve a saved user slot, `safe_start()` can start a
-  saved user preset with an injected store path, and diagnostics do not mark a
-  published saved-user slot as orphaned.
-- Current live state: `actionrail.PresetStore`, `actionrail.resolve_preset()`,
-  `actionrail.preset_ids()`, and `actionrail.show_preset()` are public; built-in
-  `show_example()` remains as a compatibility wrapper over the shared resolver,
-  and active overlay state is also package-level public API.
+- Task goal completed: slot render-state resolution was extracted from
+  `widgets.py` into pure `actionrail.slot_state`, and `widgets.py` now focuses
+  on Qt rail building, custom painting, property application, and refresh
+  plumbing.
+- Files changed in this handoff update: new pure slot-state module, widget
+  builder rename to `build_rail()`, compatibility wrappers for
+  `build_transform_stack()` and `resolve_slot_render_state()`, project map,
+  architecture/status docs, and focused widget/project-map regressions.
+- Behavior verified: widget unit coverage still exercises render-state
+  resolution, missing action/icon/availability diagnostics, predicate refresh,
+  hotkey badge preservation, and the legacy `build_transform_stack()` smoke/test
+  entry point.
+- Current live state: `actionrail.slot_state.resolve_slot_render_state()` is the
+  pure implementation; `actionrail.widgets.resolve_slot_render_state()` remains
+  a compatibility wrapper for existing tests/smokes.
 - Blockers/risks: no implementation blocker known.
-- Exact next step: continue with the Phase 2 step 2.2 dockable Quick Create
-  panel using saved user preset ids for preview/save/publish/bind flows.
+- Exact next step: continue Phase 2 step 2.2 dockable Quick Create work.
 
 ## Next
 
@@ -317,7 +318,7 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 332 passed, `TOTAL 3475 0 100%`.
+  -> 332 passed, `TOTAL 3496 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Full Maya smoke baseline:
@@ -326,8 +327,8 @@ Start here:
   badges, diagnostics window copy/full-report behavior, hidden visibility,
   manifest-backed horizontal icon rail, hotkey bridge, hotkey label sync,
   import/recovery diagnostics, curated Maya built-in icon rendering, Maya
-  menu/shelf UI, overlay cleanup, phase 0, predicates, StackItem ABI, and
-  transform-stack state.
+  menu/shelf UI, missing Maya icon resources, overlay cleanup, phase 0,
+  predicates, StackItem ABI, and transform-stack state.
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.

@@ -1,7 +1,7 @@
 """Qt widgets for ActionRail stack specs.
 
 Purpose: turn validated preset data into compact Qt rail widgets.
-Owns: button layout, slot render state, diagnostic badges, predicate refresh.
+Owns: button layout, custom painting, diagnostic badge application, predicate refresh.
 Used by: the viewport overlay host; imports Qt only when building widgets.
 Tests: `tests/test_widgets.py` and widget-focused Maya smoke scripts.
 """
@@ -11,9 +11,9 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass, replace
 
+from . import slot_state as _slot_state
 from .actions import ActionRegistry
-from .icons import IconStatus, icon_status
-from .predicates import PredicateContext, availability_blocking_targets, evaluate_predicate
+from .predicates import PredicateContext
 from .qt import load
 from .spec import StackItem, StackSpec
 from .state import MayaStateSnapshot
@@ -36,11 +36,25 @@ __all__ = [
     "ActionRailRoot",
     "PredicateRefreshResult",
     "SlotRenderState",
+    "build_rail",
     "build_transform_stack",
     "refresh_predicate_state",
     "resolve_slot_render_state",
     "set_slot_key_label",
 ]
+
+SlotRenderState = _slot_state.SlotRenderState
+_SlotDiagnostic = _slot_state._SlotDiagnostic
+_availability_diagnostic = _slot_state._availability_diagnostic
+_button_secondary_text = _slot_state.button_secondary_text
+_button_text = _slot_state.button_text
+_diagnostic_tooltip = _slot_state._diagnostic_tooltip
+_icon_diagnostic = _slot_state._icon_diagnostic
+_is_item_active = _slot_state.is_item_active
+_is_item_visible = _slot_state.is_item_visible
+_item_context = _slot_state._item_context
+_slot_render_state = _slot_state.resolve_slot_render_state
+_visible_action_items = _slot_state.visible_action_items
 
 
 @dataclass(frozen=True)
@@ -51,52 +65,6 @@ class PredicateRefreshResult:
     needs_rebuild: bool
     visible_slot_ids: tuple[str, ...]
     rendered_slot_ids: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class SlotRenderState:
-    """Resolved, mutable-at-runtime state for one rendered action slot."""
-
-    label: str
-    key_label: str
-    icon: str
-    icon_path: str
-    icon_name: str
-    tone: str
-    tooltip: str
-    enabled: bool
-    active: bool
-    locked: bool = False
-    diagnostic_code: str = ""
-    diagnostic_severity: str = ""
-    diagnostic_badge: str = ""
-
-    @property
-    def text(self) -> str:
-        return _button_text(self.label, self.key_label, self.diagnostic_badge)
-
-    @property
-    def active_property(self) -> str:
-        return "true" if self.active else "false"
-
-
-@dataclass(frozen=True)
-class _SlotDiagnostic:
-    code: str = ""
-    severity: str = ""
-    badge: str = ""
-    message: str = ""
-
-    @property
-    def blocks_enabled(self) -> bool:
-        return self.severity == "error" or self.code in {"missing_command", "missing_plugin"}
-
-    @property
-    def has_issue(self) -> bool:
-        return bool(self.code)
-
-
-_NO_SLOT_DIAGNOSTIC = _SlotDiagnostic()
 
 
 class ActionRailRoot:
@@ -133,7 +101,7 @@ class ActionRailRoot:
         return _ActionRailRoot()
 
 
-def build_transform_stack(
+def build_rail(
     spec: StackSpec,
     registry: ActionRegistry,
     theme: ActionRailTheme = DEFAULT_THEME,
@@ -197,6 +165,24 @@ def build_transform_stack(
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
     return root
+
+
+def build_transform_stack(
+    spec: StackSpec,
+    registry: ActionRegistry,
+    theme: ActionRailTheme = DEFAULT_THEME,
+    state_snapshot: MayaStateSnapshot | None = None,
+    cmds_module: object | None = None,
+) -> object:
+    """Compatibility wrapper for the generic ActionRail rail builder."""
+
+    return build_rail(
+        spec,
+        registry,
+        theme=theme,
+        state_snapshot=state_snapshot,
+        cmds_module=cmds_module,
+    )
 
 
 def _build_cluster(
@@ -265,7 +251,7 @@ def _build_button(
     context: PredicateContext | None = None,
 ) -> object:
     qt = load()
-    state = _slot_render_state(item, registry, context)
+    state = resolve_slot_render_state(item, registry, context)
     button = _button_class(qt)(state.text)
     button.setProperty("actionRailRole", "button")
     button.setProperty("actionRailSlotId", item.id)
@@ -382,7 +368,12 @@ def resolve_slot_render_state(
 ) -> SlotRenderState:
     """Resolve the public render-state contract for one action slot."""
 
-    return _slot_render_state(item, registry, context, key_label=key_label)
+    return _slot_state.resolve_slot_render_state(
+        item,
+        registry,
+        context,
+        key_label=key_label,
+    )
 
 
 def refresh_predicate_state(
@@ -420,7 +411,7 @@ def refresh_predicate_state(
             continue
 
         key_label = button.property("actionRailKeyLabel")
-        state = _slot_render_state(
+        state = resolve_slot_render_state(
             item,
             registry,
             context,
@@ -434,17 +425,6 @@ def refresh_predicate_state(
         visible_slot_ids=visible_slot_ids,
         rendered_slot_ids=rendered_slot_ids,
     )
-
-
-def _button_text(label: str, key_label: str, diagnostic_badge: str = "") -> str:
-    secondary = _button_secondary_text(key_label, diagnostic_badge)
-    return label if not secondary else f"{label}\n{secondary}"
-
-
-def _button_secondary_text(key_label: str, diagnostic_badge: str = "") -> str:
-    if key_label and diagnostic_badge:
-        return f"{key_label}{diagnostic_badge}"
-    return key_label or diagnostic_badge
 
 
 def _button_label(button: object) -> str:
@@ -576,146 +556,6 @@ def _text_width(qt: object, font: object, text: str) -> int:
             if callable(width):
                 return int(width(text))
     return len(text) * 5
-
-
-def _slot_render_state(
-    item: StackItem,
-    registry: ActionRegistry,
-    context: PredicateContext | None = None,
-    *,
-    key_label: str | None = None,
-) -> SlotRenderState:
-    item_context = _item_context(item, registry, context)
-    diagnostic = _slot_diagnostic(item, registry, item_context)
-    icon = _icon_status(item.icon, item_context) if item.icon else None
-    locked = not bool(item.action)
-    return SlotRenderState(
-        label=item.label,
-        key_label=item.key_label if key_label is None else key_label,
-        icon=item.icon,
-        icon_path=str(icon.path or "") if icon is not None else "",
-        icon_name=icon.qt_name if icon is not None else "",
-        tone=item.tone,
-        tooltip=_diagnostic_tooltip(_item_tooltip(item, registry), diagnostic),
-        enabled=not locked
-        and evaluate_predicate(item.enabled_when, item_context)
-        and not diagnostic.blocks_enabled,
-        active=not locked and _is_item_active(item, item_context),
-        locked=locked,
-        diagnostic_code=diagnostic.code,
-        diagnostic_severity=diagnostic.severity,
-        diagnostic_badge=diagnostic.badge,
-    )
-
-
-def _item_tooltip(item: StackItem, registry: ActionRegistry | None = None) -> str:
-    if item.tooltip:
-        return item.tooltip
-
-    get_action = getattr(registry, "get", None)
-    if get_action is None:
-        return ""
-
-    try:
-        action = get_action(item.action)
-    except Exception:
-        return ""
-
-    tooltip = getattr(action, "tooltip", "")
-    return tooltip if isinstance(tooltip, str) else ""
-
-
-def _slot_diagnostic(
-    item: StackItem,
-    registry: ActionRegistry | None = None,
-    context: PredicateContext | None = None,
-) -> _SlotDiagnostic:
-    get_action = getattr(registry, "get", None)
-    if item.action and get_action is not None:
-        try:
-            get_action(item.action)
-        except Exception:
-            return _SlotDiagnostic(
-                code="missing_action",
-                severity="error",
-                badge="!",
-                message=f"Missing ActionRail action: {item.action}",
-            )
-
-    availability_diagnostic = _availability_diagnostic(item, context)
-    if availability_diagnostic.has_issue:
-        return availability_diagnostic
-
-    if item.icon:
-        return _icon_diagnostic(item.icon, context)
-
-    return _NO_SLOT_DIAGNOSTIC
-
-
-def _icon_diagnostic(
-    icon_id: str,
-    context: PredicateContext | None = None,
-) -> _SlotDiagnostic:
-    status = _icon_status(icon_id, context)
-    if status.ok:
-        return _NO_SLOT_DIAGNOSTIC
-    if status.issue is not None:
-        return _SlotDiagnostic(
-            code=status.issue.code,
-            severity="warning",
-            badge="?",
-            message=status.issue.message,
-        )
-    return _SlotDiagnostic(
-        code="missing_icon",
-        severity="warning",
-        badge="?",
-        message=f"Missing ActionRail icon: {icon_id}",
-    )
-
-
-def _icon_status(icon_id: str, context: PredicateContext | None = None) -> IconStatus:
-    if context is None or context.cmds_module is None:
-        return icon_status(icon_id)
-    return icon_status(icon_id, cmds_module=context.cmds_module)
-
-
-def _availability_diagnostic(
-    item: StackItem,
-    context: PredicateContext | None,
-) -> _SlotDiagnostic:
-    if context is None:
-        return _NO_SLOT_DIAGNOSTIC
-
-    for field_name in ("enabled_when", "visible_when", "active_when"):
-        predicate = getattr(item, field_name)
-        if not predicate.strip():
-            continue
-        for kind, target in availability_blocking_targets(predicate, context):
-            if kind == "command":
-                return _SlotDiagnostic(
-                    code="missing_command",
-                    severity="warning",
-                    badge="?",
-                    message=f"Unavailable Maya command in {field_name}: {target}",
-                )
-            if kind == "plugin":
-                return _SlotDiagnostic(
-                    code="missing_plugin",
-                    severity="warning",
-                    badge="?",
-                    message=f"Unavailable Maya plugin in {field_name}: {target}",
-                )
-
-    return _NO_SLOT_DIAGNOSTIC
-
-
-def _diagnostic_tooltip(base_tooltip: str, diagnostic: _SlotDiagnostic) -> str:
-    if not diagnostic.message:
-        return base_tooltip
-    if not base_tooltip:
-        return diagnostic.message
-    return f"{base_tooltip}\n{diagnostic.message}"
 
 
 def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
@@ -874,34 +714,6 @@ def _set_button_property(button: object, name: str, value: object) -> int:
     return 1
 
 
-def _is_item_visible(item: StackItem, context: PredicateContext | None = None) -> bool:
-    item_context = _item_context(item, context=context)
-    if evaluate_predicate(item.visible_when, item_context):
-        return True
-    return bool(availability_blocking_targets(item.visible_when, item_context))
-
-
-def _is_item_active(item: StackItem, context: PredicateContext | None = None) -> bool:
-    return bool(item.active_when.strip()) and evaluate_predicate(
-        item.active_when,
-        _item_context(item, context=context),
-    )
-
-
-def _item_context(
-    item: StackItem,
-    registry: ActionRegistry | None = None,
-    context: PredicateContext | None = None,
-) -> PredicateContext:
-    context = context or PredicateContext()
-    return PredicateContext(
-        state=context.state,
-        registry=registry or context.registry,
-        item=item,
-        cmds_module=context.cmds_module,
-    )
-
-
 def _scaled_theme(theme: ActionRailTheme, scale: float) -> ActionRailTheme:
     if scale == 1.0:
         return theme
@@ -926,17 +738,6 @@ def _frame_main_axis_size(item_count: int, theme: ActionRailTheme) -> int:
     spacing = theme.frame_spacing * max(item_count - 1, 0)
     outer_padding = (theme.frame_padding + theme.cluster_border_width) * 2
     return (theme.button_outer_size * item_count) + spacing + outer_padding
-
-
-def _visible_action_items(
-    spec: StackSpec,
-    context: PredicateContext | None = None,
-) -> tuple[StackItem, ...]:
-    return tuple(
-        item
-        for item in spec.items
-        if item.type in {"button", "toolButton"} and _is_item_visible(item, context)
-    )
 
 
 def _slot_buttons(root: object) -> dict[str, object]:
