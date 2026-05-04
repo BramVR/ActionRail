@@ -15,7 +15,11 @@ from actionrail.quick_create import (
     template_by_id,
     template_choices,
 )
-from actionrail.quick_create_ui import _slider_label
+from actionrail.quick_create_ui import (
+    _slider_label,
+    _valid_draft_status_text,
+    _widget_value_from_slider,
+)
 
 
 def test_template_defaults_build_valid_draft_specs() -> None:
@@ -142,3 +146,27 @@ def test_icon_choices_expose_picker_descriptors() -> None:
 def test_quick_create_slider_label_formats_scaled_values() -> None:
     assert _slider_label(12, 1) == "12"
     assert _slider_label(125, 100) == "1.25"
+
+
+def test_quick_create_slider_value_preserves_unscaled_integers() -> None:
+    assert _widget_value_from_slider(7, 1) == 7
+    assert isinstance(_widget_value_from_slider(7, 1), int)
+    assert _widget_value_from_slider(125, 100) == 1.25
+
+
+def test_quick_create_valid_status_uses_runtime_schema() -> None:
+    valid_draft = build_quick_create_draft(make_default_input())
+
+    assert _valid_draft_status_text(valid_draft) == "Valid draft: quick-vertical-stack (4 slots)"
+
+    invalid_draft = build_quick_create_draft(
+        QuickCreateDraftInput(
+            preset_id="bad",
+            template_id="vertical_stack",
+            slots=(QuickCreateSlotInput(id="slot", label=""),),
+            anchor="viewport.left.center",
+            orientation="vertical",
+        )
+    )
+    with pytest.raises(ValueError, match="requires non-empty string 'label'"):
+        _valid_draft_status_text(invalid_draft)

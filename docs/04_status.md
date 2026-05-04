@@ -312,19 +312,16 @@ Start here:
 
 ## Latest Handoff
 
-- Task goal completed: Phase 2 step 2.2 dockable Quick Create panel was added,
-  including template/action/icon picker data, Maya workspace-control entry
-  points, draft validation, unit coverage, and a Maya screenshot smoke.
-- Files changed in this handoff update: new `quick_create.py`,
-  `quick_create_ui.py`, `tests/test_quick_create.py`, and
-  `tests/maya_smoke/actionrail_quick_create_smoke.py`; `maya_ui.py`,
-  `__init__.py`, `project.py`, Maya UI tests, and docs were updated.
+- Task goal completed: Quick Create review fixes landed for schema-backed draft
+  validation and integer-preserving layout slider sync.
+- Files changed in this handoff update: `quick_create_ui.py`,
+  `tests/test_quick_create.py`, and this status note.
 - Behavior verified: full pytest and coverage report pass at 100%, Ruff passes,
-  and `scripts/maya-smoke.ps1 -Script all` passes against MayaSessiond with
-  Quick Create screenshots for every tab.
-- Current live state: ActionRail has a dockable Quick Create panel that can
-  choose vertical/horizontal/edge-tab templates, edit basic layout and slot
-  values, pick registered actions/icons, and produce a valid `DraftRail`.
+  and `scripts/maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` passes
+  against MayaSessiond.
+- Current live state: Validate Draft now runs drafts through the runtime schema
+  before reporting success, and unscaled layout sliders feed integers back into
+  integer spin boxes.
 - Blockers/risks: no implementation blocker known.
 - Exact next step: continue Phase 2 step 2.3 preview and save workflow.
 
@@ -349,13 +346,14 @@ Start here:
 
 - Coverage gate:
   `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 354 passed, `TOTAL 3780 0 100%`.
+  -> 356 passed, `TOTAL 3788 0 100%`.
 - Full local checks:
   `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py` ->
-  passed against MayaSessiond on port `7217`; saved General, Layout, Slots, and
-  final panel screenshots at `900x680`.
+  passed against MayaSessiond on port `7217`; reported
+  `Valid draft: quick-horizontal-strip (4 slots)` and saved General, Layout,
+  Slots, and final panel screenshots at `900x680`.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all` -> passed against MayaSessiond on
   port `7217`; verified capture, diagnostic badges, diagnostics window,

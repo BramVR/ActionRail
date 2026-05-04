@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .authoring import DraftRail, build_draft_spec
 from .overlay import maya_main_window
 from .qt import QtBinding, load
 from .quick_create import (
@@ -266,12 +267,13 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
     def validate_draft() -> None:
         try:
             draft = current_draft()
+            text = _valid_draft_status_text(draft)
         except Exception as exc:
             status.setProperty("actionRailStatus", "error")
             status.setText(str(exc))
             return
         status.setProperty("actionRailStatus", "ok")
-        status.setText(f"Valid draft: {draft.id} ({len(draft.slots)} slots)")
+        status.setText(text)
 
     def refresh_template(index: int) -> None:
         if template_list.currentRow() != index:
@@ -469,7 +471,7 @@ def _add_slider_field(  # pragma: no cover
     layout.addLayout(slider_row)
 
     def set_widget_from_slider(value: int) -> None:
-        value_widget.setValue(value / scale_factor)
+        value_widget.setValue(_widget_value_from_slider(value, scale_factor))
 
     def set_slider_from_widget(value: float) -> None:
         slider.setValue(round(float(value) * scale_factor))
@@ -483,6 +485,17 @@ def _slider_label(value: int, scale_factor: int) -> str:
     if scale_factor == 1:
         return str(value)
     return f"{value / scale_factor:g}"
+
+
+def _widget_value_from_slider(value: int, scale_factor: int) -> int | float:
+    if scale_factor == 1:
+        return value
+    return value / scale_factor
+
+
+def _valid_draft_status_text(draft: DraftRail) -> str:
+    spec = build_draft_spec(draft)
+    return f"Valid draft: {spec.id} ({len(spec.items)} slots)"
 
 
 def _widget_to_slider_value(widget: Any, scale_factor: int) -> int:  # pragma: no cover
