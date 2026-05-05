@@ -13,8 +13,8 @@ Last updated: 2026-05-05
 ## Current Snapshot
 
 ActionRail has a verified declarative MVP and Phase 2 authoring foundation
-through Quick Create preview/save/load, the first Edit Mode layout-map shell,
-and the first Edit Mode layout-save path for unlocked runtime/user rails.
+through Quick Create preview/save/load, Edit Mode layout-map/direct
+manipulation controls, user preset saves, and built-in layout override saves.
 
 Working surface:
 
@@ -28,24 +28,28 @@ Working surface:
 - Maya menu and shelf entry points, including diagnostics, SVG import
   diagnostics, Quick Create, and Toggle Edit Mode.
 - Dockable Quick Create panel with template selection, preview, clear preview,
-  save, overwrite, and load-existing user preset workflow.
+  save, overwrite, custom user preset store support, custom action/icon id
+  preservation, and load-existing user preset workflow.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
-  Frames, active rail frames, selection, right-click routing, X/Y movement for
-  unlocked rails, and Save Position/user-preset persistence for unlocked
-  runtime/user rails.
+  Frames, active rail frames, selection, drag handles, anchor pins,
+  snap/spacing guides, right-click options, X/Y movement for unlocked rails,
+  slot add/remove/reorder controls, edge-tab opacity collapse, safe movement
+  clamps, Save Position/user-preset persistence for unlocked runtime/user
+  rails, and user override saves for unlocked built-in rails.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
 
 ## In Progress
 
-Phase 2 step 2.5 Layout Editing And Direct Manipulation continues.
+Phase 2 step 2.5 Layout Editing And Direct Manipulation continues after the
+open `.spec` audit fix pass.
 
 Focus this slice on:
 
-- broadening persistence toward built-in/studio user overrides
-- drag handles, anchor pins, safe margins, snap guides, and spacing guides
-- fuller right-click frame options routing
+- broadening persistence toward fuller studio override layering
+- polishing handle hit targets, guide behavior, and slot-edit affordances
+- keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 
 Do not start Bind Mode, flyouts, command rings, profile layers,
@@ -71,11 +75,12 @@ $env:PYTHONPATH = "scripts"
 - Quick Create can preview/save/load user presets.
 - Edit Mode can inspect active rails, select frames, show grid/snap/sticky
   controls, move unlocked rails in-session, and route right-click options.
-- Edit Mode can save adjusted unlocked runtime/user rail specs to the user
-  preset store through `save_edit_mode_layout()` and the right-click Save
-  Position control.
-- User-override persistence for built-in/studio presets and fuller direct
-  manipulation are the exact next implementation steps.
+- Edit Mode can save adjusted unlocked runtime/user rail specs and unlocked
+  built-in user override presets through `save_edit_mode_layout()` and the
+  right-click Save Position control.
+- The `.spec/actionrail-open-issues-2026-05-05.md` audit items are fixed in
+  follow-up commits through `feat(edit-mode): add direct manipulation controls`
+  plus the diagnostics follow-up.
 - No ActionRail implementation blocker is known.
 
 ## Blockers
@@ -93,13 +98,13 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 399 passed.
+  -> 412 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
 - Project map:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
-  -> passed; reports Phase 2 step 2.5 layout persistence slice implemented.
+  -> passed.
 - Docs list:
   `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`
   -> passed.

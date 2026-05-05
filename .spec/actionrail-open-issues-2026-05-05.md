@@ -12,9 +12,10 @@ This report is separate from `actionrail-qa-report-2026-05-05.md`, which mostly
 records regressions already fixed in earlier commits. The items below are open
 at current `HEAD` and should not be counted as fixed.
 
-Current result: 18 open issues found. Several are data-loss paths in Quick
-Create load/save workflows, and several are Phase 2.5 direct-manipulation gaps
-that still affect whether ActionRail feels safe as an authoring tool.
+Current result: 18 issues found and fixed by follow-up commits. Several were
+data-loss paths in Quick Create load/save workflows, and several were Phase 2.5
+direct-manipulation gaps affecting whether ActionRail felt safe as an authoring
+tool.
 
 ## Evidence
 
@@ -155,16 +156,16 @@ that still affect whether ActionRail feels safe as an authoring tool.
     Status: fixed in `fix(edit-mode): clamp rail movement to safe bounds`.
 
 17. AR-OPEN-017: Built-in/studio user-override persistence is still missing.
-    Evidence: `docs/08_edit_mode.md` lists it as not implemented, and current
-    Save Position behavior is scoped to unlocked runtime/user rails.
+    Evidence: earlier `docs/08_edit_mode.md` status listed it as missing, and
+    Save Position behavior was scoped to unlocked runtime/user rails.
     Impact: users cannot safely personalize locked shipped/studio rails without
     creating separate user presets.
     Status: fixed in `fix(edit-mode): save builtin layout overrides`.
 
 18. AR-OPEN-018: Edit Mode direct-manipulation controls are still incomplete.
-    Evidence: `docs/08_edit_mode.md` lists drag handles, anchor pins,
+    Evidence: earlier `docs/08_edit_mode.md` status listed drag handles, anchor pins,
     snap/spacing guide rendering, fuller rail options, slot add/remove/reorder,
-    and collapsible edge-tab controls as not implemented.
+    and collapsible edge-tab controls as missing.
     Impact: the current Edit Mode shell still requires indirect controls and
     cannot yet serve as the polished viewport layout editor described in the
     Phase 2.5 goal.
@@ -178,7 +179,7 @@ open count. That includes the custom user-preset store save regression fixed by
 runtime-command collision handling, empty-selection Set Key protection, and the
 Quick Create basic validation/load-protection fixes.
 
-## Recommended Fix Order
+## Completed Fix Order
 
 1. Fix Quick Create round-trip data loss first: preserve spacers and metadata or
    explicitly reject richer presets with a non-destructive warning.
