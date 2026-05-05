@@ -18,6 +18,8 @@ from .qt import load
 
 DEFAULT_GRID_SIZE = 32
 STICKY_SNAP_THRESHOLD = 8
+SAFE_MARGIN = 8
+DEFAULT_SAFE_BOUNDS = (4096, 4096)
 MIN_GRID_SIZE = 16
 MAX_GRID_SIZE = 512
 EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
@@ -386,6 +388,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
                 getattr(self, "settings", EditModeSettings()).normalized(),
                 self.frames,
                 snap_axes=snap_axes,
+                bounds=_safe_widget_size(self.widget),
             )
         base_x = selected.x - selected.offset[0]
         base_y = selected.y - selected.offset[1]
@@ -980,6 +983,7 @@ def _snapped_position(
     frames: tuple[RailFrameInfo, ...],
     *,
     snap_axes: tuple[str, ...] = ("x", "y"),
+    bounds: tuple[int, int] | None = None,
 ) -> tuple[int, int]:
     snap_x = "x" in snap_axes
     snap_y = "y" in snap_axes
@@ -992,7 +996,7 @@ def _snapped_position(
             x_pos = _snap_value_to_grid(x_pos, settings.grid_size)
         if snap_y:
             y_pos = _snap_value_to_grid(y_pos, settings.grid_size)
-    return x_pos, y_pos
+    return _clamped_frame_position(frame, x_pos, y_pos, frames, bounds=bounds)
 
 
 def _snap_axes_for_delta(dx: int, dy: int) -> tuple[str, ...]:
@@ -1013,6 +1017,32 @@ def _nudge_delta(delta: int, step: int) -> int:
 def _snap_value_to_grid(value: int, grid_size: int) -> int:
     grid_size = max(MIN_GRID_SIZE, int(grid_size))
     return int(round(value / grid_size) * grid_size)
+
+
+def _clamped_frame_position(
+    frame: RailFrameInfo,
+    x_pos: int,
+    y_pos: int,
+    frames: tuple[RailFrameInfo, ...],
+    *,
+    bounds: tuple[int, int] | None = None,
+) -> tuple[int, int]:
+    _ = frames
+    width, height = bounds or DEFAULT_SAFE_BOUNDS
+    max_x = max(SAFE_MARGIN, width - frame.width - SAFE_MARGIN)
+    max_y = max(SAFE_MARGIN, height - frame.height - SAFE_MARGIN)
+    return (
+        min(max(SAFE_MARGIN, x_pos), max_x),
+        min(max(SAFE_MARGIN, y_pos), max_y),
+    )
+
+
+def _safe_widget_size(widget: Any) -> tuple[int, int] | None:
+    width = _safe_widget_dimension(widget, "width")
+    height = _safe_widget_dimension(widget, "height")
+    if width <= 0 or height <= 0:
+        return None
+    return (width, height)
 
 
 def _sticky_snap_position(

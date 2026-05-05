@@ -152,7 +152,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
     Evidence: `_snapped_position()` returns `(-128, -128)` for a negative move
     and `(99968, 99968)` for a huge move with a 64px grid.
     Impact: a rail can be moved far outside the useful viewport area.
-    Status: open.
+    Status: fixed in `fix(edit-mode): clamp rail movement to safe bounds`.
 
 17. AR-OPEN-017: Built-in/studio user-override persistence is still missing.
     Evidence: `docs/08_edit_mode.md` lists it as not implemented, and current

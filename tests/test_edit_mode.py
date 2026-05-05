@@ -107,6 +107,36 @@ def test_snap_to_grid_and_sticky_frame_alignment() -> None:
     assert edit_mode._nudge_delta(0, 64) == 0
 
 
+def test_snapped_position_clamps_to_safe_bounds() -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="moving",
+        label="Moving",
+        x=0,
+        y=0,
+        width=100,
+        height=50,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="horizontal",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    settings = edit_mode.EditModeSettings(snap_to_grid=True, grid_size=64)
+
+    assert edit_mode._snapped_position(frame, -100, -100, settings, ()) == (8, 8)
+    assert edit_mode._snapped_position(
+        frame,
+        100000,
+        100000,
+        settings,
+        (),
+        bounds=(640, 480),
+    ) == (532, 422)
+
+
 def test_widget_position_prefers_parent_mapped_global_position() -> None:
     class Point:
         def __init__(self, x_pos: int, y_pos: int) -> None:
