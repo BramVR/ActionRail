@@ -284,6 +284,15 @@ options_popover = edit_widget.findChild(
 if options_popover is None or not options_popover.isVisible():
     raise AssertionError("Right click did not open the frame options popover.")
 
+save_dir = output_path.parent.parent / "user_presets"
+saved_path = actionrail.save_edit_mode_layout(user_preset_dir=save_dir)
+saved_spec = actionrail.load_user_preset("edit_mode_custom", preset_dir=save_dir)
+if saved_spec.layout.offset != custom_frame_after_snap_sticky.offset:
+    raise AssertionError(
+        "Edit Mode layout save did not persist the adjusted offset: "
+        f"{saved_spec.layout.offset} != {custom_frame_after_snap_sticky.offset}"
+    )
+
 pixmap = edit_widget.grab()
 screenshot_saved = pixmap.save(str(output_path), "PNG")
 if not screenshot_saved or pixmap.width() <= 0 or pixmap.height() <= 0:
@@ -294,6 +303,8 @@ result = {
     "grid_size": actionrail.edit_mode_state().settings.grid_size,
     "options_preset_id": actionrail.edit_mode_state().options_preset_id,
     "rail_count": len(host.frames),
+    "saved_layout_offset": list(saved_spec.layout.offset),
+    "saved_layout_path": str(saved_path),
     "screenshot": str(output_path),
     "screenshot_saved": bool(screenshot_saved),
     "screenshot_size": [pixmap.width(), pixmap.height()],

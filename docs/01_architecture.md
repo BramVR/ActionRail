@@ -202,8 +202,10 @@ authoring shell. It owns the public `EditModeSettings`, `EditModeState`, and
 `RailFrameInfo` value objects; global enter/exit/toggle state; layout-map
 painting; selected-rail state; grid/snap/sticky options; and session-local
 position changes. It reads active overlay geometry from the runtime registry
-and should not mutate locked built-in presets directly. Phase 2 step 2.5 should
-persist edited layout data through user presets or user overrides.
+and should not mutate locked built-in presets directly. Phase 2 step 2.5 now
+persists unlocked runtime/user rail layout edits by saving the current spec to
+the user preset store; built-in/studio override layering remains the next
+persistence refinement.
 
 Icon fields should store stable logical ids, not raw file paths. The icon
 provider layer currently resolves manifest-backed ids such as

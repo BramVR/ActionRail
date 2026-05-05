@@ -13,8 +13,8 @@ Last updated: 2026-05-05
 ## Current Snapshot
 
 ActionRail has a verified declarative MVP and Phase 2 authoring foundation
-through Quick Create preview/save/load and the first Edit Mode layout-map
-shell.
+through Quick Create preview/save/load, the first Edit Mode layout-map shell,
+and the first Edit Mode layout-save path for unlocked runtime/user rails.
 
 Working surface:
 
@@ -30,20 +30,20 @@ Working surface:
 - Dockable Quick Create panel with template selection, preview, clear preview,
   save, overwrite, and load-existing user preset workflow.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
-  Frames, active rail frames, selection, right-click routing, and session-local
-  X/Y movement for unlocked rails.
+  Frames, active rail frames, selection, right-click routing, X/Y movement for
+  unlocked rails, and Save Position/user-preset persistence for unlocked
+  runtime/user rails.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
 
 ## In Progress
 
-Phase 2 step 2.5 Layout Editing And Direct Manipulation is next.
+Phase 2 step 2.5 Layout Editing And Direct Manipulation continues.
 
 Focus this slice on:
 
-- persisting adjusted rail offsets/layout values to user presets or user
-  overrides
+- broadening persistence toward built-in/studio user overrides
 - drag handles, anchor pins, safe margins, snap guides, and spacing guides
 - fuller right-click frame options routing
 - keeping locked built-in/studio presets read-only
@@ -71,8 +71,11 @@ $env:PYTHONPATH = "scripts"
 - Quick Create can preview/save/load user presets.
 - Edit Mode can inspect active rails, select frames, show grid/snap/sticky
   controls, move unlocked rails in-session, and route right-click options.
-- Saved layout persistence and fuller direct manipulation are the exact next
-  implementation step.
+- Edit Mode can save adjusted unlocked runtime/user rail specs to the user
+  preset store through `save_edit_mode_layout()` and the right-click Save
+  Position control.
+- User-override persistence for built-in/studio presets and fuller direct
+  manipulation are the exact next implementation steps.
 - No ActionRail implementation blocker is known.
 
 ## Blockers
@@ -88,25 +91,36 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
-- Coverage gate:
-  `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
-  -> 395 passed, `TOTAL 4145 0 100%`.
+- Full pytest:
+  `.\\.venv\\Scripts\\python.exe -m pytest`
+  -> 399 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
+- Project map:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
+  -> passed; reports Phase 2 step 2.5 layout persistence slice implemented.
+- Docs list:
+  `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`
+  -> passed.
+- Local Markdown link check:
+  PowerShell local-link scan over `docs/**/*.md`
+  -> `Local Markdown links OK`.
 - Edit Mode Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script actionrail_edit_mode_smoke.py -Timeout 240 -NoStart`
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
   -> passed; verified layout-map overlay, Grid Size 64, Snap to Grid, Sticky
   Frames, left-click selection, X coordinate movement, sticky-frame alignment,
-  right-click options routing, and screenshot capture at
+  right-click options routing, saved layout offset `[51, -133]`, user preset
+  save path `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and
+  screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script all -Timeout 240 -NoStart`
-  -> passed against a separate MayaSessiond on port `7219`; covered capture,
-  diagnostic badges, diagnostics window, hidden visibility, Edit Mode,
-  horizontal and Maya icon rails, hotkey bridge, import/recovery diagnostics,
-  menu/shelf UI, overlay cleanup, predicates, Quick Create, StackItem ABI, and
-  transform-stack state.
+  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
+  -> passed against MayaSessiond on port `7217`; covered capture, diagnostic
+  badges, diagnostics window, hidden visibility, Edit Mode, horizontal and Maya
+  icon rails, hotkey bridge, hotkey label sync, import/recovery diagnostics,
+  menu/shelf UI, missing Maya icon resources, overlay cleanup, predicates,
+  Quick Create, StackItem ABI, and transform-stack state.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,

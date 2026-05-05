@@ -53,15 +53,19 @@ Inside Edit Mode:
 
 - left-click a rail frame to select it and open the X/Y popover
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
-- right-click a rail frame to record options routing for that rail
+- right-click a rail frame to open options routing for that rail
 - enable Grid to show or hide the edit-only grid
 - adjust Grid Size to change the grid spacing
 - enable Snap to Grid to snap authoring movement to the grid
 - enable Sticky Frames to align moved rails to nearby rail edges
+- use Save Position from the right-click options popover, or
+  `save_edit_mode_layout()`, to persist an unlocked runtime/user rail as a user
+  preset
 
-Current movement is in-session only. It updates active rail overlay positions
-while Edit Mode is open, but Phase 2 step 2.5 still needs saved user preset or
-user-override persistence.
+Movement updates active rail overlay positions immediately. Saved persistence is
+implemented for unlocked runtime/user rails by writing the current runtime spec
+to the user preset store. Locked built-in presets remain read-only; built-in
+user-override layering is still a later persistence refinement.
 
 ## Public API
 
@@ -80,7 +84,8 @@ state = actionrail.set_edit_mode_options(
     sticky_frames=True,
     grid_size=32,
 )
-state = actionrail.select_edit_mode_rail("transform_stack")
+state = actionrail.select_edit_mode_rail("my_user_rail")
+path = actionrail.save_edit_mode_layout("my_user_rail")
 ```
 
 State objects:
@@ -110,15 +115,17 @@ Implemented now:
 - grid visibility and grid-size controls
 - left-click frame selection
 - selected-frame X/Y popover
-- non-persistent X/Y movement for unlocked rails
+- X/Y movement for unlocked rails
 - snap-to-grid and Sticky Frames during movement
 - right-click frame options routing marker
+- Save Position for unlocked runtime/user rails
+- public layout-save helper that persists adjusted offsets to user presets
 - Maya menu toggle
 - Maya screenshot verification
 
 Not implemented yet:
 
-- persisted layout edits
+- built-in/studio user-override persistence
 - drag handles
 - anchor pins
 - snap/spacing guide rendering

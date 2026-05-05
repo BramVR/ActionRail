@@ -353,7 +353,9 @@ Build the user-facing authoring workflow in medium slices:
    margins, left-click position popover with X/Y and Reset, right-click
    frame-specific options routing, optional snap-to-grid, optional sticky-frame
    snapping to nearby rails, snap/spacing guides, slot add/remove/reorder, and
-   persisted layout edits.
+   persisted layout edits. Status: first user-preset layout-save path is
+   implemented for unlocked runtime/user rails; built-in/studio override
+   layering is still pending.
    Future button-style controls should let users independently show/hide,
    offset, and colorize the slot label and hotkey/key-label overlay.
 6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,

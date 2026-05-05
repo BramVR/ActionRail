@@ -1,7 +1,7 @@
 """Edit Mode layout-map overlay for ActionRail rails.
 
 Purpose: show edit-only grid, rail footprints, selection, and placement controls.
-Owns: global Edit Mode state, layout-map painting, and non-persistent rail nudging.
+Owns: global Edit Mode state, layout-map painting, rail nudging, and layout saves.
 Used by: public ActionRail API and Maya menu commands.
 Tests: `tests/test_edit_mode.py` and `tests/maya_smoke/actionrail_edit_mode_smoke.py`.
 """
@@ -11,6 +11,7 @@ from __future__ import annotations
 from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
+from pathlib import Path
 from typing import Any
 
 from .qt import load
@@ -38,6 +39,7 @@ __all__ = [
     "enter_edit_mode",
     "exit_edit_mode",
     "refresh_edit_mode",
+    "save_edit_mode_layout",
     "select_edit_mode_rail",
     "set_edit_mode_options",
     "toggle_edit_mode",
@@ -181,6 +183,24 @@ def refresh_edit_mode() -> EditModeState:
     if _EDIT_HOST is not None:
         _EDIT_HOST.refresh()
     return edit_mode_state()
+
+
+def save_edit_mode_layout(
+    preset_id: str | None = None,
+    *,
+    user_preset_dir: str | Path | None = None,
+    overwrite: bool = True,
+) -> Path:
+    """Persist the selected active rail's current layout as a user preset."""
+
+    if _EDIT_HOST is None:
+        msg = "ActionRail Edit Mode is not active."
+        raise RuntimeError(msg)
+    return _EDIT_HOST.save_layout(
+        preset_id or _SELECTED_PRESET_ID,
+        user_preset_dir=user_preset_dir,
+        overwrite=overwrite,
+    )
 
 
 def select_edit_mode_rail(preset_id: str) -> EditModeState:
@@ -384,11 +404,62 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         _set_host_offset(host, original)
         self.refresh()
 
-    def selected_frame(self) -> RailFrameInfo | None:
+    def save_selected_layout(
+        self,
+        *,
+        user_preset_dir: str | Path | None = None,
+        overwrite: bool = True,
+    ) -> Path:
+        """Persist the currently selected rail's layout to the user preset store."""
+
+        return self.save_layout(
+            _SELECTED_PRESET_ID,
+            user_preset_dir=user_preset_dir,
+            overwrite=overwrite,
+        )
+
+    def save_layout(
+        self,
+        preset_id: str,
+        *,
+        user_preset_dir: str | Path | None = None,
+        overwrite: bool = True,
+    ) -> Path:
+        """Persist an active rail's current spec to the user preset store."""
+
+        if not preset_id:
+            msg = "Select an ActionRail frame before saving its layout."
+            raise ValueError(msg)
+        frame = self.frame_for_preset(preset_id)
+        if frame is None:
+            msg = f"ActionRail rail is not active in Edit Mode: {preset_id}"
+            raise KeyError(msg)
+        if frame.locked:
+            msg = f"ActionRail rail is locked and cannot be saved from Edit Mode: {preset_id}"
+            raise ValueError(msg)
+        if frame.source_layer == "builtin":
+            msg = (
+                f"ActionRail built-in preset '{preset_id}' is read-only. "
+                "Save a user-created preset instead."
+            )
+            raise ValueError(msg)
+        host = _runtime_hosts().get(preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            msg = f"ActionRail runtime host is unavailable for rail: {preset_id}"
+            raise KeyError(msg)
+        from .authoring import save_user_preset
+
+        return save_user_preset(spec, preset_dir=user_preset_dir, overwrite=overwrite)
+
+    def frame_for_preset(self, preset_id: str) -> RailFrameInfo | None:
         for frame in self.frames:
-            if frame.preset_id == _SELECTED_PRESET_ID:
+            if frame.preset_id == preset_id:
                 return frame
         return None
+
+    def selected_frame(self) -> RailFrameInfo | None:
+        return self.frame_for_preset(_SELECTED_PRESET_ID)
 
 
 class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
@@ -694,15 +765,21 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.title.setAlignment(qt.QtCore.Qt.AlignCenter)
                 self.details = qt.QtWidgets.QLabel("")
                 self.details.setWordWrap(True)
+                self.status = qt.QtWidgets.QLabel("")
+                self.status.setWordWrap(True)
+                self.save = qt.QtWidgets.QPushButton("Save Position")
                 self.reset = qt.QtWidgets.QPushButton("Reset Position")
                 self.close_button = qt.QtWidgets.QToolButton()
                 self.close_button.setText("x")
                 layout.addWidget(self.title, 0, 0, 1, 2)
                 layout.addWidget(self.close_button, 0, 2)
                 layout.addWidget(self.details, 1, 0, 1, 3)
-                layout.addWidget(self.reset, 2, 0, 1, 3)
+                layout.addWidget(self.status, 2, 0, 1, 3)
+                layout.addWidget(self.save, 3, 0, 1, 3)
+                layout.addWidget(self.reset, 4, 0, 1, 3)
                 self.setFixedWidth(260)
                 self.close_button.clicked.connect(self._close_options)
+                self.save.clicked.connect(self._save_options)
                 self.reset.clicked.connect(self._owner._host.reset_selected_position)
 
             def sync(self, frame: RailFrameInfo | None) -> None:
@@ -716,6 +793,8 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                     f"{frame.anchor}\n"
                     f"Offset {frame.offset[0]}, {frame.offset[1]} | {lock_text}"
                 )
+                self.status.setText(_save_status_text(frame))
+                self.save.setEnabled(_can_save_frame(frame))
                 self.reset.setEnabled(not frame.locked)
                 self.setFixedHeight(self.sizeHint().height())
                 self.move(
@@ -733,6 +812,17 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 global _OPTIONS_PRESET_ID
                 _OPTIONS_PRESET_ID = ""
                 self._owner.refresh_from_host()
+
+            def _save_options(self) -> None:
+                try:
+                    path = self._owner._host.save_selected_layout()
+                except Exception as exc:
+                    self.status.setText(str(exc))
+                    self.save.setEnabled(False)
+                    self.setFixedHeight(self.sizeHint().height())
+                    return
+                self.status.setText(f"Saved {path.name}")
+                self.setFixedHeight(self.sizeHint().height())
 
         return _Options(canvas)
 
@@ -781,6 +871,7 @@ def _rail_frame_info(
         scale=float(getattr(layout, "scale", 1.0)),
         opacity=float(getattr(layout, "opacity", 1.0)),
         locked=bool(getattr(layout, "locked", False)),
+        source_layer=_preset_source_layer(preset_id),
     )
 
 
@@ -803,6 +894,20 @@ def _set_host_offset(host: Any, offset: tuple[int, int]) -> None:
     position = getattr(host, "position", None)
     if callable(position):
         position()
+
+
+def _preset_source_layer(preset_id: str) -> str:
+    try:
+        from .authoring import user_preset_ids
+        from .spec import builtin_preset_ids
+
+        if preset_id in builtin_preset_ids():
+            return "builtin"
+        if preset_id in user_preset_ids():
+            return "user"
+    except Exception:
+        return "runtime"
+    return "runtime"
 
 
 def _widget_position_in_parent(qt: Any, parent: Any, widget: Any) -> tuple[int, int]:
@@ -1026,6 +1131,20 @@ def _lock_button_text(selected: RailFrameInfo | None) -> str:
     if selected is None:
         return "No selection"
     return "Locked" if selected.locked else "Unlocked"
+
+
+def _can_save_frame(frame: RailFrameInfo) -> bool:
+    return not frame.locked and frame.source_layer != "builtin"
+
+
+def _save_status_text(frame: RailFrameInfo) -> str:
+    if frame.locked:
+        return "Locked rails are read-only."
+    if frame.source_layer == "builtin":
+        return "Built-in presets are read-only."
+    if frame.source_layer == "runtime":
+        return "Save creates a user preset."
+    return "Save updates the user preset."
 
 
 def _frame_label(preset_id: str) -> str:

@@ -47,8 +47,9 @@ Snapshot:
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.5 layout editing and direct
-  manipulation polish; do not start Bind Mode, flyouts, command rings, profile
-  layers, marking-menu export, or Viewport 2.0 yet.
+  manipulation polish. The first persistence slice can save unlocked
+  runtime/user rail offsets to user presets; do not start Bind Mode, flyouts,
+  command rings, profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -91,13 +92,13 @@ Build PySide6/Qt overlay first.
 ## Current Priority
 
 Phase 1 declarative MVP and Phase 2 steps 2.1-2.4 are complete for their first
-useful slices. Continue Phase 2 with focused layout editing/direct manipulation
-work:
+useful slices. Phase 2 step 2.5 has its first user-preset layout-save path.
+Continue Phase 2 with focused layout editing/direct manipulation work:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Build on the Edit Mode shell: persist layout edits to user presets or
-   overrides, add snap/spacing guides, expand right-click options routing, and
-   keep the existing layout-map frame view stable.
+2. Build on the Edit Mode shell: broaden persistence toward overrides, add
+   snap/spacing guides, expand right-click options routing, and keep the
+   existing layout-map frame view stable.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,
