@@ -46,11 +46,11 @@ Snapshot:
   should use the provider catalog instead of import/write/fallback code.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
-- Current next implementation slice: Phase 2 step 2.5 layout editing and direct
-  manipulation polish. Edit Mode can save unlocked runtime/user rail offsets
-  plus unlocked built-in and studio user override presets; do not start Bind
-  Mode, flyouts, command rings, profile layers, marking-menu export, or
-  Viewport 2.0 yet.
+- Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
+  publish polish. Phase 2 step 2.5 layout editing and direct manipulation is
+  complete; Edit Mode can save unlocked runtime/user rail offsets plus unlocked
+  built-in and studio user override presets. Do not start Bind Mode, flyouts,
+  command rings, profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -92,14 +92,15 @@ Build PySide6/Qt overlay first.
 
 ## Current Priority
 
-Phase 1 declarative MVP and Phase 2 steps 2.1-2.4 are complete for their first
+Phase 1 declarative MVP and Phase 2 steps 2.1-2.5 are complete for their first
 useful slices. Phase 2 step 2.5 has direct-manipulation controls plus
 user-preset, built-in user-override, and studio user-override layout-save paths.
-Continue Phase 2 with focused layout editing/direct manipulation work:
+Continue Phase 2 with collapsible edge tabs and publish polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Build on the Edit Mode shell: polish drag handles/guides/slot edits and keep
-   the existing layout-map frame view stable.
+2. Build on the completed Edit Mode layout editing surface; carry forward only
+   polish needed for Phase 2 step 2.6, such as handle hit targets, guide
+   behavior, and slot-edit affordances.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

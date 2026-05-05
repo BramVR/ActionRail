@@ -8,7 +8,7 @@ read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 - Deep reference: `docs/01_architecture.md`; roadmap: `docs/02_implementation_plan.md`; Maya verification: `docs/03_maya_sessiond_workflow.md`.
 - Fast project map: `$env:PYTHONPATH="scripts"; .\.venv\Scripts\python.exe -m actionrail --json`.
 - Live state stays compact in `docs/04_status.md`; long verification history belongs in `docs/history/verification_log.md`.
-- Current implementation boundary: Phase 2 step 2.5 layout editing/direct manipulation on top of the verified Quick Create and Edit Mode shell. Do not jump to Bind Mode, flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0.
+- Current implementation boundary: Phase 2 step 2.6 collapsible edge tabs and publish polish on top of the completed Phase 2 step 2.5 Edit Mode layout editing surface. Do not jump to Bind Mode, flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0.
 - PySide6/Qt overlay first. Viewport 2.0 only for scene/native drawing.
 
 ## Workflow
@@ -25,6 +25,7 @@ read: `../bram-agent-scripts/AGENTS.MD` before ANYTHING
 - Before saying all tests passed, run full pytest, Ruff, and `maya-smoke.ps1 -Script all`.
 - For docs-only changes, at minimum run the project map, docs-list, local Markdown link check, and any targeted consistency check such as smoke-list parity.
 - Keep docs current so agents know big picture, done state, next work, blockers, and the active verification route.
+- Treat `docs/02_implementation_plan.md` as the phase/roadmap source of truth. When phase status or next work changes, update it first, then mirror the short live summary in `docs/00_start_here.md`, `docs/04_status.md`, `scripts/actionrail/project.py`, and `CHANGELOG.md`.
 - Keep `CHANGELOG.md` in sync with following updates; group related conventional commits into dated, user-facing bullets.
 - Keep `docs/04_status.md` compact; archive long verification entries in `docs/history/verification_log.md`.
 - After adding or renaming a Maya smoke script, update `docs/03_maya_sessiond_workflow.md` and the project/status docs as needed.

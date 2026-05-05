@@ -179,8 +179,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.5 studio override resolution implemented",
-            "next_slice": "Phase 2 step 2.5 handle, guide, and options polish",
+            "phase": "Phase 2 step 2.5 layout editing/direct manipulation done",
+            "next_slice": "Phase 2 step 2.6 collapsible edge tabs and publish polish",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

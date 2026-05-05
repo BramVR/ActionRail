@@ -11,6 +11,8 @@ import actionrail.project as project_map
 from actionrail.__main__ import main
 from actionrail.project import about
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_about_returns_json_safe_agent_map() -> None:
     project = about()
@@ -48,12 +50,11 @@ def test_package_exposes_about() -> None:
 
 
 def test_module_cli_prints_json_project_map() -> None:
-    repo_root = Path(__file__).resolve().parents[1]
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(repo_root / "scripts")
+    env["PYTHONPATH"] = str(REPO_ROOT / "scripts")
     result = subprocess.run(
         [sys.executable, "-m", "actionrail", "--json"],
-        cwd=repo_root,
+        cwd=REPO_ROOT,
         env=env,
         check=True,
         capture_output=True,
@@ -70,7 +71,8 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 2 step 2.5 studio override resolution implemented" in output
+    assert "Status: Phase 2 step 2.5 layout editing/direct manipulation done" in output
+    assert "Next: Phase 2 step 2.6 collapsible edge tabs and publish polish" in output
     assert "Use --json" in output
 
 

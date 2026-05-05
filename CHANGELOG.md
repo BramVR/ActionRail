@@ -41,3 +41,5 @@
   tracking local `.spec/` reports so future reports stay out of Git.
 - Refreshed README/status docs to reflect the current bundled presets and
   implemented Edit Mode persistence/direct-manipulation surface.
+- Marked Phase 2 step 2.5 complete in the implementation plan and aligned
+  start/status/Edit Mode docs so Phase 2 step 2.6 is the next active slice.

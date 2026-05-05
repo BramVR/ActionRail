@@ -42,13 +42,14 @@ Working surface:
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
 
-## In Progress
+## Current Plan
 
-Phase 2 step 2.5 Layout Editing And Direct Manipulation continues after the
-direct-manipulation and audit fix pass. Local `.spec/` reports are ignored and
-not part of the Git-tracked handoff.
+`docs/02_implementation_plan.md` is the source of truth for phase completion
+and next work. Phase 2 step 2.5 Layout Editing And Direct Manipulation is done;
+Phase 2 step 2.6 collapsible edge tabs and publish polish is next. Local
+`.spec/` reports are ignored and not part of the Git-tracked handoff.
 
-Focus this slice on:
+Focus the next slice on:
 
 - polishing handle hit targets, guide behavior, and slot-edit affordances
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
@@ -67,7 +68,8 @@ $env:PYTHONPATH = "scripts"
 .\.venv\Scripts\python.exe -m actionrail --json
 ```
 
-3. Begin Phase 2 step 2.5 on top of the verified Edit Mode shell.
+3. Begin Phase 2 step 2.6 on top of the completed Phase 2 step 2.5 Edit Mode
+   layout editing surface.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff

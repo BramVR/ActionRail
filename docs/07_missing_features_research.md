@@ -57,9 +57,10 @@ records 1x/2x/3x assets plus source hashes in the manifest, and diagnostics
 report missing or stale fallback assets.
 
 2026-05-05 status note: Maya-facing icon import diagnostics, fallback preset
-recovery, Quick Create preview/save/load, curated Maya resource icons, and the
-first Edit Mode shell are implemented and smoke verified. The active backlog
-starts with Phase 2 step 2.5 layout editing and persistence.
+recovery, Quick Create preview/save/load, curated Maya resource icons, and
+Phase 2 step 2.5 layout editing/direct manipulation are implemented and smoke
+verified. The active backlog starts with Phase 2 step 2.6 collapsible edge tabs
+and publish polish.
 
 ## Highest Priority Gaps
 
@@ -146,13 +147,15 @@ Source: [Autodesk workspace controls](https://help.autodesk.com/cloudhelp/2024/C
 
 ### 5. Quick Create And Edit Mode
 
-Status: Quick Create and the first Edit Mode shell are implemented and
-Maya-smoke verified. Quick Create can create draft rails from templates,
-preview, save, overwrite, and load user presets. Edit Mode can inspect active
-rails in a layout-map overlay, select rail frames, show Grid/Grid Size/Snap to
-Grid/Sticky Frames controls, route right-click frame options, and apply
-session-local X/Y movement with snap/sticky alignment. The remaining gap is
-Phase 2 step 2.5 persistence and fuller direct manipulation.
+Status: Quick Create and the Phase 2 step 2.5 Edit Mode layout editing surface
+are implemented and Maya-smoke verified. Quick Create can create draft rails
+from templates, preview, save, overwrite, and load user presets. Edit Mode can
+inspect active rails in a layout-map overlay, select rail frames, show
+Grid/Grid Size/Snap to Grid/Sticky Frames controls, route right-click frame
+options, apply X/Y movement with snap/sticky alignment, and persist layout edits
+to user presets or user override sidecars. The remaining authoring gap begins
+with Phase 2 step 2.6 collapsible edge-tab runtime/persistence and publish
+polish.
 
 The first artist-facing authoring workflow should stay narrow:
 
@@ -417,13 +420,12 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue Phase 2 step 2.5 layout editing: persisted offset/layout writes,
-   drag handles, anchor pins, snap/spacing guides, and fuller frame options.
-2. Add collapsible edge-tab runtime/persistence polish.
-3. Add Bind Mode.
-4. Add flyouts.
-5. Add command rings.
-6. Add profile layers: built-in, studio locked, project, scene/asset, user
+1. Add Phase 2 step 2.6 collapsible edge tabs and publish polish, including
+   collapsible rail runtime and persistence.
+2. Add Bind Mode.
+3. Add flyouts.
+4. Add command rings.
+5. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-7. Add marking-menu/hotbox export.
-8. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+6. Add marking-menu/hotbox export.
+7. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.

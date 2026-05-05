@@ -13,8 +13,8 @@ viewport rail layouts. Normal Mode executes rail actions; Edit Mode draws an
 edit-only layout map over the active Maya viewport so rails can be selected and
 positioned without triggering their buttons.
 
-The first shell slice is implemented and Maya-smoke verified. It is intended as
-the base for Phase 2 step 2.5 layout persistence and direct manipulation.
+The Edit Mode shell and Phase 2 step 2.5 layout persistence/direct
+manipulation surface are implemented and Maya-smoke verified.
 
 ## What It Shows
 

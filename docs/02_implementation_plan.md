@@ -304,8 +304,8 @@ Status: complete for the first shell slice.
   configuring grid size, sticky-frame snapping, and snap-to-grid later; the
   first shell may show the grid and settings without moving or saving rails yet.
   Done for grid visibility, Grid Size, Snap to Grid, and Sticky Frames controls;
-  in-session snap/sticky movement is implemented, while saved persistence
-  remains in 2.5.
+  in-session snap/sticky movement was implemented here and saved persistence
+  was completed in 2.5.
 - Keep normal action execution disabled or clearly separated while editing.
 
 Done when existing and user-created rails can be selected and inspected in Edit
@@ -322,16 +322,19 @@ Research hints:
 
 #### 2.5 Layout Editing And Direct Manipulation
 
-- Add drag handles for moving rails in the active viewport.
-- Add anchor pins, safe margins, optional snap-to-grid behavior, snap guides,
+Status: done.
+
+- Added drag handles for moving rails in the active viewport.
+- Added anchor pins, safe margins, optional snap-to-grid behavior, snap guides,
   and spacing guides.
-- Add left-click selected-rail position controls with arrow nudges, numeric X/Y
-  coordinates, and Reset.
-- Add right-click routing from a rail/frame to that rail's options section.
-- Add Sticky Frames behavior so dragged rails can snap to other rails for quick
-  alignment.
-- Persist edited anchor/offset/layout values to a user preset or user override.
-- Add controls for slot add/remove/reorder and rail layout changes.
+- Added left-click selected-rail position controls with arrow nudges, numeric
+  X/Y coordinates, and Reset.
+- Added right-click routing from a rail/frame to that rail's options section.
+- Added Sticky Frames behavior so dragged rails can snap to other rails for
+  quick alignment.
+- Persisted edited layout offsets and saveable layout values to user presets or
+  user override sidecars for read-only built-in/studio presets.
+- Added controls for slot add/remove/reorder and rail layout changes.
 
 Done when an artist can recreate the reference stack and create a distinct rail
 layout from Maya UI only, then save those changes outside locked built-in
@@ -431,17 +434,16 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 
 ## Current Priority
 
-Phase 2 steps 2.1-2.4 are complete and verified locally. The draft authoring
+Phase 2 steps 2.1-2.5 are complete and verified locally. The draft authoring
 model, safe user-preset storage, shared preset resolver, dockable Quick Create
-panel, preview cleanup, load-existing support, save/reload workflow, and first
-Edit Mode layout-map shell are in place.
+panel, preview cleanup, load-existing support, save/reload workflow, Edit Mode
+layout-map shell, direct manipulation, snap/sticky guides, right-click options,
+slot edits, and user override persistence are in place.
 
-Current implementation slice: Phase 2 step 2.5 layout editing and direct
-manipulation. Persistence saves adjusted unlocked runtime/user rail specs to
-user presets, and unlocked built-in/studio rail saves now write
-`*_user_override` sidecars that the preset resolver applies when loading the
-original read-only preset id. Continue with snap/spacing guides, saved handling
-for snap/sticky edits, and right-click routing into a fuller options surface. Keep
+Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
+publish polish. Carry forward only polish that naturally supports 2.6, such as
+handle hit targets, guide behavior, slot-edit affordances, Quick Create
+round-trip stability, and locked built-in/studio read-only behavior. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.
@@ -451,12 +453,10 @@ yet.
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Finish Phase 2 step 2.5 layout editing: drag handles, anchor pins,
-   snap/spacing guides, and fuller frame options.
-2. Add Phase 2 step 2.6 collapsible edge-tab runtime, persistence, and publish
+1. Add Phase 2 step 2.6 collapsible edge-tab runtime, persistence, and publish
    polish.
-3. Add Bind Mode, then flyouts, then command rings.
-4. Broaden the workflow action library beyond transform/keyframe.
-5. Add profile layers for built-in, studio, project, scene/asset, and user
+2. Add Bind Mode, then flyouts, then command rings.
+3. Broaden the workflow action library beyond transform/keyframe.
+4. Add profile layers for built-in, studio, project, scene/asset, and user
    overrides.
-6. Add marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+5. Add marking-menu/hotbox export and later Viewport 2.0 labels/guides.
