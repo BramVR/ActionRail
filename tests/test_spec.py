@@ -4,6 +4,10 @@ import pytest
 
 from actionrail.actions import create_default_registry, validate_action_ids
 from actionrail.spec import (
+    MAX_LAYOUT_COLUMNS,
+    MAX_LAYOUT_OFFSET,
+    MAX_LAYOUT_ROWS,
+    MAX_LAYOUT_SCALE,
     TRANSFORM_STACK_ID,
     StackItem,
     _default_item_id,
@@ -264,6 +268,41 @@ def test_parse_stack_spec_rejects_bool_layout_counts() -> None:
                 "items": [{"type": "button", "label": "K", "action": "maya.anim.set_key"}],
             }
         )
+
+
+def test_parse_stack_spec_layout_limits_match_authoring_ui() -> None:
+    spec = parse_stack_spec(
+        {
+            "id": "layout_limits",
+            "layout": {
+                "anchor": "viewport.left.center",
+                "rows": MAX_LAYOUT_ROWS,
+                "columns": MAX_LAYOUT_COLUMNS,
+                "offset": [MAX_LAYOUT_OFFSET, -MAX_LAYOUT_OFFSET],
+                "scale": MAX_LAYOUT_SCALE,
+            },
+            "items": [{"type": "button", "label": "K"}],
+        }
+    )
+
+    assert spec.layout.rows == MAX_LAYOUT_ROWS
+    assert spec.layout.columns == MAX_LAYOUT_COLUMNS
+    assert spec.layout.offset == (MAX_LAYOUT_OFFSET, -MAX_LAYOUT_OFFSET)
+    assert spec.layout.scale == MAX_LAYOUT_SCALE
+
+    for field, value, match in (
+        ("rows", MAX_LAYOUT_ROWS + 1, "rows"),
+        ("columns", MAX_LAYOUT_COLUMNS + 1, "columns"),
+        ("offset", [MAX_LAYOUT_OFFSET + 1, 0], "offset"),
+        ("scale", MAX_LAYOUT_SCALE + 0.1, "scale"),
+    ):
+        payload = {
+            "id": f"bad_{field}",
+            "layout": {"anchor": "viewport.left.center", field: value},
+            "items": [{"type": "button", "label": "K"}],
+        }
+        with pytest.raises(ValueError, match=match):
+            parse_stack_spec(payload)
 
 
 def test_parse_stack_spec_rejects_bad_layout_locked_flag() -> None:

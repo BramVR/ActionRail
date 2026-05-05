@@ -22,6 +22,12 @@ from .quick_create import (
     save_quick_create_preset,
     template_choices,
 )
+from .spec import (
+    MAX_LAYOUT_COLUMNS,
+    MAX_LAYOUT_OFFSET,
+    MAX_LAYOUT_ROWS,
+    MAX_LAYOUT_SCALE,
+)
 from .theme import DEFAULT_THEME
 
 PANEL_OBJECT_NAME = "ActionRailQuickCreatePanel"
@@ -166,11 +172,11 @@ def _build_panel(
     orientation_combo = qt.QtWidgets.QComboBox()
     orientation_combo.setObjectName("ActionRailQuickCreateOrientation")
     orientation_combo.addItems(("vertical", "horizontal"))
-    rows = _spin_box(qt, 1, 12, 1)
-    columns = _spin_box(qt, 1, 12, 1)
-    offset_x = _spin_box(qt, -400, 400, 0)
-    offset_y = _spin_box(qt, -400, 400, 0)
-    scale = _double_spin_box(qt, 0.1, 4.0, 1.0, 0.05)
+    rows = _spin_box(qt, 1, MAX_LAYOUT_ROWS, 1)
+    columns = _spin_box(qt, 1, MAX_LAYOUT_COLUMNS, 1)
+    offset_x = _spin_box(qt, -MAX_LAYOUT_OFFSET, MAX_LAYOUT_OFFSET, 0)
+    offset_y = _spin_box(qt, -MAX_LAYOUT_OFFSET, MAX_LAYOUT_OFFSET, 0)
+    scale = _double_spin_box(qt, 0.1, MAX_LAYOUT_SCALE, 1.0, 0.05)
     opacity = _double_spin_box(qt, 0.0, 1.0, 1.0, 0.05)
     locked = qt.QtWidgets.QCheckBox()
 
@@ -207,12 +213,40 @@ def _build_panel(
     control_grid.setHorizontalSpacing(18)
     control_grid.setVerticalSpacing(12)
     layout_layout.addLayout(control_grid)
-    _add_slider_field(qt, control_grid, 0, 0, "Buttons", columns, 1, 12)
-    _add_slider_field(qt, control_grid, 0, 2, "Buttons Per Row", rows, 1, 12)
-    _add_slider_field(qt, control_grid, 1, 0, "Button Size", scale, 10, 400, scale_factor=100)
+    _add_slider_field(qt, control_grid, 0, 0, "Buttons", columns, 1, MAX_LAYOUT_COLUMNS)
+    _add_slider_field(qt, control_grid, 0, 2, "Buttons Per Row", rows, 1, MAX_LAYOUT_ROWS)
+    _add_slider_field(
+        qt,
+        control_grid,
+        1,
+        0,
+        "Button Size",
+        scale,
+        10,
+        round(MAX_LAYOUT_SCALE * 100),
+        scale_factor=100,
+    )
     _add_slider_field(qt, control_grid, 1, 2, "Alpha", opacity, 0, 100, scale_factor=100)
-    _add_slider_field(qt, control_grid, 2, 0, "Offset X", offset_x, -400, 400)
-    _add_slider_field(qt, control_grid, 2, 2, "Offset Y", offset_y, -400, 400)
+    _add_slider_field(
+        qt,
+        control_grid,
+        2,
+        0,
+        "Offset X",
+        offset_x,
+        -MAX_LAYOUT_OFFSET,
+        MAX_LAYOUT_OFFSET,
+    )
+    _add_slider_field(
+        qt,
+        control_grid,
+        2,
+        2,
+        "Offset Y",
+        offset_y,
+        -MAX_LAYOUT_OFFSET,
+        MAX_LAYOUT_OFFSET,
+    )
     control_grid.setColumnStretch(0, 1)
     control_grid.setColumnStretch(2, 1)
     layout_layout.addStretch(1)

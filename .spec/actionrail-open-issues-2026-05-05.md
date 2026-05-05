@@ -102,7 +102,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
    four slots produces a spec with one row, one column, and four items.
    Impact: users can save ambiguous layout metadata that the runtime has to
    interpret later.
-   Status: open.
+   Status: fixed in `fix(authoring): align layout bounds`.
 
 10. AR-OPEN-010: Runtime schema allows row counts the Quick Create UI cannot
     preserve.
@@ -110,14 +110,14 @@ that still affect whether ActionRail feels safe as an authoring tool.
     capped at 12.
     Impact: loading and saving a valid existing preset through the UI can clamp
     its layout.
-    Status: open.
+    Status: fixed in `fix(authoring): align layout bounds`.
 
 11. AR-OPEN-011: Runtime schema allows column counts the Quick Create UI cannot
     preserve.
     Evidence: `parse_stack_spec()` accepts `columns=99`, while the UI spin box
     is capped at 12.
     Impact: wide or dense rails can be damaged by the authoring panel.
-    Status: open.
+    Status: fixed in `fix(authoring): align layout bounds`.
 
 12. AR-OPEN-012: Runtime schema allows offset values the Quick Create UI cannot
     preserve.
@@ -125,14 +125,14 @@ that still affect whether ActionRail feels safe as an authoring tool.
     offset controls are capped at `-400..400`.
     Impact: existing off-edge or workspace-specific placement can be clamped on
     edit/save.
-    Status: open.
+    Status: fixed in `fix(authoring): align layout bounds`.
 
 13. AR-OPEN-013: Runtime schema allows scale values the Quick Create UI cannot
     preserve.
     Evidence: `parse_stack_spec()` accepts `scale=10.0`, while the UI scale
     control is capped at `4.0`.
     Impact: large-format rails can be shrunk silently after editing.
-    Status: open.
+    Status: fixed in `fix(authoring): align layout bounds`.
 
 14. AR-OPEN-014: Preset discovery lists invalid user preset ids.
     Evidence: `PresetStore.ids()` reports a user file named `bad id!.json`, but

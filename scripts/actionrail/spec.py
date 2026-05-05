@@ -8,10 +8,18 @@ from pathlib import Path
 from typing import Any
 
 TRANSFORM_STACK_ID = "transform_stack"
+MAX_LAYOUT_COLUMNS = 99
+MAX_LAYOUT_OFFSET = 5000
+MAX_LAYOUT_ROWS = 99
+MAX_LAYOUT_SCALE = 10.0
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _PRESET_DIR = _PACKAGE_ROOT / "presets"
 
 __all__ = [
+    "MAX_LAYOUT_COLUMNS",
+    "MAX_LAYOUT_OFFSET",
+    "MAX_LAYOUT_ROWS",
+    "MAX_LAYOUT_SCALE",
     "TRANSFORM_STACK_ID",
     "RailLayout",
     "StackItem",
@@ -151,10 +159,23 @@ def _parse_layout(payload: dict[str, Any], source: str) -> RailLayout:
         msg = f"ActionRail preset layout orientation must be 'vertical' or 'horizontal': {source}"
         raise ValueError(msg)
 
-    rows = _optional_positive_int(raw_layout, "rows", 1, source)
-    columns = _optional_positive_int(raw_layout, "columns", 1, source)
+    rows = _optional_positive_int(raw_layout, "rows", 1, source, maximum=MAX_LAYOUT_ROWS)
+    columns = _optional_positive_int(
+        raw_layout,
+        "columns",
+        1,
+        source,
+        maximum=MAX_LAYOUT_COLUMNS,
+    )
     offset = _optional_offset(raw_layout, source)
-    scale = _optional_number(raw_layout, "scale", 1.0, source, minimum=0.1)
+    scale = _optional_number(
+        raw_layout,
+        "scale",
+        1.0,
+        source,
+        minimum=0.1,
+        maximum=MAX_LAYOUT_SCALE,
+    )
     opacity = _optional_number(raw_layout, "opacity", 1.0, source, minimum=0.0, maximum=1.0)
     locked = raw_layout.get("locked", False)
     if not isinstance(locked, bool):
@@ -293,12 +314,22 @@ def _optional_positive_int(
     key: str,
     default: int,
     source: str,
+    *,
+    maximum: int | None = None,
 ) -> int:
     value = payload.get(key, default)
-    if isinstance(value, int) and not isinstance(value, bool) and value >= 1:
+    if (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and value >= 1
+        and (maximum is None or value <= maximum)
+    ):
         return value
 
-    msg = f"ActionRail preset layout field '{key}' must be a positive integer: {source}"
+    range_text = "a positive integer"
+    if maximum is not None:
+        range_text = f"an integer between 1 and {maximum}"
+    msg = f"ActionRail preset layout field '{key}' must be {range_text}: {source}"
     raise ValueError(msg)
 
 
@@ -331,8 +362,12 @@ def _optional_offset(payload: dict[str, Any], source: str) -> tuple[int, int]:
             isinstance(component, int) and not isinstance(component, bool)
             for component in value
         )
+        and all(abs(component) <= MAX_LAYOUT_OFFSET for component in value)
     ):
         return (value[0], value[1])
 
-    msg = f"ActionRail preset layout field 'offset' must be a two-integer array: {source}"
+    msg = (
+        "ActionRail preset layout field 'offset' must be a two-integer array "
+        f"with values between -{MAX_LAYOUT_OFFSET} and {MAX_LAYOUT_OFFSET}: {source}"
+    )
     raise ValueError(msg)

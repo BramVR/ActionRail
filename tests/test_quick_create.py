@@ -113,6 +113,35 @@ def test_build_quick_create_draft_uses_edited_values() -> None:
     assert spec.items[0].icon == "maya.set_key"
 
 
+def test_build_quick_create_draft_normalizes_layout_capacity() -> None:
+    horizontal = make_default_input("horizontal_strip")
+    horizontal = QuickCreateDraftInput(
+        preset_id=horizontal.preset_id,
+        template_id=horizontal.template_id,
+        slots=horizontal.slots,
+        anchor=horizontal.anchor,
+        orientation=horizontal.orientation,
+        rows=1,
+        columns=1,
+    )
+    vertical = make_default_input("vertical_stack")
+    vertical = QuickCreateDraftInput(
+        preset_id=vertical.preset_id,
+        template_id=vertical.template_id,
+        slots=vertical.slots,
+        anchor=vertical.anchor,
+        orientation=vertical.orientation,
+        rows=1,
+        columns=1,
+    )
+
+    horizontal_spec = build_draft_spec(build_quick_create_draft(horizontal))
+    vertical_spec = build_draft_spec(build_quick_create_draft(vertical))
+
+    assert horizontal_spec.layout.columns == 4
+    assert vertical_spec.layout.rows == 4
+
+
 def test_build_quick_create_draft_uses_label_tooltip_without_action() -> None:
     values = QuickCreateDraftInput(
         preset_id="notes",

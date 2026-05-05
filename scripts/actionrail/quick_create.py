@@ -112,7 +112,7 @@ _TEMPLATES = (
         layout=RailLayout(
             anchor="viewport.left.center",
             orientation="vertical",
-            rows=1,
+            rows=4,
             columns=1,
             offset=(12, 0),
         ),
@@ -205,11 +205,19 @@ def build_quick_create_draft(values: QuickCreateDraftInput) -> DraftRail:
         msg = "ActionRail Quick Create requires at least one slot."
         raise ValueError(msg)
 
+    action_slot_count = sum(1 for slot in values.slots if slot.type != "spacer")
+    rows = values.rows
+    columns = values.columns
+    if values.orientation == "horizontal":
+        columns = max(columns, action_slot_count)
+    else:
+        rows = max(rows, action_slot_count)
+
     layout = RailLayout(
         anchor=values.anchor,
         orientation=values.orientation,
-        rows=values.rows,
-        columns=values.columns,
+        rows=rows,
+        columns=columns,
         offset=values.offset,
         scale=values.scale,
         opacity=values.opacity,
