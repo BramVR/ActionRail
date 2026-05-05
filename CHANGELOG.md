@@ -8,6 +8,8 @@
   custom action/icon ids that are not in the built-in pickers.
 - Aligned Quick Create layout bounds with runtime schema limits and normalized
   saved horizontal/vertical layout capacity to the authored slot count.
+- Fixed preset discovery so invalid user preset files are marked with an error
+  and excluded from loadable preset id lists.
 - Moved the ActionRail QA reports into the repository-root `.spec` directory
   and added a current open-issue audit covering the last-24-hour commit window.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset

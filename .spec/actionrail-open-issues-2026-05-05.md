@@ -138,7 +138,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
     Evidence: `PresetStore.ids()` reports a user file named `bad id!.json`, but
     attempting to load it raises a preset-id validation error.
     Impact: pickers can present ids that cannot actually be opened.
-    Status: open.
+    Status: fixed in `fix(presets): filter broken discovery ids`.
 
 15. AR-OPEN-015: Preset discovery lists malformed user preset files as normal
     entries.
@@ -146,7 +146,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
     raises schema validation because its layout is malformed.
     Impact: UI lists can include broken presets without an error marker or
     recovery path.
-    Status: open.
+    Status: fixed in `fix(presets): filter broken discovery ids`.
 
 16. AR-OPEN-016: Edit Mode snapping has no viewport clamp or safe-margin guard.
     Evidence: `_snapped_position()` returns `(-128, -128)` for a negative move

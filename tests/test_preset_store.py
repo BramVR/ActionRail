@@ -92,3 +92,33 @@ def test_preset_store_builtin_precedence_does_not_hide_user_entry_validation(tmp
 
     with pytest.raises(ValueError, match="shadow a locked built-in"):
         store.load_entry(user_entry)
+
+
+def test_preset_store_marks_broken_user_entries_without_listing_ids(tmp_path) -> None:
+    (tmp_path / "bad id!.json").write_text(
+        json.dumps(
+            {
+                "id": "bad id!",
+                "layout": {"anchor": "viewport.left.center"},
+                "items": [{"type": "button", "label": "B"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "mismatch.json").write_text(
+        json.dumps({"id": "different", "layout": {}, "items": []}),
+        encoding="utf-8",
+    )
+
+    store = PresetStore(user_preset_dir=tmp_path)
+    entries = {entry.id: entry for entry in store.user_entries()}
+
+    assert store.user_ids() == ()
+    assert "bad id!" not in store.ids()
+    assert "mismatch" not in store.ids()
+    assert entries["bad id!"].error
+    assert entries["mismatch"].error
+    with pytest.raises(KeyError, match="Unknown ActionRail preset"):
+        store.load("bad id!")
+    with pytest.raises(KeyError, match="Unknown ActionRail preset"):
+        store.load("mismatch")

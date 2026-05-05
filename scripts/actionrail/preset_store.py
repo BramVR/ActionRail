@@ -9,7 +9,6 @@ from typing import Literal
 from .authoring import (
     load_user_preset,
     user_preset_files,
-    user_preset_ids,
 )
 from .authoring import (
     user_preset_dir as resolve_user_preset_dir,
@@ -35,6 +34,13 @@ class PresetEntry:
     id: str
     source: PresetSource
     path: Path | None = None
+    error: str = ""
+
+    @property
+    def is_loadable(self) -> bool:
+        """Return whether this discovered entry passed lightweight validation."""
+
+        return not self.error
 
 
 class PresetStore:
@@ -57,7 +63,7 @@ class PresetStore:
     def user_ids(self) -> tuple[str, ...]:
         """Return saved user preset ids."""
 
-        return user_preset_ids(preset_dir=self._user_preset_dir)
+        return tuple(entry.id for entry in self.user_entries() if entry.is_loadable)
 
     def ids(self) -> tuple[str, ...]:
         """Return every known preset id, with built-ins taking precedence."""
@@ -73,10 +79,10 @@ class PresetStore:
         )
 
     def user_entries(self) -> tuple[PresetEntry, ...]:
-        """Return saved user preset entries without parsing them."""
+        """Return saved user preset entries with discovery validation state."""
 
         return tuple(
-            PresetEntry(path.stem, "user", path)
+            self._user_entry_from_path(path)
             for path in user_preset_files(preset_dir=self._user_preset_dir)
         )
 
@@ -86,7 +92,7 @@ class PresetStore:
         if preset_id in self.builtin_ids():
             return PresetEntry(preset_id, "builtin")
         for entry in self.user_entries():
-            if entry.id == preset_id:
+            if entry.id == preset_id and entry.is_loadable:
                 return entry
         msg = f"Unknown ActionRail preset: {preset_id}"
         raise KeyError(msg)
@@ -103,6 +109,14 @@ class PresetStore:
             return load_builtin_preset(entry.id)
         preset_dir = entry.path.parent if entry.path is not None else self._user_preset_dir
         return load_user_preset(entry.id, preset_dir=preset_dir)
+
+    def _user_entry_from_path(self, path: Path) -> PresetEntry:
+        preset_id = path.stem
+        try:
+            load_user_preset(preset_id, preset_dir=path.parent)
+        except Exception as exc:
+            return PresetEntry(preset_id, "user", path, str(exc))
+        return PresetEntry(preset_id, "user", path)
 
 
 def resolve_preset(
