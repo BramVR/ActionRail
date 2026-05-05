@@ -314,7 +314,60 @@ def test_load_quick_create_preset_returns_editable_values(tmp_path) -> None:
     assert loaded.columns == 4
     assert loaded.offset == (2, -8)
     assert loaded.opacity == 0.75
-    assert loaded.slots == values.slots
+    assert loaded.slots == (
+        QuickCreateSlotInput(
+            id="move",
+            label="Move",
+            action="maya.tool.move",
+            key_label="W",
+            icon="maya.move",
+            tooltip="maya.tool.move",
+        ),
+    )
+
+
+def test_load_quick_create_preset_preserves_rich_items(tmp_path) -> None:
+    save_user_preset(
+        StackSpec(
+            id="rich_tools",
+            layout=RailLayout(anchor="viewport.left.center", rows=3),
+            items=(
+                StackItem(
+                    type="button",
+                    id="rich_tools.meta",
+                    label="Meta",
+                    action="custom.missing",
+                    tone="teal",
+                    tooltip="Custom tip",
+                    visible_when="selection.count > 0",
+                    enabled_when='plugin.exists("foo")',
+                    active_when="maya.tool == move",
+                    icon="custom.unknown",
+                ),
+                StackItem(type="spacer", id="rich_tools.gap", size=8),
+                StackItem(
+                    type="button",
+                    id="rich_tools.rotate",
+                    label="Rotate",
+                    action="maya.tool.rotate",
+                ),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    loaded = load_quick_create_preset("rich_tools", preset_dir=tmp_path)
+    rebuilt = build_draft_spec(build_quick_create_draft(loaded))
+
+    assert [item.type for item in rebuilt.items] == ["button", "spacer", "button"]
+    assert rebuilt.items[0].tone == "teal"
+    assert rebuilt.items[0].tooltip == "Custom tip"
+    assert rebuilt.items[0].visible_when == "selection.count > 0"
+    assert rebuilt.items[0].enabled_when == 'plugin.exists("foo")'
+    assert rebuilt.items[0].active_when == "maya.tool == move"
+    assert rebuilt.items[0].icon == "custom.unknown"
+    assert rebuilt.items[1].id == "rich_tools.gap"
+    assert rebuilt.items[1].size == 8
 
 
 def test_load_quick_create_preset_infers_vertical_and_edge_templates(tmp_path) -> None:

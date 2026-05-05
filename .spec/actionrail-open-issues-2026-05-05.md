@@ -45,38 +45,38 @@ that still affect whether ActionRail feels safe as an authoring tool.
    `load_quick_create_preset`.
    Impact: editing an existing rail in Quick Create can permanently remove
    deliberate spacing.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 2. AR-OPEN-002: Quick Create load/save drops per-button `tone`.
    Evidence: a button with `tone='teal'` round-trips back as `neutral`.
    Impact: authoring an existing styled preset through Quick Create resets
    semantic button color.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 3. AR-OPEN-003: Quick Create load/save drops custom `tooltip`.
    Evidence: a button with `tooltip='Custom tip'` round-trips back as the
    action id fallback.
    Impact: user-authored help text is lost on overwrite.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 4. AR-OPEN-004: Quick Create load/save drops `visible_when`.
    Evidence: `visible_when='selection.count > 0'` round-trips back as an empty
    predicate.
    Impact: conditional visibility rules can be silently erased.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 5. AR-OPEN-005: Quick Create load/save drops `enabled_when`.
    Evidence: `enabled_when='plugin.exists("foo")'` round-trips back as an empty
    predicate.
    Impact: actions that should be disabled until their dependency is present
    can become clickable.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 6. AR-OPEN-006: Quick Create load/save drops `active_when`.
    Evidence: `active_when='maya.tool == move'` round-trips back as an empty
    predicate.
    Impact: active-state feedback can disappear after editing a preset.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve rich preset round trips`.
 
 7. AR-OPEN-007: Quick Create UI load/save does not accept or retain a custom
    user preset directory.

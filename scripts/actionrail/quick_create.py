@@ -56,6 +56,13 @@ class QuickCreateSlotInput:
     action: str = ""
     key_label: str = ""
     icon: str = ""
+    type: str = "button"
+    tone: str = "neutral"
+    tooltip: str = ""
+    visible_when: str = ""
+    enabled_when: str = ""
+    active_when: str = ""
+    size: int = 0
 
 
 @dataclass(frozen=True)
@@ -297,11 +304,7 @@ def load_quick_create_preset(
     return QuickCreateDraftInput(
         preset_id=spec.id,
         template_id=_template_id_for_layout(spec.layout, len(spec.items)),
-        slots=tuple(
-            _slot_input_from_item(spec.id, item)
-            for item in spec.items
-            if item.type != "spacer"
-        ),
+        slots=tuple(_slot_input_from_item(spec.id, item) for item in spec.items),
         anchor=spec.layout.anchor,
         orientation=spec.layout.orientation,
         rows=spec.layout.rows,
@@ -336,13 +339,21 @@ def _draft_slot_from_input(slot: QuickCreateSlotInput) -> DraftSlot:
         id=slot.id,
         label=slot.label,
         action=slot.action,
+        type=slot.type,
+        tone=slot.tone,
         key_label=slot.key_label,
         icon=slot.icon,
         tooltip=_slot_tooltip(slot),
+        visible_when=slot.visible_when,
+        enabled_when=slot.enabled_when,
+        active_when=slot.active_when,
+        size=slot.size,
     )
 
 
 def _slot_tooltip(slot: QuickCreateSlotInput) -> str:
+    if slot.tooltip:
+        return slot.tooltip
     if slot.action:
         return slot.action
     return slot.label
@@ -355,6 +366,13 @@ def _slot_input_from_item(preset_id: str, item: Any) -> QuickCreateSlotInput:
         action=item.action,
         key_label=item.key_label,
         icon=item.icon,
+        type=item.type,
+        tone=item.tone,
+        tooltip=item.tooltip,
+        visible_when=item.visible_when,
+        enabled_when=item.enabled_when,
+        active_when=item.active_when,
+        size=item.size,
     )
 
 
