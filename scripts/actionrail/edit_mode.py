@@ -440,12 +440,6 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         if frame.locked:
             msg = f"ActionRail rail is locked and cannot be saved from Edit Mode: {preset_id}"
             raise ValueError(msg)
-        if frame.source_layer == "builtin":
-            msg = (
-                f"ActionRail built-in preset '{preset_id}' is read-only. "
-                "Save a user-created preset instead."
-            )
-            raise ValueError(msg)
         host = _runtime_hosts().get(preset_id)
         spec = getattr(host, "spec", None)
         if host is None or spec is None:
@@ -453,6 +447,8 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             raise KeyError(msg)
         from .authoring import save_user_preset
 
+        if frame.source_layer == "builtin":
+            spec = _builtin_override_spec(spec)
         target_preset_dir = (
             user_preset_dir
             if user_preset_dir is not None
@@ -911,6 +907,28 @@ def _set_host_offset(host: Any, offset: tuple[int, int]) -> None:
         position()
 
 
+def _builtin_override_spec(spec: Any) -> Any:
+    return dataclass_replace(
+        spec,
+        id=_builtin_override_id(str(getattr(spec, "id", ""))),
+        layout=dataclass_replace(spec.layout, locked=False),
+        items=tuple(_override_item_id(spec.id, item) for item in spec.items),
+    )
+
+
+def _builtin_override_id(preset_id: str) -> str:
+    return f"{preset_id}_user_override"
+
+
+def _override_item_id(preset_id: str, item: Any) -> Any:
+    override_id = _builtin_override_id(preset_id)
+    item_id = str(getattr(item, "id", ""))
+    prefix = f"{preset_id}."
+    if item_id.startswith(prefix):
+        item_id = f"{override_id}.{item_id.removeprefix(prefix)}"
+    return dataclass_replace(item, id=item_id)
+
+
 def _preset_source_layer(
     preset_id: str,
     *,
@@ -1180,14 +1198,14 @@ def _lock_button_text(selected: RailFrameInfo | None) -> str:
 
 
 def _can_save_frame(frame: RailFrameInfo) -> bool:
-    return not frame.locked and frame.source_layer != "builtin"
+    return not frame.locked
 
 
 def _save_status_text(frame: RailFrameInfo) -> str:
     if frame.locked:
         return "Locked rails are read-only."
     if frame.source_layer == "builtin":
-        return "Built-in presets are read-only."
+        return f"Save Position writes {_builtin_override_id(frame.preset_id)}."
     if frame.source_layer == "runtime":
         return "Save creates a user preset."
     return "Save updates the user preset."

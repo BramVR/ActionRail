@@ -620,7 +620,10 @@ def test_preset_source_layer_uses_custom_user_preset_dir(tmp_path) -> None:
     )
 
 
-def test_save_edit_mode_layout_refuses_locked_or_builtin_frames(monkeypatch) -> None:
+def test_save_edit_mode_layout_writes_builtin_user_override(
+    monkeypatch,
+    tmp_path,
+) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="transform_stack",
         label="Transform Stack",
@@ -662,12 +665,47 @@ def test_save_edit_mode_layout_refuses_locked_or_builtin_frames(monkeypatch) -> 
     monkeypatch.setattr(edit_mode, "_SELECTED_PRESET_ID", "transform_stack")
     monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"transform_stack": runtime_host})
 
+    path = edit_mode.save_edit_mode_layout(user_preset_dir=tmp_path)
+    saved = load_user_preset("transform_stack_user_override", preset_dir=tmp_path)
+
+    assert path == tmp_path / "transform_stack_user_override.json"
+    assert saved.id == "transform_stack_user_override"
+    assert saved.layout.offset == (12, 24)
+    assert saved.layout.locked is False
+    assert saved.items[0].id == "transform_stack_user_override.move"
+
+
+def test_save_edit_mode_layout_refuses_locked_frames(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="locked",
+        label="Locked",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=True,
+        source_layer="builtin",
+    )
+    runtime_host = type("RuntimeHost", (), {"spec": object()})()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", host)
+    monkeypatch.setattr(edit_mode, "_SELECTED_PRESET_ID", "locked")
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"locked": runtime_host})
+
     try:
         edit_mode.save_edit_mode_layout()
     except ValueError as exc:
-        assert "built-in preset" in str(exc)
+        assert "locked" in str(exc)
     else:
-        raise AssertionError("Built-in Edit Mode layout save unexpectedly succeeded.")
+        raise AssertionError("Locked Edit Mode layout save unexpectedly succeeded.")
 
 
 def test_locked_frame_does_not_nudge(monkeypatch) -> None:

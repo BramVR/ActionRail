@@ -159,7 +159,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
     Save Position behavior is scoped to unlocked runtime/user rails.
     Impact: users cannot safely personalize locked shipped/studio rails without
     creating separate user presets.
-    Status: open.
+    Status: fixed in `fix(edit-mode): save builtin layout overrides`.
 
 18. AR-OPEN-018: Edit Mode direct-manipulation controls are still incomplete.
     Evidence: `docs/08_edit_mode.md` lists drag handles, anchor pins,

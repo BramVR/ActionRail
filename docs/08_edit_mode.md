@@ -119,13 +119,13 @@ Implemented now:
 - snap-to-grid and Sticky Frames during movement
 - right-click frame options routing marker
 - Save Position for unlocked runtime/user rails
+- Save Position user-overrides for unlocked built-in rails
 - public layout-save helper that persists adjusted offsets to user presets
 - Maya menu toggle
 - Maya screenshot verification
 
 Not implemented yet:
 
-- built-in/studio user-override persistence
 - drag handles
 - anchor pins
 - snap/spacing guide rendering
