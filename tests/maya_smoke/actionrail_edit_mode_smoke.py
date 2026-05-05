@@ -178,6 +178,7 @@ if len(spinboxes) < 2:
     raise AssertionError("Position popover is missing X/Y spin boxes.")
 
 old_x = custom_frame.x
+old_y = custom_frame.y
 actionrail.set_edit_mode_options(snap_to_grid=True, sticky_frames=False)
 app.processEvents()
 spinboxes[0].setValue(old_x + 5)
@@ -193,6 +194,11 @@ if custom_frame_after_nudge.x != expected_snap_x:
     raise AssertionError(
         "X coordinate control did not honor Snap to Grid: "
         f"{old_x} -> {custom_frame_after_nudge.x}, expected {expected_snap_x}"
+    )
+if custom_frame_after_nudge.y != old_y:
+    raise AssertionError(
+        "X coordinate control changed Y while Snap to Grid was enabled: "
+        f"{old_y} -> {custom_frame_after_nudge.y}"
     )
 
 right_button = next(
@@ -212,6 +218,11 @@ if custom_frame_after_arrow.x != expected_snap_x + 64:
     raise AssertionError(
         "Right-arrow nudge did not move by one grid cell with Snap to Grid enabled: "
         f"{custom_frame_after_arrow.x} != {expected_snap_x + 64}"
+    )
+if custom_frame_after_arrow.y != old_y:
+    raise AssertionError(
+        "Right-arrow nudge changed Y while Snap to Grid was enabled: "
+        f"{old_y} -> {custom_frame_after_arrow.y}"
     )
 
 actionrail.set_edit_mode_options(snap_to_grid=False, sticky_frames=True)

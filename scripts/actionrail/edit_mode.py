@@ -298,9 +298,15 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.refresh()
 
     def refresh(self) -> None:
+        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID
         self.frames = tuple(_rail_frame_infos(self.qt, self.parent))
         for frame in self.frames:
             self._original_offsets.setdefault(frame.preset_id, frame.offset)
+        active_preset_ids = {frame.preset_id for frame in self.frames}
+        if _SELECTED_PRESET_ID not in active_preset_ids:
+            _SELECTED_PRESET_ID = ""
+        if _OPTIONS_PRESET_ID not in active_preset_ids:
+            _OPTIONS_PRESET_ID = ""
         self.widget.refresh_from_host()
 
     def set_settings(self, settings: EditModeSettings) -> None:
@@ -335,6 +341,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             selected.x + dx_pos,
             selected.y + dy_pos,
             apply_snapping=True,
+            snap_axes=_snap_axes_for_delta(dx, dy),
         )
 
     def set_selected_position(
@@ -343,6 +350,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         y_pos: int,
         *,
         apply_snapping: bool = False,
+        snap_axes: tuple[str, ...] = ("x", "y"),
     ) -> None:
         selected = self.selected_frame()
         if selected is None or selected.locked:
@@ -357,6 +365,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
                 int(y_pos),
                 getattr(self, "settings", EditModeSettings()).normalized(),
                 self.frames,
+                snap_axes=snap_axes,
             )
         base_x = selected.x - selected.offset[0]
         base_y = selected.y - selected.offset[1]
@@ -455,6 +464,7 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                 event.accept()
 
             def resizeEvent(self, event: Any) -> None:  # noqa: N802
+                self._panel.sync()
                 self._panel.move(
                     max(8, int((self.width() - self._panel.width()) / 2)),
                     18,
@@ -520,7 +530,7 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 layout.addWidget(self.snap_check, 3, 0, 1, 2)
                 layout.addWidget(self.sticky_check, 3, 2, 1, 2)
                 self.adjustSize()
-                self.setFixedWidth(max(540, self.sizeHint().width()))
+                self._resize_to_owner()
 
                 self.grid_check.toggled.connect(
                     lambda checked: set_edit_mode_options(show_grid=checked)
@@ -553,7 +563,16 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                     )
                 )
                 self.lock_button.setText(_lock_button_text(selected))
+                self._resize_to_owner()
                 self.setFixedHeight(self.sizeHint().height())
+
+            def _resize_to_owner(self) -> None:
+                self.setFixedWidth(
+                    _panel_width(
+                        self._owner.width(),
+                        max(540, self.sizeHint().width()),
+                    )
+                )
 
             def _set_checked(self, checkbox: Any, checked: bool) -> None:
                 blocked = checkbox.blockSignals(True)
@@ -616,8 +635,8 @@ class _PositionPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.left.clicked.connect(lambda: self._owner._host.nudge_selected(-1, 0))
                 self.right.clicked.connect(lambda: self._owner._host.nudge_selected(1, 0))
                 self.reset.clicked.connect(self._owner._host.reset_selected_position)
-                self.x_spin.valueChanged.connect(self._spin_changed)
-                self.y_spin.valueChanged.connect(self._spin_changed)
+                self.x_spin.valueChanged.connect(lambda _value: self._spin_changed("x"))
+                self.y_spin.valueChanged.connect(lambda _value: self._spin_changed("y"))
 
             def sync(self, frame: RailFrameInfo | None) -> None:
                 if frame is None:
@@ -643,13 +662,14 @@ class _PositionPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.show()
                 self.raise_()
 
-            def _spin_changed(self) -> None:
+            def _spin_changed(self, axis: str) -> None:
                 if self._syncing:
                     return
                 self._owner._host.set_selected_position(
                     self.x_spin.value(),
                     self.y_spin.value(),
                     apply_snapping=True,
+                    snap_axes=(axis,),
                 )
 
         return _Popover(canvas)
@@ -837,13 +857,30 @@ def _snapped_position(
     y_pos: int,
     settings: EditModeSettings,
     frames: tuple[RailFrameInfo, ...],
+    *,
+    snap_axes: tuple[str, ...] = ("x", "y"),
 ) -> tuple[int, int]:
+    snap_x = "x" in snap_axes
+    snap_y = "y" in snap_axes
     if settings.sticky_frames:
-        x_pos, y_pos = _sticky_snap_position(frame, x_pos, y_pos, frames)
+        sticky_x, sticky_y = _sticky_snap_position(frame, x_pos, y_pos, frames)
+        x_pos = sticky_x if snap_x else x_pos
+        y_pos = sticky_y if snap_y else y_pos
     if settings.snap_to_grid:
-        x_pos = _snap_value_to_grid(x_pos, settings.grid_size)
-        y_pos = _snap_value_to_grid(y_pos, settings.grid_size)
+        if snap_x:
+            x_pos = _snap_value_to_grid(x_pos, settings.grid_size)
+        if snap_y:
+            y_pos = _snap_value_to_grid(y_pos, settings.grid_size)
     return x_pos, y_pos
+
+
+def _snap_axes_for_delta(dx: int, dy: int) -> tuple[str, ...]:
+    axes = []
+    if dx:
+        axes.append("x")
+    if dy:
+        axes.append("y")
+    return tuple(axes) or ("x", "y")
 
 
 def _nudge_delta(delta: int, step: int) -> int:
@@ -953,6 +990,13 @@ def _popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int
     x_pos = min(max(8, frame.right + 8), max(8, canvas.width() - width - 8))
     y_pos = min(max(8, frame.y), max(8, canvas.height() - height - 8))
     return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
+
+
+def _panel_width(canvas_width: int, desired_width: int) -> int:
+    desired_width = max(320, desired_width)
+    if canvas_width <= 0:
+        return desired_width
+    return min(desired_width, max(1, canvas_width - 16))
 
 
 def _options_popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int) -> Any:

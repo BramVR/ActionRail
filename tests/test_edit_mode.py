@@ -89,6 +89,17 @@ def test_snap_to_grid_and_sticky_frame_alignment() -> None:
         edit_mode.EditModeSettings(snap_to_grid=True, sticky_frames=True, grid_size=16),
         (moving, target),
     ) == (64, 160)
+    assert edit_mode._snapped_position(
+        moving,
+        61,
+        163,
+        edit_mode.EditModeSettings(snap_to_grid=True, sticky_frames=True, grid_size=16),
+        (moving, target),
+        snap_axes=("x",),
+    ) == (64, 163)
+    assert edit_mode._snap_axes_for_delta(1, 0) == ("x",)
+    assert edit_mode._snap_axes_for_delta(0, -1) == ("y",)
+    assert edit_mode._snap_axes_for_delta(0, 0) == ("x", "y")
     assert edit_mode._nudge_delta(1, 64) == 64
     assert edit_mode._nudge_delta(-1, 64) == -64
     assert edit_mode._nudge_delta(0, 64) == 0
@@ -357,6 +368,38 @@ def test_select_edit_mode_rail_forwards_to_active_host(monkeypatch) -> None:
     edit_mode.select_edit_mode_rail("")
 
 
+def test_refresh_clears_stale_selected_and_options_ids(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="visible",
+        label="Visible",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(10, 20),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.qt = object()
+    host.parent = object()
+    host._original_offsets = {}
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    monkeypatch.setattr(edit_mode, "_SELECTED_PRESET_ID", "missing")
+    monkeypatch.setattr(edit_mode, "_OPTIONS_PRESET_ID", "missing")
+    monkeypatch.setattr(edit_mode, "_rail_frame_infos", lambda *_args: (frame,))
+
+    host.refresh()
+
+    assert edit_mode._SELECTED_PRESET_ID == ""
+    assert edit_mode._OPTIONS_PRESET_ID == ""
+
+
 def test_select_and_nudge_unlocked_frame_updates_host(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="custom",
@@ -516,6 +559,8 @@ def test_popover_position_and_panel_style() -> None:
     )
 
     assert edit_mode._popover_position(Canvas(), frame, 80, 60).value == (92, 72)
+    assert edit_mode._panel_width(0, 540) == 540
+    assert edit_mode._panel_width(500, 540) == 484
     assert edit_mode._options_popover_position(Canvas(), frame, 80, 60).value == (92, 72)
     assert "Sticky" not in edit_mode._panel_style_sheet()
     assert edit_mode._frame_label_font_size(frame) == 10
