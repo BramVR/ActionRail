@@ -19,6 +19,7 @@ MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
 SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
 QUICK_CREATE_WORKSPACE_CONTROL = "ActionRailQuickCreateWorkspaceControl"
+_QUICK_CREATE_USER_PRESET_DIR: str | Path | None = None
 
 ToggleResult = Literal["shown", "hidden"]
 
@@ -260,8 +261,12 @@ def diagnose_icon_import_from_maya(
 def show_quick_create_panel(
     *,
     cmds_module: Any | None = None,
+    user_preset_dir: str | Path | None = None,
 ) -> Any:
     """Open the dockable Maya workspace-control Quick Create panel."""
+
+    global _QUICK_CREATE_USER_PRESET_DIR
+    _QUICK_CREATE_USER_PRESET_DIR = user_preset_dir
 
     cmds = _require_cmds(cmds_module)
     if not cmds.workspaceControl(QUICK_CREATE_WORKSPACE_CONTROL, exists=True):
@@ -276,14 +281,21 @@ def show_quick_create_panel(
         )
     else:
         cmds.workspaceControl(QUICK_CREATE_WORKSPACE_CONTROL, edit=True, visible=True)
-    return restore_quick_create_panel()
+    return restore_quick_create_panel(user_preset_dir=user_preset_dir)
 
 
-def restore_quick_create_panel() -> Any:
+def restore_quick_create_panel(
+    *,
+    user_preset_dir: str | Path | None = None,
+) -> Any:
     """Restore the Quick Create Qt contents inside Maya's workspace control."""
 
+    preset_dir = user_preset_dir
+    if preset_dir is None:
+        preset_dir = _QUICK_CREATE_USER_PRESET_DIR
     return quick_create_ui.show_quick_create_panel(
         parent=_workspace_control_parent(QUICK_CREATE_WORKSPACE_CONTROL),
+        user_preset_dir=preset_dir,
     )
 
 

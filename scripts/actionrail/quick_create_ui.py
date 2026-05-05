@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .authoring import DraftRail, build_draft_spec
@@ -60,6 +61,7 @@ def show_quick_create_panel(  # pragma: no cover - Maya-hosted Qt panel.
     *,
     qt_binding: QtBinding | None = None,
     parent: Any | None = None,
+    user_preset_dir: str | Path | None = None,
 ) -> Any:
     """Show the dockable Quick Create panel widget and return it."""
 
@@ -84,7 +86,8 @@ def show_quick_create_panel(  # pragma: no cover - Maya-hosted Qt panel.
     if panel_parent is None:
         panel.setWindowFlags(qt.QtCore.Qt.Tool)
 
-    _build_panel(panel, qt)
+    panel._actionrail_user_preset_dir = user_preset_dir
+    _build_panel(panel, qt, user_preset_dir=user_preset_dir)
     panel.destroyed.connect(_forget_panel)
     _PANEL = panel
     panel.show()
@@ -93,7 +96,12 @@ def show_quick_create_panel(  # pragma: no cover - Maya-hosted Qt panel.
     return panel
 
 
-def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
+def _build_panel(
+    panel: Any,
+    qt: QtBinding,
+    *,
+    user_preset_dir: str | Path | None = None,
+) -> None:  # pragma: no cover
     panel.setStyleSheet(_style_sheet())
     templates = template_choices()
     actions = action_choices()
@@ -318,7 +326,7 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
     def load_existing() -> None:
         preset_text = preset_id.text().strip()
         try:
-            values = load_quick_create_preset(preset_text)
+            values = load_quick_create_preset(preset_text, preset_dir=user_preset_dir)
             apply_values(values)
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
@@ -327,7 +335,11 @@ def _build_panel(panel: Any, qt: QtBinding) -> None:  # pragma: no cover
 
     def save_draft(*, overwrite: bool = False) -> None:
         try:
-            result = save_quick_create_preset(current_draft(), overwrite=overwrite)
+            result = save_quick_create_preset(
+                current_draft(),
+                overwrite=overwrite,
+                preset_dir=user_preset_dir,
+            )
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
@@ -434,9 +446,11 @@ def _add_slot_row(  # pragma: no cover
     key_label = qt.QtWidgets.QLineEdit(slot.key_label)
     action = qt.QtWidgets.QComboBox()
     action.addItems(("", *(choice[0] for choice in actions)))
+    action.setEditable(True)
     _set_combo_text(action, slot.action)
     icon = qt.QtWidgets.QComboBox()
     icon.addItems(("", *(descriptor.id for descriptor in icons)))
+    icon.setEditable(True)
     _set_combo_text(icon, slot.icon)
 
     for widget, (_label, width) in zip(
@@ -455,6 +469,7 @@ def _add_slot_row(  # pragma: no cover
             "action": action,
             "key_label": key_label,
             "icon": icon,
+            "source": slot,
         }
     )
 
@@ -478,12 +493,20 @@ def _remove_last_slot_row(  # pragma: no cover
 
 
 def _slot_input_from_row(row: dict[str, Any]) -> QuickCreateSlotInput:  # pragma: no cover
+    source = row.get("source")
     return QuickCreateSlotInput(
         id=row["id"].text().strip(),
         label=row["label"].text().strip(),
         action=row["action"].currentText().strip(),
         key_label=row["key_label"].text().strip(),
         icon=row["icon"].currentText().strip(),
+        type=getattr(source, "type", "button"),
+        tone=getattr(source, "tone", "neutral"),
+        tooltip=getattr(source, "tooltip", ""),
+        visible_when=getattr(source, "visible_when", ""),
+        enabled_when=getattr(source, "enabled_when", ""),
+        active_when=getattr(source, "active_when", ""),
+        size=getattr(source, "size", 0),
     )
 
 
@@ -611,6 +634,9 @@ def _set_combo_text(combo: Any, text: str) -> None:  # pragma: no cover
     index = combo.findText(text)
     if index >= 0:
         combo.setCurrentIndex(index)
+        return
+    if text and combo.isEditable():
+        combo.setEditText(text)
 
 
 def _close_existing_panel(qt: QtBinding) -> None:  # pragma: no cover

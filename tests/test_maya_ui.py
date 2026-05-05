@@ -437,15 +437,15 @@ def test_show_quick_create_panel_creates_workspace_control(monkeypatch) -> None:
     cmds = FakeCmds()
     calls: list[str] = []
 
-    def restore_quick_create_panel() -> str:
-        calls.append("restore")
+    def restore_quick_create_panel(**kwargs: object) -> str:
+        calls.append(str(kwargs))
         return "panel"
 
     monkeypatch.setattr(maya_ui, "restore_quick_create_panel", restore_quick_create_panel)
 
     assert maya_ui.show_quick_create_panel(cmds_module=cmds) == "panel"
 
-    assert calls == ["restore"]
+    assert calls == ["{'user_preset_dir': None}"]
     assert cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL] == {
         "label": "ActionRail Quick Create",
         "retain": False,
@@ -459,7 +459,7 @@ def test_show_quick_create_panel_creates_workspace_control(monkeypatch) -> None:
 def test_show_quick_create_panel_reopens_existing_workspace_control(monkeypatch) -> None:
     cmds = FakeCmds()
     cmds.workspace_controls[maya_ui.QUICK_CREATE_WORKSPACE_CONTROL] = {"label": "Existing"}
-    monkeypatch.setattr(maya_ui, "restore_quick_create_panel", lambda: "panel")
+    monkeypatch.setattr(maya_ui, "restore_quick_create_panel", lambda **_kwargs: "panel")
 
     assert maya_ui.show_quick_create_panel(cmds_module=cmds) == "panel"
 
@@ -484,6 +484,31 @@ def test_restore_quick_create_panel_uses_workspace_parent(monkeypatch) -> None:
     assert maya_ui.restore_quick_create_panel() == "panel"
     assert calls["show"] == {
         "parent": f"parent:{maya_ui.QUICK_CREATE_WORKSPACE_CONTROL}",
+        "user_preset_dir": None,
+    }
+
+
+def test_restore_quick_create_panel_forwards_custom_user_preset_dir(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    calls: dict[str, object] = {}
+
+    def show_quick_create_panel(**kwargs: object) -> str:
+        calls["show"] = kwargs
+        return "panel"
+
+    monkeypatch.setattr(maya_ui, "_workspace_control_parent", lambda name: f"parent:{name}")
+    monkeypatch.setattr(
+        maya_ui.quick_create_ui,
+        "show_quick_create_panel",
+        show_quick_create_panel,
+    )
+
+    assert maya_ui.restore_quick_create_panel(user_preset_dir=tmp_path) == "panel"
+    assert calls["show"] == {
+        "parent": f"parent:{maya_ui.QUICK_CREATE_WORKSPACE_CONTROL}",
+        "user_preset_dir": tmp_path,
     }
 
 

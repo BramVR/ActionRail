@@ -86,7 +86,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
    the recently fixed Edit Mode custom-store path.
    Impact: a preset opened from a non-default store can be saved to the wrong
    store or fail to load from the visible project/session store.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve panel store and custom ids`.
 
 8. AR-OPEN-008: Unknown action or icon values cannot be faithfully edited in
    the Quick Create UI.
@@ -95,7 +95,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
    current combo text.
    Impact: externally authored action or icon ids can be overwritten by an
    unrelated visible combo selection.
-   Status: open.
+   Status: fixed in `fix(quick-create): preserve panel store and custom ids`.
 
 9. AR-OPEN-009: Quick Create accepts contradictory layout dimensions.
    Evidence: building the horizontal template with `rows=1`, `columns=1`, and

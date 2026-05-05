@@ -24,7 +24,9 @@ from actionrail.quick_create import (
     template_choices,
 )
 from actionrail.quick_create_ui import (
+    _set_combo_text,
     _slider_label,
+    _slot_input_from_row,
     _valid_draft_status_text,
     _widget_value_from_slider,
 )
@@ -168,6 +170,84 @@ def test_quick_create_slider_value_preserves_unscaled_integers() -> None:
     assert _widget_value_from_slider(7, 1) == 7
     assert isinstance(_widget_value_from_slider(7, 1), int)
     assert _widget_value_from_slider(125, 100) == 1.25
+
+
+def test_quick_create_combo_preserves_unknown_editable_text() -> None:
+    class FakeCombo:
+        def __init__(self) -> None:
+            self.text = ""
+            self.index = -1
+
+        def findText(self, text: str) -> int:
+            return -1 if text == "custom.unknown" else 0
+
+        def setCurrentIndex(self, index: int) -> None:
+            self.index = index
+
+        def isEditable(self) -> bool:
+            return True
+
+        def setEditText(self, text: str) -> None:
+            self.text = text
+
+    combo = FakeCombo()
+
+    _set_combo_text(combo, "custom.unknown")
+
+    assert combo.text == "custom.unknown"
+    assert combo.index == -1
+
+
+def test_quick_create_row_preserves_hidden_slot_metadata() -> None:
+    class FakeText:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def text(self) -> str:
+            return self._text
+
+    class FakeCombo:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def currentText(self) -> str:
+            return self._text
+
+    source = QuickCreateSlotInput(
+        id="meta",
+        label="Meta",
+        action="old.action",
+        key_label="K",
+        icon="old.icon",
+        type="toolButton",
+        tone="teal",
+        tooltip="Custom tip",
+        visible_when="selection.count > 0",
+        enabled_when='plugin.exists("foo")',
+        active_when="maya.tool == move",
+        size=7,
+    )
+
+    slot = _slot_input_from_row(
+        {
+            "id": FakeText("meta"),
+            "label": FakeText("Edited"),
+            "action": FakeCombo("custom.action"),
+            "key_label": FakeText("E"),
+            "icon": FakeCombo("custom.icon"),
+            "source": source,
+        }
+    )
+
+    assert slot.label == "Edited"
+    assert slot.action == "custom.action"
+    assert slot.icon == "custom.icon"
+    assert slot.tone == "teal"
+    assert slot.tooltip == "Custom tip"
+    assert slot.visible_when == "selection.count > 0"
+    assert slot.enabled_when == 'plugin.exists("foo")'
+    assert slot.active_when == "maya.tool == move"
+    assert slot.type == "toolButton"
 
 
 def test_quick_create_valid_status_uses_runtime_schema() -> None:

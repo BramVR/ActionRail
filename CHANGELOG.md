@@ -4,6 +4,8 @@
 
 - Fixed Quick Create rich preset round-trips so loading and rebuilding saved
   presets preserves spacers, tones, tooltips, predicates, and spacer sizes.
+- Fixed the Quick Create panel to preserve explicit user preset stores and
+  custom action/icon ids that are not in the built-in pickers.
 - Moved the ActionRail QA reports into the repository-root `.spec` directory
   and added a current open-issue audit covering the last-24-hour commit window.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset
