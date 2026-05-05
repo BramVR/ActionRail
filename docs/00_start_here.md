@@ -80,7 +80,9 @@ Build PySide6/Qt overlay first.
 
 - PySide overlay draws on top of Maya's viewport.
 - Use Python 3.11 in Maya, PySide6/Qt Widgets, `maya.cmds`, OpenMayaUI, JSON specs, SVG icons with PNG fallbacks, Maya `.mod` packaging, and MayaSessiond verification.
-- Spike Maya 2026 `moverlay` early, but only adopt it if it proves ActionRail's anchoring, hit testing, styling, and cleanup needs.
+- Spike Maya 2026 `moverlay` only as a reference or adapter candidate; keep
+  the custom Qt overlay host until it proves ActionRail's anchoring, hit
+  testing, styling, and cleanup needs.
 - Viewport 2.0 is later, only for native scene/viewport drawing.
 - Web tools are for authoring/import only, not the core runtime.
 - Core UX is user-authored declarative presets plus reusable Maya actions.
@@ -106,5 +108,7 @@ work:
 
 - Keep docs current as work changes.
 - Prefer small implementation slices with visible Maya verification.
-- Do not start designer, icon importer, or Viewport 2.0 backend before the declarative MVP works.
+- Keep Quick Create, icon import, and Edit Mode work scoped to the current
+  Phase 2 authoring slice; do not jump ahead to Bind Mode, flyouts, command
+  rings, profile layers, marking-menu export, or Viewport 2.0.
 - If Maya verification is blocked, record the exact blocker in `docs/04_status.md`.

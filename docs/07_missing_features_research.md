@@ -25,12 +25,15 @@ ActionRail has a solid MVP base:
   overlay hosts.
 - Safe-mode diagnostics and visible missing-action, missing-icon, missing-command,
   and missing-plugin badges.
+- Provider-backed icon catalog, first-party SVG icons, curated Maya resource
+  icons, SVG import diagnostics, and PNG fallback generation.
+- User preset storage, shared bundled/user preset resolution, dockable Quick
+  Create, preview/save/load workflow, and the first Edit Mode layout-map shell.
 - Pure Python tests and MayaSessiond smoke coverage.
 
-The main gap is that the UI is still not authorable or diagnostic enough for
-artists. The next work should make rails recoverable, explain broken presets or
-missing commands clearly, then add narrow authoring workflows beyond the current
-transform stack.
+The main gap is now direct layout authoring. The next work should let users
+persist rail placement from Edit Mode, use drag/anchor/snap controls, and route
+frame options into a fuller options surface.
 
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
 hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
@@ -51,8 +54,12 @@ local import-tooling slice by validating local SVG safety, copying assets under
 helper now rejects external resources in SVG style blocks and normalizes
 manifest paths before overwrite conflict checks. PNG fallback generation now
 records 1x/2x/3x assets plus source hashes in the manifest, and diagnostics
-report missing or stale fallback assets. The remaining active backlog is
-broader import diagnostics and preset recovery polish.
+report missing or stale fallback assets.
+
+2026-05-05 status note: Maya-facing icon import diagnostics, fallback preset
+recovery, Quick Create preview/save/load, curated Maya resource icons, and the
+first Edit Mode shell are implemented and smoke verified. The active backlog
+starts with Phase 2 step 2.5 layout editing and persistence.
 
 ## Highest Priority Gaps
 

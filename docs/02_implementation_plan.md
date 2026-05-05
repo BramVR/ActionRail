@@ -446,12 +446,14 @@ Viewport 2.0 yet.
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
-The highest-priority missing features are:
+The active backlog priorities are:
 
-1. Wire icon-backed preset/import diagnostics into Maya-facing support flows.
-2. Continue visible diagnostics as the import path expands.
-3. Narrow Quick Create and Edit Mode after the declarative MVP is stable, including collapsible edge-tab rail controls.
-4. Bind Mode, then flyouts, then command rings.
-5. Broader workflow action library beyond transform/keyframe.
-6. Profile layers for built-in, studio, project, scene/asset, and user overrides.
-7. Marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+1. Finish Phase 2 step 2.5 layout editing: persisted offset/layout writes,
+   drag handles, anchor pins, snap/spacing guides, and fuller frame options.
+2. Add Phase 2 step 2.6 collapsible edge-tab runtime, persistence, and publish
+   polish.
+3. Add Bind Mode, then flyouts, then command rings.
+4. Broaden the workflow action library beyond transform/keyframe.
+5. Add profile layers for built-in, studio, project, scene/asset, and user
+   overrides.
+6. Add marking-menu/hotbox export and later Viewport 2.0 labels/guides.

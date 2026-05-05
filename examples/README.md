@@ -3,9 +3,10 @@
 Built-in examples load from JSON presets in `../presets/`.
 
 - `transform_stack.json` is the reference `M/T/R/S + K` vertical viewport rail. Local visual references can live in ignored `../research/` when present.
-- `horizontal_tools.json` is a horizontal rail example used to prove layout metadata without widget-code changes.
+- `horizontal_tools.json` is a horizontal rail example backed by first-party ActionRail SVG icons.
+- `maya_tools.json` is a horizontal rail example backed by curated Maya Qt resource icons.
 
-Use `actionrail.show_example("transform_stack")` or `actionrail.show_example("horizontal_tools")` inside Maya to render them.
+Use `actionrail.show_example("transform_stack")`, `actionrail.show_example("horizontal_tools")`, or `actionrail.show_example("maya_tools")` inside Maya to render them.
 
 Python callers can also build a rail without adding a bundled preset:
 

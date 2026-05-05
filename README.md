@@ -39,7 +39,8 @@ and TDs can define as data, share as presets, and bind through Maya's native
 command system.
 
 The included examples are a compact transform stack, `M/T/R/S` plus a separate
-`K` key button, and an icon-backed horizontal tool rail.
+`K` key button, a first-party icon horizontal rail, and a Maya-resource icon
+horizontal rail.
 
 ## Quick Start
 
@@ -52,10 +53,11 @@ import actionrail
 actionrail.show_example("transform_stack")
 ```
 
-Try the horizontal rail:
+Try the horizontal rails:
 
 ```python
 actionrail.show_example("horizontal_tools")
+actionrail.show_example("maya_tools")
 ```
 
 Useful commands:
@@ -162,7 +164,8 @@ limits.
 
 - Qt rail overlay anchored to Maya model-panel geometry and shown as a small
   frameless Maya-owned tool window to avoid Viewport 2.0 repaint artifacts.
-- Built-in `transform_stack` and icon-backed `horizontal_tools` JSON presets.
+- Built-in `transform_stack`, manifest-icon `horizontal_tools`, and Maya-icon
+  `maya_tools` JSON presets.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.
 - Stable slot ids for hotkeys, user overrides, and preset migrations.

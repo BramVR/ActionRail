@@ -162,6 +162,15 @@ Useful variants:
 - `actionrail_import_recovery_smoke.py`: icon import diagnostics report window
   screenshot plus opt-in fallback preset startup recovery.
 - `actionrail_diagnostic_badges_smoke.py`: visible missing-action, missing-icon, missing-command, and missing-plugin badge rendering.
+- `actionrail_edit_mode_smoke.py`: Edit Mode layout-map overlay, grid/settings
+  controls, frame selection, in-session movement, sticky-frame alignment,
+  right-click routing, and screenshot capture.
+- `actionrail_missing_maya_icon_resource_smoke.py`: missing curated Maya
+  resource icon diagnostics and widget rendering fallback behavior.
+- `actionrail_quick_create_smoke.py`: dockable Quick Create panel template
+  switching, draft validation, preview, save, overwrite, load, and screenshots.
+- `actionrail_stackitem_abi_smoke.py`: public `StackItem(...)` positional
+  constructor compatibility inside Maya.
 
 After adding a new smoke script, update this list, summarize the latest result
 in `docs/04_status.md`, and archive detailed history in

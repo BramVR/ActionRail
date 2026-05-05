@@ -338,11 +338,13 @@ Build the user-facing authoring workflow in medium slices:
 1. Authoring model and user preset storage: complete for the first foundation
    slice through `DraftRail`, `DraftSlot`, safe user-preset writes, schema
    validation, and non-blocking diagnostics for broken user presets.
-2. Dockable Quick Create panel: Maya workspace-control entry point, vertical and
-   horizontal templates, action picker, labels, icons, and basic layout values.
-3. Preview and save workflow: preview without saving, cleanup preview overlays,
-   save stable user preset ids and slot ids, then reload through the normal
-   runtime path.
+2. Dockable Quick Create panel: complete for the first Maya-facing authoring
+   slice through a workspace-control entry point, vertical/horizontal/edge-tab
+   starter templates, action picker, labels, icons, and basic layout values.
+3. Preview and save workflow: complete for the first Quick Create workflow
+   slice through preview without saving, cleanup preview overlays, stable user
+   preset ids and slot ids, explicit overwrite, load existing, and reload
+   through the normal runtime path.
 4. Edit Mode shell and rail selection: global toggle, layout-map frame view,
    rail outlines, hit boxes, selected-rail inspector, source-layer badges,
    lock-state display, and optional grid overlay visibility for placement

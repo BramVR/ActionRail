@@ -30,13 +30,30 @@ ActionRail/
       spec.py
       authoring.py
       preset_store.py
+      quick_create.py
+      quick_create_ui.py
+      edit_mode.py
+      diagnostics.py
+      diagnostics_ui.py
+      icon_catalog.py
+      icon_manifest.py
+      icon_import.py
+      icon_fallbacks.py
+      icon_svg.py
+      icon_types.py
+      icon_paths.py
       theme.py
   icons/
   presets/
   examples/
 ```
 
-Use this layout unless implementation proves a smaller split is cleaner.
+Use the machine-readable project map for exact ownership and tests:
+
+```powershell
+$env:PYTHONPATH = "scripts"
+.\.venv\Scripts\python.exe -m actionrail --json
+```
 
 ## Layers
 

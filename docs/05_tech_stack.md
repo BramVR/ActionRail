@@ -49,7 +49,8 @@ Python 3.11 in Maya
 
 Maya 2026 includes Autodesk's `moverlay` module for Qt-based 2D overlays over Maya UI.
 
-Spike it early as a reference or adapter, but do not make it the core until it proves:
+Spike it as a reference or adapter when overlay work needs it, but do not make
+it the core until it proves:
 
 - viewport/model-panel anchoring works for ActionRail
 - it can avoid viewport-sized transparent hit areas while still anchoring to

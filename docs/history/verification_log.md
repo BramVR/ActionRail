@@ -279,3 +279,21 @@ This archive preserves older verification history. Keep `docs/04_status.md` focu
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
   - Maya smoke was not run because this slice only changes pure Python
     navigation helpers and docs, not Maya overlay/UI behavior.
+- 2026-05-04 Phase 2 authoring foundation through Edit Mode shell:
+  - Phase 2 steps 2.1-2.4 completed: user preset storage, shared preset
+    resolver, dockable Quick Create panel, preview/save/load workflow, and the
+    first Edit Mode layout-map shell.
+  - Coverage gate:
+    `.\\.venv\\Scripts\\python.exe -m coverage run -m pytest; .\\.venv\\Scripts\\python.exe -m coverage report`
+    -> 395 passed, `TOTAL 4145 0 100%`.
+  - Ruff:
+    `.\\.venv\\Scripts\\python.exe -m ruff check .`
+    -> all checks passed.
+  - Edit Mode Maya smoke:
+    `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script actionrail_edit_mode_smoke.py -Timeout 240 -NoStart`
+    -> passed with layout-map screenshot capture.
+  - Full Maya smoke baseline:
+    `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-edit -Port 7219 -Script all -Timeout 240 -NoStart`
+    -> passed against port `7219`, covering capture, diagnostics, Edit Mode,
+    icon rails, hotkeys, import recovery, menu/shelf UI, predicates, Quick
+    Create, StackItem ABI, and transform-stack state.
