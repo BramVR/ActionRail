@@ -5,6 +5,7 @@
 .ruff_cache/
 .coverage
 .run/
+.spec/
 research/
 actionrail_qa_hunt_*/
 __pycache__/
