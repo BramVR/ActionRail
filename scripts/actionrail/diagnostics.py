@@ -301,6 +301,31 @@ def collect_diagnostics(
             )
             continue
 
+        if preset_entry.source == "builtin_override" and include_user_presets:
+            override_entry = _override_user_entry(preset_entry)
+            explicit_user_preset_ids.add(override_entry.id)
+            try:
+                override_spec = preset_store.load_entry(override_entry)
+            except Exception as exc:
+                issues.append(_broken_user_preset_issue(_entry_path(override_entry), exc))
+                preset_entry = PresetEntry(preset_id, "builtin")
+            else:
+                override_issues = _diagnose_user_preset_spec(
+                    _entry_path(override_entry),
+                    override_spec,
+                    registry=action_registry,
+                    cmds_module=resolved_cmds,
+                )
+                if override_issues:
+                    issues.extend(override_issues)
+                    issues.append(
+                        _builtin_override_ignored_issue(
+                            preset_id,
+                            _entry_path(override_entry),
+                        )
+                    )
+                    preset_entry = PresetEntry(preset_id, "builtin")
+
         try:
             spec = preset_store.load_entry(preset_entry)
         except Exception as exc:
@@ -478,12 +503,20 @@ def safe_start(
         )
 
     try:
-        _show_resolved_overlay(
-            preset_id,
-            panel=panel,
-            registry=registry,
-            user_preset_dir=user_preset_dir,
-        )
+        if _has_ignored_builtin_override(report, preset_id):
+            _show_builtin_overlay(
+                preset_id,
+                panel=panel,
+                registry=registry,
+                user_preset_dir=user_preset_dir,
+            )
+        else:
+            _show_resolved_overlay(
+                preset_id,
+                panel=panel,
+                registry=registry,
+                user_preset_dir=user_preset_dir,
+            )
     except Exception as exc:
         _safe_hide_overlay(preset_id)
         issue = DiagnosticIssue(
@@ -682,6 +715,34 @@ def _user_preset_diagnostics(
             )
         )
     return tuple(issues)
+
+
+def _override_user_entry(entry: PresetEntry) -> PresetEntry:
+    if entry.path is None:
+        return entry
+    return PresetEntry(entry.path.stem, "user", entry.path)
+
+
+def _builtin_override_ignored_issue(preset_id: str, path: Path) -> DiagnosticIssue:
+    return DiagnosticIssue(
+        code="builtin_override_ignored",
+        severity="warning",
+        message=(
+            f"ActionRail ignored user override '{path.stem}' because it has "
+            "diagnostic issues; the bundled preset remains available."
+        ),
+        preset_id=preset_id,
+        target=path.stem,
+        path=str(path),
+        hint="Fix or remove the saved override before showing the customized layout.",
+    )
+
+
+def _has_ignored_builtin_override(report: DiagnosticReport, preset_id: str) -> bool:
+    return any(
+        issue.code == "builtin_override_ignored" and issue.preset_id == preset_id
+        for issue in report.issues
+    )
 
 
 def _broken_user_entry(
@@ -1055,6 +1116,24 @@ def _show_resolved_overlay(
         return _show_overlay(preset_id, panel=panel, registry=registry)
     return _show_overlay(
         preset_id,
+        panel=panel,
+        registry=registry,
+        user_preset_dir=user_preset_dir,
+    )
+
+
+def _show_builtin_overlay(
+    preset_id: str,
+    *,
+    panel: str | None,
+    registry: ActionRegistry | None,
+    user_preset_dir: str | Path | None,
+) -> Any:
+    from .runtime import show_spec
+    from .spec import load_builtin_preset
+
+    return show_spec(
+        load_builtin_preset(preset_id),
         panel=panel,
         registry=registry,
         user_preset_dir=user_preset_dir,

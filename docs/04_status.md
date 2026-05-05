@@ -83,6 +83,8 @@ $env:PYTHONPATH = "scripts"
 - The shared preset resolver now applies saved built-in `*_user_override`
   sidecars when loading the original built-in preset id, while leaving broken
   override files as user-preset diagnostics instead of blocking bundled loads.
+- Safe startup keeps diagnostically bad built-in user override sidecars on the
+  user-preset warning path and starts the bundled preset instead.
 - The May 5 audit items are fixed in focused conventional commits through
   `feat(edit-mode): add direct manipulation controls`, the diagnostics
   follow-up, and the status/changelog hygiene updates.
@@ -103,7 +105,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 414 passed.
+  -> 416 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -129,6 +131,10 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified custom user-preset directory retention through
   `show_preset()`, Edit Mode user source classification, and Save Position
   persistence back to the same custom store.
+- Diagnostics Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_diagnostics_smoke.py -Timeout 240`
+  -> passed; verified safe diagnostics and `safe_start("transform_stack")`
+  still start an overlay after the built-in override diagnostics fix.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
   -> passed against MayaSessiond on port `7217`; covered capture, custom

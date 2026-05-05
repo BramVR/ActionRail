@@ -28,6 +28,8 @@
   separate user override presets instead of mutating bundled presets.
 - Fixed built-in preset resolution to apply saved Edit Mode user override
   sidecars when loading the original built-in preset id.
+- Fixed safe startup so diagnostically bad built-in user override sidecars stay
+  user-preset warnings and the bundled preset can still start.
 - Added Edit Mode direct-manipulation controls for drag handles, anchor pins,
   guide rendering, slot add/remove/reorder, and edge-tab opacity collapse.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset

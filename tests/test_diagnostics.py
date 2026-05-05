@@ -24,7 +24,7 @@ from actionrail.diagnostics import (
     show_last_report,
 )
 from actionrail.hotkeys import publish_action, publish_slot
-from actionrail.preset_store import PresetEntry, PresetStore
+from actionrail.preset_store import PresetEntry, PresetStore, builtin_user_override_id
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -401,6 +401,47 @@ def test_collect_diagnostics_downgrades_user_preset_spec_issues(tmp_path) -> Non
     assert report.has_errors is False
     assert user_issues[0].path == str(user_path)
     assert user_issues[0].hint
+
+
+def test_collect_diagnostics_keeps_bad_builtin_override_as_user_warning(tmp_path) -> None:
+    override_id = builtin_user_override_id("horizontal_tools")
+    override_path = tmp_path / f"{override_id}.json"
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(anchor="viewport.left.center", locked=False),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.missing",
+                    label="X",
+                    action="maya.missing.action",
+                ),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    report = collect_diagnostics(
+        ("horizontal_tools",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    missing_action_issues = [
+        issue for issue in report.warnings if issue.code == "missing_action"
+    ]
+    ignored_override_issues = [
+        issue for issue in report.warnings if issue.code == "builtin_override_ignored"
+    ]
+    assert report.has_errors is False
+    assert len(missing_action_issues) == 1
+    assert missing_action_issues[0].preset_id == override_id
+    assert missing_action_issues[0].path == str(override_path)
+    assert len(ignored_override_issues) == 1
+    assert ignored_override_issues[0].preset_id == "horizontal_tools"
+    assert ignored_override_issues[0].target == override_id
+    assert not any(issue.code == "broken_preset" for issue in report.issues)
 
 
 def test_collect_diagnostics_can_skip_user_preset_scan(tmp_path) -> None:
@@ -1113,6 +1154,59 @@ def test_safe_start_resolves_saved_user_preset_for_overlay_start(
     assert report.overlay_started is True
     assert report.overlay_id == "artist_tools"
     assert started == [("artist_tools", tmp_path)]
+
+
+def test_safe_start_uses_builtin_when_user_override_has_diagnostic_warnings(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    override_id = builtin_user_override_id("horizontal_tools")
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(anchor="viewport.left.center", locked=False),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.missing",
+                    label="X",
+                    action="maya.missing.action",
+                ),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+    started: list[tuple[str, object]] = []
+
+    def show_builtin_overlay(
+        preset_id: str,
+        *,
+        panel: str | None,
+        registry: ActionRegistry | None,
+        user_preset_dir: object = None,
+    ) -> object:
+        started.append((preset_id, user_preset_dir))
+        return object()
+
+    def show_resolved_overlay(*args: object, **kwargs: object) -> object:
+        raise AssertionError("bad builtin override should not be started")
+
+    monkeypatch.setattr(diagnostics, "_show_builtin_overlay", show_builtin_overlay)
+    monkeypatch.setattr(diagnostics, "_show_resolved_overlay", show_resolved_overlay)
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("horizontal_tools",))
+
+    report = safe_start(
+        "horizontal_tools",
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=tmp_path,
+    )
+
+    assert report.has_errors is False
+    assert report.overlay_started is True
+    assert report.overlay_id == "horizontal_tools"
+    assert started == [("horizontal_tools", tmp_path)]
+    assert any(issue.code == "builtin_override_ignored" for issue in report.warnings)
 
 
 def test_diagnostics_private_runtime_boundaries_are_defensive(
