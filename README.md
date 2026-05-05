@@ -3,7 +3,7 @@
 ![Maya](https://img.shields.io/badge/Maya-2025%2F2026-37a5cc)
 ![Python](https://img.shields.io/badge/Python-3.11-3776ab)
 ![PySide](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt-41cd52)
-![Status](https://img.shields.io/badge/status-Phase%202%20authoring%20foundation-37a5cc)
+![Status](https://img.shields.io/badge/status-Phase%202.5%20layout%20editing%20next-37a5cc)
 
 ActionRail is a Maya module for compact, polished, user-created viewport UI:
 tool rails, action bars, action buttons, hotkey badges, diagnostics, and
@@ -44,20 +44,20 @@ horizontal rail.
 
 ## Quick Start
 
-Add this checkout to Maya's module path, then run the example from Maya's Python
-environment:
+Add this checkout to Maya's module path, then show a bundled preset from Maya's
+Python environment:
 
 ```python
 import actionrail
 
-actionrail.show_example("transform_stack")
+actionrail.show_preset("transform_stack")
 ```
 
 Try the horizontal rails:
 
 ```python
-actionrail.show_example("horizontal_tools")
-actionrail.show_example("maya_tools")
+actionrail.show_preset("horizontal_tools")
+actionrail.show_preset("maya_tools")
 ```
 
 Useful commands:
@@ -65,6 +65,7 @@ Useful commands:
 ```python
 actionrail.reload()
 actionrail.hide_all()
+actionrail.show_example("transform_stack")
 actionrail.run_action("maya.tool.rotate")
 actionrail.run_slot("transform_stack", "set_key")
 ```
@@ -100,6 +101,10 @@ panels. Draft rails can be validated, converted into runtime specs, previewed,
 saved as user presets, loaded back for editing, and inspected in Edit Mode
 without touching locked built-in presets.
 
+Bundled presets and saved user presets share the same resolver path through
+`show_preset()`, `run_slot()`, diagnostics, and hotkey publishing. Bundled
+presets stay read-only; user-created rails are written outside the checkout.
+
 ```python
 import actionrail
 
@@ -131,7 +136,7 @@ draft = actionrail.DraftRail(
 spec = actionrail.build_draft_spec(draft)
 path = actionrail.save_user_preset(draft)
 loaded = actionrail.load_user_preset("artist_tools")
-actionrail.show_spec(loaded)
+actionrail.show_preset("artist_tools")
 ```
 
 User presets default to `%APPDATA%\ActionRail\presets` on Windows. Override the
@@ -169,6 +174,8 @@ limits.
 - Declarative layout metadata: orientation, rows, columns, anchor, offset,
   scale, opacity, and locked state.
 - Stable slot ids for hotkeys, user overrides, and preset migrations.
+- Shared built-in/user preset resolver through `PresetStore`,
+  `resolve_preset()`, `preset_ids()`, and `show_preset()`.
 - Draft authoring model with `DraftRail`, `DraftSlot`,
   `build_draft_spec()`, `spec_to_payload()`, `save_user_preset()`,
   `load_user_preset()`, `user_preset_dir()`, and `user_preset_ids()`.
@@ -202,7 +209,7 @@ limits.
 - PNG fallback generation for SVG icons at 1x/2x/3x, with manifest diagnostics
   for missing or stale fallback assets.
 - Idempotent Maya menu and shelf toggle entry points, plus Maya menu flows for
-  diagnostics and SVG import preflight.
+  diagnostics, Quick Create, Toggle Edit Mode, and SVG import preflight.
 - Copyable Qt diagnostics window with severity filtering, overlay support
   state, published runtime-command summary, and a hide-overlays support action.
 - `actionrail.about()` and `python -m actionrail --json` project map output for
@@ -212,7 +219,7 @@ limits.
 
 ## Roadmap
 
-For the current handoff, blockers, and latest verification summary, see
+For the current phase, blockers, and latest verification summary, see
 [`docs/04_status.md`](docs/04_status.md).
 
 Near-term:
@@ -263,7 +270,7 @@ Run the coverage gate:
 .\.venv\Scripts\python.exe -m coverage report
 ```
 
-Show the compact agent/project map:
+Show the project map:
 
 ```powershell
 $env:PYTHONPATH = "scripts"
@@ -281,15 +288,17 @@ The wrapper uses `.gg-maya-sessiond`, starts Sessiond only when needed, injects
 this module path, discovers MCP tools, and runs cleanup before and after each
 selected smoke script.
 
-## Contributor Docs
+## Documentation
 
-- [Start here](docs/00_start_here.md) - current goal, state, and read order.
-- [Architecture](docs/01_architecture.md) - runtime boundaries and planned
-  layers.
-- [Implementation plan](docs/02_implementation_plan.md) - phase roadmap.
-- [Status](docs/04_status.md) - live state, blockers, latest handoff, and latest verification.
-- [Verification log](docs/history/verification_log.md) - archived historical
-  test and MayaSessiond runs.
+- [Start here](docs/00_start_here.md) - current project state and reading guide.
+- [Status](docs/04_status.md) - current phase, blockers, latest status, and
+  verification summary.
+- [Architecture](docs/01_architecture.md) - runtime boundaries and module
+  responsibilities.
+- [Implementation plan](docs/02_implementation_plan.md) - phase roadmap and
+  next feature slices.
+- [MayaSessiond workflow](docs/03_maya_sessiond_workflow.md) - Maya smoke
+  verification workflow.
 - [Tech stack](docs/05_tech_stack.md) - PySide6/Qt overlay decision.
 - [Customization roadmap](docs/06_wow_style_customization.md) - Edit Mode,
   Bind Mode, flyouts, rings, and profiles.
@@ -312,13 +321,14 @@ selected smoke script.
 
 ## Status
 
-ActionRail has a verified declarative MVP and Phase 2 authoring foundation
-through Quick Create preview/save/load and the first Edit Mode layout-map
-shell. JSON presets, viewport rails, Maya actions, runtime-command hotkey
-publishing, predicate refresh, safe diagnostics, icon import diagnostics, menu
-and shelf entry points, user preset storage, Quick Create, and Edit Mode
-inspection/session-local positioning are working. It is not yet a finished
-designer or production preset manager.
+ActionRail has a verified declarative MVP and Phase 2 authoring foundation.
+Quick Create preview/save/load and the first Edit Mode layout-map shell are
+implemented; Phase 2.5 layout editing and persistence is next. JSON presets,
+viewport rails, Maya actions, runtime-command hotkey publishing, predicate
+refresh, safe diagnostics, icon import diagnostics, menu and shelf entry
+points, user preset storage, Quick Create, and Edit Mode inspection/session-local
+positioning are working. It is not yet a finished designer or production preset
+manager.
 
 ## License
 
