@@ -11,6 +11,7 @@ from actionrail.spec import RailLayout, StackSpec
 
 
 def test_edit_mode_settings_clamp_grid_size() -> None:
+    assert edit_mode.EditModeSettings().normalized().grid_size == 32
     assert edit_mode.EditModeSettings(grid_size=-1).normalized().grid_size == 16
     assert edit_mode.EditModeSettings(grid_size=999).normalized().grid_size == 512
     assert edit_mode.EditModeSettings(grid_size=32).normalized().grid_size == 32

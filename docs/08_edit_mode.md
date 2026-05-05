@@ -78,7 +78,7 @@ state = actionrail.set_edit_mode_options(
     show_grid=True,
     snap_to_grid=True,
     sticky_frames=True,
-    grid_size=64,
+    grid_size=32,
 )
 state = actionrail.select_edit_mode_rail("transform_stack")
 ```

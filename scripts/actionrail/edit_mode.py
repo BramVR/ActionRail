@@ -15,7 +15,7 @@ from typing import Any
 
 from .qt import load
 
-DEFAULT_GRID_SIZE = 64
+DEFAULT_GRID_SIZE = 32
 STICKY_SNAP_THRESHOLD = 8
 MIN_GRID_SIZE = 16
 MAX_GRID_SIZE = 512

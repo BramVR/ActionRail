@@ -16,6 +16,7 @@ from maya import cmds  # noqa: E402
 from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
+from actionrail import edit_mode  # noqa: E402
 
 if __args__.get("repo_root"):
     REPO_ROOT = Path(__args__["repo_root"])
@@ -484,6 +485,88 @@ def _save_composite(
     }
 
 
+def _edit_mode_widget() -> object:
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        raise RuntimeError("Maya QApplication is not available.")
+    widget = next(
+        (
+            candidate
+            for candidate in app.allWidgets()
+            if candidate.objectName() == edit_mode.EDIT_OVERLAY_OBJECT_NAME
+            and candidate.isVisible()
+        ),
+        None,
+    )
+    if widget is None:
+        raise RuntimeError("ActionRail Edit Mode overlay is not visible.")
+    return widget
+
+
+def _save_edit_mode_composite(
+    output_path: Path,
+    *,
+    panel: str,
+    selected_preset_id: str,
+    blast_name: str,
+) -> dict[str, object]:
+    state = actionrail.enter_edit_mode(
+        panel=panel,
+        settings=actionrail.EditModeSettings(
+            show_grid=True,
+            snap_to_grid=True,
+            sticky_frames=True,
+            grid_size=edit_mode.DEFAULT_GRID_SIZE,
+        ),
+    )
+    if not state.enabled:
+        raise RuntimeError(f"Edit Mode did not enable for README screenshot: {state}")
+    _process_events(150)
+
+    state = actionrail.select_edit_mode_rail(selected_preset_id)
+    if state.selected_preset_id != selected_preset_id:
+        raise RuntimeError(
+            "Edit Mode did not select the README showcase rail: "
+            f"{selected_preset_id!r} -> {state}"
+        )
+    _process_events(150)
+
+    widget = _edit_mode_widget()
+    widget_size = (max(1, widget.width()), max(1, widget.height()))
+    blast_path = _playblast(SCRATCH_DIR / blast_name, widget_size)
+    base = QtGui.QPixmap(str(blast_path))
+    if base.isNull():
+        raise RuntimeError(f"Unable to read Edit Mode viewport playblast: {blast_path}")
+
+    overlay = widget.grab()
+    if overlay.isNull() or overlay.width() <= 0 or overlay.height() <= 0:
+        raise RuntimeError("Unable to grab the ActionRail Edit Mode overlay.")
+
+    if overlay.size() != base.size():
+        overlay = overlay.scaled(
+            base.size(),
+            QtCore.Qt.IgnoreAspectRatio,
+            QtCore.Qt.SmoothTransformation,
+        )
+
+    painter = QtGui.QPainter(base)
+    painter.drawPixmap(0, 0, overlay)
+    painter.end()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if not base.save(str(output_path), "PNG"):
+        raise RuntimeError(f"Unable to save Edit Mode composite screenshot: {output_path}")
+
+    return {
+        "output_path": str(output_path),
+        "playblast_path": str(blast_path),
+        "selected_preset_id": selected_preset_id,
+        "size": [base.width(), base.height()],
+        "overlay_size": [overlay.width(), overlay.height()],
+        "rail_count": state.rail_count,
+    }
+
+
 def main() -> None:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
     SCRATCH_DIR.mkdir(parents=True, exist_ok=True)
@@ -505,7 +588,15 @@ def main() -> None:
                 blast_name="actionrail_readme_maya_scene_base.png",
             )
         ]
+        edit_capture = _save_edit_mode_composite(
+            ASSET_DIR / "actionrail_readme_edit_mode.png",
+            panel=panel,
+            selected_preset_id="readme_number_actionbar",
+            blast_name="actionrail_readme_edit_mode_base.png",
+        )
+        captures.append(edit_capture)
     finally:
+        actionrail.exit_edit_mode()
         actionrail.hide_all()
         _process_events(100)
 
