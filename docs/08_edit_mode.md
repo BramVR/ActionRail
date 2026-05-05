@@ -52,7 +52,7 @@ The Maya menu exposes `Toggle Edit Mode` after `install_menu_toggle()` is run.
 
 Inside Edit Mode:
 
-- left-click a rail frame to select it and open the X/Y popover
+- left-click and drag an unlocked rail frame to move it directly
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
 - right-click a rail frame to open options routing for that rail
 - use frame options to add/remove/reorder placeholder slots
@@ -63,12 +63,14 @@ Inside Edit Mode:
 - enable Sticky Frames to align moved rails to nearby rail edges
 - use Save Position from the right-click options popover, or
   `save_edit_mode_layout()`, to persist an unlocked runtime/user rail as a user
-  preset
+  preset or an unlocked built-in rail as a user override
 
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
-to the user preset store. Locked built-in presets remain read-only; built-in
-user-override layering is still a later persistence refinement.
+to the user preset store. Unlocked built-in rail saves write a separate
+`*_user_override` user preset; loading the original built-in preset id applies
+that sidecar override without mutating bundled JSON. Locked built-in and studio
+presets remain read-only.
 
 ## Public API
 

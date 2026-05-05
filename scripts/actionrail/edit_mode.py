@@ -1086,7 +1086,9 @@ def _builtin_override_spec(spec: Any) -> Any:
 
 
 def _builtin_override_id(preset_id: str) -> str:
-    return f"{preset_id}_user_override"
+    from .preset_store import builtin_user_override_id
+
+    return builtin_user_override_id(preset_id)
 
 
 def _override_item_id(preset_id: str, item: Any) -> Any:

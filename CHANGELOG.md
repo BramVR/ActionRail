@@ -26,6 +26,8 @@
   safe viewport margin.
 - Added Edit Mode Save Position support for unlocked built-in rails by writing
   separate user override presets instead of mutating bundled presets.
+- Fixed built-in preset resolution to apply saved Edit Mode user override
+  sidecars when loading the original built-in preset id.
 - Added Edit Mode direct-manipulation controls for drag handles, anchor pins,
   guide rendering, slot add/remove/reorder, and edge-tab opacity collapse.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset

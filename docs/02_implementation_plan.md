@@ -437,10 +437,11 @@ panel, preview cleanup, load-existing support, save/reload workflow, and first
 Edit Mode layout-map shell are in place.
 
 Current implementation slice: Phase 2 step 2.5 layout editing and direct
-manipulation. The first persistence path saves adjusted unlocked runtime/user
-rail specs to user presets. Continue with user-override layering for
-built-in/studio presets, snap/spacing guides, saved handling for snap/sticky
-edits, and right-click routing into a fuller options surface. Keep
+manipulation. Persistence saves adjusted unlocked runtime/user rail specs to
+user presets, and unlocked built-in rail saves now write `*_user_override`
+sidecars that the preset resolver applies when loading the original built-in id.
+Continue with studio override layering, snap/spacing guides, saved handling for
+snap/sticky edits, and right-click routing into a fuller options surface. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.

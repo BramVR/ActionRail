@@ -8,10 +8,12 @@ from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.preset_store import (
     PresetEntry,
     PresetStore,
+    builtin_user_override_id,
     preset_entries,
     preset_ids,
     resolve_preset,
 )
+from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
 def test_preset_store_lists_builtin_and_user_presets(tmp_path) -> None:
@@ -56,6 +58,57 @@ def test_resolve_preset_loads_builtin_and_user_presets(tmp_path) -> None:
     assert user.items[0].id == "artist_tools.key"
     assert preset_ids(user_preset_dir=tmp_path)[0] == "artist_tools"
     assert preset_entries(user_preset_dir=tmp_path)[-1].id == "artist_tools"
+
+
+def test_resolve_builtin_preset_applies_user_override_layer(tmp_path) -> None:
+    override_id = builtin_user_override_id("transform_stack")
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(
+                anchor="viewport.left.top",
+                offset=(88, 99),
+                locked=False,
+            ),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    store = PresetStore(user_preset_dir=tmp_path)
+    spec = store.load("transform_stack")
+
+    assert store.entry("transform_stack") == PresetEntry(
+        "transform_stack",
+        "builtin_override",
+        tmp_path / "transform_stack_user_override.json",
+    )
+    assert spec.id == "transform_stack"
+    assert spec.layout.offset == (88, 99)
+    assert spec.layout.locked is False
+    assert spec.items[0].id == "transform_stack.move"
+    assert resolve_preset(override_id, user_preset_dir=tmp_path).id == override_id
+
+
+def test_broken_builtin_override_does_not_block_bundled_preset(tmp_path) -> None:
+    (tmp_path / "transform_stack_user_override.json").write_text(
+        json.dumps({"id": "different", "layout": {}, "items": []}),
+        encoding="utf-8",
+    )
+
+    store = PresetStore(user_preset_dir=tmp_path)
+    spec = store.load("transform_stack")
+
+    assert store.entry("transform_stack") == PresetEntry("transform_stack", "builtin")
+    assert spec.id == "transform_stack"
+    assert store.user_entries()[0].error
 
 
 def test_preset_store_reports_unknown_preset(tmp_path) -> None:

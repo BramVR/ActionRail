@@ -69,7 +69,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 2 step 2.5 direct manipulation controls implemented" in output
+    assert "Status: Phase 2 step 2.5 built-in override resolution implemented" in output
     assert "Use --json" in output
 
 
