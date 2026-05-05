@@ -460,6 +460,7 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                     18,
                 )
                 self._sync_popover()
+                self._sync_options_popover()
                 super().resizeEvent(event)
 
             def _frame_at_event(self, event: Any) -> RailFrameInfo | None:
