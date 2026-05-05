@@ -321,7 +321,14 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         selected = self.selected_frame()
         if selected is None or selected.locked:
             return
-        self.set_selected_position(selected.x + dx, selected.y + dy)
+        settings = getattr(self, "settings", EditModeSettings()).normalized()
+        dx_pos = _nudge_delta(dx, settings.grid_size) if settings.snap_to_grid else dx
+        dy_pos = _nudge_delta(dy, settings.grid_size) if settings.snap_to_grid else dy
+        self.set_selected_position(
+            selected.x + dx_pos,
+            selected.y + dy_pos,
+            apply_snapping=True,
+        )
 
     def set_selected_position(
         self,
@@ -341,7 +348,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
                 selected,
                 int(x_pos),
                 int(y_pos),
-                self.settings,
+                getattr(self, "settings", EditModeSettings()).normalized(),
                 self.frames,
             )
         base_x = selected.x - selected.offset[0]
@@ -625,9 +632,72 @@ class _PositionPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self._owner._host.set_selected_position(
                     self.x_spin.value(),
                     self.y_spin.value(),
+                    apply_snapping=True,
                 )
 
         return _Popover(canvas)
+
+
+class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
+    def __new__(cls, canvas: Any) -> Any:
+        qt = load()
+
+        class _Options(qt.QtWidgets.QFrame):
+            def __init__(self, owner: Any) -> None:
+                super().__init__(owner)
+                self._owner = owner
+                self.setObjectName(FRAME_OPTIONS_POPOVER_OBJECT_NAME)
+                self.setFrameShape(qt.QtWidgets.QFrame.StyledPanel)
+                self.setStyleSheet(_panel_style_sheet())
+                layout = qt.QtWidgets.QGridLayout(self)
+                layout.setContentsMargins(10, 8, 10, 8)
+                layout.setHorizontalSpacing(6)
+                layout.setVerticalSpacing(5)
+                self.title = qt.QtWidgets.QLabel("")
+                self.title.setAlignment(qt.QtCore.Qt.AlignCenter)
+                self.details = qt.QtWidgets.QLabel("")
+                self.details.setWordWrap(True)
+                self.reset = qt.QtWidgets.QPushButton("Reset Position")
+                self.close_button = qt.QtWidgets.QToolButton()
+                self.close_button.setText("x")
+                layout.addWidget(self.title, 0, 0, 1, 2)
+                layout.addWidget(self.close_button, 0, 2)
+                layout.addWidget(self.details, 1, 0, 1, 3)
+                layout.addWidget(self.reset, 2, 0, 1, 3)
+                self.setFixedWidth(260)
+                self.close_button.clicked.connect(self._close_options)
+                self.reset.clicked.connect(self._owner._host.reset_selected_position)
+
+            def sync(self, frame: RailFrameInfo | None) -> None:
+                if frame is None:
+                    self.hide()
+                    return
+                self.title.setText(f"{frame.label} Options")
+                lock_text = "Locked" if frame.locked else "Unlocked"
+                self.details.setText(
+                    f"{frame.source_layer.title()} rail\n"
+                    f"{frame.anchor}\n"
+                    f"Offset {frame.offset[0]}, {frame.offset[1]} | {lock_text}"
+                )
+                self.reset.setEnabled(not frame.locked)
+                self.setFixedHeight(self.sizeHint().height())
+                self.move(
+                    _options_popover_position(
+                        self._owner,
+                        frame,
+                        self.width(),
+                        self.height(),
+                    )
+                )
+                self.show()
+                self.raise_()
+
+            def _close_options(self) -> None:
+                global _OPTIONS_PRESET_ID
+                _OPTIONS_PRESET_ID = ""
+                self._owner.refresh_from_host()
+
+        return _Options(canvas)
 
 
 def _rail_frame_infos(qt: Any, edit_parent: Any) -> tuple[RailFrameInfo, ...]:
@@ -751,12 +821,18 @@ def _snapped_position(
     settings: EditModeSettings,
     frames: tuple[RailFrameInfo, ...],
 ) -> tuple[int, int]:
+    if settings.sticky_frames:
+        x_pos, y_pos = _sticky_snap_position(frame, x_pos, y_pos, frames)
     if settings.snap_to_grid:
         x_pos = _snap_value_to_grid(x_pos, settings.grid_size)
         y_pos = _snap_value_to_grid(y_pos, settings.grid_size)
-    if settings.sticky_frames:
-        x_pos, y_pos = _sticky_snap_position(frame, x_pos, y_pos, frames)
     return x_pos, y_pos
+
+
+def _nudge_delta(delta: int, step: int) -> int:
+    if delta == 0:
+        return 0
+    return step if delta > 0 else -step
 
 
 def _snap_value_to_grid(value: int, grid_size: int) -> int:
@@ -860,6 +936,35 @@ def _popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int
     x_pos = min(max(8, frame.right + 8), max(8, canvas.width() - width - 8))
     y_pos = min(max(8, frame.y), max(8, canvas.height() - height - 8))
     return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
+
+
+def _options_popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int) -> Any:
+    x_pos = min(max(8, frame.x), max(8, canvas.width() - width - 8))
+    y_pos = min(max(8, frame.bottom + 8), max(8, canvas.height() - height - 8))
+    return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
+
+
+def _panel_summary_text(
+    selected: RailFrameInfo | None,
+    frame_count: int,
+    options_preset_id: str,
+) -> str:
+    if selected is None:
+        text = f"{frame_count} rail frame(s) | no frame selected"
+    else:
+        text = (
+            f"{selected.label}\n"
+            f"{selected.source_layer} | {selected.anchor} | x {selected.x}, y {selected.y}"
+        )
+    if options_preset_id:
+        text = f"{text}\noptions: {options_preset_id}"
+    return text
+
+
+def _lock_button_text(selected: RailFrameInfo | None) -> str:
+    if selected is None:
+        return "No selection"
+    return "Locked" if selected.locked else "Unlocked"
 
 
 def _frame_label(preset_id: str) -> str:

@@ -82,6 +82,16 @@ def test_snap_to_grid_and_sticky_frame_alignment() -> None:
         edit_mode.EditModeSettings(sticky_frames=True),
         (moving, target),
     ) == (40, 140)
+    assert edit_mode._snapped_position(
+        moving,
+        61,
+        161,
+        edit_mode.EditModeSettings(snap_to_grid=True, sticky_frames=True, grid_size=16),
+        (moving, target),
+    ) == (64, 160)
+    assert edit_mode._nudge_delta(1, 64) == 64
+    assert edit_mode._nudge_delta(-1, 64) == -64
+    assert edit_mode._nudge_delta(0, 64) == 0
 
 
 def test_widget_position_prefers_parent_mapped_global_position() -> None:
