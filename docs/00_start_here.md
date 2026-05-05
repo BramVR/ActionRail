@@ -31,8 +31,8 @@ Snapshot:
   verified; Phase 2 step 2.1 authoring model/user-preset storage/shared preset
   resolver, Phase 2 step 2.2 dockable Quick Create panel, and Phase 2 step 2.3
   Quick Create preview/save/load workflow are complete and locally verified.
-  Phase 2 step 2.4 Edit Mode shell is implemented and Maya-smoke verified for
-  the first layout-map view.
+  Phase 2 step 2.4 Edit Mode shell and Phase 2 step 2.5 direct-manipulation
+  controls are implemented and Maya-smoke verified.
 - Working surface includes JSON presets, Qt overlay lifecycle, reusable actions,
   runtime-command hotkey publishing, predicate refresh, diagnostic badges,
   safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
@@ -47,8 +47,8 @@ Snapshot:
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.5 layout editing and direct
-  manipulation polish. The first persistence slice can save unlocked
-  runtime/user rail offsets to user presets; do not start Bind Mode, flyouts,
+  manipulation polish. Edit Mode can save unlocked runtime/user rail offsets
+  and unlocked built-in user override presets; do not start Bind Mode, flyouts,
   command rings, profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
@@ -92,12 +92,13 @@ Build PySide6/Qt overlay first.
 ## Current Priority
 
 Phase 1 declarative MVP and Phase 2 steps 2.1-2.4 are complete for their first
-useful slices. Phase 2 step 2.5 has its first user-preset layout-save path.
+useful slices. Phase 2 step 2.5 has direct-manipulation controls plus the first
+user-preset and built-in user-override layout-save paths.
 Continue Phase 2 with focused layout editing/direct manipulation work:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Build on the Edit Mode shell: broaden persistence toward overrides, add
-   snap/spacing guides, expand right-click options routing, and keep the
+2. Build on the Edit Mode shell: broaden persistence toward fuller studio
+   override layering, polish drag handles/guides/slot edits, and keep the
    existing layout-map frame view stable.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.

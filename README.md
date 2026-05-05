@@ -3,7 +3,7 @@
 ![Maya](https://img.shields.io/badge/Maya-2025%2F2026-37a5cc)
 ![Python](https://img.shields.io/badge/Python-3.11-3776ab)
 ![PySide](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt-41cd52)
-![Status](https://img.shields.io/badge/status-Phase%202.5%20layout%20editing%20next-37a5cc)
+![Status](https://img.shields.io/badge/status-Phase%202.5%20direct%20manipulation-37a5cc)
 
 ActionRail is a Maya module for compact, polished, user-created viewport UI:
 tool rails, action bars, action buttons, hotkey badges, diagnostics, and
@@ -38,9 +38,9 @@ ActionRail fills a different slot: tiny viewport-adjacent controls that artists
 and TDs can define as data, share as presets, and bind through Maya's native
 command system.
 
-The included examples are a compact transform stack, `M/T/R/S` plus a separate
-`K` key button, a first-party icon horizontal rail, and a Maya-resource icon
-horizontal rail.
+The bundled presets are a compact transform stack with `M/T/R/S` and a
+separate `K` set-key button, a first-party icon horizontal rail, and a
+Maya-resource icon horizontal rail.
 
 ## Quick Start
 
@@ -160,8 +160,8 @@ actionrail.show_preset("transform_stack")
 actionrail.toggle_edit_mode()
 ```
 
-Current Edit Mode edits are session-local. The next implementation slice is
-persisting adjusted layout values to a user preset or user override. See
+Edit Mode can save unlocked runtime/user rail layout edits and user overrides
+for unlocked built-in rails without mutating bundled presets. See
 [`docs/08_edit_mode.md`](docs/08_edit_mode.md) for the current behavior and
 limits.
 
@@ -184,8 +184,10 @@ limits.
   workflow.
 - Edit Mode shell with global toggle, layout-map overlay, active rail frames,
   grid controls, Snap to Grid, Sticky Frames, left-click selection,
-  right-click options routing, selected-frame X/Y controls, and non-persistent
-  movement for unlocked rails.
+  right-click options routing, selected-frame X/Y controls, safe movement
+  clamps, save-position persistence, built-in user override saves, drag
+  handles, anchor pins, snap/spacing guides, slot add/remove/reorder controls,
+  and edge-tab opacity collapse.
 - Built-in Maya actions for move, translate, rotate, scale, and set key.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
@@ -224,12 +226,10 @@ For the current phase, blockers, and latest verification summary, see
 
 Near-term:
 
-- Continue Phase 2 step 2.5 layout editing and direct manipulation on top of
-  the verified Edit Mode shell.
-- Persist adjusted anchor/offset/layout values to user presets or user
-  overrides.
-- Add drag handles, anchor pins, snap/spacing guides, and fuller frame options
-  routing.
+- Continue Phase 2 step 2.5 layout editing and direct-manipulation polish on
+  top of the verified Edit Mode shell.
+- Broaden persistence toward fuller studio override layering.
+- Polish handle hit targets, guide behavior, and slot-edit affordances.
 
 Next:
 
@@ -322,13 +322,13 @@ selected smoke script.
 ## Status
 
 ActionRail has a verified declarative MVP and Phase 2 authoring foundation.
-Quick Create preview/save/load and the first Edit Mode layout-map shell are
-implemented; Phase 2.5 layout editing and persistence is next. JSON presets,
-viewport rails, Maya actions, runtime-command hotkey publishing, predicate
-refresh, safe diagnostics, icon import diagnostics, menu and shelf entry
-points, user preset storage, Quick Create, and Edit Mode inspection/session-local
-positioning are working. It is not yet a finished designer or production preset
-manager.
+Quick Create preview/save/load, Edit Mode layout-map inspection,
+direct-manipulation controls, user preset layout saves, and built-in user
+override saves are implemented. JSON presets, viewport rails, Maya actions,
+runtime-command hotkey publishing, predicate refresh, safe diagnostics, icon
+import diagnostics, menu and shelf entry points, user preset storage, Quick
+Create, and Edit Mode positioning are working. It is not yet a finished
+designer or production preset manager.
 
 ## License
 

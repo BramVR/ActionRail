@@ -1,5 +1,15 @@
 # Changelog
 
+## Update Method
+
+- Keep newest date sections first.
+- Build each date section from `git log --oneline` since the previous
+  changelog update.
+- Group related conventional commits into concise user-facing bullets instead
+  of listing every hash.
+- Include repo/process hygiene only when it changes how future work should be
+  done or how the checkout behaves.
+
 ## 2026-05-05
 
 - Fixed Quick Create rich preset round-trips so loading and rebuilding saved
@@ -18,8 +28,10 @@
   separate user override presets instead of mutating bundled presets.
 - Added Edit Mode direct-manipulation controls for drag handles, anchor pins,
   guide rendering, slot add/remove/reorder, and edge-tab opacity collapse.
-- Moved the ActionRail QA reports into the repository-root `.spec` directory
-  and added a current open-issue audit covering the last-24-hour commit window.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset
   directory so Save Position updates the same preset store instead of falling
   back to the default ActionRail user preset folder.
+- Recorded the audit/status docs from the May 5 fix pass, then stopped
+  tracking local `.spec/` reports so future reports stay out of Git.
+- Refreshed README/status docs to reflect the current bundled presets and
+  implemented Edit Mode persistence/direct-manipulation surface.

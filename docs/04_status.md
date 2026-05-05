@@ -43,7 +43,8 @@ Long-form implementation and verification history belongs in
 ## In Progress
 
 Phase 2 step 2.5 Layout Editing And Direct Manipulation continues after the
-open `.spec` audit fix pass.
+direct-manipulation and audit fix pass. Local `.spec/` reports are ignored and
+not part of the Git-tracked handoff.
 
 Focus this slice on:
 
@@ -78,9 +79,9 @@ $env:PYTHONPATH = "scripts"
 - Edit Mode can save adjusted unlocked runtime/user rail specs and unlocked
   built-in user override presets through `save_edit_mode_layout()` and the
   right-click Save Position control.
-- The `.spec/actionrail-open-issues-2026-05-05.md` audit items are fixed in
-  follow-up commits through `feat(edit-mode): add direct manipulation controls`
-  plus the diagnostics follow-up.
+- The May 5 audit items are fixed in focused conventional commits through
+  `feat(edit-mode): add direct manipulation controls`, the diagnostics
+  follow-up, and the status/changelog hygiene updates.
 - No ActionRail implementation blocker is known.
 
 ## Blockers
