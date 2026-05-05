@@ -47,7 +47,12 @@ def show_preset(
     """Show a resolved ActionRail preset overlay by id."""
 
     spec = resolve_preset(preset_id, user_preset_dir=user_preset_dir)
-    return show_spec(spec, panel=panel, registry=registry)
+    return show_spec(
+        spec,
+        panel=panel,
+        registry=registry,
+        user_preset_dir=user_preset_dir,
+    )
 
 
 def show_spec(
@@ -55,6 +60,7 @@ def show_spec(
     *,
     panel: str | None = None,
     registry: ActionRegistry | None = None,
+    user_preset_dir: str | Path | None = None,
 ) -> Any:
     """Show a user-authored ActionRail spec through the runtime registry."""
 
@@ -63,6 +69,8 @@ def show_spec(
     from .overlay import ViewportOverlayHost
 
     host = ViewportOverlayHost(spec, panel=panel, registry=registry)
+    if user_preset_dir is not None:
+        host.user_preset_dir = Path(user_preset_dir)
     host.show()
     _OVERLAYS[spec.id] = host
     _refresh_edit_mode()

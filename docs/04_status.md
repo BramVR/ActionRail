@@ -114,13 +114,19 @@ $env:PYTHONPATH = "scripts"
   save path `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and
   screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
+- Custom user-preset store Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_custom_preset_store_smoke.py -Timeout 240`
+  -> passed; verified custom user-preset directory retention through
+  `show_preset()`, Edit Mode user source classification, and Save Position
+  persistence back to the same custom store.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
-  -> passed against MayaSessiond on port `7217`; covered capture, diagnostic
-  badges, diagnostics window, hidden visibility, Edit Mode, horizontal and Maya
-  icon rails, hotkey bridge, hotkey label sync, import/recovery diagnostics,
-  menu/shelf UI, missing Maya icon resources, overlay cleanup, predicates,
-  Quick Create, StackItem ABI, and transform-stack state.
+  -> passed against MayaSessiond on port `7217`; covered capture, custom
+  user-preset store layout saves, diagnostic badges, diagnostics window, hidden
+  visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge, hotkey
+  label sync, import/recovery diagnostics, menu/shelf UI, missing Maya icon
+  resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
+  transform-stack state.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,

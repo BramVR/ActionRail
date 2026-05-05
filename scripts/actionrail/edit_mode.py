@@ -450,7 +450,16 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             raise KeyError(msg)
         from .authoring import save_user_preset
 
-        return save_user_preset(spec, preset_dir=user_preset_dir, overwrite=overwrite)
+        target_preset_dir = (
+            user_preset_dir
+            if user_preset_dir is not None
+            else getattr(host, "user_preset_dir", None)
+        )
+        return save_user_preset(
+            spec,
+            preset_dir=target_preset_dir,
+            overwrite=overwrite,
+        )
 
     def frame_for_preset(self, preset_id: str) -> RailFrameInfo | None:
         for frame in self.frames:
@@ -871,7 +880,10 @@ def _rail_frame_info(
         scale=float(getattr(layout, "scale", 1.0)),
         opacity=float(getattr(layout, "opacity", 1.0)),
         locked=bool(getattr(layout, "locked", False)),
-        source_layer=_preset_source_layer(preset_id),
+        source_layer=_preset_source_layer(
+            preset_id,
+            user_preset_dir=getattr(host, "user_preset_dir", None),
+        ),
     )
 
 
@@ -896,14 +908,18 @@ def _set_host_offset(host: Any, offset: tuple[int, int]) -> None:
         position()
 
 
-def _preset_source_layer(preset_id: str) -> str:
+def _preset_source_layer(
+    preset_id: str,
+    *,
+    user_preset_dir: str | Path | None = None,
+) -> str:
     try:
         from .authoring import user_preset_ids
         from .spec import builtin_preset_ids
 
         if preset_id in builtin_preset_ids():
             return "builtin"
-        if preset_id in user_preset_ids():
+        if preset_id in user_preset_ids(preset_dir=user_preset_dir):
             return "user"
     except Exception:
         return "runtime"

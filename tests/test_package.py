@@ -181,7 +181,9 @@ def test_runtime_show_preset_and_reload_resolve_user_presets(tmp_path, monkeypat
     monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
 
     runtime.show_preset("artist_tools", panel="modelPanel4", user_preset_dir=tmp_path)
+    assert runtime._OVERLAYS["artist_tools"].user_preset_dir == tmp_path
     runtime.reload("artist_tools", panel="modelPanel5", user_preset_dir=tmp_path)
+    assert runtime._OVERLAYS["artist_tools"].user_preset_dir == tmp_path
 
     assert events == [
         ("show", "artist_tools:modelPanel4"),

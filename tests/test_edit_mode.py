@@ -7,7 +7,7 @@ from types import ModuleType
 import actionrail.edit_mode as edit_mode
 import actionrail.overlay as overlay
 import actionrail.runtime as runtime
-from actionrail.authoring import load_user_preset
+from actionrail.authoring import load_user_preset, save_user_preset
 from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
@@ -508,6 +508,86 @@ def test_save_edit_mode_layout_writes_selected_runtime_spec_to_user_preset(
     assert path == tmp_path / "custom_layout.json"
     assert saved.layout.offset == (12, 24)
     assert saved.items[0].id == "custom_layout.move"
+
+
+def test_save_edit_mode_layout_uses_runtime_host_user_preset_dir(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="custom_store_layout",
+        label="Custom Store Layout",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+        source_layer="user",
+    )
+    spec = StackSpec(
+        id="custom_store_layout",
+        layout=RailLayout(anchor="viewport.left.top", offset=(12, 24)),
+        items=(
+            StackItem(
+                type="button",
+                id="custom_store_layout.move",
+                label="Move",
+                action="maya.tool.move",
+            ),
+        ),
+    )
+    runtime_host = type(
+        "RuntimeHost",
+        (),
+        {"spec": spec, "user_preset_dir": tmp_path},
+    )()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", host)
+    monkeypatch.setattr(edit_mode, "_SELECTED_PRESET_ID", "custom_store_layout")
+    monkeypatch.setattr(
+        edit_mode,
+        "_runtime_hosts",
+        lambda: {"custom_store_layout": runtime_host},
+    )
+
+    path = edit_mode.save_edit_mode_layout()
+
+    assert path == tmp_path / "custom_store_layout.json"
+    assert load_user_preset("custom_store_layout", preset_dir=tmp_path).layout.offset == (
+        12,
+        24,
+    )
+
+
+def test_preset_source_layer_uses_custom_user_preset_dir(tmp_path) -> None:
+    save_user_preset(
+        StackSpec(
+            id="custom_source",
+            layout=RailLayout(anchor="viewport.left.top"),
+            items=(
+                StackItem(
+                    type="button",
+                    id="custom_source.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    assert (
+        edit_mode._preset_source_layer("custom_source", user_preset_dir=tmp_path)
+        == "user"
+    )
 
 
 def test_save_edit_mode_layout_refuses_locked_or_builtin_frames(monkeypatch) -> None:
