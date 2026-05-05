@@ -262,6 +262,16 @@ def collect_diagnostics(
         try:
             preset_entry = preset_store.entry(preset_id)
         except Exception as exc:
+            broken_user_entry = _broken_user_entry(preset_store, preset_id)
+            if broken_user_entry is not None and include_user_presets:
+                explicit_user_preset_ids.add(preset_id)
+                issues.append(
+                    _broken_user_preset_issue(
+                        _entry_path(broken_user_entry),
+                        ValueError(broken_user_entry.error or str(exc)),
+                    )
+                )
+                continue
             issues.append(
                 DiagnosticIssue(
                     code="broken_preset",
@@ -655,6 +665,9 @@ def _user_preset_diagnostics(
         path = _entry_path(entry)
         if entry.id in excluded:
             continue
+        if entry.error:
+            issues.append(_broken_user_preset_issue(path, ValueError(entry.error)))
+            continue
         try:
             spec = preset_store.load_entry(entry)
         except Exception as exc:
@@ -669,6 +682,16 @@ def _user_preset_diagnostics(
             )
         )
     return tuple(issues)
+
+
+def _broken_user_entry(
+    preset_store: PresetStore,
+    preset_id: str,
+) -> PresetEntry | None:
+    for entry in preset_store.user_entries():
+        if entry.id == preset_id and entry.error:
+            return entry
+    return None
 
 
 def _entry_path(entry: PresetEntry) -> Path:

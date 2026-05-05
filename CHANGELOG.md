@@ -10,6 +10,8 @@
   saved horizontal/vertical layout capacity to the authored slot count.
 - Fixed preset discovery so invalid user preset files are marked with an error
   and excluded from loadable preset id lists.
+- Fixed diagnostics to keep explicit broken user preset ids as warnings when
+  preset discovery has already marked the files invalid.
 - Fixed Edit Mode rail movement to clamp snapped/dragged positions inside a
   safe viewport margin.
 - Added Edit Mode Save Position support for unlocked built-in rails by writing
