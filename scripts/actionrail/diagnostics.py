@@ -248,17 +248,22 @@ def collect_diagnostics(
     cmds_module: Any | None = None,
     include_user_presets: bool = True,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> DiagnosticReport:
     """Collect diagnostics for bundled and saved user presets without showing an overlay."""
 
     resolved_cmds = _resolve_cmds_module(cmds_module)
     action_registry = registry or create_default_registry(resolved_cmds)
-    preset_store = PresetStore(user_preset_dir=user_preset_dir)
+    preset_store = PresetStore(
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
     issues: list[DiagnosticIssue] = [
         _icon_manifest_issue(issue) for issue in validate_icon_manifest()
     ]
     explicit_user_preset_ids: set[str] = set()
-    for preset_id in tuple(preset_ids) if preset_ids is not None else preset_store.builtin_ids():
+    default_preset_ids = (*preset_store.builtin_ids(), *preset_store.studio_ids())
+    for preset_id in tuple(preset_ids) if preset_ids is not None else default_preset_ids:
         try:
             preset_entry = preset_store.entry(preset_id)
         except Exception as exc:
@@ -301,14 +306,14 @@ def collect_diagnostics(
             )
             continue
 
-        if preset_entry.source == "builtin_override" and include_user_presets:
+        if preset_entry.source in {"builtin_override", "studio_override"} and include_user_presets:
             override_entry = _override_user_entry(preset_entry)
             explicit_user_preset_ids.add(override_entry.id)
             try:
                 override_spec = preset_store.load_entry(override_entry)
             except Exception as exc:
                 issues.append(_broken_user_preset_issue(_entry_path(override_entry), exc))
-                preset_entry = PresetEntry(preset_id, "builtin")
+                preset_entry = preset_store.base_entry(preset_id)
             else:
                 override_issues = _diagnose_user_preset_spec(
                     _entry_path(override_entry),
@@ -319,12 +324,13 @@ def collect_diagnostics(
                 if override_issues:
                     issues.extend(override_issues)
                     issues.append(
-                        _builtin_override_ignored_issue(
+                        _preset_override_ignored_issue(
                             preset_id,
                             _entry_path(override_entry),
+                            preset_entry.source,
                         )
                     )
-                    preset_entry = PresetEntry(preset_id, "builtin")
+                    preset_entry = preset_store.base_entry(preset_id)
 
         try:
             spec = preset_store.load_entry(preset_entry)
@@ -362,6 +368,7 @@ def collect_diagnostics(
             action_registry,
             resolved_cmds,
             user_preset_dir=user_preset_dir,
+            studio_preset_dir=studio_preset_dir,
         )
     )
     return _record_report(
@@ -473,6 +480,7 @@ def safe_start(
     registry: ActionRegistry | None = None,
     cmds_module: Any | None = None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
     fallback_preset_id: str = "",
 ) -> DiagnosticReport:
     """Validate a preset, start it if safe, and report recoverable failures."""
@@ -482,6 +490,7 @@ def safe_start(
         registry=registry,
         cmds_module=cmds_module,
         user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
     )
     if report.has_errors:
         if fallback_preset_id and fallback_preset_id != preset_id:
@@ -493,6 +502,7 @@ def safe_start(
                 registry=registry,
                 cmds_module=cmds_module,
                 user_preset_dir=user_preset_dir,
+                studio_preset_dir=studio_preset_dir,
             )
         return _record_report(
             report.with_runtime(
@@ -510,12 +520,21 @@ def safe_start(
                 registry=registry,
                 user_preset_dir=user_preset_dir,
             )
+        elif _has_ignored_studio_override(report, preset_id):
+            _show_studio_overlay(
+                preset_id,
+                panel=panel,
+                registry=registry,
+                user_preset_dir=user_preset_dir,
+                studio_preset_dir=studio_preset_dir,
+            )
         else:
             _show_resolved_overlay(
                 preset_id,
                 panel=panel,
                 registry=registry,
                 user_preset_dir=user_preset_dir,
+                studio_preset_dir=studio_preset_dir,
             )
     except Exception as exc:
         _safe_hide_overlay(preset_id)
@@ -723,6 +742,16 @@ def _override_user_entry(entry: PresetEntry) -> PresetEntry:
     return PresetEntry(entry.path.stem, "user", entry.path)
 
 
+def _preset_override_ignored_issue(
+    preset_id: str,
+    path: Path,
+    source: str,
+) -> DiagnosticIssue:
+    if source == "studio_override":
+        return _studio_override_ignored_issue(preset_id, path)
+    return _builtin_override_ignored_issue(preset_id, path)
+
+
 def _builtin_override_ignored_issue(preset_id: str, path: Path) -> DiagnosticIssue:
     return DiagnosticIssue(
         code="builtin_override_ignored",
@@ -738,9 +767,31 @@ def _builtin_override_ignored_issue(preset_id: str, path: Path) -> DiagnosticIss
     )
 
 
+def _studio_override_ignored_issue(preset_id: str, path: Path) -> DiagnosticIssue:
+    return DiagnosticIssue(
+        code="studio_override_ignored",
+        severity="warning",
+        message=(
+            f"ActionRail ignored user override '{path.stem}' because it has "
+            "diagnostic issues; the studio preset remains available."
+        ),
+        preset_id=preset_id,
+        target=path.stem,
+        path=str(path),
+        hint="Fix or remove the saved override before showing the customized layout.",
+    )
+
+
 def _has_ignored_builtin_override(report: DiagnosticReport, preset_id: str) -> bool:
     return any(
         issue.code == "builtin_override_ignored" and issue.preset_id == preset_id
+        for issue in report.issues
+    )
+
+
+def _has_ignored_studio_override(report: DiagnosticReport, preset_id: str) -> bool:
+    return any(
+        issue.code == "studio_override_ignored" and issue.preset_id == preset_id
         for issue in report.issues
     )
 
@@ -812,12 +863,14 @@ def _recover_with_fallback_preset(
     registry: ActionRegistry | None,
     cmds_module: Any | None,
     user_preset_dir: str | Path | None,
+    studio_preset_dir: str | Path | None,
 ) -> DiagnosticReport:
     fallback_report = collect_diagnostics(
         (fallback_preset_id,),
         registry=registry,
         cmds_module=cmds_module,
         user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
     )
     issues = list(report.issues)
     issues.extend(fallback_report.issues)
@@ -850,6 +903,7 @@ def _recover_with_fallback_preset(
             panel=panel,
             registry=registry,
             user_preset_dir=user_preset_dir,
+            studio_preset_dir=studio_preset_dir,
         )
     except Exception as exc:
         _safe_hide_overlay(fallback_preset_id)
@@ -940,13 +994,17 @@ def _runtime_command_diagnostics(
     cmds_module: Any | None,
     *,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> tuple[DiagnosticIssue, ...]:
     if cmds_module is None:
         return ()
 
     issues: list[DiagnosticIssue] = []
     action_ids = set(registry.ids())
-    preset_store = PresetStore(user_preset_dir=user_preset_dir)
+    preset_store = PresetStore(
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
     for command in _safe_published_commands(cmds_module):
         if command.target_kind == "action":
             if command.target_id not in action_ids:
@@ -1012,7 +1070,10 @@ def _orphaned_slot_command_issue(
 def _runtime_command_preset_store(command: Any, default_store: PresetStore) -> PresetStore:
     user_preset_dir = getattr(command, "user_preset_dir", "")
     if user_preset_dir:
-        return PresetStore(user_preset_dir=user_preset_dir)
+        return PresetStore(
+            user_preset_dir=user_preset_dir,
+            studio_preset_dir=default_store.studio_preset_dir,
+        )
     return default_store
 
 
@@ -1094,9 +1155,18 @@ def _show_overlay(
     panel: str | None,
     registry: ActionRegistry | None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
     from .runtime import show_preset
 
+    if studio_preset_dir is not None:
+        return show_preset(
+            preset_id,
+            panel=panel,
+            registry=registry,
+            user_preset_dir=user_preset_dir,
+            studio_preset_dir=studio_preset_dir,
+        )
     return show_preset(
         preset_id,
         panel=panel,
@@ -1111,14 +1181,23 @@ def _show_resolved_overlay(
     panel: str | None,
     registry: ActionRegistry | None,
     user_preset_dir: str | Path | None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
-    if user_preset_dir is None:
+    if user_preset_dir is None and studio_preset_dir is None:
         return _show_overlay(preset_id, panel=panel, registry=registry)
+    if studio_preset_dir is None:
+        return _show_overlay(
+            preset_id,
+            panel=panel,
+            registry=registry,
+            user_preset_dir=user_preset_dir,
+        )
     return _show_overlay(
         preset_id,
         panel=panel,
         registry=registry,
         user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
     )
 
 
@@ -1137,6 +1216,29 @@ def _show_builtin_overlay(
         panel=panel,
         registry=registry,
         user_preset_dir=user_preset_dir,
+    )
+
+
+def _show_studio_overlay(
+    preset_id: str,
+    *,
+    panel: str | None,
+    registry: ActionRegistry | None,
+    user_preset_dir: str | Path | None,
+    studio_preset_dir: str | Path | None,
+) -> Any:
+    from .runtime import show_spec
+
+    preset_store = PresetStore(
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
+    return show_spec(
+        preset_store.load_entry(preset_store.base_entry(preset_id)),
+        panel=panel,
+        registry=registry,
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
     )
 
 

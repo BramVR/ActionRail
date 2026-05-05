@@ -184,7 +184,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 
 The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
 
-Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. `actionrail.preset_store` is the shared resolver for bundled and saved user presets; runtime overlay startup, no-overlay slot execution, hotkey publishing/sync, diagnostics, Maya menu toggles, and the project map should resolve preset ids through it instead of directly assuming `presets/` built-ins. This is a local user-preset layer only; project/studio/profile layering is still reserved for a later phase.
+Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. `actionrail.preset_store` is the shared resolver for bundled, optional studio, and saved user presets; runtime overlay startup, no-overlay slot execution, hotkey publishing/sync, diagnostics, Maya menu toggles, and the project map should resolve preset ids through it instead of directly assuming `presets/` built-ins. This remains a compact preset-layer slice; broader project/profile layering is still reserved for a later phase.
 
 Phase 2 steps 2.2-2.3 add `actionrail.quick_create` and
 `actionrail.quick_create_ui` as the first Maya-facing authoring surface. Quick
@@ -204,8 +204,9 @@ painting; selected-rail state; grid/snap/sticky options; and session-local
 position changes. It reads active overlay geometry from the runtime registry
 and should not mutate locked built-in presets directly. Phase 2 step 2.5 now
 persists unlocked runtime/user rail layout edits by saving the current spec to
-the user preset store; built-in/studio override layering remains the next
-persistence refinement.
+the user preset store; unlocked built-in and studio rail edits save as
+`*_user_override` sidecars in the user preset store and are applied when the
+original read-only preset id is resolved.
 
 Icon fields should store stable logical ids, not raw file paths. The icon
 provider layer currently resolves manifest-backed ids such as

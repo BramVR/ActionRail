@@ -63,14 +63,14 @@ Inside Edit Mode:
 - enable Sticky Frames to align moved rails to nearby rail edges
 - use Save Position from the right-click options popover, or
   `save_edit_mode_layout()`, to persist an unlocked runtime/user rail as a user
-  preset or an unlocked built-in rail as a user override
+  preset or an unlocked built-in/studio rail as a user override
 
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
-to the user preset store. Unlocked built-in rail saves write a separate
-`*_user_override` user preset; loading the original built-in preset id applies
-that sidecar override without mutating bundled JSON. Locked built-in and studio
-presets remain read-only.
+to the user preset store. Unlocked built-in and studio rail saves write a
+separate `*_user_override` user preset; loading the original read-only preset
+id applies that sidecar override without mutating bundled or studio JSON.
+Locked built-in and studio presets remain read-only.
 
 ## Public API
 
@@ -128,7 +128,7 @@ Implemented now:
 - frame options for slot add/remove/reorder
 - edge-tab collapse opacity control
 - Save Position for unlocked runtime/user rails
-- Save Position user-overrides for unlocked built-in rails
+- Save Position user-overrides for unlocked built-in and studio rails
 - public layout-save helper that persists adjusted offsets to user presets
 - Maya menu toggle
 - Maya screenshot verification

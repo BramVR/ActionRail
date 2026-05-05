@@ -14,7 +14,8 @@ Last updated: 2026-05-05
 
 ActionRail has a verified declarative MVP and Phase 2 authoring foundation
 through Quick Create preview/save/load, Edit Mode layout-map/direct
-manipulation controls, user preset saves, and built-in layout override saves.
+manipulation controls, user preset saves, built-in layout override saves, and
+studio layout override saves.
 
 Working surface:
 
@@ -35,7 +36,8 @@ Working surface:
   snap/spacing guides, right-click options, X/Y movement for unlocked rails,
   slot add/remove/reorder controls, edge-tab opacity collapse, safe movement
   clamps, Save Position/user-preset persistence for unlocked runtime/user
-  rails, and user override saves/resolution for unlocked built-in rails.
+  rails, and user override saves/resolution for unlocked built-in and studio
+  rails.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
@@ -48,8 +50,6 @@ not part of the Git-tracked handoff.
 
 Focus this slice on:
 
-- broadening persistence from built-in user overrides toward fuller studio
-  override layering
 - polishing handle hit targets, guide behavior, and slot-edit affordances
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
@@ -78,13 +78,17 @@ $env:PYTHONPATH = "scripts"
 - Edit Mode can inspect active rails, select frames, show grid/snap/sticky
   controls, move unlocked rails in-session, and route right-click options.
 - Edit Mode can save adjusted unlocked runtime/user rail specs and unlocked
-  built-in user override presets through `save_edit_mode_layout()` and the
-  right-click Save Position control.
+  built-in/studio user override presets through `save_edit_mode_layout()` and
+  the right-click Save Position control.
 - The shared preset resolver now applies saved built-in `*_user_override`
   sidecars when loading the original built-in preset id, while leaving broken
   override files as user-preset diagnostics instead of blocking bundled loads.
-- Safe startup keeps diagnostically bad built-in user override sidecars on the
-  user-preset warning path and starts the bundled preset instead.
+- The shared preset resolver also supports optional read-only studio preset
+  discovery through `ACTIONRAIL_STUDIO_PRESET_DIR` or `PresetStore(...,
+  studio_preset_dir=...)`, with `*_user_override` sidecars applied when loading
+  the original studio preset id.
+- Safe startup keeps diagnostically bad built-in/studio user override sidecars
+  on the user-preset warning path and starts the read-only preset instead.
 - The May 5 audit items are fixed in focused conventional commits through
   `feat(edit-mode): add direct manipulation controls`, the diagnostics
   follow-up, and the status/changelog hygiene updates.
@@ -105,7 +109,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 416 passed.
+  -> 422 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.

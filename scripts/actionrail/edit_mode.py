@@ -515,8 +515,8 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             raise KeyError(msg)
         from .authoring import save_user_preset
 
-        if frame.source_layer == "builtin":
-            spec = _builtin_override_spec(spec)
+        if frame.source_layer in {"builtin", "studio"}:
+            spec = _user_override_spec(spec)
         target_preset_dir = (
             user_preset_dir
             if user_preset_dir is not None
@@ -1076,23 +1076,23 @@ def _is_edge_anchor(anchor: str) -> bool:
     return ".left." in anchor or ".right." in anchor
 
 
-def _builtin_override_spec(spec: Any) -> Any:
+def _user_override_spec(spec: Any) -> Any:
     return dataclass_replace(
         spec,
-        id=_builtin_override_id(str(getattr(spec, "id", ""))),
+        id=_user_override_id(str(getattr(spec, "id", ""))),
         layout=dataclass_replace(spec.layout, locked=False),
         items=tuple(_override_item_id(spec.id, item) for item in spec.items),
     )
 
 
-def _builtin_override_id(preset_id: str) -> str:
-    from .preset_store import builtin_user_override_id
+def _user_override_id(preset_id: str) -> str:
+    from .preset_store import preset_user_override_id
 
-    return builtin_user_override_id(preset_id)
+    return preset_user_override_id(preset_id)
 
 
 def _override_item_id(preset_id: str, item: Any) -> Any:
-    override_id = _builtin_override_id(preset_id)
+    override_id = _user_override_id(preset_id)
     item_id = str(getattr(item, "id", ""))
     prefix = f"{preset_id}."
     if item_id.startswith(prefix):
@@ -1106,16 +1106,25 @@ def _preset_source_layer(
     user_preset_dir: str | Path | None = None,
 ) -> str:
     try:
-        from .authoring import user_preset_ids
-        from .spec import builtin_preset_ids
+        from .preset_store import PresetStore
 
-        if preset_id in builtin_preset_ids():
-            return "builtin"
-        if preset_id in user_preset_ids(preset_dir=user_preset_dir):
-            return "user"
+        store = PresetStore(
+            user_preset_dir=user_preset_dir,
+            studio_preset_dir=_studio_preset_dir_from_runtime_host(preset_id),
+        )
+        source = store.entry(preset_id).source
+        if source in {"builtin_override", "studio_override"}:
+            return source.removesuffix("_override")
+        return source
     except Exception:
         return "runtime"
     return "runtime"
+
+
+def _studio_preset_dir_from_runtime_host(preset_id: str) -> Path | None:
+    host = _runtime_hosts().get(preset_id)
+    value = getattr(host, "studio_preset_dir", None)
+    return Path(value) if value is not None else None
 
 
 def _widget_position_in_parent(qt: Any, parent: Any, widget: Any) -> tuple[int, int]:
@@ -1433,7 +1442,9 @@ def _save_status_text(frame: RailFrameInfo) -> str:
     if frame.locked:
         return "Locked rails are read-only."
     if frame.source_layer == "builtin":
-        return f"Save Position writes {_builtin_override_id(frame.preset_id)}."
+        return f"Save Position writes {_user_override_id(frame.preset_id)}."
+    if frame.source_layer == "studio":
+        return f"Save Position writes {_user_override_id(frame.preset_id)}."
     if frame.source_layer == "runtime":
         return "Save creates a user preset."
     return "Save updates the user preset."

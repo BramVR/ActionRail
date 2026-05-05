@@ -35,6 +35,8 @@
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset
   directory so Save Position updates the same preset store instead of falling
   back to the default ActionRail user preset folder.
+- Added optional read-only studio preset discovery and Edit Mode Save Position
+  user overrides for unlocked studio rails.
 - Recorded the audit/status docs from the May 5 fix pass, then stopped
   tracking local `.spec/` reports so future reports stay out of Git.
 - Refreshed README/status docs to reflect the current bundled presets and

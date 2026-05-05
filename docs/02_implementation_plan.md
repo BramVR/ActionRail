@@ -438,10 +438,10 @@ Edit Mode layout-map shell are in place.
 
 Current implementation slice: Phase 2 step 2.5 layout editing and direct
 manipulation. Persistence saves adjusted unlocked runtime/user rail specs to
-user presets, and unlocked built-in rail saves now write `*_user_override`
-sidecars that the preset resolver applies when loading the original built-in id.
-Continue with studio override layering, snap/spacing guides, saved handling for
-snap/sticky edits, and right-click routing into a fuller options surface. Keep
+user presets, and unlocked built-in/studio rail saves now write
+`*_user_override` sidecars that the preset resolver applies when loading the
+original read-only preset id. Continue with snap/spacing guides, saved handling
+for snap/sticky edits, and right-click routing into a fuller options surface. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.
@@ -451,8 +451,8 @@ yet.
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Finish Phase 2 step 2.5 layout editing: user-override persistence, drag
-   handles, anchor pins, snap/spacing guides, and fuller frame options.
+1. Finish Phase 2 step 2.5 layout editing: drag handles, anchor pins,
+   snap/spacing guides, and fuller frame options.
 2. Add Phase 2 step 2.6 collapsible edge-tab runtime, persistence, and publish
    polish.
 3. Add Bind Mode, then flyouts, then command rings.

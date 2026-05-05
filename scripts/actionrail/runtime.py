@@ -43,15 +43,21 @@ def show_preset(
     panel: str | None = None,
     registry: ActionRegistry | None = None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
     """Show a resolved ActionRail preset overlay by id."""
 
-    spec = resolve_preset(preset_id, user_preset_dir=user_preset_dir)
+    spec = resolve_preset(
+        preset_id,
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
     return show_spec(
         spec,
         panel=panel,
         registry=registry,
         user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
     )
 
 
@@ -61,6 +67,7 @@ def show_spec(
     panel: str | None = None,
     registry: ActionRegistry | None = None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
     """Show a user-authored ActionRail spec through the runtime registry."""
 
@@ -71,6 +78,8 @@ def show_spec(
     host = ViewportOverlayHost(spec, panel=panel, registry=registry)
     if user_preset_dir is not None:
         host.user_preset_dir = Path(user_preset_dir)
+    if studio_preset_dir is not None:
+        host.studio_preset_dir = Path(studio_preset_dir)
     host.show()
     _OVERLAYS[spec.id] = host
     _refresh_edit_mode()
@@ -96,11 +105,17 @@ def reload(
     *,
     panel: str | None = None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
     """Rebuild the default overlay after cleaning up existing widgets."""
 
     hide_all()
-    return show_preset(example_id, panel=panel, user_preset_dir=user_preset_dir)
+    return show_preset(
+        example_id,
+        panel=panel,
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
 
 
 def active_overlay_ids() -> tuple[str, ...]:
@@ -139,10 +154,15 @@ def run_slot(
     *,
     registry: ActionRegistry | None = None,
     user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> Any:
     """Run the action attached to a slot in a resolved preset."""
 
-    spec = resolve_preset(preset_id, user_preset_dir=user_preset_dir)
+    spec = resolve_preset(
+        preset_id,
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
     qualified_slot_id = _qualified_slot_id(preset_id, slot_id)
     for item in spec.items:
         if item.id == qualified_slot_id:

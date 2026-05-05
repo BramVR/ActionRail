@@ -53,6 +53,7 @@ from .preset_store import (
     PresetStore,
     preset_entries,
     preset_ids,
+    preset_user_override_id,
     resolve_preset,
 )
 from .project import about
@@ -130,6 +131,7 @@ __all__ = [
     "parse_stack_spec",
     "preset_entries",
     "preset_ids",
+    "preset_user_override_id",
     "preview_quick_create_draft",
     "reload",
     "resolve_preset",

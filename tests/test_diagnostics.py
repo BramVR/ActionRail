@@ -24,7 +24,12 @@ from actionrail.diagnostics import (
     show_last_report,
 )
 from actionrail.hotkeys import publish_action, publish_slot
-from actionrail.preset_store import PresetEntry, PresetStore, builtin_user_override_id
+from actionrail.preset_store import (
+    PresetEntry,
+    PresetStore,
+    builtin_user_override_id,
+    preset_user_override_id,
+)
 from actionrail.spec import RailLayout, StackItem, StackSpec, builtin_preset_ids
 
 
@@ -440,6 +445,65 @@ def test_collect_diagnostics_keeps_bad_builtin_override_as_user_warning(tmp_path
     assert missing_action_issues[0].path == str(override_path)
     assert len(ignored_override_issues) == 1
     assert ignored_override_issues[0].preset_id == "horizontal_tools"
+    assert ignored_override_issues[0].target == override_id
+    assert not any(issue.code == "broken_preset" for issue in report.issues)
+
+
+def test_collect_diagnostics_keeps_bad_studio_override_as_user_warning(tmp_path) -> None:
+    user_dir = tmp_path / "user"
+    studio_dir = tmp_path / "studio"
+    override_id = preset_user_override_id("studio.tools")
+    save_user_preset(
+        StackSpec(
+            id="studio.tools",
+            layout=RailLayout(anchor="viewport.right.center", locked=True),
+            items=(
+                StackItem(
+                    type="button",
+                    id="studio.tools.move",
+                    label="M",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=studio_dir,
+    )
+    override_path = user_dir / f"{override_id}.json"
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(anchor="viewport.right.center", locked=False),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.missing",
+                    label="X",
+                    action="maya.missing.action",
+                ),
+            ),
+        ),
+        preset_dir=user_dir,
+    )
+
+    report = collect_diagnostics(
+        ("studio.tools",),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=user_dir,
+        studio_preset_dir=studio_dir,
+    )
+
+    missing_action_issues = [
+        issue for issue in report.warnings if issue.code == "missing_action"
+    ]
+    ignored_override_issues = [
+        issue for issue in report.warnings if issue.code == "studio_override_ignored"
+    ]
+    assert report.has_errors is False
+    assert len(missing_action_issues) == 1
+    assert missing_action_issues[0].preset_id == override_id
+    assert missing_action_issues[0].path == str(override_path)
+    assert len(ignored_override_issues) == 1
+    assert ignored_override_issues[0].preset_id == "studio.tools"
     assert ignored_override_issues[0].target == override_id
     assert not any(issue.code == "broken_preset" for issue in report.issues)
 
@@ -1207,6 +1271,78 @@ def test_safe_start_uses_builtin_when_user_override_has_diagnostic_warnings(
     assert report.overlay_id == "horizontal_tools"
     assert started == [("horizontal_tools", tmp_path)]
     assert any(issue.code == "builtin_override_ignored" for issue in report.warnings)
+
+
+def test_safe_start_uses_studio_when_user_override_has_diagnostic_warnings(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user_dir = tmp_path / "user"
+    studio_dir = tmp_path / "studio"
+    override_id = preset_user_override_id("studio.tools")
+    save_user_preset(
+        StackSpec(
+            id="studio.tools",
+            layout=RailLayout(anchor="viewport.right.center", locked=True),
+            items=(
+                StackItem(
+                    type="button",
+                    id="studio.tools.move",
+                    label="M",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=studio_dir,
+    )
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(anchor="viewport.right.center", locked=False),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.missing",
+                    label="X",
+                    action="maya.missing.action",
+                ),
+            ),
+        ),
+        preset_dir=user_dir,
+    )
+    started: list[tuple[str, object, object]] = []
+
+    def show_studio_overlay(
+        preset_id: str,
+        *,
+        panel: str | None,
+        registry: ActionRegistry | None,
+        user_preset_dir: object = None,
+        studio_preset_dir: object = None,
+    ) -> object:
+        started.append((preset_id, user_preset_dir, studio_preset_dir))
+        return object()
+
+    def show_resolved_overlay(*args: object, **kwargs: object) -> object:
+        raise AssertionError("bad studio override should not be started")
+
+    monkeypatch.setattr(diagnostics, "_show_studio_overlay", show_studio_overlay)
+    monkeypatch.setattr(diagnostics, "_show_resolved_overlay", show_resolved_overlay)
+    monkeypatch.setattr(diagnostics, "_safe_active_overlay_ids", lambda: ("studio.tools",))
+
+    report = safe_start(
+        "studio.tools",
+        registry=create_default_registry(AvailabilityCmds()),
+        cmds_module=AvailabilityCmds(),
+        user_preset_dir=user_dir,
+        studio_preset_dir=studio_dir,
+    )
+
+    assert report.has_errors is False
+    assert report.overlay_started is True
+    assert report.overlay_id == "studio.tools"
+    assert started == [("studio.tools", user_dir, studio_dir)]
+    assert any(issue.code == "studio_override_ignored" for issue in report.warnings)
 
 
 def test_diagnostics_private_runtime_boundaries_are_defensive(

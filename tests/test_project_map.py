@@ -22,6 +22,7 @@ def test_about_returns_json_safe_agent_map() -> None:
     assert "transform_stack" in project["presets"]["preset_ids"]
     assert "maya.tool.rotate" in project["builtins"]["action_ids"]
     assert "directory" in project["user_presets"]
+    assert "directory" in project["studio_presets"]
     assert {"id": "maya", "icon_count": 36} in project["icons"]["providers"]
     assert any(entry["path"] == "docs/00_start_here.md" for entry in project["docs"])
     assert any(entry["path"] == "docs/08_edit_mode.md" for entry in project["docs"])
@@ -69,7 +70,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 2 step 2.5 built-in override resolution implemented" in output
+    assert "Status: Phase 2 step 2.5 studio override resolution implemented" in output
     assert "Use --json" in output
 
 

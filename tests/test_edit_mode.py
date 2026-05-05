@@ -620,6 +620,36 @@ def test_preset_source_layer_uses_custom_user_preset_dir(tmp_path) -> None:
     )
 
 
+def test_preset_source_layer_detects_studio_runtime_host(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    studio_dir = tmp_path / "studio"
+    save_user_preset(
+        StackSpec(
+            id="studio.tools",
+            layout=RailLayout(anchor="viewport.right.center", locked=True),
+            items=(
+                StackItem(
+                    type="button",
+                    id="studio.tools.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=studio_dir,
+    )
+    runtime_host = type("RuntimeHost", (), {"studio_preset_dir": studio_dir})()
+    monkeypatch.setattr(
+        edit_mode,
+        "_runtime_hosts",
+        lambda: {"studio.tools": runtime_host},
+    )
+
+    assert edit_mode._preset_source_layer("studio.tools") == "studio"
+
+
 def test_save_edit_mode_layout_writes_builtin_user_override(
     monkeypatch,
     tmp_path,
@@ -673,6 +703,69 @@ def test_save_edit_mode_layout_writes_builtin_user_override(
     assert saved.layout.offset == (12, 24)
     assert saved.layout.locked is False
     assert saved.items[0].id == "transform_stack_user_override.move"
+
+
+def test_save_edit_mode_layout_writes_studio_user_override(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="studio.tools",
+        label="Studio Tools",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.right.center",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+        source_layer="studio",
+    )
+    runtime_host = type(
+        "RuntimeHost",
+        (),
+        {
+            "spec": StackSpec(
+                id="studio.tools",
+                layout=RailLayout(
+                    anchor="viewport.right.center",
+                    offset=(12, 24),
+                    locked=True,
+                ),
+                items=(
+                    StackItem(
+                        type="button",
+                        id="studio.tools.move",
+                        label="Move",
+                        action="maya.tool.move",
+                    ),
+                ),
+            )
+        },
+    )()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    monkeypatch.setattr(edit_mode, "_EDIT_HOST", host)
+    monkeypatch.setattr(edit_mode, "_SELECTED_PRESET_ID", "studio.tools")
+    monkeypatch.setattr(
+        edit_mode,
+        "_runtime_hosts",
+        lambda: {"studio.tools": runtime_host},
+    )
+
+    path = edit_mode.save_edit_mode_layout(user_preset_dir=tmp_path)
+    saved = load_user_preset("studio.tools_user_override", preset_dir=tmp_path)
+
+    assert path == tmp_path / "studio.tools_user_override.json"
+    assert saved.id == "studio.tools_user_override"
+    assert saved.layout.offset == (12, 24)
+    assert saved.layout.locked is False
+    assert saved.items[0].id == "studio.tools_user_override.move"
 
 
 def test_save_edit_mode_layout_refuses_locked_frames(monkeypatch) -> None:

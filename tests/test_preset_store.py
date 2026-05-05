@@ -11,6 +11,7 @@ from actionrail.preset_store import (
     builtin_user_override_id,
     preset_entries,
     preset_ids,
+    preset_user_override_id,
     resolve_preset,
 )
 from actionrail.spec import RailLayout, StackItem, StackSpec
@@ -108,6 +109,106 @@ def test_broken_builtin_override_does_not_block_bundled_preset(tmp_path) -> None
 
     assert store.entry("transform_stack") == PresetEntry("transform_stack", "builtin")
     assert spec.id == "transform_stack"
+    assert store.user_entries()[0].error
+
+
+def test_resolve_studio_preset_applies_user_override_layer(tmp_path) -> None:
+    user_dir = tmp_path / "user"
+    studio_dir = tmp_path / "studio"
+    override_id = preset_user_override_id("studio.tools")
+    save_user_preset(
+        StackSpec(
+            id="studio.tools",
+            layout=RailLayout(
+                anchor="viewport.right.center",
+                offset=(10, 20),
+                locked=True,
+            ),
+            items=(
+                StackItem(
+                    type="button",
+                    id="studio.tools.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=studio_dir,
+    )
+    save_user_preset(
+        StackSpec(
+            id=override_id,
+            layout=RailLayout(
+                anchor="viewport.right.center",
+                offset=(44, 55),
+                locked=False,
+            ),
+            items=(
+                StackItem(
+                    type="button",
+                    id=f"{override_id}.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=user_dir,
+    )
+
+    store = PresetStore(user_preset_dir=user_dir, studio_preset_dir=studio_dir)
+    spec = store.load("studio.tools")
+
+    assert store.studio_ids() == ("studio.tools",)
+    assert store.entry("studio.tools") == PresetEntry(
+        "studio.tools",
+        "studio_override",
+        user_dir / "studio.tools_user_override.json",
+    )
+    assert spec.id == "studio.tools"
+    assert spec.layout.offset == (44, 55)
+    assert spec.layout.locked is False
+    assert spec.items[0].id == "studio.tools.move"
+    assert resolve_preset(
+        "studio.tools",
+        user_preset_dir=user_dir,
+        studio_preset_dir=studio_dir,
+    ).layout.offset == (44, 55)
+
+
+def test_broken_studio_override_does_not_block_studio_preset(tmp_path) -> None:
+    user_dir = tmp_path / "user"
+    studio_dir = tmp_path / "studio"
+    save_user_preset(
+        StackSpec(
+            id="studio.tools",
+            layout=RailLayout(anchor="viewport.right.center", locked=True),
+            items=(
+                StackItem(
+                    type="button",
+                    id="studio.tools.move",
+                    label="Move",
+                    action="maya.tool.move",
+                ),
+            ),
+        ),
+        preset_dir=studio_dir,
+    )
+    user_dir.mkdir()
+    (user_dir / "studio.tools_user_override.json").write_text(
+        json.dumps({"id": "different", "layout": {}, "items": []}),
+        encoding="utf-8",
+    )
+
+    store = PresetStore(user_preset_dir=user_dir, studio_preset_dir=studio_dir)
+    spec = store.load("studio.tools")
+
+    assert store.entry("studio.tools") == PresetEntry(
+        "studio.tools",
+        "studio",
+        studio_dir / "studio.tools.json",
+    )
+    assert spec.id == "studio.tools"
+    assert spec.layout.locked is True
     assert store.user_entries()[0].error
 
 

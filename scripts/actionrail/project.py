@@ -50,7 +50,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/preset_store.py",
-        "owns": "shared built-in/user preset id resolution",
+        "owns": "shared built-in/studio/user preset id resolution",
         "tests": ("tests/test_preset_store.py",),
     },
     {
@@ -179,8 +179,8 @@ def about() -> dict[str, object]:
         "package": "actionrail",
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
-            "phase": "Phase 2 step 2.5 built-in override resolution implemented",
-            "next_slice": "Phase 2 step 2.5 studio override and polish follow-up",
+            "phase": "Phase 2 step 2.5 studio override resolution implemented",
+            "next_slice": "Phase 2 step 2.5 handle, guide, and options polish",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(
@@ -198,6 +198,14 @@ def about() -> dict[str, object]:
         "user_presets": {
             "directory": str(preset_store.user_preset_dir),
             "preset_ids": preset_store.user_ids(),
+        },
+        "studio_presets": {
+            "directory": (
+                str(preset_store.studio_preset_dir)
+                if preset_store.studio_preset_dir is not None
+                else ""
+            ),
+            "preset_ids": preset_store.studio_ids(),
         },
         "icons": {
             "manifest": "icons/manifest.json",
