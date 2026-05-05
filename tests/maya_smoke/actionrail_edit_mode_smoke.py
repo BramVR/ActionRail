@@ -127,6 +127,23 @@ panel = edit_widget.findChild(QtWidgets.QFrame, edit_mode.EDIT_PANEL_OBJECT_NAME
 if panel is None or not panel.isVisible():
     raise AssertionError("Edit Mode control panel is not visible.")
 
+grid_check = next(
+    (checkbox for checkbox in panel.findChildren(QtWidgets.QCheckBox) if checkbox.text() == "Grid"),
+    None,
+)
+grid_size_spin = panel.findChild(QtWidgets.QSpinBox)
+lock_button = panel.findChild(QtWidgets.QPushButton)
+if grid_check is None or grid_size_spin is None or lock_button is None:
+    raise AssertionError("Edit Mode panel is missing expected grid or lock controls.")
+if lock_button.text() != "No selection":
+    raise AssertionError(f"Expected neutral lock text before selection, got {lock_button.text()!r}")
+grid_check.setChecked(False)
+app.processEvents()
+if grid_size_spin.isEnabled():
+    raise AssertionError("Grid Size remained enabled while Grid was unchecked.")
+grid_check.setChecked(True)
+app.processEvents()
+
 host = edit_mode._EDIT_HOST
 if host is None:
     raise AssertionError("Edit Mode host was not created.")
