@@ -168,7 +168,7 @@ that still affect whether ActionRail feels safe as an authoring tool.
     Impact: the current Edit Mode shell still requires indirect controls and
     cannot yet serve as the polished viewport layout editor described in the
     Phase 2.5 goal.
-    Status: open.
+    Status: fixed in `feat(edit-mode): add direct manipulation controls`.
 
 ## Fixed Items Not Counted
 

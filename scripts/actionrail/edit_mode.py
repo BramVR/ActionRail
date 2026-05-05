@@ -407,6 +407,74 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         _set_host_offset(host, original)
         self.refresh()
 
+    def add_slot_to_selected(self) -> bool:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return False
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            return False
+        from .spec import StackItem
+
+        slot_number = _next_slot_number(spec)
+        slot_id = f"{spec.id}.slot_{slot_number}"
+        item = StackItem(type="button", id=slot_id, label="New")
+        _replace_host_spec(host, dataclass_replace(spec, items=(*spec.items, item)))
+        self.refresh()
+        return True
+
+    def remove_slot_from_selected(self) -> bool:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return False
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            return False
+        index = _last_action_item_index(spec.items)
+        if index is None:
+            return False
+        items = (*spec.items[:index], *spec.items[index + 1 :])
+        _replace_host_spec(host, dataclass_replace(spec, items=items))
+        self.refresh()
+        return True
+
+    def reorder_selected_slot(self, delta: int) -> bool:
+        selected = self.selected_frame()
+        if selected is None or selected.locked or delta == 0:
+            return False
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            return False
+        index = _last_action_item_index(spec.items)
+        if index is None:
+            return False
+        target = max(0, min(len(spec.items) - 1, index + delta))
+        if target == index:
+            return False
+        items = list(spec.items)
+        item = items.pop(index)
+        items.insert(target, item)
+        _replace_host_spec(host, dataclass_replace(spec, items=tuple(items)))
+        self.refresh()
+        return True
+
+    def toggle_selected_edge_tab(self) -> bool:
+        selected = self.selected_frame()
+        if selected is None or selected.locked or not _is_edge_anchor(selected.anchor):
+            return False
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            return False
+        opacity = 0.35 if float(getattr(spec.layout, "opacity", 1.0)) > 0.5 else 0.92
+        layout = dataclass_replace(spec.layout, opacity=opacity)
+        _replace_host_spec(host, dataclass_replace(spec, layout=layout))
+        self.refresh()
+        return True
+
     def save_selected_layout(
         self,
         *,
@@ -503,6 +571,16 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                     painter.setRenderHint(qt.QtGui.QPainter.Antialiasing, False)
                     if self._host.settings.show_grid:
                         _paint_grid(qt, painter, self.rect(), self._host.settings.grid_size)
+                    selected = self._host.selected_frame()
+                    if selected is not None:
+                        _paint_guides(
+                            qt,
+                            painter,
+                            self.rect(),
+                            selected,
+                            self._host.frames,
+                            self._host.settings,
+                        )
                     for frame in self._host.frames:
                         _paint_frame(qt, painter, frame, frame.preset_id == _SELECTED_PRESET_ID)
                 finally:
@@ -777,6 +855,11 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.status.setWordWrap(True)
                 self.save = qt.QtWidgets.QPushButton("Save Position")
                 self.reset = qt.QtWidgets.QPushButton("Reset Position")
+                self.add_slot = qt.QtWidgets.QPushButton("Add Slot")
+                self.remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
+                self.slot_up = qt.QtWidgets.QPushButton("Slot Up")
+                self.slot_down = qt.QtWidgets.QPushButton("Slot Down")
+                self.collapse = qt.QtWidgets.QPushButton("Collapse Edge Tab")
                 self.close_button = qt.QtWidgets.QToolButton()
                 self.close_button.setText("x")
                 layout.addWidget(self.title, 0, 0, 1, 2)
@@ -785,10 +868,20 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 layout.addWidget(self.status, 2, 0, 1, 3)
                 layout.addWidget(self.save, 3, 0, 1, 3)
                 layout.addWidget(self.reset, 4, 0, 1, 3)
+                layout.addWidget(self.add_slot, 5, 0, 1, 3)
+                layout.addWidget(self.remove_slot, 6, 0, 1, 3)
+                layout.addWidget(self.slot_up, 7, 0)
+                layout.addWidget(self.slot_down, 7, 1)
+                layout.addWidget(self.collapse, 8, 0, 1, 3)
                 self.setFixedWidth(260)
                 self.close_button.clicked.connect(self._close_options)
                 self.save.clicked.connect(self._save_options)
                 self.reset.clicked.connect(self._owner._host.reset_selected_position)
+                self.add_slot.clicked.connect(self._add_slot)
+                self.remove_slot.clicked.connect(self._remove_slot)
+                self.slot_up.clicked.connect(lambda: self._move_slot(-1))
+                self.slot_down.clicked.connect(lambda: self._move_slot(1))
+                self.collapse.clicked.connect(self._collapse_edge_tab)
 
             def sync(self, frame: RailFrameInfo | None) -> None:
                 if frame is None:
@@ -804,6 +897,11 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.status.setText(_save_status_text(frame))
                 self.save.setEnabled(_can_save_frame(frame))
                 self.reset.setEnabled(not frame.locked)
+                self.add_slot.setEnabled(not frame.locked)
+                self.remove_slot.setEnabled(not frame.locked)
+                self.slot_up.setEnabled(not frame.locked)
+                self.slot_down.setEnabled(not frame.locked)
+                self.collapse.setEnabled(not frame.locked and _is_edge_anchor(frame.anchor))
                 self.setFixedHeight(self.sizeHint().height())
                 self.move(
                     _options_popover_position(
@@ -830,6 +928,31 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                     self.setFixedHeight(self.sizeHint().height())
                     return
                 self.status.setText(f"Saved {path.name}")
+                self.setFixedHeight(self.sizeHint().height())
+
+            def _add_slot(self) -> None:
+                self._set_action_status(self._owner._host.add_slot_to_selected(), "Added slot")
+
+            def _remove_slot(self) -> None:
+                self._set_action_status(
+                    self._owner._host.remove_slot_from_selected(),
+                    "Removed slot",
+                )
+
+            def _move_slot(self, delta: int) -> None:
+                self._set_action_status(
+                    self._owner._host.reorder_selected_slot(delta),
+                    "Reordered slot",
+                )
+
+            def _collapse_edge_tab(self) -> None:
+                self._set_action_status(
+                    self._owner._host.toggle_selected_edge_tab(),
+                    "Toggled edge tab",
+                )
+
+            def _set_action_status(self, ok: bool, text: str) -> None:
+                self.status.setText(text if ok else "Action unavailable")
                 self.setFixedHeight(self.sizeHint().height())
 
         return _Options(canvas)
@@ -905,6 +1028,52 @@ def _set_host_offset(host: Any, offset: tuple[int, int]) -> None:
     position = getattr(host, "position", None)
     if callable(position):
         position()
+
+
+def _replace_host_spec(host: Any, spec: Any) -> None:
+    host.spec = spec
+    rebuild = getattr(host, "_rebuild_widget", None)
+    if callable(rebuild):
+        state_snapshot = None
+        snapshot_fn = getattr(host, "cmds", None)
+        try:
+            from .state import snapshot
+
+            state_snapshot = snapshot(snapshot_fn, active_panel=getattr(host, "panel", None))
+        except Exception:
+            state_snapshot = None
+        rebuild(state_snapshot)
+        return
+    position = getattr(host, "position", None)
+    if callable(position):
+        position()
+
+
+def _next_slot_number(spec: Any) -> int:
+    prefix = f"{spec.id}.slot_"
+    used: set[int] = set()
+    for item in spec.items:
+        item_id = str(getattr(item, "id", ""))
+        if not item_id.startswith(prefix):
+            continue
+        suffix = item_id.removeprefix(prefix)
+        if suffix.isdigit():
+            used.add(int(suffix))
+    number = 1
+    while number in used:
+        number += 1
+    return number
+
+
+def _last_action_item_index(items: tuple[Any, ...]) -> int | None:
+    for index in range(len(items) - 1, -1, -1):
+        if getattr(items[index], "type", "") != "spacer":
+            return index
+    return None
+
+
+def _is_edge_anchor(anchor: str) -> bool:
+    return ".left." in anchor or ".right." in anchor
 
 
 def _builtin_override_spec(spec: Any) -> Any:
@@ -1106,6 +1275,31 @@ def _snap_axis_position(
     return position
 
 
+def _paint_guides(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    rect: Any,
+    frame: RailFrameInfo,
+    frames: tuple[RailFrameInfo, ...],
+    settings: EditModeSettings,
+) -> None:
+    guide = qt.QtGui.QColor(112, 226, 255, 135)
+    painter.setPen(qt.QtGui.QPen(guide, 1))
+    for x_pos in (frame.x, frame.x + int(frame.width / 2), frame.right):
+        painter.drawLine(x_pos, 0, x_pos, rect.height())
+    for y_pos in (frame.y, frame.y + int(frame.height / 2), frame.bottom):
+        painter.drawLine(0, y_pos, rect.width(), y_pos)
+    if not settings.sticky_frames:
+        return
+    for other in frames:
+        if other.preset_id == frame.preset_id:
+            continue
+        if abs(other.x - frame.right) <= STICKY_SNAP_THRESHOLD:
+            painter.drawLine(frame.right, frame.y, other.x, other.y)
+        if abs(other.y - frame.bottom) <= STICKY_SNAP_THRESHOLD:
+            painter.drawLine(frame.x, frame.bottom, other.x, other.y)
+
+
 def _paint_grid(  # pragma: no cover - covered by Maya smoke screenshots.
     qt: Any,
     painter: Any,
@@ -1137,6 +1331,8 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
         outline = qt.QtGui.QColor(255, 211, 0, 255)
     painter.setPen(qt.QtGui.QPen(outline, 2 if selected else 1))
     painter.drawRect(rect.adjusted(0, 0, -1, -1))
+    _paint_drag_handle(qt, painter, frame)
+    _paint_anchor_pin(qt, painter, frame)
     painter.setPen(qt.QtGui.QColor(0, 184, 255, 255))
     font = painter.font()
     font.setBold(True)
@@ -1146,6 +1342,36 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     if frame.locked:
         label = f"{label}\nLocked"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
+
+
+def _paint_drag_handle(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    frame: RailFrameInfo,
+) -> None:
+    handle = qt.QtCore.QRect(frame.right - 16, frame.y + 4, 12, 12)
+    painter.fillRect(handle, qt.QtGui.QColor(112, 226, 255, 190))
+
+
+def _paint_anchor_pin(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    frame: RailFrameInfo,
+) -> None:
+    radius = 5
+    x_pos = frame.x + int(frame.width / 2)
+    y_pos = frame.y + int(frame.height / 2)
+    if ".left." in frame.anchor:
+        x_pos = frame.x + radius + 2
+    elif ".right." in frame.anchor:
+        x_pos = frame.right - radius - 2
+    if ".top." in frame.anchor:
+        y_pos = frame.y + radius + 2
+    elif ".bottom." in frame.anchor:
+        y_pos = frame.bottom - radius - 2
+    painter.setBrush(qt.QtGui.QColor(155, 216, 200, 210))
+    painter.setPen(qt.QtGui.QPen(qt.QtGui.QColor(5, 30, 38, 220), 1))
+    painter.drawEllipse(x_pos - radius, y_pos - radius, radius * 2, radius * 2)
 
 
 def _frame_label_font_size(frame: RailFrameInfo) -> int:

@@ -14,6 +14,8 @@
   safe viewport margin.
 - Added Edit Mode Save Position support for unlocked built-in rails by writing
   separate user override presets instead of mutating bundled presets.
+- Added Edit Mode direct-manipulation controls for drag handles, anchor pins,
+  guide rendering, slot add/remove/reorder, and edge-tab opacity collapse.
 - Moved the ActionRail QA reports into the repository-root `.spec` directory
   and added a current open-issue audit covering the last-24-hour commit window.
 - Fixed Edit Mode layout saves for overlays loaded from a custom user preset

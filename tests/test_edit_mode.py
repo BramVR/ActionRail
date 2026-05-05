@@ -708,6 +708,108 @@ def test_save_edit_mode_layout_refuses_locked_frames(monkeypatch) -> None:
         raise AssertionError("Locked Edit Mode layout save unexpectedly succeeded.")
 
 
+def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="custom_slots",
+        label="Custom Slots",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.center",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+        source_layer="runtime",
+    )
+
+    class RuntimeHost:
+        def __init__(self) -> None:
+            self.spec = StackSpec(
+                id="custom_slots",
+                layout=RailLayout(anchor="viewport.left.center", offset=(12, 24)),
+                items=(
+                    StackItem(type="button", id="custom_slots.a", label="A"),
+                    StackItem(type="button", id="custom_slots.b", label="B"),
+                    StackItem(type="spacer", id="custom_slots.gap", size=8),
+                ),
+            )
+            self.rebuilds = 0
+
+        def _rebuild_widget(self, _state: object) -> None:
+            self.rebuilds += 1
+
+    runtime_host = RuntimeHost()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.refresh = lambda: None
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"custom_slots": runtime_host})
+    host.select_rail("custom_slots")
+
+    assert host.reorder_selected_slot(-1) is True
+    assert [item.id for item in runtime_host.spec.items] == [
+        "custom_slots.b",
+        "custom_slots.a",
+        "custom_slots.gap",
+    ]
+    assert host.add_slot_to_selected() is True
+    assert runtime_host.spec.items[-1].id == "custom_slots.slot_1"
+    assert host.remove_slot_from_selected() is True
+    assert [item.id for item in runtime_host.spec.items] == [
+        "custom_slots.b",
+        "custom_slots.a",
+        "custom_slots.gap",
+    ]
+    assert runtime_host.rebuilds == 3
+
+
+def test_edit_mode_options_toggle_edge_tab_opacity(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="edge_tab",
+        label="Edge Tab",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.center",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=0.92,
+        locked=False,
+        source_layer="runtime",
+    )
+    runtime_host = type(
+        "RuntimeHost",
+        (),
+        {
+            "spec": StackSpec(
+                id="edge_tab",
+                layout=RailLayout(anchor="viewport.left.center", opacity=0.92),
+                items=(StackItem(type="button", id="edge_tab.a", label="A"),),
+            )
+        },
+    )()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.refresh = lambda: None
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"edge_tab": runtime_host})
+    host.select_rail("edge_tab")
+
+    assert host.toggle_selected_edge_tab() is True
+    assert runtime_host.spec.layout.opacity == 0.35
+    assert host.toggle_selected_edge_tab() is True
+    assert runtime_host.spec.layout.opacity == 0.92
+
+
 def test_locked_frame_does_not_nudge(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="locked",

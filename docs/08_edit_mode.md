@@ -24,6 +24,7 @@ When Edit Mode is enabled, ActionRail draws:
 - an optional placement grid
 - one translucent labeled frame for each active runtime rail
 - selected-frame styling
+- drag handles, anchor pins, and selected-frame guide lines
 - rail source layer and lock state labels
 - a compact Edit Mode panel with Grid, Grid Size, Snap to Grid, Sticky Frames,
   and selected lock-state display
@@ -54,6 +55,8 @@ Inside Edit Mode:
 - left-click a rail frame to select it and open the X/Y popover
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
 - right-click a rail frame to open options routing for that rail
+- use frame options to add/remove/reorder placeholder slots
+- use frame options to collapse or expand edge-tab opacity
 - enable Grid to show or hide the edit-only grid
 - adjust Grid Size to change the grid spacing
 - enable Snap to Grid to snap authoring movement to the grid
@@ -116,8 +119,12 @@ Implemented now:
 - left-click frame selection
 - selected-frame X/Y popover
 - X/Y movement for unlocked rails
+- drag handles and anchor pins
 - snap-to-grid and Sticky Frames during movement
+- selected-frame snap/spacing guide rendering
 - right-click frame options routing marker
+- frame options for slot add/remove/reorder
+- edge-tab collapse opacity control
 - Save Position for unlocked runtime/user rails
 - Save Position user-overrides for unlocked built-in rails
 - public layout-save helper that persists adjusted offsets to user presets
@@ -126,12 +133,6 @@ Implemented now:
 
 Not implemented yet:
 
-- drag handles
-- anchor pins
-- snap/spacing guide rendering
-- fuller rail options panel
-- slot add/remove/reorder from Edit Mode
-- collapsible edge-tab controls
 - Bind Mode, flyouts, command rings, profile layers, marking-menu export, and
   Viewport 2.0 drawing
 
