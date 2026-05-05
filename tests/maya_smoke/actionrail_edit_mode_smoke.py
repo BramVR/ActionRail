@@ -161,6 +161,8 @@ if len(spinboxes) < 2:
     raise AssertionError("Position popover is missing X/Y spin boxes.")
 
 old_x = custom_frame.x
+actionrail.set_edit_mode_options(snap_to_grid=True, sticky_frames=False)
+app.processEvents()
 spinboxes[0].setValue(old_x + 5)
 app.processEvents()
 cmds.refresh(force=True)
@@ -169,16 +171,37 @@ app.processEvents()
 custom_frame_after_nudge = next(
     frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
 )
-if custom_frame_after_nudge.x != old_x + 5:
+expected_snap_x = edit_mode._snap_value_to_grid(old_x + 5, 64)
+if custom_frame_after_nudge.x != expected_snap_x:
     raise AssertionError(
-        f"X coordinate control did not move frame: {old_x} -> {custom_frame_after_nudge.x}"
+        "X coordinate control did not honor Snap to Grid: "
+        f"{old_x} -> {custom_frame_after_nudge.x}, expected {expected_snap_x}"
+    )
+
+right_button = next(
+    (button for button in popover.findChildren(QtWidgets.QToolButton) if button.text() == ">"),
+    None,
+)
+if right_button is None:
+    raise AssertionError("Position popover is missing right nudge button.")
+QtTest.QTest.mouseClick(right_button, QtCore.Qt.LeftButton)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+custom_frame_after_arrow = next(
+    frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
+)
+if custom_frame_after_arrow.x != expected_snap_x + 64:
+    raise AssertionError(
+        "Right-arrow nudge did not move by one grid cell with Snap to Grid enabled: "
+        f"{custom_frame_after_arrow.x} != {expected_snap_x + 64}"
     )
 
 actionrail.set_edit_mode_options(snap_to_grid=False, sticky_frames=True)
 app.processEvents()
 host.set_selected_position(
-    target_frame.x - custom_frame_after_nudge.width + 5,
-    custom_frame_after_nudge.y,
+    target_frame.x - custom_frame_after_arrow.width + 5,
+    custom_frame_after_arrow.y,
     apply_snapping=True,
 )
 app.processEvents()
@@ -191,9 +214,26 @@ if custom_frame_after_sticky.right != target_frame.x:
         f"{custom_frame_after_sticky.right} != {target_frame.x}"
     )
 
+actionrail.set_edit_mode_options(snap_to_grid=True, sticky_frames=True)
+app.processEvents()
+host.set_selected_position(
+    target_frame.x - custom_frame_after_sticky.width + 5,
+    custom_frame_after_sticky.y + 5,
+    apply_snapping=True,
+)
+app.processEvents()
+custom_frame_after_snap_sticky = next(
+    frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
+)
+if custom_frame_after_snap_sticky.x % 64 or custom_frame_after_snap_sticky.y % 64:
+    raise AssertionError(
+        "Sticky Frames left the rail off-grid while Snap to Grid was enabled: "
+        f"{custom_frame_after_snap_sticky.x}, {custom_frame_after_snap_sticky.y}"
+    )
+
 right_click_point = QtCore.QPoint(
-    custom_frame_after_sticky.x + 4,
-    custom_frame_after_sticky.y + 4,
+    custom_frame_after_snap_sticky.x + 4,
+    custom_frame_after_snap_sticky.y + 4,
 )
 QtTest.QTest.mouseClick(
     edit_widget,
@@ -208,6 +248,13 @@ if state_after_right_click.options_preset_id != "edit_mode_custom":
     raise AssertionError(
         f"Right click did not route to frame options: {state_after_right_click}"
     )
+
+options_popover = edit_widget.findChild(
+    QtWidgets.QFrame,
+    edit_mode.FRAME_OPTIONS_POPOVER_OBJECT_NAME,
+)
+if options_popover is None or not options_popover.isVisible():
+    raise AssertionError("Right click did not open the frame options popover.")
 
 pixmap = edit_widget.grab()
 screenshot_saved = pixmap.save(str(output_path), "PNG")
@@ -225,6 +272,10 @@ result = {
     "selected_preset_id": actionrail.edit_mode_state().selected_preset_id,
     "snap_to_grid": actionrail.edit_mode_state().settings.snap_to_grid,
     "sticky_aligned_right_edge": custom_frame_after_sticky.right,
+    "sticky_grid_position": [
+        custom_frame_after_snap_sticky.x,
+        custom_frame_after_snap_sticky.y,
+    ],
     "sticky_target_left_edge": target_frame.x,
     "sticky_frames": actionrail.edit_mode_state().settings.sticky_frames,
 }

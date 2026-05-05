@@ -22,11 +22,13 @@ MAX_GRID_SIZE = 512
 EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
 EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
 POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
+FRAME_OPTIONS_POPOVER_OBJECT_NAME = "ActionRailEditModeFrameOptionsPopover"
 
 __all__ = [
     "DEFAULT_GRID_SIZE",
     "EDIT_OVERLAY_OBJECT_NAME",
     "EDIT_PANEL_OBJECT_NAME",
+    "FRAME_OPTIONS_POPOVER_OBJECT_NAME",
     "POSITION_POPOVER_OBJECT_NAME",
     "EditModeSettings",
     "EditModeState",
@@ -306,16 +308,21 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.widget.refresh_from_host()
 
     def select_rail(self, preset_id: str) -> None:
-        global _SELECTED_PRESET_ID
+        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID
         _SELECTED_PRESET_ID = (
             preset_id if any(frame.preset_id == preset_id for frame in self.frames) else ""
         )
+        if _OPTIONS_PRESET_ID and _OPTIONS_PRESET_ID != _SELECTED_PRESET_ID:
+            _OPTIONS_PRESET_ID = ""
         self.widget.refresh_from_host()
 
     def open_options(self, preset_id: str) -> None:
-        global _OPTIONS_PRESET_ID
-        _OPTIONS_PRESET_ID = preset_id
-        self.select_rail(preset_id)
+        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID
+        _SELECTED_PRESET_ID = (
+            preset_id if any(frame.preset_id == preset_id for frame in self.frames) else ""
+        )
+        _OPTIONS_PRESET_ID = _SELECTED_PRESET_ID
+        self.widget.refresh_from_host()
 
     def nudge_selected(self, dx: int, dy: int) -> None:
         selected = self.selected_frame()
@@ -392,11 +399,14 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                 self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
                 self._panel = _EditModePanel(self)
                 self._popover = _PositionPopover(self)
+                self._options_popover = _FrameOptionsPopover(self)
                 self._popover.hide()
+                self._options_popover.hide()
 
             def refresh_from_host(self) -> None:
                 self._panel.sync()
                 self._sync_popover()
+                self._sync_options_popover()
                 self.update()
 
             def paintEvent(self, event: Any) -> None:  # noqa: N802
@@ -460,6 +470,12 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                 frame = self._host.selected_frame()
                 self._popover.sync(frame)
 
+            def _sync_options_popover(self) -> None:
+                frame = self._host.selected_frame()
+                if frame is not None and frame.preset_id != _OPTIONS_PRESET_ID:
+                    frame = None
+                self._options_popover.sync(frame)
+
         return _Canvas(host)
 
 
@@ -483,25 +499,27 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 self.title.setAlignment(qt.QtCore.Qt.AlignCenter)
                 self.summary = qt.QtWidgets.QLabel("")
                 self.summary.setAlignment(qt.QtCore.Qt.AlignCenter)
+                self.summary.setWordWrap(True)
                 self.grid_check = qt.QtWidgets.QCheckBox("Grid")
                 self.snap_check = qt.QtWidgets.QCheckBox("Snap to Grid")
                 self.sticky_check = qt.QtWidgets.QCheckBox("Sticky Frames")
                 self.grid_size = qt.QtWidgets.QSpinBox()
                 self.grid_size.setRange(MIN_GRID_SIZE, MAX_GRID_SIZE)
                 self.grid_size.setSingleStep(4)
+                self.grid_size_label = qt.QtWidgets.QLabel("Grid Size")
                 self.lock_button = qt.QtWidgets.QPushButton("Lock")
                 self.lock_button.setEnabled(False)
 
                 layout.addWidget(self.title, 0, 0, 1, 4)
                 layout.addWidget(self.summary, 1, 0, 1, 4)
                 layout.addWidget(self.grid_check, 2, 0)
-                layout.addWidget(qt.QtWidgets.QLabel("Grid Size"), 2, 1)
+                layout.addWidget(self.grid_size_label, 2, 1)
                 layout.addWidget(self.grid_size, 2, 2)
                 layout.addWidget(self.lock_button, 2, 3)
                 layout.addWidget(self.snap_check, 3, 0, 1, 2)
                 layout.addWidget(self.sticky_check, 3, 2, 1, 2)
                 self.adjustSize()
-                self.setFixedSize(max(380, self.sizeHint().width()), self.sizeHint().height())
+                self.setFixedWidth(max(540, self.sizeHint().width()))
 
                 self.grid_check.toggled.connect(
                     lambda checked: set_edit_mode_options(show_grid=checked)
@@ -524,19 +542,17 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 self._set_checked(self.snap_check, settings.snap_to_grid)
                 self._set_checked(self.sticky_check, settings.sticky_frames)
                 self._set_spin_value(self.grid_size, settings.grid_size)
-                if selected is None:
-                    text = f"{len(self._owner._host.frames)} rail frame(s)"
-                    locked = False
-                else:
-                    text = (
-                        f"{selected.label} | {selected.source_layer} | {selected.anchor} | "
-                        f"{selected.x}, {selected.y}"
+                self.grid_size.setEnabled(settings.show_grid)
+                self.grid_size_label.setEnabled(settings.show_grid)
+                self.summary.setText(
+                    _panel_summary_text(
+                        selected,
+                        len(self._owner._host.frames),
+                        _OPTIONS_PRESET_ID,
                     )
-                    locked = selected.locked
-                if _OPTIONS_PRESET_ID:
-                    text = f"{text} | options: {_OPTIONS_PRESET_ID}"
-                self.summary.setText(text)
-                self.lock_button.setText("Locked" if locked else "Unlocked")
+                )
+                self.lock_button.setText(_lock_button_text(selected))
+                self.setFixedHeight(self.sizeHint().height())
 
             def _set_checked(self, checkbox: Any, checked: bool) -> None:
                 blocked = checkbox.blockSignals(True)

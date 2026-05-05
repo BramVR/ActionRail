@@ -516,9 +516,37 @@ def test_popover_position_and_panel_style() -> None:
     )
 
     assert edit_mode._popover_position(Canvas(), frame, 80, 60).value == (92, 72)
+    assert edit_mode._options_popover_position(Canvas(), frame, 80, 60).value == (92, 72)
     assert "Sticky" not in edit_mode._panel_style_sheet()
     assert edit_mode._frame_label_font_size(frame) == 10
     assert edit_mode._frame_label_font_size(replace(frame, label="Very Long Label", width=20)) == 6
+
+
+def test_panel_summary_and_lock_text_are_readable_without_selection() -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="frame",
+        label="Frame",
+        x=150,
+        y=120,
+        width=40,
+        height=30,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+
+    assert edit_mode._panel_summary_text(None, 1, "") == "1 rail frame(s) | no frame selected"
+    assert edit_mode._lock_button_text(None) == "No selection"
+    assert edit_mode._lock_button_text(frame) == "Unlocked"
+    assert (
+        edit_mode._panel_summary_text(frame, 1, "frame")
+        == "Frame\nruntime | viewport.left.top | x 150, y 120\noptions: frame"
+    )
 
 
 def test_require_cmds_uses_supplied_module() -> None:
