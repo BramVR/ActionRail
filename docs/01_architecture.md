@@ -54,7 +54,15 @@ Conceptual states:
   optional snap-to-grid, snap guides, safe margins, and per-rail settings.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.
 
-The customization layer is planned after the declarative MVP, but the spec and action registry should be designed so stable slot ids, key labels, flyouts, command rings, and preset layers can be added without replacing the core model.
+The first Edit Mode shell is implemented in `actionrail.edit_mode`: it discovers
+active runtime rails, draws their edit footprints over a grid, supports
+left-click selection, right-click options routing, Grid Size, Snap to Grid,
+Sticky Frames, lock/source labels, and non-persistent X/Y nudging for unlocked
+rails. See `docs/08_edit_mode.md` for current user behavior and limits.
+
+The remaining customization layers build on the declarative MVP, but the spec
+and action registry should continue to preserve stable slot ids, key labels,
+flyouts, command rings, and preset layers without replacing the core model.
 
 ### Bootstrap
 
@@ -172,6 +180,14 @@ through the normal runtime resolver without closing unrelated overlays. Saved
 user presets can be loaded back into editable Quick Create values; locked
 built-in presets remain read-only.
 
+Phase 2 step 2.4 adds `actionrail.edit_mode` as the first viewport-facing
+authoring shell. It owns the public `EditModeSettings`, `EditModeState`, and
+`RailFrameInfo` value objects; global enter/exit/toggle state; layout-map
+painting; selected-rail state; grid/snap/sticky options; and session-local
+position changes. It reads active overlay geometry from the runtime registry
+and should not mutate locked built-in presets directly. Phase 2 step 2.5 should
+persist edited layout data through user presets or user overrides.
+
 Icon fields should store stable logical ids, not raw file paths. The icon
 provider layer currently resolves manifest-backed ids such as
 `actionrail.move` and curated Maya resource ids such as `maya.move`. This keeps
@@ -235,12 +251,11 @@ Stable ids are required for hotkey bindings, preset migration, user overrides, a
 
 ## Non-MVP
 
-Do not implement these in Phase 0:
+Do not implement these in the remaining Phase 2 layout-editing slice unless the
+slice explicitly calls for them:
 
-- Quick Create designer.
-- Edit Mode and Bind Mode.
 - Full preset browser.
-- Icon import pipeline.
+- Bind Mode.
 - Flyouts and command rings.
 - Viewport 2.0 drawing backend.
 - QML/WebEngine runtime.

@@ -122,8 +122,9 @@ Source: [Autodesk runtime commands](https://help.autodesk.com/cloudhelp/2026/ENU
 
 ### 4. Shelf And Menu Entry Points
 
-Status: implemented for the default rail toggle through idempotent Maya menu and
-shelf installers; Edit Mode and Bind Mode commands remain future work.
+Status: implemented for the default rail toggle, diagnostics, SVG import
+preflight, Quick Create, and Toggle Edit Mode through Maya menu/shelf entry
+points where applicable. Bind Mode commands remain future work.
 
 Keep expanding user-visible Maya entry points:
 
@@ -138,10 +139,18 @@ Source: [Autodesk workspace controls](https://help.autodesk.com/cloudhelp/2024/C
 
 ### 5. Quick Create And Edit Mode
 
+Status: Quick Create and the first Edit Mode shell are implemented and
+Maya-smoke verified. Quick Create can create draft rails from templates,
+preview, save, overwrite, and load user presets. Edit Mode can inspect active
+rails in a layout-map overlay, select rail frames, show Grid/Grid Size/Snap to
+Grid/Sticky Frames controls, route right-click frame options, and apply
+session-local X/Y movement with snap/sticky alignment. The remaining gap is
+Phase 2 step 2.5 persistence and fuller direct manipulation.
+
 The first artist-facing authoring workflow should stay narrow:
 
 1. Pick a template: vertical stack, horizontal strip, collapsible edge tab,
-   flyout, command ring, status badge strip.
+   and later flyout, command ring, or status badge strip.
 2. Pick workflow context: modeling, rigging, animation, layout, camera,
    display, project.
 3. Add actions from a searchable registry.
@@ -150,7 +159,8 @@ The first artist-facing authoring workflow should stay narrow:
 6. Preview without saving.
 7. Save as a user preset.
 
-Edit Mode should add direct manipulation:
+Edit Mode has the first layout-map shell and should continue toward direct
+manipulation:
 
 - rail outlines and hit boxes
 - layout-map view of bars/frames as labeled translucent rectangles
@@ -167,6 +177,7 @@ Edit Mode should add direct manipulation:
 - collapsible side-tab controls
 - lock state
 - source layer badges
+- persisted user preset or user override writes for edited layouts
 
 WoW Edit Mode validates the product direction: named layouts can be saved,
 edited, copied, shared, and remembered per context.
@@ -399,15 +410,13 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Continue the icon pipeline with broader import diagnostics and preset
-   recovery polish.
-2. Continue visible diagnostics as the icon/preset import path expands.
-3. Implement narrow Quick Create: template, action picker, collapsible edge-tab
-   option, preview, save user preset.
-4. Add Bind Mode.
-5. Add flyouts.
-6. Add command rings.
-7. Add profile layers: built-in, studio locked, project, scene/asset, user
+1. Continue Phase 2 step 2.5 layout editing: persisted offset/layout writes,
+   drag handles, anchor pins, snap/spacing guides, and fuller frame options.
+2. Add collapsible edge-tab runtime/persistence polish.
+3. Add Bind Mode.
+4. Add flyouts.
+5. Add command rings.
+6. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-8. Add marking-menu/hotbox export.
-9. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+7. Add marking-menu/hotbox export.
+8. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.

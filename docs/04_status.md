@@ -333,6 +333,11 @@ Last updated: 2026-05-04
   - `scripts/maya-smoke.ps1` now accepts Sessiond structured payloads that omit
     `success` when they explicitly report `errors: null`, matching the current
     cleanup payload shape.
+- Edit Mode documentation pass complete:
+  - `docs/08_edit_mode.md` covers current user workflow, public APIs, limits,
+    and verification.
+  - `README.md` now includes the verified Edit Mode layout-map screenshot at
+    `docs/assets/actionrail_readme_edit_mode.png`.
 
 ## In Progress
 

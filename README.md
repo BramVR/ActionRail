@@ -20,6 +20,17 @@ part of Maya instead of a large docked tool window.
   <img src="docs/assets/actionrail_readme_maya_icons_showcase.png" alt="ActionRail action bars with Maya icons shown over a minimal Maya viewport scene">
 </p>
 
+## Edit Mode Overview
+
+<p align="center">
+  <img src="docs/assets/actionrail_readme_edit_mode.png" alt="ActionRail Edit Mode layout map with rail frames, grid, selected rail, and X/Y placement controls">
+</p>
+
+Edit Mode switches ActionRail from action execution into a layout-map view. It
+shows active rails as labeled translucent frames over the viewport, with grid
+controls, Snap to Grid, Sticky Frames, rail lock state, left-click selection,
+right-click options routing, and an X/Y position popover for unlocked rails.
+
 ## Why
 
 Maya has shelves, hotkeys, hotbox zones, marking menus, and dockable editors.
@@ -63,6 +74,7 @@ actionrail.install_menu_toggle()
 actionrail.install_shelf_toggle()
 actionrail.toggle_default()
 actionrail.run_diagnostics_from_maya()
+actionrail.toggle_edit_mode()
 ```
 
 Inspect the current package map, presets, user preset directory, public APIs,
@@ -81,9 +93,10 @@ $env:MAYA_MODULE_PATH = "."
 
 ## Authoring Utilities
 
-The first Phase 2 authoring foundation is code-facing: draft rails can be
-validated, converted into runtime specs, and saved as user presets without
-touching locked built-in presets.
+Phase 2 authoring includes both code-facing draft helpers and Maya-facing
+panels. Draft rails can be validated, converted into runtime specs, previewed,
+saved as user presets, loaded back for editing, and inspected in Edit Mode
+without touching locked built-in presets.
 
 ```python
 import actionrail
@@ -123,6 +136,28 @@ User presets default to `%APPDATA%\ActionRail\presets` on Windows. Override the
 location with `ACTIONRAIL_USER_PRESET_DIR`, or pass `preset_dir=` to the user
 preset helpers.
 
+Open the dockable Quick Create panel from the ActionRail Maya menu or Python:
+
+```python
+actionrail.show_quick_create_panel()
+```
+
+Quick Create can create a vertical stack, horizontal strip, or edge-tab starter
+draft; preview without saving; clear previews; save or explicitly overwrite a
+user preset; and load an existing user preset back into editable values.
+
+Use Edit Mode after showing rails:
+
+```python
+actionrail.show_preset("transform_stack")
+actionrail.toggle_edit_mode()
+```
+
+Current Edit Mode edits are session-local. The next implementation slice is
+persisting adjusted layout values to a user preset or user override. See
+[`docs/08_edit_mode.md`](docs/08_edit_mode.md) for the current behavior and
+limits.
+
 ## What Works Now
 
 - Qt rail overlay anchored to Maya model-panel geometry and shown as a small
@@ -134,6 +169,13 @@ preset helpers.
 - Draft authoring model with `DraftRail`, `DraftSlot`,
   `build_draft_spec()`, `spec_to_payload()`, `save_user_preset()`,
   `load_user_preset()`, `user_preset_dir()`, and `user_preset_ids()`.
+- Dockable Quick Create panel with template selection, action/icon choices,
+  draft validation, preview, clear preview, save, overwrite, and load-existing
+  workflow.
+- Edit Mode shell with global toggle, layout-map overlay, active rail frames,
+  grid controls, Snap to Grid, Sticky Frames, left-click selection,
+  right-click options routing, selected-frame X/Y controls, and non-persistent
+  movement for unlocked rails.
 - Built-in Maya actions for move, translate, rotate, scale, and set key.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.
@@ -172,16 +214,15 @@ For the current handoff, blockers, and latest verification summary, see
 
 Near-term:
 
-- Build the Phase 2 Quick Create dockable panel on top of the draft/user preset
-  storage layer.
-- Add template and action selection, preview through `show_spec()`, and save to
-  the user preset directory.
-- Keep user preset validation, diagnostics, and recovery visible while the UI
-  grows.
+- Continue Phase 2 step 2.5 layout editing and direct manipulation on top of
+  the verified Edit Mode shell.
+- Persist adjusted anchor/offset/layout values to user presets or user
+  overrides.
+- Add drag handles, anchor pins, snap/spacing guides, and fuller frame options
+  routing.
 
 Next:
 
-- Edit Mode for non-coders.
 - Bind Mode: hover a slot, press a shortcut, update Maya hotkeys.
 - Flyouts for compact command groups.
 - Command rings for press/hold/release workflows.
@@ -251,6 +292,8 @@ selected smoke script.
   Bind Mode, flyouts, rings, and profiles.
 - [Missing features research](docs/07_missing_features_research.md) -
   source-backed backlog.
+- [Edit Mode](docs/08_edit_mode.md) - current layout-map behavior, APIs,
+  limits, and verification.
 
 ## Design Principles
 
@@ -266,11 +309,13 @@ selected smoke script.
 
 ## Status
 
-ActionRail has a verified declarative MVP and the first Phase 2 authoring
-foundation. JSON presets, viewport rails, Maya actions, runtime-command hotkey
+ActionRail has a verified declarative MVP and Phase 2 authoring foundation
+through Quick Create preview/save/load and the first Edit Mode layout-map
+shell. JSON presets, viewport rails, Maya actions, runtime-command hotkey
 publishing, predicate refresh, safe diagnostics, icon import diagnostics, menu
-and shelf entry points, and code-facing user preset storage are working. It is
-not yet a finished designer or production preset manager.
+and shelf entry points, user preset storage, Quick Create, and Edit Mode
+inspection/session-local positioning are working. It is not yet a finished
+designer or production preset manager.
 
 ## License
 

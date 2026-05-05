@@ -163,6 +163,7 @@ DOC_PRIORITY: tuple[str, ...] = (
     "docs/05_tech_stack.md",
     "docs/06_wow_style_customization.md",
     "docs/07_missing_features_research.md",
+    "docs/08_edit_mode.md",
     "docs/history/verification_log.md",
 )
 
