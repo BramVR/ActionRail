@@ -26,9 +26,24 @@ EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
 EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
 POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
 FRAME_OPTIONS_POPOVER_OBJECT_NAME = "ActionRailEditModeFrameOptionsPopover"
+EMPTY_SLOT_LABEL = "New"
+_ACTION_ICON_DEFAULTS = {
+    "maya.tool.move": "maya.move",
+    "maya.tool.translate": "maya.move",
+    "maya.tool.rotate": "maya.rotate",
+    "maya.tool.scale": "maya.scale",
+    "maya.anim.set_key": "maya.set_key",
+}
+_PERSISTENT_ACTION_PREDICATES = {
+    "maya.tool.move": "maya.tool == move",
+    "maya.tool.translate": "maya.tool == move",
+    "maya.tool.rotate": "maya.tool == rotate",
+    "maya.tool.scale": "maya.tool == scale",
+}
 
 __all__ = [
     "DEFAULT_GRID_SIZE",
+    "EMPTY_SLOT_LABEL",
     "EDIT_OVERLAY_OBJECT_NAME",
     "EDIT_PANEL_OBJECT_NAME",
     "FRAME_OPTIONS_POPOVER_OBJECT_NAME",
@@ -122,24 +137,16 @@ class _GuideSegment:
 
 
 @dataclass(frozen=True)
-class _SlotEditState:
-    """Current slot edit affordance state for the frame options popover."""
+class _SlotPayload:
+    """Action payload that can move between stable slot containers."""
 
-    count: int
-    target_index: int | None = None
-    target_label: str = ""
-
-    @property
-    def can_remove(self) -> bool:
-        return self.target_index is not None
-
-    @property
-    def can_move_up(self) -> bool:
-        return self.target_index is not None and self.target_index > 0
-
-    @property
-    def can_move_down(self) -> bool:
-        return self.target_index is not None and self.target_index < self.count - 1
+    label: str = EMPTY_SLOT_LABEL
+    action: str = ""
+    tone: str = "neutral"
+    tooltip: str = ""
+    icon: str = ""
+    enabled_when: str = ""
+    active_when: str = ""
 
 
 _EDIT_HOST: EditModeOverlayHost | None = None
@@ -442,67 +449,105 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         _set_host_offset(host, original)
         self.refresh()
 
-    def add_slot_to_selected(self) -> bool:
-        selected = self.selected_frame()
-        if selected is None or selected.locked:
-            return False
-        host = _runtime_hosts().get(selected.preset_id)
+    def assign_slot_action_payload(
+        self,
+        preset_id: str,
+        slot_id: str,
+        action_id: str,
+    ) -> bool:
+        host = _runtime_hosts().get(preset_id)
         spec = getattr(host, "spec", None)
         if host is None or spec is None:
             return False
-        from .spec import StackItem
-
-        slot_number = _next_slot_number(spec)
-        slot_id = f"{spec.id}.slot_{slot_number}"
-        item = StackItem(type="button", id=slot_id, label="New")
-        _replace_host_spec(host, dataclass_replace(spec, items=(*spec.items, item)))
+        frame = self.frame_for_preset(preset_id)
+        if frame is None or frame.locked:
+            return False
+        index = _slot_item_index(spec.items, slot_id)
+        if index is None:
+            return False
+        payload = _slot_payload_from_action(action_id)
+        _replace_host_spec(
+            host,
+            _spec_with_item(
+                spec,
+                index,
+                _item_with_payload(spec.items[index], payload),
+            ),
+        )
         self.refresh()
         return True
 
-    def slot_edit_state_for_selected(self) -> _SlotEditState:
-        selected = self.selected_frame()
-        if selected is None or selected.locked:
-            return _SlotEditState(count=0)
-        host = _runtime_hosts().get(selected.preset_id)
-        spec = getattr(host, "spec", None)
-        if host is None or spec is None:
-            return _SlotEditState(count=0)
-        return _slot_edit_state(spec.items)
-
-    def remove_slot_from_selected(self) -> bool:
-        selected = self.selected_frame()
-        if selected is None or selected.locked:
-            return False
-        host = _runtime_hosts().get(selected.preset_id)
+    def clear_slot_payload(self, preset_id: str, slot_id: str) -> bool:
+        host = _runtime_hosts().get(preset_id)
         spec = getattr(host, "spec", None)
         if host is None or spec is None:
             return False
-        index = _last_action_item_index(spec.items)
+        frame = self.frame_for_preset(preset_id)
+        if frame is None or frame.locked:
+            return False
+        index = _slot_item_index(spec.items, slot_id)
         if index is None:
             return False
-        items = (*spec.items[:index], *spec.items[index + 1 :])
-        _replace_host_spec(host, dataclass_replace(spec, items=items))
+        _replace_host_spec(host, _spec_with_item(spec, index, _empty_slot_item(spec.items[index])))
         self.refresh()
         return True
 
-    def reorder_selected_slot(self, delta: int) -> bool:
-        selected = self.selected_frame()
-        if selected is None or selected.locked or delta == 0:
+    def move_slot_payload(
+        self,
+        source_preset_id: str,
+        source_slot_id: str,
+        target_preset_id: str,
+        target_slot_id: str,
+    ) -> bool:
+        if source_preset_id == target_preset_id and source_slot_id == target_slot_id:
             return False
-        host = _runtime_hosts().get(selected.preset_id)
-        spec = getattr(host, "spec", None)
-        if host is None or spec is None:
+        hosts = _runtime_hosts()
+        source_host = hosts.get(source_preset_id)
+        target_host = hosts.get(target_preset_id)
+        source_spec = getattr(source_host, "spec", None)
+        target_spec = getattr(target_host, "spec", None)
+        if source_host is None or target_host is None or source_spec is None or target_spec is None:
             return False
-        index = _last_action_item_index(spec.items)
-        if index is None:
+        source_frame = self.frame_for_preset(source_preset_id)
+        target_frame = self.frame_for_preset(target_preset_id)
+        if (
+            source_frame is None
+            or target_frame is None
+            or source_frame.locked
+            or target_frame.locked
+        ):
             return False
-        target = max(0, min(len(spec.items) - 1, index + delta))
-        if target == index:
+        source_index = _slot_item_index(source_spec.items, source_slot_id)
+        target_index = _slot_item_index(target_spec.items, target_slot_id)
+        if source_index is None or target_index is None:
             return False
-        items = list(spec.items)
-        item = items.pop(index)
-        items.insert(target, item)
-        _replace_host_spec(host, dataclass_replace(spec, items=tuple(items)))
+        source_item = source_spec.items[source_index]
+        target_item = target_spec.items[target_index]
+        if not _item_has_payload(source_item):
+            return False
+
+        if source_host is target_host:
+            items = list(source_spec.items)
+            items[source_index] = _item_with_payload(source_item, _payload_from_item(target_item))
+            items[target_index] = _item_with_payload(target_item, _payload_from_item(source_item))
+            _replace_host_spec(source_host, dataclass_replace(source_spec, items=tuple(items)))
+        else:
+            _replace_host_spec(
+                source_host,
+                _spec_with_item(
+                    source_spec,
+                    source_index,
+                    _item_with_payload(source_item, _payload_from_item(target_item)),
+                ),
+            )
+            _replace_host_spec(
+                target_host,
+                _spec_with_item(
+                    target_spec,
+                    target_index,
+                    _item_with_payload(target_item, _payload_from_item(source_item)),
+                ),
+            )
         self.refresh()
         return True
 
@@ -915,10 +960,6 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.slot_status.setWordWrap(True)
                 self.save = qt.QtWidgets.QPushButton("Save Position")
                 self.reset = qt.QtWidgets.QPushButton("Reset Position")
-                self.add_slot = qt.QtWidgets.QPushButton("Add Slot")
-                self.remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
-                self.slot_up = qt.QtWidgets.QPushButton("Move Up")
-                self.slot_down = qt.QtWidgets.QPushButton("Move Down")
                 self.collapse = qt.QtWidgets.QPushButton("Collapse Edge Tab")
                 self.close_button = qt.QtWidgets.QToolButton()
                 self.close_button.setText("x")
@@ -929,19 +970,11 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 layout.addWidget(self.save, 3, 0, 1, 3)
                 layout.addWidget(self.reset, 4, 0, 1, 3)
                 layout.addWidget(self.slot_status, 5, 0, 1, 3)
-                layout.addWidget(self.add_slot, 6, 0, 1, 3)
-                layout.addWidget(self.remove_slot, 7, 0, 1, 3)
-                layout.addWidget(self.slot_up, 8, 0)
-                layout.addWidget(self.slot_down, 8, 1)
-                layout.addWidget(self.collapse, 9, 0, 1, 3)
+                layout.addWidget(self.collapse, 6, 0, 1, 3)
                 self.setFixedWidth(260)
                 self.close_button.clicked.connect(self._close_options)
                 self.save.clicked.connect(self._save_options)
                 self.reset.clicked.connect(self._owner._host.reset_selected_position)
-                self.add_slot.clicked.connect(self._add_slot)
-                self.remove_slot.clicked.connect(self._remove_slot)
-                self.slot_up.clicked.connect(lambda: self._move_slot(-1))
-                self.slot_down.clicked.connect(lambda: self._move_slot(1))
                 self.collapse.clicked.connect(self._collapse_edge_tab)
 
             def sync(self, frame: RailFrameInfo | None) -> None:
@@ -958,14 +991,9 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                     f"{'collapsed' if frame.collapsed else 'expanded'}"
                 )
                 self.status.setText(_save_status_text(frame))
-                slot_state = self._owner._host.slot_edit_state_for_selected()
-                self.slot_status.setText(_slot_status_text(frame, slot_state))
+                self.slot_status.setText(_slot_status_text(frame))
                 self.save.setEnabled(_can_save_frame(frame))
                 self.reset.setEnabled(not frame.locked)
-                self.add_slot.setEnabled(not frame.locked)
-                self.remove_slot.setEnabled(not frame.locked and slot_state.can_remove)
-                self.slot_up.setEnabled(not frame.locked and slot_state.can_move_up)
-                self.slot_down.setEnabled(not frame.locked and slot_state.can_move_down)
                 self.collapse.setEnabled(not frame.locked and _can_toggle_collapse(frame))
                 self.collapse.setText(
                     "Expand Edge Tab" if frame.collapsed else "Collapse Edge Tab"
@@ -997,21 +1025,6 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                     return
                 self.status.setText(f"Saved {path.name}")
                 self.setFixedHeight(self.sizeHint().height())
-
-            def _add_slot(self) -> None:
-                self._set_action_status(self._owner._host.add_slot_to_selected(), "Added slot")
-
-            def _remove_slot(self) -> None:
-                self._set_action_status(
-                    self._owner._host.remove_slot_from_selected(),
-                    "Removed slot",
-                )
-
-            def _move_slot(self, delta: int) -> None:
-                self._set_action_status(
-                    self._owner._host.reorder_selected_slot(delta),
-                    "Reordered slot",
-                )
 
             def _collapse_edge_tab(self) -> None:
                 self._set_action_status(
@@ -1121,47 +1134,71 @@ def _replace_host_spec(host: Any, spec: Any) -> None:
         position()
 
 
-def _next_slot_number(spec: Any) -> int:
-    prefix = f"{spec.id}.slot_"
-    used: set[int] = set()
-    for item in spec.items:
-        item_id = str(getattr(item, "id", ""))
-        if not item_id.startswith(prefix):
+def _slot_item_index(items: tuple[Any, ...], slot_id: str) -> int | None:
+    for index, item in enumerate(items):
+        if getattr(item, "type", "") == "spacer":
             continue
-        suffix = item_id.removeprefix(prefix)
-        if suffix.isdigit():
-            used.add(int(suffix))
-    number = 1
-    while number in used:
-        number += 1
-    return number
-
-
-def _last_action_item_index(items: tuple[Any, ...]) -> int | None:
-    for index in range(len(items) - 1, -1, -1):
-        if getattr(items[index], "type", "") != "spacer":
+        if getattr(item, "id", "") == slot_id:
             return index
     return None
 
 
-def _slot_edit_state(items: tuple[Any, ...]) -> _SlotEditState:
-    target_index = _last_action_item_index(items)
-    if target_index is None:
-        return _SlotEditState(count=len(items))
-    item = items[target_index]
-    return _SlotEditState(
-        count=len(items),
-        target_index=target_index,
-        target_label=_slot_display_label(item),
+def _spec_with_item(spec: Any, index: int, item: Any) -> Any:
+    items = list(spec.items)
+    items[index] = item
+    return dataclass_replace(spec, items=tuple(items))
+
+
+def _payload_from_item(item: Any) -> _SlotPayload:
+    if not _item_has_payload(item):
+        return _SlotPayload()
+    return _SlotPayload(
+        label=str(getattr(item, "label", EMPTY_SLOT_LABEL) or EMPTY_SLOT_LABEL),
+        action=str(getattr(item, "action", "")),
+        tone=str(getattr(item, "tone", "neutral") or "neutral"),
+        tooltip=str(getattr(item, "tooltip", "")),
+        icon=str(getattr(item, "icon", "")),
+        enabled_when=str(getattr(item, "enabled_when", "")),
+        active_when=str(getattr(item, "active_when", "")),
     )
 
 
-def _slot_display_label(item: Any) -> str:
-    label = str(getattr(item, "label", "")).strip()
-    if label:
-        return label
-    item_id = str(getattr(item, "id", "")).strip()
-    return item_id or "unnamed"
+def _slot_payload_from_action(action_id: str) -> _SlotPayload:
+    from .actions import create_default_registry
+
+    action = create_default_registry().get(action_id)
+    return _SlotPayload(
+        label=action.label,
+        action=action.id,
+        tooltip=action.tooltip or action.id,
+        icon=_ACTION_ICON_DEFAULTS.get(action.id, ""),
+        active_when=_PERSISTENT_ACTION_PREDICATES.get(action.id, ""),
+    )
+
+
+def _item_with_payload(item: Any, payload: _SlotPayload) -> Any:
+    return dataclass_replace(
+        item,
+        label=payload.label,
+        action=payload.action,
+        tone=payload.tone,
+        tooltip=payload.tooltip,
+        icon=payload.icon,
+        enabled_when=payload.enabled_when,
+        active_when=payload.active_when,
+    )
+
+
+def _empty_slot_item(item: Any) -> Any:
+    return _item_with_payload(item, _SlotPayload())
+
+
+def _item_has_payload(item: Any) -> bool:
+    return bool(
+        str(getattr(item, "action", "")).strip()
+        or str(getattr(item, "icon", "")).strip()
+        or str(getattr(item, "label", "")).strip() not in {"", EMPTY_SLOT_LABEL}
+    )
 
 
 def _is_edge_anchor(anchor: str) -> bool:
@@ -1600,15 +1637,10 @@ def _save_status_text(frame: RailFrameInfo) -> str:
     return "Save updates the user preset."
 
 
-def _slot_status_text(frame: RailFrameInfo, state: _SlotEditState) -> str:
+def _slot_status_text(frame: RailFrameInfo) -> str:
     if frame.locked:
-        return "Slot edits are unavailable on locked rails."
-    if state.target_index is None:
-        return "No editable action slots yet."
-    return (
-        f"Editing last action slot: {state.target_label} "
-        f"({state.target_index + 1} of {state.count})."
-    )
+        return "Slot payload edits are unavailable on locked rails."
+    return "Slot payloads keep their hotkeys; drag actions onto slots to replace them."
 
 
 def _frame_label(preset_id: str) -> str:

@@ -847,7 +847,7 @@ def test_save_edit_mode_layout_refuses_locked_frames(monkeypatch) -> None:
         raise AssertionError("Locked Edit Mode layout save unexpectedly succeeded.")
 
 
-def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None:
+def test_edit_mode_slot_payloads_move_between_stable_slot_containers(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="custom_slots",
         label="Custom Slots",
@@ -872,8 +872,20 @@ def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None
                 id="custom_slots",
                 layout=RailLayout(anchor="viewport.left.center", offset=(12, 24)),
                 items=(
-                    StackItem(type="button", id="custom_slots.a", label="A"),
-                    StackItem(type="button", id="custom_slots.b", label="B"),
+                    StackItem(
+                        type="button",
+                        id="custom_slots.a",
+                        label="A",
+                        action="maya.tool.move",
+                        key_label="1",
+                    ),
+                    StackItem(
+                        type="button",
+                        id="custom_slots.b",
+                        label="B",
+                        action="maya.tool.rotate",
+                        key_label="2",
+                    ),
                     StackItem(type="spacer", id="custom_slots.gap", size=8),
                 ),
             )
@@ -890,73 +902,102 @@ def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None
     monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"custom_slots": runtime_host})
     host.select_rail("custom_slots")
 
-    assert host.reorder_selected_slot(-1) is True
-    assert [item.id for item in runtime_host.spec.items] == [
-        "custom_slots.b",
+    assert host.move_slot_payload(
+        "custom_slots",
         "custom_slots.a",
+        "custom_slots",
+        "custom_slots.b",
+    ) is True
+    first, second, _gap = runtime_host.spec.items
+    assert first.id == "custom_slots.a"
+    assert first.key_label == "1"
+    assert first.action == "maya.tool.rotate"
+    assert first.label == "B"
+    assert second.id == "custom_slots.b"
+    assert second.key_label == "2"
+    assert second.action == "maya.tool.move"
+    assert second.label == "A"
+    assert [item.id for item in runtime_host.spec.items] == [
+        "custom_slots.a",
+        "custom_slots.b",
         "custom_slots.gap",
     ]
-    assert host.add_slot_to_selected() is True
-    assert runtime_host.spec.items[-1].id == "custom_slots.slot_1"
-    assert host.remove_slot_from_selected() is True
-    assert [item.id for item in runtime_host.spec.items] == [
-        "custom_slots.b",
+    assert runtime_host.rebuilds == 1
+
+
+def test_edit_mode_can_assign_and_clear_slot_payload(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="custom_slots",
+        label="Custom Slots",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.center",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+        source_layer="runtime",
+    )
+
+    class RuntimeHost:
+        def __init__(self) -> None:
+            self.spec = StackSpec(
+                id="custom_slots",
+                layout=RailLayout(anchor="viewport.left.center", offset=(12, 24)),
+                items=(
+                    StackItem(
+                        type="button",
+                        id="custom_slots.a",
+                        label=edit_mode.EMPTY_SLOT_LABEL,
+                        key_label="1",
+                    ),
+                ),
+            )
+            self.rebuilds = 0
+
+        def _rebuild_widget(self, _state: object) -> None:
+            self.rebuilds += 1
+
+    runtime_host = RuntimeHost()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.refresh = lambda: None
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"custom_slots": runtime_host})
+
+    assert host.assign_slot_action_payload(
+        "custom_slots",
         "custom_slots.a",
-        "custom_slots.gap",
-    ]
-    assert runtime_host.rebuilds == 3
+        "maya.tool.scale",
+    ) is True
+    slot = runtime_host.spec.items[0]
+    assert slot.id == "custom_slots.a"
+    assert slot.key_label == "1"
+    assert slot.action == "maya.tool.scale"
+    assert slot.label == "Scale"
+    assert slot.icon == "maya.scale"
+    assert slot.active_when == "maya.tool == scale"
+
+    assert host.clear_slot_payload("custom_slots", "custom_slots.a") is True
+    slot = runtime_host.spec.items[0]
+    assert slot.id == "custom_slots.a"
+    assert slot.key_label == "1"
+    assert slot.action == ""
+    assert slot.label == edit_mode.EMPTY_SLOT_LABEL
+    assert slot.icon == ""
+    assert slot.active_when == ""
+    assert runtime_host.rebuilds == 2
 
 
-def test_slot_edit_state_reports_last_action_affordances() -> None:
-    items = (
-        StackItem(type="button", id="custom.a", label="A"),
-        StackItem(type="button", id="custom.b", label="B"),
-        StackItem(type="spacer", id="custom.gap", size=8),
-    )
-
-    state = edit_mode._slot_edit_state(items)
-
-    assert state.count == 3
-    assert state.target_index == 1
-    assert state.target_label == "B"
-    assert state.can_remove is True
-    assert state.can_move_up is True
-    assert state.can_move_down is True
-    assert (
-        edit_mode._slot_status_text(
-            edit_mode.RailFrameInfo(
-                preset_id="custom",
-                label="Custom",
-                x=0,
-                y=0,
-                width=40,
-                height=40,
-                anchor="viewport.left.top",
-                offset=(0, 0),
-                orientation="horizontal",
-                rows=1,
-                columns=1,
-                scale=1.0,
-                opacity=1.0,
-                locked=False,
-            ),
-            state,
-        )
-        == "Editing last action slot: B (2 of 3)."
-    )
-
-
-def test_slot_edit_state_handles_empty_and_locked_frames() -> None:
-    empty_state = edit_mode._slot_edit_state(())
-    assert empty_state.count == 0
-    assert empty_state.target_index is None
-    assert empty_state.can_remove is False
-    assert empty_state.can_move_up is False
-    assert empty_state.can_move_down is False
-
-    locked = edit_mode.RailFrameInfo(
-        preset_id="locked",
-        label="Locked",
+def test_slot_status_text_describes_container_payload_model() -> None:
+    unlocked = edit_mode.RailFrameInfo(
+        preset_id="custom",
+        label="Custom",
         x=0,
         y=0,
         width=40,
@@ -968,11 +1009,15 @@ def test_slot_edit_state_handles_empty_and_locked_frames() -> None:
         columns=1,
         scale=1.0,
         opacity=1.0,
-        locked=True,
+        locked=False,
     )
-    assert (
-        edit_mode._slot_status_text(locked, empty_state)
-        == "Slot edits are unavailable on locked rails."
+    locked = replace(unlocked, locked=True)
+
+    assert edit_mode._slot_status_text(unlocked) == (
+        "Slot payloads keep their hotkeys; drag actions onto slots to replace them."
+    )
+    assert edit_mode._slot_status_text(locked) == (
+        "Slot payload edits are unavailable on locked rails."
     )
 
 
