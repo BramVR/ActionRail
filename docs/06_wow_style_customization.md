@@ -41,7 +41,10 @@ WeakAuras validates trigger-driven UI, but ActionRail should use safe declarativ
 ### Edit Mode
 
 Edit Mode is a global authoring state for rail layout. Normal Mode executes
-tools and owns slot payload editing when a rail is explicitly unlocked.
+tools and owns slot payload editing when a rail is explicitly unlocked,
+including context-menu assignment/clear and Shift-drag move/swap/clear-out.
+When the rail is unlocked, populated slot clicks are edit gestures; locking the
+rail returns those clicks to normal action execution.
 
 Edit Mode should show:
 

@@ -69,7 +69,7 @@ Inside Edit Mode:
   user preset or an unlocked built-in/studio rail as a user override
 
 Outside Edit Mode, use Normal Mode rail slot editing when the goal is to add or
-remove an action payload from a slot. The public helpers are:
+remove, move, or swap an action payload from a slot. The public helpers are:
 
 ```python
 import actionrail
@@ -79,12 +79,12 @@ actionrail.lock_rail_slots("my_user_rail")
 ```
 
 In Normal Mode, the rendered slot context menu can unlock the active rail. Once
-unlocked, that same menu can assign an action payload or clear the slot. Lock
-the rail again when the bar should return to normal action execution.
-
-Planned next: while a rail is unlocked in Normal Mode, Shift-drag a populated
-slot to another slot to move/swap the action payload, or drag it outside the
-rail to clear it. That gesture is not implemented yet.
+unlocked, that same menu can assign an action payload or clear the slot.
+Shift-drag a populated slot to another slot to move its payload; dropping on a
+populated target swaps the two payloads, and releasing anywhere that is not a
+different slot clears the source slot. While a rail is unlocked, populated slot
+clicks are treated as edit gestures instead of running actions. Lock the rail
+again when the bar should return to normal action execution.
 
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
@@ -127,10 +127,11 @@ Implementation ownership:
 - `scripts/actionrail/edit_mode.py`: state model, layout-map overlay, grid,
   frame selection, rail nudging, and layout saves
 - `scripts/actionrail/overlay.py`: Normal Mode rail slot-edit lock state and
-  runtime payload assignment/clear hooks
-- `scripts/actionrail/slot_payloads.py`: stable slot payload assignment helpers
-- `scripts/actionrail/widgets.py`: rendered rail buttons and Normal Mode slot
-  edit context menus
+  runtime payload assignment/clear/move hooks
+- `scripts/actionrail/slot_payloads.py`: stable slot payload assignment,
+  clear, move, and swap helpers
+- `scripts/actionrail/widgets.py`: rendered rail buttons, Normal Mode slot edit
+  context menus, and Shift-drag slot payload gestures
 - `scripts/actionrail/maya_ui.py`: Maya menu entry point
 - `tests/test_edit_mode.py`: pure Python API/model coverage
 - `tests/maya_smoke/actionrail_edit_mode_smoke.py`: Maya layout-map,
@@ -157,12 +158,12 @@ Implemented now:
 - public layout-save helper that persists adjusted offsets to user presets
 - Normal Mode active-rail lock/unlock helpers for slot payload assignment and
   clearing
+- Normal Mode Shift-drag slot payload move/swap/clear-out gestures
 - Maya menu toggle
 - Maya screenshot verification
 
 Not implemented yet:
 
-- Normal Mode Shift-drag slot payload move/swap/clear-out gestures
 - Bind Mode, flyouts, command rings, profile layers, marking-menu export, and
   Viewport 2.0 drawing
 

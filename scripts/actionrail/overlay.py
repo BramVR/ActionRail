@@ -590,6 +590,27 @@ class ViewportOverlayHost:
         self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
         return True
 
+    def move_slot_payload(self, source_slot_id: str, target_slot_id: str) -> bool:
+        """Move or swap a slot payload while the rail is unlocked."""
+
+        if not self.slot_edit_unlocked():
+            return False
+        try:
+            from .slot_payloads import spec_with_moved_slot_payload
+
+            updated_spec = spec_with_moved_slot_payload(
+                self.spec,
+                source_slot_id,
+                target_slot_id,
+            )
+        except Exception:
+            return False
+        if updated_spec is self.spec:
+            return True
+        self.spec = updated_spec
+        self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
+        return True
+
     def _slot_edit_callbacks(self) -> SlotEditCallbacks:
         return SlotEditCallbacks(
             unlocked=bool(getattr(self, "_slot_edit_unlocked", False)),
@@ -597,6 +618,7 @@ class ViewportOverlayHost:
             lock_rail=lambda: self.set_slot_edit_unlocked(False),
             assign_action=self.assign_slot_action_payload,
             clear_slot=self.clear_slot_payload,
+            move_slot=self.move_slot_payload,
         )
 
     def expand(self) -> bool:

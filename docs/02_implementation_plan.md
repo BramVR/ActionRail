@@ -370,8 +370,11 @@ infers active-state predicates for persistent Maya tool actions while leaving
 one-shot commands inactive. Guide polish now draws axis-aligned Sticky Frames
 guides. The old Edit Mode frame options popover and slot payload editor have
 been removed; slot payload assignment/clear now belongs to Normal Mode rail
-lock/unlock helpers. The Quick Create Maya smoke verifies the Save + Publish
-shelf command carries that custom store path.
+lock/unlock helpers, and unlocked populated slots can now be Shift-dragged to
+move/swap payloads or clear them when released anywhere that is not a
+different slot. The Quick
+Create Maya smoke verifies the Save + Publish shelf command carries that custom
+store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
@@ -392,7 +395,10 @@ shelf command carries that custom store path.
   are preserved in published shelf toggles, and stale slot-command cleanup is
   reported. Explicit hotkey assignment remains Bind Mode territory.
 - Keep Edit Mode layout-only. Slot payload changes belong to Normal Mode rail
-  lock/unlock helpers, not the Edit Mode layout map.
+  lock/unlock helpers, not the Edit Mode layout map. Context-menu
+  assignment/clear and Shift-drag move/swap/clear-out are implemented for
+  unlocked Normal Mode rails; locking the rail returns populated slot clicks to
+  normal action execution.
 
 Done when an artist can collapse a custom rail to a side handle, expand it
 again, and keep layout, actions, and bindings intact.

@@ -23,8 +23,10 @@ PERSISTENT_ACTION_PREDICATES = {
 
 __all__ = [
     "EMPTY_SLOT_LABEL",
+    "item_has_payload",
     "payload_from_action",
     "spec_with_empty_slot_payload",
+    "spec_with_moved_slot_payload",
     "spec_with_slot_action_payload",
 ]
 
@@ -66,6 +68,34 @@ def spec_with_empty_slot_payload(spec: Any, slot_id: str) -> Any:
     return _spec_with_item(spec, index, _item_with_payload(spec.items[index], SlotPayload()))
 
 
+def spec_with_moved_slot_payload(spec: Any, source_slot_id: str, target_slot_id: str) -> Any:
+    """Return a spec copy with a slot payload moved or swapped between slots."""
+
+    source_index = _slot_item_index(spec.items, source_slot_id)
+    target_index = _slot_item_index(spec.items, target_slot_id)
+    if source_index is None:
+        msg = f"Unknown ActionRail slot: {source_slot_id}"
+        raise KeyError(msg)
+    if target_index is None:
+        msg = f"Unknown ActionRail slot: {target_slot_id}"
+        raise KeyError(msg)
+    if source_index == target_index:
+        return spec
+    if not item_has_payload(spec.items[source_index]):
+        msg = f"ActionRail slot has no payload: {source_slot_id}"
+        raise ValueError(msg)
+
+    source_payload = _payload_from_item(spec.items[source_index])
+    items = list(spec.items)
+    if item_has_payload(items[target_index]):
+        target_payload = _payload_from_item(items[target_index])
+        items[source_index] = _item_with_payload(items[source_index], target_payload)
+    else:
+        items[source_index] = _item_with_payload(items[source_index], SlotPayload())
+    items[target_index] = _item_with_payload(items[target_index], source_payload)
+    return dataclass_replace(spec, items=tuple(items))
+
+
 def payload_from_action(action_id: str) -> SlotPayload:
     """Resolve default slot payload fields from a registered action id."""
 
@@ -78,6 +108,17 @@ def payload_from_action(action_id: str) -> SlotPayload:
         tooltip=action.tooltip or action.id,
         icon=ACTION_ICON_DEFAULTS.get(action.id, ""),
         active_when=PERSISTENT_ACTION_PREDICATES.get(action.id, ""),
+    )
+
+
+def item_has_payload(item: Any) -> bool:
+    """Return whether a slot carries an editable action payload."""
+
+    label = str(getattr(item, "label", "")).strip()
+    return bool(
+        getattr(item, "action", "")
+        or getattr(item, "icon", "")
+        or (label and label != EMPTY_SLOT_LABEL)
     )
 
 
@@ -94,6 +135,18 @@ def _spec_with_item(spec: Any, index: int, item: Any) -> Any:
     items = list(spec.items)
     items[index] = item
     return dataclass_replace(spec, items=tuple(items))
+
+
+def _payload_from_item(item: Any) -> SlotPayload:
+    return SlotPayload(
+        label=getattr(item, "label", EMPTY_SLOT_LABEL),
+        action=getattr(item, "action", ""),
+        tone=getattr(item, "tone", "neutral"),
+        tooltip=getattr(item, "tooltip", ""),
+        icon=getattr(item, "icon", ""),
+        enabled_when=getattr(item, "enabled_when", ""),
+        active_when=getattr(item, "active_when", ""),
+    )
 
 
 def _item_with_payload(item: Any, payload: SlotPayload) -> Any:

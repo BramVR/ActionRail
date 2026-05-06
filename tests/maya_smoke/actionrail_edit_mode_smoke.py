@@ -94,6 +94,93 @@ target_spec = actionrail.StackSpec(
         ),
     ),
 )
+normal_drag_spec = actionrail.StackSpec(
+    id="normal_drag_slots",
+    layout=actionrail.RailLayout(
+        anchor="viewport.top.center",
+        orientation="horizontal",
+        rows=1,
+        columns=3,
+        offset=(0, 80),
+        locked=False,
+    ),
+    items=(
+        actionrail.StackItem(
+            type="button",
+            id="normal_drag_slots.move",
+            label="Move",
+            action="maya.tool.move",
+            key_label="1",
+        ),
+        actionrail.StackItem(
+            type="button",
+            id="normal_drag_slots.empty",
+            label="New",
+            key_label="2",
+        ),
+        actionrail.StackItem(
+            type="button",
+            id="normal_drag_slots.rotate",
+            label="Rotate",
+            action="maya.tool.rotate",
+            key_label="3",
+        ),
+    ),
+)
+
+normal_drag_host = actionrail.show_spec(normal_drag_spec)
+if not actionrail.unlock_rail_slots("normal_drag_slots"):
+    raise AssertionError("Normal Mode slot drag rail did not unlock.")
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+
+normal_drag_buttons = {
+    button.property("actionRailSlotId"): button
+    for button in normal_drag_host.widget.findChildren(QtWidgets.QPushButton)
+}
+source_button = normal_drag_buttons.get("normal_drag_slots.move")
+empty_button = normal_drag_buttons.get("normal_drag_slots.empty")
+if source_button is None or empty_button is None:
+    raise AssertionError(f"Normal Mode drag buttons were not rendered: {normal_drag_buttons}")
+
+source_center = source_button.rect().center()
+empty_center_global = empty_button.mapToGlobal(empty_button.rect().center())
+empty_center_from_source = source_button.mapFromGlobal(empty_center_global)
+QtTest.QTest.mousePress(
+    source_button,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.ShiftModifier,
+    source_center,
+)
+QtTest.QTest.mouseMove(source_button, empty_center_from_source)
+QtTest.QTest.mouseRelease(
+    source_button,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.ShiftModifier,
+    empty_center_from_source,
+)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if (
+    normal_drag_host.spec.items[0].action
+    or normal_drag_host.spec.items[1].action != "maya.tool.move"
+):
+    raise AssertionError(
+        "Shift-drag did not move payload to empty slot: "
+        f"{normal_drag_host.spec.items}"
+    )
+
+if not normal_drag_host.clear_slot_payload("normal_drag_slots.empty"):
+    raise AssertionError("Normal Mode host did not clear the moved payload slot.")
+if normal_drag_host.spec.items[1].action:
+    raise AssertionError(
+        "Normal Mode host clear did not clear the source slot: "
+        f"{normal_drag_host.spec.items}"
+    )
+
+actionrail.hide_all()
 
 actionrail.show_preset("transform_stack")
 actionrail.show_spec(custom_spec)

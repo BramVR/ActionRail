@@ -16,6 +16,7 @@ from . import slot_state as _slot_state
 from .actions import ActionRegistry
 from .predicates import PredicateContext
 from .qt import load
+from .slot_payloads import item_has_payload
 from .spec import RailLayout, StackItem, StackSpec
 from .state import MayaStateSnapshot
 from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
@@ -83,6 +84,7 @@ class SlotEditCallbacks:
     lock_rail: Callable[[], bool]
     assign_action: Callable[[str, str], bool]
     clear_slot: Callable[[str], bool]
+    move_slot: Callable[[str, str], bool] | None = None
 
 
 class ActionRailRoot:
@@ -423,6 +425,7 @@ def _build_button(
     _apply_slot_render_state(button, state)
     if slot_edit_callbacks is not None:
         _install_slot_edit_menu(button, item, registry, slot_edit_callbacks)
+        _install_slot_drag_edit(button, item, slot_edit_callbacks)
     if item.action and not (
         slot_edit_callbacks is not None and slot_edit_callbacks.unlocked
     ):
@@ -501,6 +504,842 @@ def _show_slot_edit_menu(
         menu.exec(button.mapToGlobal(point))
 
 
+def _install_slot_drag_edit(
+    button: object,
+    item: StackItem,
+    callbacks: SlotEditCallbacks,
+) -> None:
+    if not callbacks.unlocked or not item_has_payload(item):
+        return
+    if (
+        callbacks.move_slot is None
+        or not hasattr(button, "mousePressEvent")
+        or not hasattr(button, "mouseMoveEvent")
+        or not hasattr(button, "mouseReleaseEvent")
+    ):
+        return
+
+    qt = load()
+    if _install_slot_drag_event_filter(qt, button, item.id, callbacks):
+        return
+
+    button._actionrail_slot_drag_item_id = item.id
+    button._actionrail_slot_drag_callbacks = callbacks
+    button._actionrail_slot_drag_qt = qt
+    if getattr(button, "_actionrail_supports_slot_drag_events", False):
+        return
+
+    base_press = button.mousePressEvent
+    base_move = button.mouseMoveEvent
+    base_release = button.mouseReleaseEvent
+
+    def mouse_press(event):  # type: ignore[no-untyped-def]
+        if not _handle_slot_drag_press(button, event):
+            return base_press(event)
+        return None
+
+    def mouse_move(event):  # type: ignore[no-untyped-def]
+        if not _handle_slot_drag_move(button, event):
+            return base_move(event)
+        return None
+
+    def mouse_release(event):  # type: ignore[no-untyped-def]
+        if not _handle_slot_drag_release(button, event):
+            return base_release(event)
+        return None
+
+    button.mousePressEvent = mouse_press  # type: ignore[method-assign]
+    button.mouseMoveEvent = mouse_move  # type: ignore[method-assign]
+    button.mouseReleaseEvent = mouse_release  # type: ignore[method-assign]
+
+
+def _install_slot_drag_event_filter(
+    qt: object,
+    button: object,
+    source_slot_id: str,
+    callbacks: SlotEditCallbacks,
+) -> bool:
+    object_class = getattr(getattr(qt, "QtCore", None), "QObject", None)
+    event_class = getattr(getattr(qt, "QtCore", None), "QEvent", None)
+    install_event_filter = getattr(button, "installEventFilter", None)
+    if object_class is None or event_class is None or not callable(install_event_filter):
+        return False
+
+    class _SlotDragFilter(object_class):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            super().__init__(button)
+            self._state: dict[str, object] | None = None
+
+        def eventFilter(self, watched: object, event: object) -> bool:  # noqa: N802
+            event_type = event.type()
+            if event_type == event_class.MouseButtonPress:
+                if not _slot_drag_press_matches(qt, event):
+                    return False
+                self._state = {
+                    "slot_id": source_slot_id,
+                    "start": _event_global_point(event),
+                    "dragging": False,
+                    "source_button": watched,
+                }
+                _grab_slot_drag_mouse(watched)
+                _accept_event(event)
+                return True
+
+            if event_type == event_class.MouseMove and self._state is not None:
+                move_points = _slot_drag_event_points(qt, watched, event)
+                _record_slot_drag_points(self._state, move_points)
+                move_point = move_points[0] if move_points else None
+                if not self._state.get("dragging") and _drag_threshold_exceeded(
+                    qt,
+                    self._state.get("start"),
+                    move_point,
+                ):
+                    self._state["dragging"] = True
+                if self._state.get("dragging"):
+                    _ensure_slot_drag_preview(
+                        qt,
+                        self._state,
+                        watched,
+                        move_point,
+                    )
+                _accept_event(event)
+                return True
+
+            if event_type != event_class.MouseButtonRelease or self._state is None:
+                return False
+
+            state = self._state
+            self._state = None
+            _release_slot_drag_mouse(state)
+            release_points = _combined_slot_drag_points(
+                state,
+                _slot_drag_event_points(qt, watched, event),
+            )
+            release_point = release_points[0] if release_points else None
+            if not state.get("dragging") and _drag_threshold_exceeded(
+                qt,
+                state.get("start"),
+                release_point,
+            ):
+                state["dragging"] = True
+                _ensure_slot_drag_preview(qt, state, watched, release_point)
+            if not state.get("dragging"):
+                return False
+
+            target_slot_id, _inside_source_rail = _slot_drag_release_target_from_points(
+                qt,
+                watched,
+                release_points,
+            )
+            changed = _commit_slot_drag_drop(
+                callbacks,
+                source_slot_id,
+                target_slot_id,
+            )
+            _finish_slot_drag(state, restore_source=not changed)
+            _accept_event(event)
+            return True
+
+    try:
+        event_filter = _SlotDragFilter()
+        install_event_filter(event_filter)
+        button._actionrail_slot_drag_event_filter = event_filter
+    except Exception:
+        return False
+    return True
+
+
+def _handle_slot_drag_press(button: object, event: object) -> bool:
+    callbacks = getattr(button, "_actionrail_slot_drag_callbacks", None)
+    qt = getattr(button, "_actionrail_slot_drag_qt", None) or load()
+    source_slot_id = getattr(button, "_actionrail_slot_drag_item_id", None)
+    if (
+        callbacks is None
+        or not getattr(callbacks, "unlocked", False)
+        or not isinstance(source_slot_id, str)
+        or not _slot_drag_press_matches(qt, event)
+    ):
+        return False
+    button._actionrail_slot_drag = {
+        "slot_id": source_slot_id,
+        "start": _event_global_point(event),
+        "dragging": False,
+        "source_button": button,
+    }
+    _grab_slot_drag_mouse(button)
+    _accept_event(event)
+    return True
+
+
+def _handle_slot_drag_move(button: object, event: object) -> bool:
+    state = getattr(button, "_actionrail_slot_drag", None)
+    if not isinstance(state, dict):
+        return False
+    qt = getattr(button, "_actionrail_slot_drag_qt", None) or load()
+    move_points = _slot_drag_event_points(qt, button, event)
+    _record_slot_drag_points(state, move_points)
+    move_point = move_points[0] if move_points else None
+    if not state.get("dragging") and _drag_threshold_exceeded(
+        qt,
+        state.get("start"),
+        move_point,
+    ):
+        state["dragging"] = True
+    if state.get("dragging"):
+        _ensure_slot_drag_preview(qt, state, button, move_point)
+    _accept_event(event)
+    return True
+
+
+def _handle_slot_drag_release(button: object, event: object) -> bool:
+    state = getattr(button, "_actionrail_slot_drag", None)
+    if not isinstance(state, dict):
+        return False
+    with suppress(Exception):
+        delattr(button, "_actionrail_slot_drag")
+    _release_slot_drag_mouse(state)
+    qt = getattr(button, "_actionrail_slot_drag_qt", None) or load()
+    release_points = _combined_slot_drag_points(
+        state,
+        _slot_drag_event_points(qt, button, event),
+    )
+    release_point = release_points[0] if release_points else None
+    if not state.get("dragging") and _drag_threshold_exceeded(
+        qt,
+        state.get("start"),
+        release_point,
+    ):
+        state["dragging"] = True
+        _ensure_slot_drag_preview(qt, state, button, release_point)
+    if not state.get("dragging"):
+        return False
+
+    callbacks = getattr(button, "_actionrail_slot_drag_callbacks", None)
+    target_slot_id, _inside_source_rail = _slot_drag_release_target_from_points(
+        qt,
+        button,
+        release_points,
+    )
+    source_slot_id = state.get("slot_id")
+    changed = False
+    if callbacks is not None and isinstance(source_slot_id, str):
+        changed = _commit_slot_drag_drop(
+            callbacks,
+            source_slot_id,
+            target_slot_id,
+        )
+    _finish_slot_drag(state, restore_source=not changed)
+    _accept_event(event)
+    return True
+
+
+def _commit_slot_drag_drop(
+    callbacks: SlotEditCallbacks,
+    source_slot_id: str,
+    target_slot_id: str | None,
+) -> bool:
+    if target_slot_id and target_slot_id != source_slot_id:
+        return bool(callbacks.move_slot(source_slot_id, target_slot_id))
+    return bool(callbacks.clear_slot(source_slot_id))
+
+
+def _ensure_slot_drag_preview(
+    qt: object,
+    state: dict[str, object],
+    source_button: object,
+    global_point: object | None,
+) -> None:
+    preview = state.get("preview")
+    if preview is None:
+        preview = _create_slot_drag_preview(qt, source_button, global_point)
+        if preview is not None:
+            state["preview"] = preview
+            _empty_slot_drag_source(qt, state, source_button)
+    if preview is not None:
+        _move_slot_drag_preview(preview, global_point)
+
+
+def _create_slot_drag_preview(
+    qt: object,
+    source_button: object,
+    global_point: object | None,
+) -> object | None:
+    label_class = getattr(getattr(qt, "QtWidgets", None), "QLabel", None)
+    if label_class is None:
+        return None
+    try:
+        preview = label_class()
+    except Exception:
+        return None
+
+    pixmap = _slot_drag_preview_pixmap(source_button)
+    if pixmap is not None:
+        with suppress(Exception):
+            preview.setPixmap(pixmap)
+    else:
+        with suppress(Exception):
+            preview.setText(_slot_drag_preview_text(source_button))
+
+    with suppress(Exception):
+        preview.setObjectName("ActionRailSlotDragPreview")
+    with suppress(Exception):
+        preview.setWindowFlags(_slot_drag_preview_flags(qt))
+    transparent_for_mouse = _qt_enum_value(
+        qt,
+        "WA_TransparentForMouseEvents",
+        group="WidgetAttribute",
+    )
+    show_without_activating = _qt_enum_value(
+        qt,
+        "WA_ShowWithoutActivating",
+        group="WidgetAttribute",
+    )
+    if transparent_for_mouse is not None:
+        with suppress(Exception):
+            preview.setAttribute(transparent_for_mouse, True)
+    if show_without_activating is not None:
+        with suppress(Exception):
+            preview.setAttribute(show_without_activating, True)
+    with suppress(Exception):
+        preview.setWindowOpacity(0.92)
+    _copy_slot_drag_preview_size(preview, source_button, pixmap)
+    _move_slot_drag_preview(preview, global_point)
+    with suppress(Exception):
+        preview.show()
+    with suppress(Exception):
+        preview.raise_()
+    return preview
+
+
+def _slot_drag_preview_flags(qt: object) -> object:
+    qt_namespace = getattr(getattr(qt, "QtCore", None), "Qt", None)
+    flags = 0
+    for name in ("Tool", "FramelessWindowHint", "WindowStaysOnTopHint", "WindowDoesNotAcceptFocus"):
+        value = getattr(qt_namespace, name, None) if qt_namespace is not None else None
+        if value is not None:
+            flags |= value
+    return flags
+
+
+def _slot_drag_preview_pixmap(source_button: object) -> object | None:
+    grab = getattr(source_button, "grab", None)
+    if not callable(grab):
+        return None
+    with suppress(Exception):
+        pixmap = grab()
+        is_null = getattr(pixmap, "isNull", None)
+        if callable(is_null) and is_null():
+            return None
+        return pixmap
+    return None
+
+
+def _copy_slot_drag_preview_size(
+    preview: object,
+    source_button: object,
+    pixmap: object | None,
+) -> None:
+    width = _pixmap_size_value(pixmap, "width") or _widget_size_value(source_button, "width")
+    height = _pixmap_size_value(pixmap, "height") or _widget_size_value(source_button, "height")
+    if width <= 0 or height <= 0:
+        return
+    with suppress(Exception):
+        preview.setFixedSize(width, height)
+
+
+def _pixmap_size_value(pixmap: object | None, method_name: str) -> int:
+    if pixmap is None:
+        return 0
+    method = getattr(pixmap, method_name, None)
+    if callable(method):
+        with suppress(Exception):
+            return int(method())
+    return 0
+
+
+def _widget_size_value(widget: object, method_name: str) -> int:
+    method = getattr(widget, method_name, None)
+    if callable(method):
+        with suppress(Exception):
+            return int(method())
+    return 0
+
+
+def _move_slot_drag_preview(preview: object, global_point: object | None) -> None:
+    if global_point is None:
+        return
+    with suppress(Exception):
+        preview.move(_point_x(global_point) + 12, _point_y(global_point) + 12)
+
+
+def _finish_slot_drag(state: dict[str, object], *, restore_source: bool) -> None:
+    _clear_slot_drag_preview(state)
+    if restore_source:
+        _restore_slot_drag_source(state)
+
+
+def _clear_slot_drag_preview(state: dict[str, object]) -> None:
+    preview = state.pop("preview", None)
+    if preview is None:
+        return
+    with suppress(Exception):
+        preview.hide()
+    with suppress(Exception):
+        preview.deleteLater()
+
+
+def _grab_slot_drag_mouse(source_button: object) -> None:
+    grab_mouse = getattr(source_button, "grabMouse", None)
+    if callable(grab_mouse):
+        with suppress(Exception):
+            grab_mouse()
+
+
+def _release_slot_drag_mouse(state: dict[str, object]) -> None:
+    source_button = state.get("source_button")
+    release_mouse = getattr(source_button, "releaseMouse", None)
+    if callable(release_mouse):
+        with suppress(Exception):
+            release_mouse()
+
+
+def _empty_slot_drag_source(qt: object, state: dict[str, object], source_button: object) -> None:
+    if state.get("source_emptied"):
+        return
+    state["source_button"] = source_button
+    state["source_visual"] = _snapshot_slot_drag_source(source_button)
+    state["source_emptied"] = True
+
+    key_label = ""
+    visual = state.get("source_visual")
+    if isinstance(visual, dict):
+        key_label_value = visual.get("actionRailKeyLabel")
+        if isinstance(key_label_value, str):
+            key_label = key_label_value
+
+    for name, value in (
+        ("actionRailLabel", ""),
+        ("actionRailKeyLabel", key_label),
+        ("actionRailIcon", ""),
+        ("actionRailIconPath", ""),
+        ("actionRailIconName", ""),
+        ("actionRailAppliedIconSource", ""),
+        ("actionRailTone", "neutral"),
+        ("actionRailActive", "false"),
+        ("actionRailLocked", "true"),
+        ("actionRailDiagnosticCode", ""),
+        ("actionRailDiagnosticSeverity", ""),
+        ("actionRailDiagnosticBadge", ""),
+        ("actionRailSlotDragSource", "true"),
+    ):
+        with suppress(Exception):
+            source_button.setProperty(name, value)
+    with suppress(Exception):
+        source_button.setText(_button_text("", key_label))
+    with suppress(Exception):
+        source_button.setIcon(qt.QtGui.QIcon())
+    _refresh_button_style(source_button)
+    with suppress(Exception):
+        source_button.update()
+
+
+def _snapshot_slot_drag_source(source_button: object) -> dict[str, object]:
+    snapshot: dict[str, object] = {}
+    for name in (
+        "actionRailLabel",
+        "actionRailKeyLabel",
+        "actionRailIcon",
+        "actionRailIconPath",
+        "actionRailIconName",
+        "actionRailAppliedIconSource",
+        "actionRailTone",
+        "actionRailActive",
+        "actionRailLocked",
+        "actionRailDiagnosticCode",
+        "actionRailDiagnosticSeverity",
+        "actionRailDiagnosticBadge",
+        "actionRailSlotDragSource",
+    ):
+        with suppress(Exception):
+            snapshot[name] = source_button.property(name)
+    text = getattr(source_button, "text", None)
+    if callable(text):
+        with suppress(Exception):
+            snapshot["text"] = text()
+    with suppress(Exception):
+        snapshot["visible"] = source_button.isVisible()
+    with suppress(Exception):
+        snapshot["graphics_effect"] = source_button.graphicsEffect()
+    return snapshot
+
+
+def _restore_slot_drag_source(state: dict[str, object]) -> None:
+    source_button = state.pop("source_button", None)
+    visual = state.pop("source_visual", None)
+    state.pop("source_emptied", None)
+    if source_button is None or not isinstance(visual, dict):
+        return
+    with suppress(Exception):
+        source_button.setGraphicsEffect(visual.get("graphics_effect"))
+    if "visible" in visual:
+        with suppress(Exception):
+            source_button.setVisible(bool(visual["visible"]))
+    for name, value in visual.items():
+        if name in {"text", "visible", "graphics_effect"}:
+            continue
+        with suppress(Exception):
+            source_button.setProperty(name, value)
+    if "text" in visual:
+        with suppress(Exception):
+            source_button.setText(str(visual["text"]))
+    with suppress(Exception):
+        _apply_button_icon(
+            source_button,
+            str(visual.get("actionRailIconPath", "") or ""),
+            str(visual.get("actionRailIconName", "") or ""),
+        )
+    with suppress(Exception):
+        source_button.update()
+
+
+def _slot_drag_preview_text(source_button: object) -> str:
+    try:
+        label = source_button.property("actionRailLabel")
+    except Exception:
+        label = None
+    if isinstance(label, str) and label.strip():
+        return label.strip().split("\n", 1)[0]
+    text = getattr(source_button, "text", None)
+    if callable(text):
+        with suppress(Exception):
+            return str(text()).split("\n", 1)[0]
+    return "Slot"
+
+
+def _slot_drag_press_matches(qt: object, event: object) -> bool:
+    return _event_has_button(qt, event, "LeftButton") and _event_has_modifier(
+        qt,
+        event,
+        "ShiftModifier",
+    )
+
+
+def _event_has_button(qt: object, event: object, name: str) -> bool:
+    button = getattr(event, "button", None)
+    if not callable(button):
+        return False
+    expected = _qt_enum_value(qt, name, group="MouseButton")
+    if expected is None:
+        return False
+    with suppress(Exception):
+        return button() == expected
+    return False
+
+
+def _event_has_modifier(qt: object, event: object, name: str) -> bool:
+    modifiers = getattr(event, "modifiers", None)
+    if not callable(modifiers):
+        return False
+    expected = _qt_enum_value(qt, name, group="KeyboardModifier")
+    if expected is None:
+        return False
+    with suppress(Exception):
+        return bool(modifiers() & expected)
+    return False
+
+
+def _qt_enum_value(qt: object, name: str, *, group: str) -> object | None:
+    qt_namespace = getattr(getattr(qt, "QtCore", None), "Qt", None)
+    if qt_namespace is None:
+        return None
+    direct = getattr(qt_namespace, name, None)
+    if direct is not None:
+        return direct
+    enum_group = getattr(qt_namespace, group, None)
+    if enum_group is not None:
+        return getattr(enum_group, name, None)
+    return None
+
+
+def _event_global_point(event: object) -> object | None:
+    global_position = getattr(event, "globalPosition", None)
+    if callable(global_position):
+        with suppress(Exception):
+            point = global_position()
+            to_point = getattr(point, "toPoint", None)
+            return to_point() if callable(to_point) else point
+    global_pos = getattr(event, "globalPos", None)
+    if callable(global_pos):
+        with suppress(Exception):
+            return global_pos()
+    return None
+
+
+def _drag_global_point(qt: object, event: object) -> object | None:
+    points = _drag_global_points(qt, event)
+    return points[0] if points else None
+
+
+def _slot_drag_event_points(
+    qt: object,
+    source_button: object,
+    event: object,
+) -> tuple[object, ...]:
+    points = list(_drag_global_points(qt, event))
+    local_point = _event_local_point(event)
+    map_to_global = getattr(source_button, "mapToGlobal", None)
+    if local_point is not None and callable(map_to_global):
+        with suppress(Exception):
+            _append_unique_global_point(points, map_to_global(local_point))
+    return tuple(points)
+
+
+def _drag_global_points(qt: object, event: object) -> tuple[object, ...]:
+    points: list[object] = []
+    cursor_class = getattr(getattr(qt, "QtGui", None), "QCursor", None)
+    cursor_pos = getattr(cursor_class, "pos", None)
+    if callable(cursor_pos):
+        with suppress(Exception):
+            _append_unique_global_point(points, cursor_pos())
+    event_point = _event_global_point(event)
+    if event_point is not None:
+        _append_unique_global_point(points, event_point)
+    return tuple(points)
+
+
+def _event_local_point(event: object) -> object | None:
+    position = getattr(event, "position", None)
+    if callable(position):
+        with suppress(Exception):
+            point = position()
+            to_point = getattr(point, "toPoint", None)
+            return to_point() if callable(to_point) else point
+    pos = getattr(event, "pos", None)
+    if callable(pos):
+        with suppress(Exception):
+            return pos()
+    return None
+
+
+def _append_unique_global_point(points: list[object], point: object | None) -> None:
+    if point is None:
+        return
+    for existing in points:
+        if _point_x(existing) == _point_x(point) and _point_y(existing) == _point_y(point):
+            return
+    points.append(point)
+
+
+def _record_slot_drag_points(
+    state: dict[str, object],
+    points: tuple[object, ...],
+) -> None:
+    if points:
+        state["last_global_points"] = points
+
+
+def _combined_slot_drag_points(
+    state: dict[str, object],
+    release_points: tuple[object, ...],
+) -> tuple[object, ...]:
+    points: list[object] = []
+    for point in release_points:
+        _append_unique_global_point(points, point)
+    last_points = state.get("last_global_points")
+    if isinstance(last_points, tuple):
+        for point in last_points:
+            _append_unique_global_point(points, point)
+    return tuple(points)
+
+
+def _drag_threshold_exceeded(qt: object, start: object, current: object) -> bool:
+    if start is None or current is None:
+        return True
+    distance = _point_distance(start, current)
+    return distance >= _start_drag_distance(qt)
+
+
+def _point_distance(start: object, current: object) -> int:
+    with suppress(Exception):
+        delta = current - start
+        manhattan = getattr(delta, "manhattanLength", None)
+        if callable(manhattan):
+            return int(manhattan())
+    return abs(_point_x(current) - _point_x(start)) + abs(_point_y(current) - _point_y(start))
+
+
+def _point_x(point: object) -> int:
+    value = getattr(point, "x", None)
+    if callable(value):
+        with suppress(Exception):
+            return int(value())
+    return int(getattr(point, "x_pos", 0))
+
+
+def _point_y(point: object) -> int:
+    value = getattr(point, "y", None)
+    if callable(value):
+        with suppress(Exception):
+            return int(value())
+    return int(getattr(point, "y_pos", 0))
+
+
+def _start_drag_distance(qt: object) -> int:
+    app_class = getattr(getattr(qt, "QtWidgets", None), "QApplication", None)
+    if app_class is not None:
+        start_drag_distance = getattr(app_class, "startDragDistance", None)
+        if callable(start_drag_distance):
+            with suppress(Exception):
+                return max(1, int(start_drag_distance()))
+    return 4
+
+
+def _slot_drag_release_target(
+    qt: object,
+    source_button: object,
+    global_point: object | None,
+) -> tuple[str | None, bool]:
+    return _slot_drag_release_target_from_points(qt, source_button, (global_point,))
+
+
+def _slot_drag_release_target_from_points(
+    qt: object,
+    source_button: object,
+    global_points: tuple[object | None, ...],
+) -> tuple[str | None, bool]:
+    points = tuple(point for point in global_points if point is not None)
+    if not points:
+        return None, False
+    source_root = _rail_root_widget(source_button)
+    source_slot_id = _slot_id_from_button(source_button)
+    over_source_slot = False
+    if source_root is not None:
+        for point in points:
+            if _global_point_inside_widget(source_root, point):
+                target_slot_id = _slot_id_at_global_point(qt, source_root, point)
+                if target_slot_id is not None:
+                    if target_slot_id != source_slot_id:
+                        return target_slot_id, True
+                    over_source_slot = True
+        if _widget_has_global_geometry(source_root):
+            if any(not _global_point_inside_widget(source_root, point) for point in points):
+                return None, False
+            return source_slot_id if over_source_slot else None, True
+
+    hit_widget = _first_widget_at_global_points(qt, points)
+    if hit_widget is None:
+        return None, source_root is not None and _widget_has_global_geometry(source_root)
+
+    target_button = _slot_button_ancestor(qt, hit_widget)
+    if target_button is not None and _rail_root_widget(target_button) is source_root:
+        slot_id = target_button.property("actionRailSlotId")
+        return (slot_id if isinstance(slot_id, str) else None), True
+
+    return None, _rail_root_widget(hit_widget) is source_root
+
+
+def _slot_id_from_button(button: object) -> str | None:
+    try:
+        slot_id = button.property("actionRailSlotId")
+    except Exception:
+        return None
+    return slot_id if isinstance(slot_id, str) else None
+
+
+def _first_widget_at_global_points(qt: object, points: tuple[object, ...]) -> object | None:
+    for point in points:
+        hit_widget = _widget_at_global_point(qt, point)
+        if hit_widget is not None:
+            return hit_widget
+    return None
+
+
+def _slot_id_at_global_point(
+    qt: object,
+    source_root: object,
+    global_point: object | None,
+) -> str | None:
+    button_class = getattr(getattr(qt, "QtWidgets", None), "QPushButton", None)
+    find_children = getattr(source_root, "findChildren", None)
+    if button_class is None or not callable(find_children):
+        return None
+    with suppress(Exception):
+        buttons = find_children(button_class)
+    if not buttons:
+        return None
+    for button in buttons:
+        try:
+            slot_id = button.property("actionRailSlotId")
+        except Exception:
+            continue
+        if isinstance(slot_id, str) and _global_point_inside_widget(button, global_point):
+            return slot_id
+    return None
+
+
+def _global_point_inside_widget(widget: object, global_point: object | None) -> bool:
+    if global_point is None:
+        return False
+    map_from_global = getattr(widget, "mapFromGlobal", None)
+    rect = getattr(widget, "rect", None)
+    if not callable(map_from_global) or not callable(rect):
+        return True
+    with suppress(Exception):
+        local_point = map_from_global(global_point)
+        contains = getattr(rect(), "contains", None)
+        if callable(contains):
+            return bool(contains(local_point))
+    return True
+
+
+def _widget_has_global_geometry(widget: object) -> bool:
+    return callable(getattr(widget, "mapFromGlobal", None)) and callable(
+        getattr(widget, "rect", None)
+    )
+
+
+def _widget_at_global_point(qt: object, global_point: object | None) -> object | None:
+    app_class = getattr(getattr(qt, "QtWidgets", None), "QApplication", None)
+    widget_at = getattr(app_class, "widgetAt", None)
+    if global_point is None or not callable(widget_at):
+        return None
+    with suppress(Exception):
+        return widget_at(global_point)
+    return None
+
+
+def _slot_button_ancestor(qt: object, widget: object | None) -> object | None:
+    button_class = getattr(getattr(qt, "QtWidgets", None), "QPushButton", None)
+    while widget is not None:
+        if button_class is not None and isinstance(widget, button_class):
+            try:
+                if isinstance(widget.property("actionRailSlotId"), str):
+                    return widget
+            except Exception:
+                return None
+        parent = getattr(widget, "parent", None)
+        widget = parent() if callable(parent) else None
+    return None
+
+
+def _rail_root_widget(widget: object | None) -> object | None:
+    while widget is not None:
+        object_name = getattr(widget, "objectName", None)
+        with suppress(Exception):
+            if callable(object_name) and object_name() == "ActionRailRoot":
+                return widget
+        parent = getattr(widget, "parent", None)
+        widget = parent() if callable(parent) else None
+    return None
+
+
+def _accept_event(event: object) -> None:
+    accept = getattr(event, "accept", None)
+    if callable(accept):
+        with suppress(Exception):
+            accept()
+
+
 def _button_class(qt: object) -> type:
     base = qt.QtWidgets.QPushButton
     if (
@@ -511,6 +1350,23 @@ def _button_class(qt: object) -> type:
         return base
 
     class ActionRailButton(base):  # type: ignore[misc, valid-type]
+        _actionrail_supports_slot_drag_events = True
+
+        def mousePressEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if _handle_slot_drag_press(self, event):
+                return None
+            return super().mousePressEvent(event)
+
+        def mouseMoveEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if _handle_slot_drag_move(self, event):
+                return None
+            return super().mouseMoveEvent(event)
+
+        def mouseReleaseEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if _handle_slot_drag_release(self, event):
+                return None
+            return super().mouseReleaseEvent(event)
+
         def paintEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
             painter = qt.QtGui.QPainter(self)
             try:
@@ -790,6 +1646,9 @@ def _text_width(qt: object, font: object, text: str) -> int:
 
 
 def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
+    if _button_property(button, "actionRailSlotDragSource") == "true":
+        return 0
+
     refreshed = 0
     style_needs_refresh = False
 
@@ -930,10 +1789,7 @@ def _button_icon_inset(button: object) -> int:
 
 
 def _set_button_property(button: object, name: str, value: object) -> int:
-    try:
-        current = button.property(name)
-    except Exception:
-        current = None
+    current = _button_property(button, name)
 
     if current == value:
         return 0
@@ -998,3 +1854,10 @@ def _refresh_button_style(button: object) -> None:
         style.polish(button)
     with suppress(Exception):
         button.update()
+
+
+def _button_property(button: object, name: str) -> object:
+    try:
+        return button.property(name)
+    except Exception:
+        return None

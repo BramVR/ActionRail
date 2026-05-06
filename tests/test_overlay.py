@@ -1397,6 +1397,118 @@ def test_normal_mode_slot_edit_unlock_assigns_and_clears_payload(
     assert rebuilds == ["state", "state", "state"]
 
 
+def test_normal_mode_slot_edit_moves_and_swaps_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.panel = "modelPanel1"
+    host.cmds = object()
+    host._slot_edit_unlocked = True
+    host.spec = StackSpec(
+        id="drag_slots",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="drag_slots.a",
+                label="Move",
+                action="maya.tool.move",
+                key_label="1",
+                icon="maya.move",
+                active_when="maya.tool == move",
+            ),
+            StackItem(
+                type="button",
+                id="drag_slots.b",
+                label="New",
+                key_label="2",
+            ),
+            StackItem(
+                type="button",
+                id="drag_slots.c",
+                label="Rotate",
+                action="maya.tool.rotate",
+                key_label="3",
+                icon="maya.rotate",
+                active_when="maya.tool == rotate",
+            ),
+        ),
+    )
+    rebuilds = []
+    host._rebuild_widget = lambda state: rebuilds.append(state)
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: "state")
+
+    assert host.move_slot_payload("drag_slots.a", "drag_slots.b") is True
+    assert [(item.id, item.label, item.action, item.key_label) for item in host.spec.items] == [
+        ("drag_slots.a", "New", "", "1"),
+        ("drag_slots.b", "Move", "maya.tool.move", "2"),
+        ("drag_slots.c", "Rotate", "maya.tool.rotate", "3"),
+    ]
+
+    assert host.move_slot_payload("drag_slots.b", "drag_slots.c") is True
+    assert [(item.id, item.label, item.action, item.key_label) for item in host.spec.items] == [
+        ("drag_slots.a", "New", "", "1"),
+        ("drag_slots.b", "Rotate", "maya.tool.rotate", "2"),
+        ("drag_slots.c", "Move", "maya.tool.move", "3"),
+    ]
+    assert rebuilds == ["state", "state"]
+
+
+def test_normal_mode_slot_edit_clear_then_swap_keeps_cleared_slots_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.panel = "modelPanel1"
+    host.cmds = object()
+    host._slot_edit_unlocked = True
+    host.spec = StackSpec(
+        id="drag_slots",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="drag_slots.a",
+                label="Move",
+                action="maya.tool.move",
+                key_label="1",
+                icon="maya.move",
+                active_when="maya.tool == move",
+            ),
+            StackItem(
+                type="button",
+                id="drag_slots.b",
+                label="Rotate",
+                action="maya.tool.rotate",
+                key_label="2",
+                icon="maya.rotate",
+                active_when="maya.tool == rotate",
+            ),
+            StackItem(
+                type="button",
+                id="drag_slots.c",
+                label="Scale",
+                action="maya.tool.scale",
+                key_label="3",
+                icon="maya.scale",
+                active_when="maya.tool == scale",
+            ),
+        ),
+    )
+    rebuilds = []
+    host._rebuild_widget = lambda state: rebuilds.append(state)
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: "state")
+
+    assert host.clear_slot_payload("drag_slots.b") is True
+    assert host.move_slot_payload("drag_slots.a", "drag_slots.c") is True
+
+    assert [(item.id, item.label, item.action, item.key_label) for item in host.spec.items] == [
+        ("drag_slots.a", "Scale", "maya.tool.scale", "1"),
+        ("drag_slots.b", "New", "", "2"),
+        ("drag_slots.c", "Move", "maya.tool.move", "3"),
+    ]
+    assert rebuilds == ["state", "state"]
+
+
 def test_runtime_normal_mode_slot_lock_toggles_active_host(monkeypatch: pytest.MonkeyPatch) -> None:
     class Host:
         def __init__(self) -> None:

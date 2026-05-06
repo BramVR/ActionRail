@@ -469,6 +469,264 @@ def test_build_transform_stack_locked_slot_edit_menu_keeps_actions_enabled(
     assert cmds.calls == [("setToolTo", "moveSuperContext")]
 
 
+def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
+    events: list[tuple[str, str]] = []
+
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x_pos = x_pos
+            self._y_pos = y_pos
+
+        def x(self) -> int:
+            return self._x_pos
+
+        def y(self) -> int:
+            return self._y_pos
+
+    class Event:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._point = Point(x_pos, y_pos)
+            self.accepted = False
+
+        def button(self) -> int:
+            return 1
+
+        def modifiers(self) -> int:
+            return 2
+
+        def globalPos(self) -> Point:  # noqa: N802
+            return self._point
+
+        def accept(self) -> None:
+            self.accepted = True
+
+    class Root:
+        def objectName(self) -> str:  # noqa: N802
+            return "ActionRailRoot"
+
+        def parent(self) -> None:
+            return None
+
+    class DragButton:
+        def __init__(self, slot_id: str, parent: object) -> None:
+            self.slot_id = slot_id
+            self._parent = parent
+            self.base_events: list[str] = []
+
+        def property(self, name: str) -> object:
+            if name == "actionRailSlotId":
+                return self.slot_id
+            return None
+
+        def parent(self) -> object:
+            return self._parent
+
+        def mousePressEvent(self, _event: object) -> None:  # noqa: N802
+            self.base_events.append("press")
+
+        def mouseMoveEvent(self, _event: object) -> None:  # noqa: N802
+            self.base_events.append("move")
+
+        def mouseReleaseEvent(self, _event: object) -> None:  # noqa: N802
+            self.base_events.append("release")
+
+    class DragQt:
+        class QtCore:
+            class Qt:
+                LeftButton = 1
+                ShiftModifier = 2
+
+        class QtWidgets:
+            QPushButton = DragButton
+            target: object | None = None
+
+            class QApplication:
+                @staticmethod
+                def startDragDistance() -> int:  # noqa: N802
+                    return 4
+
+                @staticmethod
+                def widgetAt(_point: object) -> object | None:  # noqa: N802
+                    return DragQt.QtWidgets.target
+
+    monkeypatch.setattr(widgets, "load", lambda: DragQt)
+    root = Root()
+    source = DragButton("drag.source", root)
+    target = DragButton("drag.target", root)
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=True,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda slot_id: events.append(("clear", slot_id)) is None,
+        move_slot=lambda source_id, target_id: events.append((source_id, target_id)) is None,
+    )
+
+    widgets._install_slot_drag_edit(
+        source,
+        StackItem(
+            type="button",
+            id="drag.source",
+            label="Move",
+            action="maya.tool.move",
+        ),
+        callbacks,
+    )
+
+    DragQt.QtWidgets.target = target
+    source.mousePressEvent(Event(0, 0))
+    source.mouseMoveEvent(Event(10, 0))
+    source.mouseReleaseEvent(Event(10, 0))
+    assert events == [("drag.source", "drag.target")]
+
+    DragQt.QtWidgets.target = None
+    source.mousePressEvent(Event(0, 0))
+    source.mouseMoveEvent(Event(0, 10))
+    source.mouseReleaseEvent(Event(0, 10))
+    assert events == [("drag.source", "drag.target"), ("clear", "drag.source")]
+
+    DragQt.QtWidgets.target = source
+    source.mousePressEvent(Event(0, 0))
+    source.mouseMoveEvent(Event(10, 0))
+    source.mouseReleaseEvent(Event(10, 0))
+    assert events == [
+        ("drag.source", "drag.target"),
+        ("clear", "drag.source"),
+        ("clear", "drag.source"),
+    ]
+    assert source.base_events == []
+
+
+def test_slot_drag_release_target_prefers_rail_geometry_over_widget_at() -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x_pos = x_pos
+            self._y_pos = y_pos
+
+        def x(self) -> int:
+            return self._x_pos
+
+        def y(self) -> int:
+            return self._y_pos
+
+    class Rect:
+        def __init__(self, x_pos: int, y_pos: int, width: int, height: int) -> None:
+            self.x_pos = x_pos
+            self.y_pos = y_pos
+            self.width = width
+            self.height = height
+
+        def contains(self, point: Point) -> bool:
+            return (
+                self.x_pos <= point.x() < self.x_pos + self.width
+                and self.y_pos <= point.y() < self.y_pos + self.height
+            )
+
+    class Root:
+        def __init__(self) -> None:
+            self.buttons: list[DragButton] = []
+
+        def objectName(self) -> str:  # noqa: N802
+            return "ActionRailRoot"
+
+        def parent(self) -> None:
+            return None
+
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def rect(self) -> Rect:
+            return Rect(0, 0, 120, 40)
+
+        def findChildren(self, _button_class: object) -> list[object]:  # noqa: N802
+            return list(self.buttons)
+
+    class DragButton:
+        def __init__(self, slot_id: str, parent: Root, rect: Rect) -> None:
+            self.slot_id = slot_id
+            self._parent = parent
+            self._rect = rect
+            parent.buttons.append(self)
+
+        def property(self, name: str) -> object:
+            if name == "actionRailSlotId":
+                return self.slot_id
+            return None
+
+        def parent(self) -> object:
+            return self._parent
+
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def mapToGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def rect(self) -> Rect:
+            return self._rect
+
+    class Event:
+        def __init__(self, global_point: Point, local_point: Point) -> None:
+            self._global_point = global_point
+            self._local_point = local_point
+
+        def globalPos(self) -> Point:  # noqa: N802
+            return self._global_point
+
+        def pos(self) -> Point:
+            return self._local_point
+
+    class DragQt:
+        class QtWidgets:
+            QPushButton = DragButton
+
+            class QApplication:
+                @staticmethod
+                def widgetAt(_point: Point) -> object | None:  # noqa: N802
+                    return None
+
+    root = Root()
+    source = DragButton("drag.source", root, Rect(0, 0, 40, 40))
+    DragButton("drag.target", root, Rect(80, 0, 40, 40))
+
+    assert widgets._slot_drag_release_target(DragQt, source, Point(90, 12)) == (
+        "drag.target",
+        True,
+    )
+    assert widgets._slot_drag_release_target(DragQt, source, Point(200, 12)) == (
+        None,
+        False,
+    )
+    assert widgets._slot_drag_release_target(DragQt, source, Point(60, 12)) == (
+        None,
+        True,
+    )
+    assert widgets._slot_drag_release_target_from_points(
+        DragQt,
+        source,
+        (Point(12, 12), Point(200, 12)),
+    ) == (None, False)
+    assert widgets._slot_drag_release_target_from_points(
+        DragQt,
+        source,
+        (Point(12, 12), Point(90, 12)),
+    ) == ("drag.target", True)
+    state: dict[str, object] = {}
+    widgets._record_slot_drag_points(state, (Point(200, 12),))
+    combined = widgets._combined_slot_drag_points(state, (Point(12, 12),))
+    assert [(point.x(), point.y()) for point in combined] == [(12, 12), (200, 12)]
+    assert widgets._slot_drag_release_target_from_points(DragQt, source, combined) == (
+        None,
+        False,
+    )
+    event_points = widgets._slot_drag_event_points(
+        DragQt,
+        source,
+        Event(Point(12, 12), Point(200, 12)),
+    )
+    assert [(point.x(), point.y()) for point in event_points] == [(12, 12), (200, 12)]
+
+
 def test_build_transform_stack_wraps_multi_row_layout(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     spec = StackSpec(
@@ -1364,6 +1622,30 @@ def test_apply_slot_render_state_handles_partial_and_raising_buttons(monkeypatch
     )
 
     assert refreshed == 0
+
+
+def test_apply_slot_render_state_skips_active_drag_source(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    button = FakeButton("drag.source", label="Move", key_label="1")
+    button.setProperty("actionRailSlotDragSource", "true")
+    refreshed = widgets._apply_slot_render_state(
+        button,
+        SlotRenderState(
+            label="Move",
+            key_label="1",
+            icon="maya.move",
+            icon_path="",
+            icon_name="move_M.png",
+            tone="neutral",
+            tooltip="Move tool",
+            enabled=True,
+            active=True,
+        ),
+    )
+
+    assert refreshed == 0
+    assert button.property("actionRailLabel") == "Move"
+    assert button.property("actionRailIconName") == ""
 
 
 def test_apply_slot_render_state_ignores_tooltip_access_errors(monkeypatch) -> None:

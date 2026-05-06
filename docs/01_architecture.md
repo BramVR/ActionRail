@@ -64,9 +64,11 @@ Long-term ActionRail authoring should follow the WoW-style customization roadmap
 Conceptual states:
 
 - **Normal Mode**: rails execute actions; active rails can be explicitly
-  unlocked for slot payload assignment/clear and locked again for normal action
-  execution. The overlay host avoids viewport-sized transparent hit areas so
-  normal Maya viewport interaction remains available outside visible controls.
+  unlocked for slot payload assignment/clear plus Shift-drag move/swap/clear-out
+  and locked again for normal action execution. While unlocked, populated slot
+  clicks are edit gestures rather than action execution. The overlay host avoids
+  viewport-sized transparent hit areas so normal Maya viewport interaction
+  remains available outside visible controls.
 - **Edit Mode**: rails switch into a layout-map view with labeled translucent
   frame rectangles, outlines, anchors, handles, optional placement grid overlay,
   optional snap-to-grid, snap guides, and safe margins. Edit Mode is for rail
