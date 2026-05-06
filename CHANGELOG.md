@@ -41,6 +41,10 @@
 - Made Quick Create infer active-state predicates for persistent Maya tool
   actions so saved Move/Translate/Rotate/Scale slots highlight when that tool
   context is active, while one-shot actions such as Set Key remain inactive.
+- Polished Edit Mode guide and slot-edit feedback for the 2.6 authoring pass:
+  Sticky Frames now draws axis-aligned alignment guides, and the frame options
+  popover identifies the last editable action slot while disabling unavailable
+  slot moves.
 - Darkened locked/no-action slots so generated empty Quick Create buttons read
   more like recessed sockets while keeping the existing square shape.
 - Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows

@@ -19,7 +19,8 @@ studio layout override saves. Phase 2 step 2.6 is now in progress with the
 first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
 verified, a Maya-smoke verified handle/publish polish pass, and a locally
 verified validation UX/saved-preset publish follow-up with Quick Create Maya
-smoke coverage for the custom-store Save + Publish shelf command path.
+smoke coverage for the custom-store Save + Publish shelf command path. A first
+guide/slot-edit affordance polish pass is locally verified.
 
 Working surface:
 
@@ -39,9 +40,10 @@ Working surface:
   raised beyond the template's icon-backed slots.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
-  snap/spacing guides, right-click options, X/Y movement for unlocked rails,
-  slot add/remove/reorder controls, real edge-tab collapse/expand controls,
-  safe movement clamps, Save Position/user-preset persistence for unlocked
+  snap/spacing guides, axis-aligned sticky alignment guides, right-click
+  options, X/Y movement for unlocked rails, slot add/remove/reorder controls
+  with last-slot affordance text, real edge-tab collapse/expand controls, safe
+  movement clamps, Save Position/user-preset persistence for unlocked
   runtime/user rails, and user override saves/resolution for unlocked built-in
   and studio rails.
 - Optional collapsible rail schema/runtime: JSON `collapse` settings for edge,
@@ -74,7 +76,6 @@ Local `.spec/` reports are ignored and not part of the Git-tracked handoff.
 
 Focus the next slice on:
 
-- polishing guide behavior and slot-edit affordances
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 
@@ -96,6 +97,7 @@ $env:PYTHONPATH = "scripts"
    and Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
    verified; the validation UX/publish follow-up is locally verified, and Quick
    Create Maya smoke covers the custom-store Save + Publish shelf command path.
+   The first guide/slot-affordance polish pass is locally verified.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -136,6 +138,9 @@ $env:PYTHONPATH = "scripts"
   tool actions during draft conversion, so newly saved Move/Rotate/Scale tool
   slots reflect Maya's active tool context without marking one-shot commands
   like Set Key active.
+- The May 6 guide/slot-affordance polish pass replaces Sticky Frames diagonal
+  hints with axis-aligned alignment guides and makes frame options report the
+  last editable action slot while disabling unavailable slot moves.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -238,6 +243,12 @@ $env:PYTHONPATH = "scripts"
   icon-backed template slots plus six blank slots, Buttons Per Row=5 wrapping
   to `[2, 5]`, Button Size updating live preview scale to `1.25`, Save +
   Publish runtime commands, shelf toggle, and screenshot capture.
+- Latest focused Edit Mode validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py`
+  -> 37 passed.
+- Latest focused Edit Mode Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py tests\\test_edit_mode.py`
+  -> all checks passed.
 
 ## Decisions
 

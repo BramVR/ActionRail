@@ -62,7 +62,9 @@ Snapshot:
   through publish diagnostics, reports blocked-save issue details, reports stale
   slot-command cleanup, and preserves custom user preset stores in published
   shelf toggles; Quick Create Maya smoke covers the custom-store shelf command
-  path. Broader guide behavior and slot-edit affordance polish remain.
+  path. A first guide/slot-affordance polish pass now replaces diagonal sticky
+  guide hints with axis-aligned alignment guides and makes frame options report
+  the last editable action slot while disabling unavailable slot moves.
   Phase 2 step 2.5 layout editing and direct
   manipulation is complete; Edit Mode can save unlocked runtime/user rail
   offsets plus unlocked built-in and studio user override presets. Do not start
@@ -115,8 +117,9 @@ user-preset, built-in user-override, and studio user-override layout-save paths.
 Continue Phase 2 with collapsible edge tabs and publish polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Continue guide behavior and slot-edit affordance polish on top of the
-   validated collapsed-handle and Save + Publish path.
+2. Continue Quick Create round-trip stability and locked built-in/studio
+   read-only polish on top of the validated collapsed-handle, guide/slot
+   affordance, and Save + Publish paths.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

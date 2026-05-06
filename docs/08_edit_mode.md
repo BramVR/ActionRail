@@ -19,7 +19,8 @@ has started: frame options now toggle real collapsible edge-tab state instead
 of the earlier opacity-only placeholder, and the first collapse path is
 Maya-smoke verified. The current 2.6 polish pass also improves collapsed-handle
 edge placement and hit targets, and that latest handle tuning is now covered by
-Maya smoke.
+Maya smoke. A local guide/slot-affordance pass now draws axis-aligned Sticky
+Frames guides and shows which action slot the frame options controls will edit.
 
 ## What It Shows
 
@@ -29,7 +30,8 @@ When Edit Mode is enabled, ActionRail draws:
 - an optional placement grid
 - one translucent labeled frame for each active runtime rail
 - selected-frame styling
-- drag handles, anchor pins, and selected-frame guide lines
+- drag handles, anchor pins, selected-frame guide lines, and axis-aligned
+  Sticky Frames alignment guides
 - rail source layer and lock state labels
 - a compact Edit Mode panel with Grid, Grid Size, Snap to Grid, Sticky Frames,
   and selected lock-state display
@@ -60,7 +62,8 @@ Inside Edit Mode:
 - left-click and drag an unlocked rail frame to move it directly
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
 - right-click a rail frame to open options routing for that rail
-- use frame options to add/remove/reorder placeholder slots
+- use frame options to add/remove/reorder the last editable action slot; the
+  options popover reports the target slot and disables unavailable moves
 - use frame options to collapse an edge-anchored rail to a small handle or
   expand it again
 - enable Grid to show or hide the edit-only grid
@@ -129,9 +132,10 @@ Implemented now:
 - X/Y movement for unlocked rails
 - drag handles and anchor pins
 - snap-to-grid and Sticky Frames during movement
-- selected-frame snap/spacing guide rendering
+- selected-frame snap/spacing guide rendering with axis-aligned Sticky Frames
+  alignment hints
 - right-click frame options routing marker
-- frame options for slot add/remove/reorder
+- frame options for slot add/remove/reorder with target-slot status text
 - edge-tab collapse/expand control backed by persisted `collapse` settings and
   larger edge-clamped collapsed handles
 - Save Position for unlocked runtime/user rails

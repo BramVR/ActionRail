@@ -182,11 +182,10 @@ def about() -> dict[str, object]:
             "phase": (
                 "Phase 2 step 2.6 collapsible edge-tab handle placement and "
                 "publish polish first pass Maya-smoke verified; validation UX "
-                "publish follow-up locally verified with Quick Create Maya smoke"
+                "publish follow-up locally verified with Quick Create Maya smoke; "
+                "guide and slot-edit affordance polish locally verified"
             ),
-            "next_slice": (
-                "Phase 2 step 2.6 guide behavior and slot-edit polish"
-            ),
+            "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

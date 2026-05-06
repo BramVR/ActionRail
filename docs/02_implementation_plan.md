@@ -368,8 +368,11 @@ Validate Draft, includes the concrete blocking issue in save errors, reports
 stale slot-command cleanup from Save + Publish, and preserves custom user
 preset stores in published shelf toggles; Quick Create draft conversion also
 infers active-state predicates for persistent Maya tool actions while leaving
-one-shot commands inactive. The Quick Create Maya smoke verifies the Save +
-Publish shelf command carries that custom store path.
+one-shot commands inactive. A first guide/slot-affordance polish pass now draws
+axis-aligned Sticky Frames guides and makes frame options identify the last
+editable action slot while disabling unavailable slot moves. The Quick Create
+Maya smoke verifies the Save + Publish shelf command carries that custom store
+path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
@@ -469,11 +472,11 @@ Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
 publish polish. The collapse schema/runtime first pass is implemented and
 Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
 verified. A local validation UX/saved-preset publishing polish follow-up is in
-place, and Quick Create Maya smoke now covers the custom-store Save + Publish
-shelf command path.
-Carry forward only polish that naturally supports 2.6, such as guide behavior,
-slot-edit affordances, Quick Create round-trip stability, and locked
-built-in/studio read-only behavior. Keep
+place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
+command path, and the first guide/slot-edit affordance polish pass is locally
+verified.
+Carry forward only polish that naturally supports 2.6, such as Quick Create
+round-trip stability and locked built-in/studio read-only behavior. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.
@@ -483,7 +486,8 @@ yet.
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Verify and continue Phase 2 step 2.6 guide behavior and slot-edit polish.
+1. Verify and continue Phase 2 step 2.6 Quick Create stability and
+   locked-preset read-only polish.
 2. Add Bind Mode, then flyouts, then command rings.
 3. Broaden the workflow action library beyond transform/keyframe.
 4. Add profile layers for built-in, studio, project, scene/asset, and user
