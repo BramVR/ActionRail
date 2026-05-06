@@ -166,15 +166,9 @@ target_frame = next(
 if target_frame is None:
     raise AssertionError(f"Target rail frame was not present: {host.frames}")
 
-move_slot = next(
-    (slot for slot in host.slot_frames if slot.slot_id == "edit_mode_custom.move"),
-    None,
-)
-if move_slot is None:
-    raise AssertionError(f"Custom move slot was not present: {host.slot_frames}")
 slot_drag_start = QtCore.QPoint(
-    move_slot.x + move_slot.width // 2,
-    move_slot.y + move_slot.height // 2,
+    custom_frame.x + custom_frame.width // 2,
+    custom_frame.y + custom_frame.height // 2,
 )
 slot_drag_end = QtCore.QPoint(slot_drag_start.x() + 48, slot_drag_start.y())
 QtTest.QTest.mousePress(
@@ -197,11 +191,11 @@ custom_frame_after_slot_drag = next(
     frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
 )
 state_after_slot_drag = actionrail.edit_mode_state()
-if state_after_slot_drag.selected_slot_id != "edit_mode_custom.move":
-    raise AssertionError(f"Slot click did not select the dragged slot: {state_after_slot_drag}")
+if state_after_slot_drag.selected_preset_id != "edit_mode_custom":
+    raise AssertionError(f"Frame drag did not select the dragged rail: {state_after_slot_drag}")
 if custom_frame_after_slot_drag.x == custom_frame.x:
     raise AssertionError(
-        "Dragging from a slot without Shift did not move the unlocked rail frame."
+        "Dragging inside an unlocked rail frame did not move the whole rail."
     )
 custom_frame = custom_frame_after_slot_drag
 
@@ -221,6 +215,12 @@ if state_after_left_click.selected_preset_id != "edit_mode_custom":
 popover = edit_widget.findChild(QtWidgets.QFrame, edit_mode.POSITION_POPOVER_OBJECT_NAME)
 if popover is None or not popover.isVisible():
     raise AssertionError("Selected rail position popover did not open.")
+
+removed_options = edit_widget.findChild(QtWidgets.QFrame, "ActionRailEditModeFrameOptionsPopover")
+if removed_options is not None:
+    raise AssertionError("Removed Edit Mode frame options popover was still created.")
+if edit_widget.findChild(QtWidgets.QListWidget) is not None:
+    raise AssertionError("Edit Mode still exposes the removed action palette.")
 
 spinboxes = popover.findChildren(QtWidgets.QSpinBox)
 if len(spinboxes) < 2:
@@ -308,180 +308,6 @@ if custom_frame_after_snap_sticky.x % 64 or custom_frame_after_snap_sticky.y % 6
         f"{custom_frame_after_snap_sticky.x}, {custom_frame_after_snap_sticky.y}"
     )
 
-right_click_point = QtCore.QPoint(
-    custom_frame_after_snap_sticky.x + 4,
-    custom_frame_after_snap_sticky.y + 4,
-)
-QtTest.QTest.mouseClick(
-    edit_widget,
-    QtCore.Qt.RightButton,
-    QtCore.Qt.NoModifier,
-    right_click_point,
-)
-app.processEvents()
-
-state_after_right_click = actionrail.edit_mode_state()
-if state_after_right_click.options_preset_id != "edit_mode_custom":
-    raise AssertionError(
-        f"Right click did not route to frame options: {state_after_right_click}"
-    )
-
-options_popover = edit_widget.findChild(
-    QtWidgets.QFrame,
-    edit_mode.FRAME_OPTIONS_POPOVER_OBJECT_NAME,
-)
-if options_popover is None or not options_popover.isVisible():
-    raise AssertionError("Right click did not open the frame options popover.")
-
-action_list = options_popover.findChild(QtWidgets.QListWidget)
-if action_list is None or action_list.count() <= 0:
-    raise AssertionError("Frame options popover did not expose the action palette.")
-if not action_list.isEnabled():
-    raise AssertionError("Action palette was disabled for an unlocked rail.")
-
-retired_slot_controls = {"Add Slot", "Remove Slot", "Move Up", "Move Down"}
-visible_button_texts = {
-    button.text()
-    for button in options_popover.findChildren(QtWidgets.QPushButton)
-    if button.isVisible()
-}
-if retired_slot_controls & visible_button_texts:
-    raise AssertionError(
-        "Frame options popover still exposes retired slot reorder controls: "
-        f"{sorted(retired_slot_controls & visible_button_texts)}"
-    )
-
-custom_key_slot_id = "edit_mode_custom.key"
-custom_rotate_slot_id = "edit_mode_custom.rotate"
-target_one_slot_id = "edit_mode_target.one"
-
-host.open_options("edit_mode_custom", custom_key_slot_id)
-app.processEvents()
-state_after_slot_select = actionrail.edit_mode_state()
-if state_after_slot_select.selected_slot_id != custom_key_slot_id:
-    raise AssertionError(f"Slot selection did not track the chosen slot: {state_after_slot_select}")
-slot_status_texts = {
-    label.text()
-    for label in options_popover.findChildren(QtWidgets.QLabel)
-    if label.isVisible()
-}
-if "Selected slot: Key (key)." not in slot_status_texts:
-    raise AssertionError(f"Selected slot status was not rendered: {slot_status_texts}")
-
-
-def _runtime_item(preset_id: str, slot_id: str) -> actionrail.StackItem:
-    runtime_host = edit_mode._runtime_hosts().get(preset_id)
-    if runtime_host is None:
-        raise AssertionError(f"Runtime host is missing: {preset_id}")
-    for item in runtime_host.spec.items:
-        if item.id == slot_id:
-            return item
-    raise AssertionError(f"Runtime slot is missing: {preset_id}/{slot_id}")
-
-
-def _assert_slot_payload(
-    preset_id: str,
-    slot_id: str,
-    *,
-    label: str,
-    action: str,
-    key_label: str,
-) -> None:
-    item = _runtime_item(preset_id, slot_id)
-    if item.id != slot_id:
-        raise AssertionError(f"Slot id changed: {item.id} != {slot_id}")
-    if item.key_label != key_label:
-        raise AssertionError(
-            f"Slot key label changed for {slot_id}: {item.key_label!r} != {key_label!r}"
-        )
-    if item.label != label or item.action != action:
-        raise AssertionError(
-            f"Unexpected slot payload for {slot_id}: "
-            f"{item.label!r}/{item.action!r} != {label!r}/{action!r}"
-        )
-
-
-if not host.assign_slot_action_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    "maya.tool.rotate",
-):
-    raise AssertionError("Could not assign an action payload to a selected slot.")
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    label="Rotate",
-    action="maya.tool.rotate",
-    key_label="3",
-)
-if not host.clear_slot_payload("edit_mode_custom", custom_key_slot_id):
-    raise AssertionError("Could not clear a slot payload.")
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    label=edit_mode.EMPTY_SLOT_LABEL,
-    action="",
-    key_label="3",
-)
-if not host.move_slot_payload(
-    "edit_mode_target",
-    target_one_slot_id,
-    "edit_mode_custom",
-    custom_key_slot_id,
-):
-    raise AssertionError("Could not move a payload between rails.")
-_assert_slot_payload(
-    "edit_mode_target",
-    target_one_slot_id,
-    label=edit_mode.EMPTY_SLOT_LABEL,
-    action="",
-    key_label="4",
-)
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    label="One",
-    action="maya.tool.move",
-    key_label="3",
-)
-if not host.move_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    "edit_mode_custom",
-    custom_rotate_slot_id,
-):
-    raise AssertionError("Could not swap payloads within a rail.")
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    label="Rot",
-    action="maya.tool.rotate",
-    key_label="3",
-)
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_rotate_slot_id,
-    label="One",
-    action="maya.tool.move",
-    key_label="2",
-)
-if not host.clear_slot_payload("edit_mode_custom", custom_key_slot_id):
-    raise AssertionError("Could not clear a payload after a swap.")
-_assert_slot_payload(
-    "edit_mode_custom",
-    custom_key_slot_id,
-    label=edit_mode.EMPTY_SLOT_LABEL,
-    action="",
-    key_label="3",
-)
-_assert_slot_payload(
-    "edit_mode_custom",
-    "edit_mode_custom.move",
-    label="Move",
-    action="maya.tool.move",
-    key_label="1",
-)
-
 save_dir = output_path.parent.parent / "user_presets"
 saved_path = actionrail.save_edit_mode_layout(user_preset_dir=save_dir)
 saved_spec = actionrail.load_user_preset("edit_mode_custom", preset_dir=save_dir)
@@ -535,7 +361,6 @@ if not screenshot_saved or pixmap.width() <= 0 or pixmap.height() <= 0:
 result = {
     "edit_mode_enabled": actionrail.edit_mode_state().enabled,
     "grid_size": actionrail.edit_mode_state().settings.grid_size,
-    "options_preset_id": actionrail.edit_mode_state().options_preset_id,
     "rail_count": len(host.frames),
     "saved_layout_offset": list(saved_spec.layout.offset),
     "saved_layout_path": str(saved_path),

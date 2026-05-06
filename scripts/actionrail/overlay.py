@@ -20,6 +20,7 @@ from .spec import StackSpec
 from .state import snapshot
 from .widgets import (
     PredicateRefreshResult,
+    SlotEditCallbacks,
     build_collapsed_handle,
     build_transform_stack,
     refresh_predicate_state,
@@ -379,6 +380,7 @@ class ViewportOverlayHost:
         cleanup_overlay_widgets(self.parent, spec.id, self.qt)
         self._floating = self.window_parent is not None
         self._collapsed = bool(spec.collapse.enabled and spec.collapse.default_collapsed)
+        self._slot_edit_unlocked = False
         self._runtime_key_labels: dict[str, str] = {}
         self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
@@ -397,6 +399,7 @@ class ViewportOverlayHost:
                 self.registry,
                 state_snapshot=state_snapshot,
                 cmds_module=self.cmds,
+                slot_edit_callbacks=self._slot_edit_callbacks(),
             )
         widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{self.spec.id}")
         with suppress(Exception):
@@ -543,6 +546,58 @@ class ViewportOverlayHost:
         if self.widget is None or getattr(self, "_collapsed", False):
             return 0
         return set_slot_key_label(self.widget, slot_id, key_label)
+
+    def set_slot_edit_unlocked(self, unlocked: bool) -> bool:
+        """Toggle Normal Mode slot payload editing for this active rail."""
+
+        unlocked = bool(unlocked)
+        if self._slot_edit_unlocked == unlocked:
+            return True
+        self._slot_edit_unlocked = unlocked
+        self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
+        return True
+
+    def slot_edit_unlocked(self) -> bool:
+        """Return whether Normal Mode slot payload editing is active."""
+
+        return bool(getattr(self, "_slot_edit_unlocked", False))
+
+    def assign_slot_action_payload(self, slot_id: str, action_id: str) -> bool:
+        """Assign an action payload to a stable slot while the rail is unlocked."""
+
+        if not self.slot_edit_unlocked():
+            return False
+        try:
+            from .slot_payloads import spec_with_slot_action_payload
+
+            self.spec = spec_with_slot_action_payload(self.spec, slot_id, action_id)
+        except Exception:
+            return False
+        self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
+        return True
+
+    def clear_slot_payload(self, slot_id: str) -> bool:
+        """Clear an action payload from a stable slot while the rail is unlocked."""
+
+        if not self.slot_edit_unlocked():
+            return False
+        try:
+            from .slot_payloads import spec_with_empty_slot_payload
+
+            self.spec = spec_with_empty_slot_payload(self.spec, slot_id)
+        except Exception:
+            return False
+        self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
+        return True
+
+    def _slot_edit_callbacks(self) -> SlotEditCallbacks:
+        return SlotEditCallbacks(
+            unlocked=bool(getattr(self, "_slot_edit_unlocked", False)),
+            unlock_rail=lambda: self.set_slot_edit_unlocked(True),
+            lock_rail=lambda: self.set_slot_edit_unlocked(False),
+            assign_action=self.assign_slot_action_payload,
+            clear_slot=self.clear_slot_payload,
+        )
 
     def expand(self) -> bool:
         """Expand this rail when its collapsed edge handle is activated."""

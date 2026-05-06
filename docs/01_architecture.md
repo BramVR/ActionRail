@@ -63,19 +63,21 @@ Long-term ActionRail authoring should follow the WoW-style customization roadmap
 
 Conceptual states:
 
-- **Normal Mode**: rails execute actions; the overlay host avoids viewport-sized
-  transparent hit areas so normal Maya viewport interaction remains available
-  outside visible controls.
+- **Normal Mode**: rails execute actions; active rails can be explicitly
+  unlocked for slot payload assignment/clear and locked again for normal action
+  execution. The overlay host avoids viewport-sized transparent hit areas so
+  normal Maya viewport interaction remains available outside visible controls.
 - **Edit Mode**: rails switch into a layout-map view with labeled translucent
   frame rectangles, outlines, anchors, handles, optional placement grid overlay,
-  optional snap-to-grid, snap guides, safe margins, and per-rail settings.
+  optional snap-to-grid, snap guides, and safe margins. Edit Mode is for rail
+  layout, not slot payload editing.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.
 
 The first Edit Mode shell is implemented in `actionrail.edit_mode`: it discovers
 active runtime rails, draws their edit footprints over a grid, supports
-left-click selection, right-click options routing, Grid Size, Snap to Grid,
-Sticky Frames, lock/source labels, and non-persistent X/Y nudging for unlocked
-rails. See `docs/08_edit_mode.md` for current user behavior and limits.
+left-click selection, Grid Size, Snap to Grid, Sticky Frames, lock/source
+labels, and non-persistent X/Y nudging for unlocked rails. See
+`docs/08_edit_mode.md` for current user behavior and limits.
 
 The remaining customization layers build on the declarative MVP, but the spec
 and action registry should continue to preserve stable slot ids, key labels,

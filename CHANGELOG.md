@@ -43,10 +43,10 @@
   context is active, while one-shot actions such as Set Key remain inactive.
 - Polished Edit Mode guide feedback for the 2.6 authoring pass: Sticky Frames
   now draws axis-aligned alignment guides instead of diagonal hints.
-- Replaced the risky Edit Mode slot add/remove/reorder workflow with stable
-  slot containers: frame options now expose an action palette, selected slots
-  report their target, payloads can be assigned/moved/swapped/cleared, and slot
-  key labels remain attached to the container.
+- Removed the Edit Mode frame options popover and moved slot payload editing
+  out of Edit Mode. Active rails now expose Normal Mode lock/unlock helpers so
+  slot payloads can be assigned or cleared from the rendered rail while Edit
+  Mode stays focused on whole-rail layout.
 - Darkened locked/no-action slots so generated empty Quick Create buttons read
   more like recessed sockets while keeping the existing square shape.
 - Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows

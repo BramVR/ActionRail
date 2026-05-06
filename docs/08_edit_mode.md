@@ -9,20 +9,18 @@ read_when:
 # Edit Mode
 
 Edit Mode is ActionRail's global authoring state for inspecting and adjusting
-viewport rail layouts. Normal Mode executes rail actions; Edit Mode draws an
-edit-only layout map over the active Maya viewport so rails can be selected and
-positioned without triggering their buttons.
+viewport rail layouts. Normal Mode executes rail actions and owns slot payload
+editing through rail lock/unlock controls; Edit Mode draws an edit-only layout
+map over the active Maya viewport so whole rails can be selected and positioned
+without triggering their buttons.
 
 The Edit Mode shell and Phase 2 step 2.5 layout persistence/direct
 manipulation surface are implemented and Maya-smoke verified. Phase 2 step 2.6
-has started: frame options now toggle real collapsible edge-tab state instead
-of the earlier opacity-only placeholder, and the first collapse path is
-Maya-smoke verified. The current 2.6 polish pass also improves collapsed-handle
-edge placement and hit targets. Guide/slot-affordance work now draws
-axis-aligned Sticky Frames guides and changes slot editing to stable slot
-containers: key labels stay on the slot, while the action payload can be
-assigned, moved, swapped, or cleared. The latest Edit Mode smoke covers this
-behavior in Maya.
+has started: the first collapse path is Maya-smoke verified, collapsed-handle
+edge placement and hit targets are improved, and Sticky Frames now draws
+axis-aligned alignment guides. The old right-click frame options popover and
+Edit Mode slot payload editor have been removed so Edit Mode stays focused on
+rail layout only.
 
 ## What It Shows
 
@@ -63,21 +61,26 @@ Inside Edit Mode:
 
 - left-click and drag an unlocked rail frame to move it directly
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
-- right-click a rail frame to open options routing for that rail
-- select a rail slot to make frame options report the target slot
-- drag an action from the frame options action palette onto an unlocked slot to
-  replace that slot's payload
-- Shift+left-drag a populated unlocked slot to move its payload to another
-  slot, or drag it out of the bar to clear it
-- use frame options to collapse an edge-anchored rail to a small handle or
-  expand it again
 - enable Grid to show or hide the edit-only grid
 - adjust Grid Size to change the grid spacing
 - enable Snap to Grid to snap authoring movement to the grid
 - enable Sticky Frames to align moved rails to nearby rail edges
-- use Save Position from the right-click options popover, or
-  `save_edit_mode_layout()`, to persist an unlocked runtime/user rail as a user
-  preset or an unlocked built-in/studio rail as a user override
+- use `save_edit_mode_layout()` to persist an unlocked runtime/user rail as a
+  user preset or an unlocked built-in/studio rail as a user override
+
+Outside Edit Mode, use Normal Mode rail slot editing when the goal is to add or
+remove an action payload from a slot. The public helpers are:
+
+```python
+import actionrail
+
+actionrail.unlock_rail_slots("my_user_rail")
+actionrail.lock_rail_slots("my_user_rail")
+```
+
+In Normal Mode, the rendered slot context menu can unlock the active rail. Once
+unlocked, that same menu can assign an action payload or clear the slot. Lock
+the rail again when the bar should return to normal action execution.
 
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
@@ -111,23 +114,23 @@ State objects:
 
 - `EditModeSettings`: `show_grid`, `snap_to_grid`, `sticky_frames`,
   `grid_size`
-- `EditModeState`: `enabled`, `selected_preset_id`, `settings`, `rail_count`,
-  `options_preset_id`, `selected_slot_id`
+- `EditModeState`: `enabled`, `selected_preset_id`, `settings`, `rail_count`
 - `RailFrameInfo`: viewport-local frame geometry, layout metadata, lock state,
   collapse state, and source layer
-- `RailSlotInfo`: viewport-local slot geometry, stable slot id, visible label,
-  action payload, lock state, and payload-present state
 
 Implementation ownership:
 
 - `scripts/actionrail/edit_mode.py`: state model, layout-map overlay, grid,
-  frame/slot selection, options routing, payload assignment/move/clear, and
-  rail nudging
+  frame selection, rail nudging, and layout saves
+- `scripts/actionrail/overlay.py`: Normal Mode rail slot-edit lock state and
+  runtime payload assignment/clear hooks
+- `scripts/actionrail/slot_payloads.py`: stable slot payload assignment helpers
+- `scripts/actionrail/widgets.py`: rendered rail buttons and Normal Mode slot
+  edit context menus
 - `scripts/actionrail/maya_ui.py`: Maya menu entry point
 - `tests/test_edit_mode.py`: pure Python API/model coverage
 - `tests/maya_smoke/actionrail_edit_mode_smoke.py`: Maya layout-map,
-  selection, movement, sticky-frame, slot-payload editing, right-click routing,
-  collapse, and screenshot smoke
+  selection, movement, sticky-frame, collapse, save, and screenshot smoke
 
 ## Current Limits
 
@@ -143,15 +146,13 @@ Implemented now:
 - snap-to-grid and Sticky Frames during movement
 - selected-frame snap/spacing guide rendering with axis-aligned Sticky Frames
   alignment hints
-- right-click frame options routing marker
-- frame options action palette for replacing selected slot payloads
-- stable slot containers where ids and key labels stay fixed while payloads
-  move, swap, or clear
-- edge-tab collapse/expand control backed by persisted `collapse` settings and
-  larger edge-clamped collapsed handles
+- edge-tab collapse/expand runtime support backed by persisted `collapse`
+  settings and larger edge-clamped collapsed handles
 - Save Position for unlocked runtime/user rails
 - Save Position user-overrides for unlocked built-in and studio rails
 - public layout-save helper that persists adjusted offsets to user presets
+- Normal Mode active-rail lock/unlock helpers for slot payload assignment and
+  clearing
 - Maya menu toggle
 - Maya screenshot verification
 

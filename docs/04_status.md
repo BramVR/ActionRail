@@ -19,8 +19,10 @@ studio layout override saves. Phase 2 step 2.6 is now in progress with the
 first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
 verified, a Maya-smoke verified handle/publish polish pass, and a locally
 verified validation UX/saved-preset publish follow-up with Quick Create Maya
-smoke coverage for the custom-store Save + Publish shelf command path. A first
-guide/slot-edit affordance polish pass is locally verified.
+smoke coverage for the custom-store Save + Publish shelf command path. The
+latest local cleanup keeps Edit Mode layout-only by removing the frame options
+popover and moving slot payload add/clear editing to Normal Mode rail
+lock/unlock helpers.
 
 Working surface:
 
@@ -40,13 +42,14 @@ Working surface:
   raised beyond the template's icon-backed slots.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
-  snap/spacing guides, axis-aligned sticky alignment guides, right-click
-  options, X/Y movement for unlocked rails, stable slot containers with action
-  palette assignment, payload move/swap/clear behavior, selected-slot status,
-  key labels retained on slot containers, real edge-tab collapse/expand
-  controls, safe movement clamps, Save Position/user-preset persistence for unlocked
-  runtime/user rails, and user override saves/resolution for unlocked built-in
-  and studio rails.
+  snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
+  unlocked rails, safe movement clamps, Save Position/user-preset persistence
+  for unlocked runtime/user rails, and user override saves/resolution for
+  unlocked built-in and studio rails. Edit Mode no longer opens the right-click
+  frame options window and no longer edits slot payloads.
+- Normal Mode active rails can be unlocked and locked for slot payload editing;
+  while unlocked, rendered slot context menus can assign an action payload or
+  clear the slot without entering Edit Mode.
 - Optional collapsible rail schema/runtime: JSON `collapse` settings for edge,
   handle icon, reveal trigger, and default collapsed state; Quick Create
   edge-tab defaults/settings; collapsed handle-only Qt overlays; click/hover
@@ -98,8 +101,8 @@ $env:PYTHONPATH = "scripts"
    and Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
    verified; the validation UX/publish follow-up is locally verified, and Quick
    Create Maya smoke covers the custom-store Save + Publish shelf command path.
-   The guide/slot-affordance polish pass is Maya-smoke verified, including the
-   stable slot payload model.
+   Edit Mode slot-payload controls have since moved out of Edit Mode and into
+   Normal Mode rail lock/unlock helpers.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -108,7 +111,8 @@ $env:PYTHONPATH = "scripts"
   screenshot verified.
 - Quick Create can preview/save/load user presets.
 - Edit Mode can inspect active rails, select frames, show grid/snap/sticky
-  controls, move unlocked rails in-session, and route right-click options.
+  controls, and move unlocked rails in-session without opening a frame options
+  popover.
 - Edit Mode can save adjusted unlocked runtime/user rail specs and unlocked
   built-in/studio user override presets through `save_edit_mode_layout()` and
   the right-click Save Position control.
@@ -140,11 +144,10 @@ $env:PYTHONPATH = "scripts"
   tool actions during draft conversion, so newly saved Move/Rotate/Scale tool
   slots reflect Maya's active tool context without marking one-shot commands
   like Set Key active.
-- The May 6 guide/slot-affordance polish pass replaces Sticky Frames diagonal
-  hints with axis-aligned alignment guides and replaces slot reorder controls
-  with stable slot containers, action-palette assignment, selected-slot status,
-  and payload move/swap/clear behavior that keeps hotkey labels attached to the
-  slot container.
+- The May 6 Edit Mode cleanup removes the frame options popover and the
+  Edit Mode slot payload surface. Slot payload assignment/clear now belongs to
+  Normal Mode rail lock/unlock helpers, while Edit Mode keeps the
+  axis-aligned Sticky Frames layout guides.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -181,9 +184,7 @@ $env:PYTHONPATH = "scripts"
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
   -> passed; verified layout-map overlay, Grid Size 64, Snap to Grid, Sticky
   Frames, left-click selection, X coordinate movement, sticky-frame alignment,
-  right-click options routing, action palette presence, retired slot reorder
-  controls absent, selected-slot status, stable slot ids/key labels through
-  payload assign/clear/move/swap/clear, collapsed handle-only widget sizing,
+  collapsed handle-only widget sizing,
   collapsed-state save persistence, `run_slot()` while collapsed, handle-click
   expansion, saved layout offset `[51, -133]`, user preset save path
   `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and screenshot capture at
@@ -205,8 +206,8 @@ $env:PYTHONPATH = "scripts"
   hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
   icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
   transform-stack state. Edit Mode smoke covered the axis-aligned Sticky Frames
-  position path, stable slot payload editing, collapsed-state persistence,
-  handle expansion, and screenshot capture; Quick Create smoke verifies Save +
+  position path, collapsed-state persistence, handle expansion, and screenshot
+  capture; Quick Create smoke verifies Save +
   Publish creates four slot runtime commands plus a preset shelf toggle.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
@@ -249,18 +250,18 @@ $env:PYTHONPATH = "scripts"
   icon-backed template slots plus six blank slots, Buttons Per Row=5 wrapping
   to `[2, 5]`, Button Size updating live preview scale to `1.25`, Save +
   Publish runtime commands, shelf toggle, and screenshot capture.
-- Latest focused Edit Mode validation:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py tests\\test_hotkeys.py`
-  -> 87 passed.
-- Latest focused Edit Mode Ruff:
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py tests\\test_edit_mode.py`
+- Latest focused Edit/Normal Mode validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py tests\\test_overlay.py tests\\test_widgets.py`
+  -> 110 passed.
+- Latest focused Edit/Normal Mode Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py scripts\\actionrail\\overlay.py scripts\\actionrail\\widgets.py scripts\\actionrail\\runtime.py scripts\\actionrail\\slot_payloads.py tests\\test_edit_mode.py tests\\test_overlay.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py`
   -> all checks passed.
 - Latest Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
-  -> passed; verified action palette presence, retired slot reorder controls
-  absent, selected-slot status, stable slot ids/key labels through payload
-  assign/clear/move/swap/clear, layout movement, save, collapse persistence,
-  `run_slot()` while collapsed, handle expansion, and screenshot capture.
+  -> passed; verified layout-map overlay, frame selection/movement, Grid Size
+  64, Snap to Grid, Sticky Frames alignment, layout save, collapse-state save
+  persistence, `run_slot()` while collapsed, handle-click expansion, screenshot
+  capture, and absence of the removed frame options payload path.
 
 ## Decisions
 

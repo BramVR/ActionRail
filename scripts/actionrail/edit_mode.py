@@ -8,7 +8,6 @@ Tests: `tests/test_edit_mode.py` and `tests/maya_smoke/actionrail_edit_mode_smok
 
 from __future__ import annotations
 
-import json
 from contextlib import suppress
 from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
@@ -26,30 +25,13 @@ MAX_GRID_SIZE = 512
 EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
 EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
 POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
-FRAME_OPTIONS_POPOVER_OBJECT_NAME = "ActionRailEditModeFrameOptionsPopover"
 EMPTY_SLOT_LABEL = "New"
-_ACTION_DRAG_MIME = "application/x-actionrail-action-id"
-_SLOT_DRAG_MIME = "application/x-actionrail-slot-payload"
-_ACTION_ICON_DEFAULTS = {
-    "maya.tool.move": "maya.move",
-    "maya.tool.translate": "maya.move",
-    "maya.tool.rotate": "maya.rotate",
-    "maya.tool.scale": "maya.scale",
-    "maya.anim.set_key": "maya.set_key",
-}
-_PERSISTENT_ACTION_PREDICATES = {
-    "maya.tool.move": "maya.tool == move",
-    "maya.tool.translate": "maya.tool == move",
-    "maya.tool.rotate": "maya.tool == rotate",
-    "maya.tool.scale": "maya.tool == scale",
-}
 
 __all__ = [
     "DEFAULT_GRID_SIZE",
     "EMPTY_SLOT_LABEL",
     "EDIT_OVERLAY_OBJECT_NAME",
     "EDIT_PANEL_OBJECT_NAME",
-    "FRAME_OPTIONS_POPOVER_OBJECT_NAME",
     "POSITION_POPOVER_OBJECT_NAME",
     "EditModeSettings",
     "EditModeState",
@@ -171,24 +153,9 @@ class _GuideSegment:
     kind: str
 
 
-@dataclass(frozen=True)
-class _SlotPayload:
-    """Action payload that can move between stable slot containers."""
-
-    label: str = EMPTY_SLOT_LABEL
-    action: str = ""
-    tone: str = "neutral"
-    tooltip: str = ""
-    icon: str = ""
-    enabled_when: str = ""
-    active_when: str = ""
-
-
 _EDIT_HOST: EditModeOverlayHost | None = None
 _SETTINGS = EditModeSettings()
 _SELECTED_PRESET_ID = ""
-_OPTIONS_PRESET_ID = ""
-_SELECTED_SLOT_ID = ""
 
 
 def enter_edit_mode(
@@ -213,13 +180,11 @@ def enter_edit_mode(
 def exit_edit_mode() -> EditModeState:
     """Close the Edit Mode overlay and return to normal action execution."""
 
-    global _EDIT_HOST, _SELECTED_PRESET_ID, _OPTIONS_PRESET_ID, _SELECTED_SLOT_ID
+    global _EDIT_HOST, _SELECTED_PRESET_ID
     if _EDIT_HOST is not None:
         _EDIT_HOST.close()
     _EDIT_HOST = None
     _SELECTED_PRESET_ID = ""
-    _OPTIONS_PRESET_ID = ""
-    _SELECTED_SLOT_ID = ""
     return edit_mode_state()
 
 
@@ -287,9 +252,8 @@ def save_edit_mode_layout(
 def select_edit_mode_rail(preset_id: str) -> EditModeState:
     """Select an active rail in Edit Mode."""
 
-    global _SELECTED_PRESET_ID, _SELECTED_SLOT_ID
+    global _SELECTED_PRESET_ID
     _SELECTED_PRESET_ID = preset_id
-    _SELECTED_SLOT_ID = ""
     if _EDIT_HOST is not None:
         _EDIT_HOST.select_rail(preset_id)
     return edit_mode_state()
@@ -306,8 +270,6 @@ def edit_mode_state() -> EditModeState:
         selected_preset_id=_SELECTED_PRESET_ID,
         settings=_SETTINGS,
         rail_count=rail_count,
-        options_preset_id=_OPTIONS_PRESET_ID,
-        selected_slot_id=_SELECTED_SLOT_ID,
     )
 
 
@@ -338,7 +300,6 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.window_parent = maya_main_window(self.qt)
         self.settings = (settings or _SETTINGS).normalized()
         self.frames: tuple[RailFrameInfo, ...] = ()
-        self.slot_frames: tuple[RailSlotInfo, ...] = ()
         self._original_offsets: dict[str, tuple[int, int]] = {}
         self._qt_widget_is_valid = _qt_widget_is_valid
         self._map_to_global = _map_to_global
@@ -402,20 +363,13 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.refresh()
 
     def refresh(self) -> None:
-        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID, _SELECTED_SLOT_ID
+        global _SELECTED_PRESET_ID
         self.frames = tuple(_rail_frame_infos(self.qt, self.parent))
-        self.slot_frames = tuple(_rail_slot_infos(self.qt, self.parent, self.frames))
         for frame in self.frames:
             self._original_offsets.setdefault(frame.preset_id, frame.offset)
         active_preset_ids = {frame.preset_id for frame in self.frames}
-        active_slot_ids = {slot.slot_id for slot in self.slot_frames}
         if _SELECTED_PRESET_ID not in active_preset_ids:
             _SELECTED_PRESET_ID = ""
-            _SELECTED_SLOT_ID = ""
-        if _OPTIONS_PRESET_ID not in active_preset_ids:
-            _OPTIONS_PRESET_ID = ""
-        if _SELECTED_SLOT_ID not in active_slot_ids:
-            _SELECTED_SLOT_ID = ""
         self.widget.refresh_from_host()
 
     def set_settings(self, settings: EditModeSettings) -> None:
@@ -423,44 +377,10 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.widget.refresh_from_host()
 
     def select_rail(self, preset_id: str) -> None:
-        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID, _SELECTED_SLOT_ID
+        global _SELECTED_PRESET_ID
         _SELECTED_PRESET_ID = (
             preset_id if any(frame.preset_id == preset_id for frame in self.frames) else ""
         )
-        _SELECTED_SLOT_ID = ""
-        if _OPTIONS_PRESET_ID and _OPTIONS_PRESET_ID != _SELECTED_PRESET_ID:
-            _OPTIONS_PRESET_ID = ""
-        self.widget.refresh_from_host()
-
-    def select_slot(self, preset_id: str, slot_id: str) -> None:
-        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID, _SELECTED_SLOT_ID
-        if not any(
-            slot.preset_id == preset_id and slot.slot_id == slot_id
-            for slot in self.slot_frames
-        ):
-            return
-        _SELECTED_PRESET_ID = preset_id
-        _SELECTED_SLOT_ID = slot_id
-        if _OPTIONS_PRESET_ID and preset_id != _OPTIONS_PRESET_ID:
-            _OPTIONS_PRESET_ID = ""
-        self.widget.refresh_from_host()
-
-    def open_options(self, preset_id: str, slot_id: str = "") -> None:
-        global _OPTIONS_PRESET_ID, _SELECTED_PRESET_ID, _SELECTED_SLOT_ID
-        _SELECTED_PRESET_ID = (
-            preset_id if any(frame.preset_id == preset_id for frame in self.frames) else ""
-        )
-        _OPTIONS_PRESET_ID = _SELECTED_PRESET_ID
-        if slot_id and any(
-            slot.preset_id == preset_id and slot.slot_id == slot_id
-            for slot in self.slot_frames
-        ):
-            _SELECTED_SLOT_ID = slot_id
-        elif not any(
-            slot.preset_id == preset_id and slot.slot_id == _SELECTED_SLOT_ID
-            for slot in self.slot_frames
-        ):
-            _SELECTED_SLOT_ID = ""
         self.widget.refresh_from_host()
 
     def nudge_selected(self, dx: int, dy: int) -> None:
@@ -517,108 +437,6 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             return
         _set_host_offset(host, original)
         self.refresh()
-
-    def assign_slot_action_payload(
-        self,
-        preset_id: str,
-        slot_id: str,
-        action_id: str,
-    ) -> bool:
-        host = _runtime_hosts().get(preset_id)
-        spec = getattr(host, "spec", None)
-        if host is None or spec is None:
-            return False
-        frame = self.frame_for_preset(preset_id)
-        if frame is None or frame.locked:
-            return False
-        index = _slot_item_index(spec.items, slot_id)
-        if index is None:
-            return False
-        payload = _slot_payload_from_action(action_id)
-        _replace_host_spec(
-            host,
-            _spec_with_item(
-                spec,
-                index,
-                _item_with_payload(spec.items[index], payload),
-            ),
-        )
-        self.refresh()
-        return True
-
-    def clear_slot_payload(self, preset_id: str, slot_id: str) -> bool:
-        host = _runtime_hosts().get(preset_id)
-        spec = getattr(host, "spec", None)
-        if host is None or spec is None:
-            return False
-        frame = self.frame_for_preset(preset_id)
-        if frame is None or frame.locked:
-            return False
-        index = _slot_item_index(spec.items, slot_id)
-        if index is None:
-            return False
-        _replace_host_spec(host, _spec_with_item(spec, index, _empty_slot_item(spec.items[index])))
-        self.refresh()
-        return True
-
-    def move_slot_payload(
-        self,
-        source_preset_id: str,
-        source_slot_id: str,
-        target_preset_id: str,
-        target_slot_id: str,
-    ) -> bool:
-        if source_preset_id == target_preset_id and source_slot_id == target_slot_id:
-            return False
-        hosts = _runtime_hosts()
-        source_host = hosts.get(source_preset_id)
-        target_host = hosts.get(target_preset_id)
-        source_spec = getattr(source_host, "spec", None)
-        target_spec = getattr(target_host, "spec", None)
-        if source_host is None or target_host is None or source_spec is None or target_spec is None:
-            return False
-        source_frame = self.frame_for_preset(source_preset_id)
-        target_frame = self.frame_for_preset(target_preset_id)
-        if (
-            source_frame is None
-            or target_frame is None
-            or source_frame.locked
-            or target_frame.locked
-        ):
-            return False
-        source_index = _slot_item_index(source_spec.items, source_slot_id)
-        target_index = _slot_item_index(target_spec.items, target_slot_id)
-        if source_index is None or target_index is None:
-            return False
-        source_item = source_spec.items[source_index]
-        target_item = target_spec.items[target_index]
-        if not _item_has_payload(source_item):
-            return False
-
-        if source_host is target_host:
-            items = list(source_spec.items)
-            items[source_index] = _item_with_payload(source_item, _payload_from_item(target_item))
-            items[target_index] = _item_with_payload(target_item, _payload_from_item(source_item))
-            _replace_host_spec(source_host, dataclass_replace(source_spec, items=tuple(items)))
-        else:
-            _replace_host_spec(
-                source_host,
-                _spec_with_item(
-                    source_spec,
-                    source_index,
-                    _item_with_payload(source_item, _payload_from_item(target_item)),
-                ),
-            )
-            _replace_host_spec(
-                target_host,
-                _spec_with_item(
-                    target_spec,
-                    target_index,
-                    _item_with_payload(target_item, _payload_from_item(source_item)),
-                ),
-            )
-        self.refresh()
-        return True
 
     def toggle_selected_edge_tab(self) -> bool:
         selected = self.selected_frame()
@@ -709,15 +527,6 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
     def selected_frame(self) -> RailFrameInfo | None:
         return self.frame_for_preset(_SELECTED_PRESET_ID)
 
-    def slot_for_position(self, x_pos: int, y_pos: int) -> RailSlotInfo | None:
-        return _topmost_slot_at(self.slot_frames, x_pos, y_pos)
-
-    def selected_slot(self) -> RailSlotInfo | None:
-        for slot in self.slot_frames:
-            if slot.preset_id == _SELECTED_PRESET_ID and slot.slot_id == _SELECTED_SLOT_ID:
-                return slot
-        return None
-
 
 class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
     """Factory wrapper around the Qt canvas class."""
@@ -731,22 +540,17 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                 self._host = edit_host
                 self._drag_preset_id = ""
                 self._drag_offset = (0, 0)
-                self._slot_drag_source: RailSlotInfo | None = None
-                self._slot_drag_start = qt.QtCore.QPoint()
                 self.setAttribute(qt.QtCore.Qt.WA_TranslucentBackground, True)
                 self.setMouseTracking(True)
-                self.setAcceptDrops(True)
+                self.setAcceptDrops(False)
                 self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
                 self._panel = _EditModePanel(self)
                 self._popover = _PositionPopover(self)
-                self._options_popover = _FrameOptionsPopover(self)
                 self._popover.hide()
-                self._options_popover.hide()
 
             def refresh_from_host(self) -> None:
                 self._panel.sync()
                 self._sync_popover()
-                self._sync_options_popover()
                 self.update()
 
             def paintEvent(self, event: Any) -> None:  # noqa: N802
@@ -773,44 +577,19 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
 
             def mousePressEvent(self, event: Any) -> None:  # noqa: N802
                 frame = self._frame_at_event(event)
-                slot = self._slot_at_event(event)
                 if frame is None:
                     self._host.select_rail("")
                     self._drag_preset_id = ""
-                    self._slot_drag_source = None
                     event.accept()
                     return
-                if event.button() == qt.QtCore.Qt.RightButton:
-                    self._host.open_options(frame.preset_id, slot.slot_id if slot else "")
-                elif slot is not None:
-                    self._host.select_slot(slot.preset_id, slot.slot_id)
-                    if (
-                        event.modifiers() & qt.QtCore.Qt.ShiftModifier
-                        and not slot.locked
-                        and slot.has_payload
-                    ):
-                        self._slot_drag_source = slot
-                        self._slot_drag_start = event.pos()
-                    elif not frame.locked:
-                        point = event.pos()
-                        self._drag_preset_id = frame.preset_id
-                        self._drag_offset = (point.x() - frame.x, point.y() - frame.y)
-                else:
-                    self._host.select_rail(frame.preset_id)
-                    if not frame.locked:
-                        point = event.pos()
-                        self._drag_preset_id = frame.preset_id
-                        self._drag_offset = (point.x() - frame.x, point.y() - frame.y)
+                self._host.select_rail(frame.preset_id)
+                if event.button() == qt.QtCore.Qt.LeftButton and not frame.locked:
+                    point = event.pos()
+                    self._drag_preset_id = frame.preset_id
+                    self._drag_offset = (point.x() - frame.x, point.y() - frame.y)
                 event.accept()
 
             def mouseMoveEvent(self, event: Any) -> None:  # noqa: N802
-                if self._slot_drag_source is not None:
-                    distance = (event.pos() - self._slot_drag_start).manhattanLength()
-                    if distance >= qt.QtWidgets.QApplication.startDragDistance():
-                        self._start_slot_payload_drag(self._slot_drag_source)
-                        self._slot_drag_source = None
-                    event.accept()
-                    return
                 if not self._drag_preset_id:
                     event.accept()
                     return
@@ -824,46 +603,7 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
 
             def mouseReleaseEvent(self, event: Any) -> None:  # noqa: N802
                 self._drag_preset_id = ""
-                self._slot_drag_source = None
                 event.accept()
-
-            def dragEnterEvent(self, event: Any) -> None:  # noqa: N802
-                self._accept_payload_drag(event)
-
-            def dragMoveEvent(self, event: Any) -> None:  # noqa: N802
-                self._accept_payload_drag(event)
-
-            def dropEvent(self, event: Any) -> None:  # noqa: N802
-                slot = self._slot_at_event(event)
-                if slot is None or slot.locked:
-                    event.ignore()
-                    return
-                mime = event.mimeData()
-                if mime.hasFormat(_ACTION_DRAG_MIME):
-                    action_id = bytes(mime.data(_ACTION_DRAG_MIME)).decode("utf-8")
-                    ok = self._host.assign_slot_action_payload(
-                        slot.preset_id,
-                        slot.slot_id,
-                        action_id,
-                    )
-                    drop_action = qt.QtCore.Qt.CopyAction
-                elif mime.hasFormat(_SLOT_DRAG_MIME):
-                    payload = json.loads(bytes(mime.data(_SLOT_DRAG_MIME)).decode("utf-8"))
-                    ok = self._host.move_slot_payload(
-                        str(payload.get("preset_id", "")),
-                        str(payload.get("slot_id", "")),
-                        slot.preset_id,
-                        slot.slot_id,
-                    )
-                    drop_action = qt.QtCore.Qt.MoveAction
-                else:
-                    ok = False
-                    drop_action = qt.QtCore.Qt.IgnoreAction
-                if ok:
-                    event.setDropAction(drop_action)
-                    event.accept()
-                    return
-                event.ignore()
 
             def resizeEvent(self, event: Any) -> None:  # noqa: N802
                 self._panel.sync()
@@ -872,57 +612,15 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                     18,
                 )
                 self._sync_popover()
-                self._sync_options_popover()
                 super().resizeEvent(event)
 
             def _frame_at_event(self, event: Any) -> RailFrameInfo | None:
                 point = event.pos()
                 return _topmost_frame_at(self._host.frames, point.x(), point.y())
 
-            def _slot_at_event(self, event: Any) -> RailSlotInfo | None:
-                point = event.pos()
-                return self._host.slot_for_position(point.x(), point.y())
-
             def _sync_popover(self) -> None:
                 frame = self._host.selected_frame()
                 self._popover.sync(frame)
-
-            def _sync_options_popover(self) -> None:
-                frame = self._host.selected_frame()
-                if frame is not None and frame.preset_id != _OPTIONS_PRESET_ID:
-                    frame = None
-                self._options_popover.sync(frame)
-
-            def _accept_payload_drag(self, event: Any) -> None:
-                mime = event.mimeData()
-                if not (mime.hasFormat(_ACTION_DRAG_MIME) or mime.hasFormat(_SLOT_DRAG_MIME)):
-                    event.ignore()
-                    return
-                slot = self._slot_at_event(event)
-                if slot is None or slot.locked:
-                    event.ignore()
-                    return
-                if mime.hasFormat(_ACTION_DRAG_MIME):
-                    event.setDropAction(qt.QtCore.Qt.CopyAction)
-                else:
-                    event.setDropAction(qt.QtCore.Qt.MoveAction)
-                event.accept()
-
-            def _start_slot_payload_drag(self, slot: RailSlotInfo) -> None:
-                drag = qt.QtGui.QDrag(self)
-                mime = qt.QtCore.QMimeData()
-                mime.setData(
-                    _SLOT_DRAG_MIME,
-                    json.dumps(
-                        {"preset_id": slot.preset_id, "slot_id": slot.slot_id},
-                        sort_keys=True,
-                    ).encode("utf-8"),
-                )
-                mime.setText(slot.label)
-                drag.setMimeData(mime)
-                result = drag.exec(qt.QtCore.Qt.MoveAction)
-                if result != qt.QtCore.Qt.MoveAction:
-                    self._host.clear_slot_payload(slot.preset_id, slot.slot_id)
 
         return _Canvas(host)
 
@@ -996,7 +694,6 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                     _panel_summary_text(
                         selected,
                         len(self._owner._host.frames),
-                        _OPTIONS_PRESET_ID,
                     )
                 )
                 self.lock_button.setText(_lock_button_text(selected))
@@ -1112,149 +809,6 @@ class _PositionPopover:  # pragma: no cover - covered by Maya smoke tests.
         return _Popover(canvas)
 
 
-def _ActionPalette(qt: Any) -> Any:  # pragma: no cover - covered by Maya smoke tests.
-    class _Palette(qt.QtWidgets.QListWidget):
-        def __init__(self) -> None:
-            super().__init__()
-            self.setDragEnabled(True)
-            self.setSelectionMode(qt.QtWidgets.QAbstractItemView.SingleSelection)
-            self.setFixedHeight(96)
-            from .actions import create_default_registry
-
-            for action in sorted(create_default_registry().actions(), key=lambda item: item.label):
-                item = qt.QtWidgets.QListWidgetItem(action.label)
-                item.setToolTip(action.tooltip or action.id)
-                item.setData(qt.QtCore.Qt.UserRole, action.id)
-                self.addItem(item)
-
-        def startDrag(self, _supported_actions: Any) -> None:  # noqa: N802
-            item = self.currentItem()
-            if item is None:
-                return
-            action_id = item.data(qt.QtCore.Qt.UserRole)
-            if not isinstance(action_id, str) or not action_id:
-                return
-            drag = qt.QtGui.QDrag(self)
-            mime = qt.QtCore.QMimeData()
-            mime.setData(_ACTION_DRAG_MIME, action_id.encode("utf-8"))
-            mime.setText(item.text())
-            drag.setMimeData(mime)
-            drag.exec(qt.QtCore.Qt.CopyAction)
-
-    return _Palette()
-
-
-class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
-    def __new__(cls, canvas: Any) -> Any:
-        qt = load()
-
-        class _Options(qt.QtWidgets.QFrame):
-            def __init__(self, owner: Any) -> None:
-                super().__init__(owner)
-                self._owner = owner
-                self.setObjectName(FRAME_OPTIONS_POPOVER_OBJECT_NAME)
-                self.setFrameShape(qt.QtWidgets.QFrame.StyledPanel)
-                self.setStyleSheet(_panel_style_sheet())
-                layout = qt.QtWidgets.QGridLayout(self)
-                layout.setContentsMargins(10, 8, 10, 8)
-                layout.setHorizontalSpacing(6)
-                layout.setVerticalSpacing(5)
-                self.title = qt.QtWidgets.QLabel("")
-                self.title.setAlignment(qt.QtCore.Qt.AlignCenter)
-                self.details = qt.QtWidgets.QLabel("")
-                self.details.setWordWrap(True)
-                self.status = qt.QtWidgets.QLabel("")
-                self.status.setWordWrap(True)
-                self.slot_status = qt.QtWidgets.QLabel("")
-                self.slot_status.setWordWrap(True)
-                self.action_label = qt.QtWidgets.QLabel("Actions")
-                self.action_list = _ActionPalette(qt)
-                self.save = qt.QtWidgets.QPushButton("Save Position")
-                self.reset = qt.QtWidgets.QPushButton("Reset Position")
-                self.collapse = qt.QtWidgets.QPushButton("Collapse Edge Tab")
-                self.close_button = qt.QtWidgets.QToolButton()
-                self.close_button.setText("x")
-                layout.addWidget(self.title, 0, 0, 1, 2)
-                layout.addWidget(self.close_button, 0, 2)
-                layout.addWidget(self.details, 1, 0, 1, 3)
-                layout.addWidget(self.status, 2, 0, 1, 3)
-                layout.addWidget(self.save, 3, 0, 1, 3)
-                layout.addWidget(self.reset, 4, 0, 1, 3)
-                layout.addWidget(self.slot_status, 5, 0, 1, 3)
-                layout.addWidget(self.action_label, 6, 0, 1, 3)
-                layout.addWidget(self.action_list, 7, 0, 1, 3)
-                layout.addWidget(self.collapse, 8, 0, 1, 3)
-                self.setFixedWidth(300)
-                self.close_button.clicked.connect(self._close_options)
-                self.save.clicked.connect(self._save_options)
-                self.reset.clicked.connect(self._owner._host.reset_selected_position)
-                self.collapse.clicked.connect(self._collapse_edge_tab)
-
-            def sync(self, frame: RailFrameInfo | None) -> None:
-                if frame is None:
-                    self.hide()
-                    return
-                self.title.setText(f"{frame.label} Options")
-                lock_text = "Locked" if frame.locked else "Unlocked"
-                self.details.setText(
-                    f"{frame.source_layer.title()} rail\n"
-                    f"{frame.anchor}\n"
-                    f"Offset {frame.offset[0]}, {frame.offset[1]} | {lock_text}\n"
-                    f"Collapse {frame.collapse_edge} | "
-                    f"{'collapsed' if frame.collapsed else 'expanded'}"
-                )
-                self.status.setText(_save_status_text(frame))
-                self.slot_status.setText(
-                    _slot_status_text(frame, self._owner._host.selected_slot())
-                )
-                self.save.setEnabled(_can_save_frame(frame))
-                self.reset.setEnabled(not frame.locked)
-                self.action_list.setEnabled(not frame.locked)
-                self.collapse.setEnabled(not frame.locked and _can_toggle_collapse(frame))
-                self.collapse.setText(
-                    "Expand Edge Tab" if frame.collapsed else "Collapse Edge Tab"
-                )
-                self.setFixedHeight(self.sizeHint().height())
-                self.move(
-                    _options_popover_position(
-                        self._owner,
-                        frame,
-                        self.width(),
-                        self.height(),
-                    )
-                )
-                self.show()
-                self.raise_()
-
-            def _close_options(self) -> None:
-                global _OPTIONS_PRESET_ID
-                _OPTIONS_PRESET_ID = ""
-                self._owner.refresh_from_host()
-
-            def _save_options(self) -> None:
-                try:
-                    path = self._owner._host.save_selected_layout()
-                except Exception as exc:
-                    self.status.setText(str(exc))
-                    self.save.setEnabled(False)
-                    self.setFixedHeight(self.sizeHint().height())
-                    return
-                self.status.setText(f"Saved {path.name}")
-                self.setFixedHeight(self.sizeHint().height())
-
-            def _collapse_edge_tab(self) -> None:
-                self._set_action_status(
-                    self._owner._host.toggle_selected_edge_tab(),
-                    "Toggled edge tab",
-                )
-
-            def _set_action_status(self, ok: bool, text: str) -> None:
-                self.status.setText(text if ok else "Action unavailable")
-                self.setFixedHeight(self.sizeHint().height())
-
-        return _Options(canvas)
-
-
 def _rail_frame_infos(qt: Any, edit_parent: Any) -> tuple[RailFrameInfo, ...]:
     frames: list[RailFrameInfo] = []
     for preset_id, host in _runtime_hosts().items():
@@ -1262,62 +816,6 @@ def _rail_frame_infos(qt: Any, edit_parent: Any) -> tuple[RailFrameInfo, ...]:
         if frame is not None:
             frames.append(frame)
     return tuple(frames)
-
-
-def _rail_slot_infos(
-    qt: Any,
-    edit_parent: Any,
-    frames: tuple[RailFrameInfo, ...],
-) -> tuple[RailSlotInfo, ...]:
-    frame_by_preset = {frame.preset_id: frame for frame in frames}
-    slots: list[RailSlotInfo] = []
-    for preset_id, host in _runtime_hosts().items():
-        frame = frame_by_preset.get(preset_id)
-        if frame is None:
-            continue
-        slots.extend(_rail_slot_infos_for_host(qt, edit_parent, frame, host))
-    return tuple(slots)
-
-
-def _rail_slot_infos_for_host(
-    qt: Any,
-    edit_parent: Any,
-    frame: RailFrameInfo,
-    host: Any,
-) -> tuple[RailSlotInfo, ...]:
-    widget = getattr(host, "widget", None)
-    spec = getattr(host, "spec", None)
-    if widget is None or spec is None:
-        return ()
-    item_by_id = {getattr(item, "id", ""): item for item in getattr(spec, "items", ())}
-    buttons = _slot_buttons(qt, widget)
-    slots: list[RailSlotInfo] = []
-    for button in buttons:
-        slot_id = button.property("actionRailSlotId")
-        if not isinstance(slot_id, str) or not slot_id:
-            continue
-        item = item_by_id.get(slot_id)
-        if item is None:
-            continue
-        x_pos, y_pos = _widget_position_in_parent(qt, edit_parent, button)
-        width = _safe_widget_dimension(button, "width")
-        height = _safe_widget_dimension(button, "height")
-        if width <= 0 or height <= 0:
-            continue
-        slots.append(
-            RailSlotInfo(
-                preset_id=frame.preset_id,
-                slot_id=slot_id,
-                label=str(getattr(item, "label", "")),
-                action=str(getattr(item, "action", "")),
-                x=x_pos,
-                y=y_pos,
-                width=width,
-                height=height,
-                locked=frame.locked,
-            )
-        )
-    return tuple(slots)
 
 
 def _rail_frame_info(
@@ -1404,73 +902,6 @@ def _replace_host_spec(host: Any, spec: Any) -> None:
     position = getattr(host, "position", None)
     if callable(position):
         position()
-
-
-def _slot_item_index(items: tuple[Any, ...], slot_id: str) -> int | None:
-    for index, item in enumerate(items):
-        if getattr(item, "type", "") == "spacer":
-            continue
-        if getattr(item, "id", "") == slot_id:
-            return index
-    return None
-
-
-def _spec_with_item(spec: Any, index: int, item: Any) -> Any:
-    items = list(spec.items)
-    items[index] = item
-    return dataclass_replace(spec, items=tuple(items))
-
-
-def _payload_from_item(item: Any) -> _SlotPayload:
-    if not _item_has_payload(item):
-        return _SlotPayload()
-    return _SlotPayload(
-        label=str(getattr(item, "label", EMPTY_SLOT_LABEL) or EMPTY_SLOT_LABEL),
-        action=str(getattr(item, "action", "")),
-        tone=str(getattr(item, "tone", "neutral") or "neutral"),
-        tooltip=str(getattr(item, "tooltip", "")),
-        icon=str(getattr(item, "icon", "")),
-        enabled_when=str(getattr(item, "enabled_when", "")),
-        active_when=str(getattr(item, "active_when", "")),
-    )
-
-
-def _slot_payload_from_action(action_id: str) -> _SlotPayload:
-    from .actions import create_default_registry
-
-    action = create_default_registry().get(action_id)
-    return _SlotPayload(
-        label=action.label,
-        action=action.id,
-        tooltip=action.tooltip or action.id,
-        icon=_ACTION_ICON_DEFAULTS.get(action.id, ""),
-        active_when=_PERSISTENT_ACTION_PREDICATES.get(action.id, ""),
-    )
-
-
-def _item_with_payload(item: Any, payload: _SlotPayload) -> Any:
-    return dataclass_replace(
-        item,
-        label=payload.label,
-        action=payload.action,
-        tone=payload.tone,
-        tooltip=payload.tooltip,
-        icon=payload.icon,
-        enabled_when=payload.enabled_when,
-        active_when=payload.active_when,
-    )
-
-
-def _empty_slot_item(item: Any) -> Any:
-    return _item_with_payload(item, _SlotPayload())
-
-
-def _item_has_payload(item: Any) -> bool:
-    return bool(
-        str(getattr(item, "action", "")).strip()
-        or str(getattr(item, "icon", "")).strip()
-        or str(getattr(item, "label", "")).strip() not in {"", EMPTY_SLOT_LABEL}
-    )
 
 
 def _is_edge_anchor(anchor: str) -> bool:
@@ -1572,20 +1003,6 @@ def _safe_widget_dimension(widget: Any, method_name: str) -> int:
         return int(method())
     except Exception:
         return 0
-
-
-def _slot_buttons(qt: Any, widget: Any) -> tuple[Any, ...]:
-    find_children = getattr(widget, "findChildren", None)
-    if not callable(find_children):
-        return ()
-    try:
-        return tuple(
-            button
-            for button in find_children(qt.QtWidgets.QPushButton)
-            if button.property("actionRailRole") == "button"
-        )
-    except Exception:
-        return ()
 
 
 def _topmost_frame_at(
@@ -1889,65 +1306,22 @@ def _panel_width(canvas_width: int, desired_width: int) -> int:
     return min(desired_width, max(1, canvas_width - 16))
 
 
-def _options_popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int) -> Any:
-    x_pos = min(max(8, frame.x), max(8, canvas.width() - width - 8))
-    y_pos = min(max(8, frame.bottom + 8), max(8, canvas.height() - height - 8))
-    return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
-
-
 def _panel_summary_text(
     selected: RailFrameInfo | None,
     frame_count: int,
-    options_preset_id: str,
 ) -> str:
     if selected is None:
-        text = f"{frame_count} rail frame(s) | no frame selected"
-    else:
-        text = (
+        return f"{frame_count} rail frame(s) | no frame selected"
+    return (
             f"{selected.label}\n"
             f"{selected.source_layer} | {selected.anchor} | x {selected.x}, y {selected.y}"
-        )
-    if options_preset_id:
-        text = f"{text}\noptions: {options_preset_id}"
-    return text
+    )
 
 
 def _lock_button_text(selected: RailFrameInfo | None) -> str:
     if selected is None:
         return "No selection"
     return "Locked" if selected.locked else "Unlocked"
-
-
-def _can_save_frame(frame: RailFrameInfo) -> bool:
-    return not frame.locked
-
-
-def _save_status_text(frame: RailFrameInfo) -> str:
-    if frame.locked:
-        return "Locked rails are read-only."
-    if frame.source_layer == "builtin":
-        return f"Save Position writes {_user_override_id(frame.preset_id)}."
-    if frame.source_layer == "studio":
-        return f"Save Position writes {_user_override_id(frame.preset_id)}."
-    if frame.source_layer == "runtime":
-        return "Save creates a user preset."
-    return "Save updates the user preset."
-
-
-def _slot_status_text(frame: RailFrameInfo, slot: RailSlotInfo | None = None) -> str:
-    if frame.locked:
-        return "Slot payload edits are unavailable on locked rails."
-    if slot is None:
-        return "Select a slot, or drag an action from the list onto a slot."
-    label = slot.label if slot.has_payload else EMPTY_SLOT_LABEL
-    return f"Selected slot: {label} ({_slot_suffix(frame.preset_id, slot.slot_id)})."
-
-
-def _slot_suffix(preset_id: str, slot_id: str) -> str:
-    prefix = f"{preset_id}."
-    if slot_id.startswith(prefix):
-        return slot_id.removeprefix(prefix)
-    return slot_id
 
 
 def _frame_label(preset_id: str) -> str:

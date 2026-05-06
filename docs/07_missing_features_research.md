@@ -31,9 +31,9 @@ ActionRail has a solid MVP base:
   Create, preview/save/load workflow, and the first Edit Mode layout-map shell.
 - Pure Python tests and MayaSessiond smoke coverage.
 
-The main gap is now direct layout authoring. The next work should let users
-persist rail placement from Edit Mode, use drag/anchor/snap controls, and route
-frame options into a fuller options surface.
+The main gap is now direct layout authoring and Normal Mode slot editing. Edit
+Mode should persist rail placement and use drag/anchor/snap controls; slot
+payload changes should stay outside Edit Mode behind rail lock/unlock controls.
 
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
 hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
@@ -151,11 +151,12 @@ Status: Quick Create and the Phase 2 step 2.5 Edit Mode layout editing surface
 are implemented and Maya-smoke verified. Quick Create can create draft rails
 from templates, preview, save, overwrite, and load user presets. Edit Mode can
 inspect active rails in a layout-map overlay, select rail frames, show
-Grid/Grid Size/Snap to Grid/Sticky Frames controls, route right-click frame
-options, apply X/Y movement with snap/sticky alignment, and persist layout edits
-to user presets or user override sidecars. The remaining authoring gap begins
-with Phase 2 step 2.6 collapsible edge-tab runtime/persistence and publish
-polish.
+Grid/Grid Size/Snap to Grid/Sticky Frames controls, apply X/Y movement with
+snap/sticky alignment, and persist layout edits to user presets or user
+override sidecars. The old right-click frame options popover has been removed
+from Edit Mode. The remaining authoring gap begins with Phase 2 step 2.6
+collapsible edge-tab runtime/persistence, Normal Mode slot lock/unlock polish,
+and publish polish.
 
 The first artist-facing authoring workflow should stay narrow:
 

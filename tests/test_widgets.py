@@ -397,6 +397,78 @@ def test_build_transform_stack_constructs_scaled_horizontal_widget(monkeypatch) 
     assert cmds.calls == [("setToolTo", "moveSuperContext")]
 
 
+def test_build_transform_stack_marks_unlocked_slot_edit_buttons(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    cmds = BuildCmds()
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=True,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda _slot_id: True,
+    )
+    spec = StackSpec(
+        id="slot_edit",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="slot_edit.move",
+                label="M",
+                action="maya.tool.move",
+            ),
+        ),
+    )
+
+    root = widgets.build_transform_stack(
+        spec,
+        create_default_registry(cmds),
+        slot_edit_callbacks=callbacks,
+    )
+    button = root.findChildren(BuildButton)[0]
+
+    assert button.property("actionRailSlotEditUnlocked") == "true"
+    button.clicked.emit()
+    assert cmds.calls == []
+
+
+def test_build_transform_stack_locked_slot_edit_menu_keeps_actions_enabled(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    cmds = BuildCmds()
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=False,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda _slot_id: True,
+    )
+    spec = StackSpec(
+        id="slot_edit_locked",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="slot_edit_locked.move",
+                label="M",
+                action="maya.tool.move",
+            ),
+        ),
+    )
+
+    root = widgets.build_transform_stack(
+        spec,
+        create_default_registry(cmds),
+        slot_edit_callbacks=callbacks,
+    )
+    button = root.findChildren(BuildButton)[0]
+
+    assert button.property("actionRailSlotEditUnlocked") == "false"
+    button.clicked.emit()
+    assert cmds.calls == [("setToolTo", "moveSuperContext")]
+
+
 def test_build_transform_stack_wraps_multi_row_layout(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     spec = StackSpec(

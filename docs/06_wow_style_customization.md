@@ -40,7 +40,8 @@ WeakAuras validates trigger-driven UI, but ActionRail should use safe declarativ
 
 ### Edit Mode
 
-Edit Mode is a global authoring state. Normal mode executes tools; Edit Mode edits the UI.
+Edit Mode is a global authoring state for rail layout. Normal Mode executes
+tools and owns slot payload editing when a rail is explicitly unlocked.
 
 Edit Mode should show:
 
@@ -75,8 +76,6 @@ Frame-level Edit Mode interaction should stay direct:
 
 - left-click a rail/frame to select it and open a compact position popover with
   arrow nudge controls, numeric X/Y coordinates, and Reset
-- right-click a rail/frame to open that rail's settings section in the options
-  panel
 - `Sticky Frames` makes dragged rails snap to other rails for quick alignment
 - `Grid Size` controls the visible edit-only grid spacing used for precise
   placement
@@ -350,13 +349,12 @@ Build the user-facing authoring workflow in medium slices:
    lock-state display, and optional grid overlay visibility for placement
    preview. Status: first shell implemented and Maya-smoke verified.
 5. Layout editing and direct manipulation: drag handles, anchor pins, safe
-   margins, left-click position popover with X/Y and Reset, right-click
-   frame-specific options routing, optional snap-to-grid, optional sticky-frame
-   snapping to nearby rails, snap/spacing guides, stable slot containers with
-   movable action payloads, and persisted layout edits. Status: user-preset
-   layout saves are implemented for unlocked runtime/user rails, and
-   user-override layout saves are implemented for unlocked built-in/studio
-   rails.
+   margins, left-click position popover with X/Y and Reset, optional
+   snap-to-grid, optional sticky-frame snapping to nearby rails, snap/spacing
+   guides, and persisted layout edits. Status: user-preset layout saves are
+   implemented for unlocked runtime/user rails, and user-override layout saves
+   are implemented for unlocked built-in/studio rails. Slot payload edits have
+   moved to Normal Mode rail lock/unlock helpers.
    Future button-style controls should let users independently show/hide,
    offset, and colorize the slot label and hotkey/key-label overlay.
 6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,

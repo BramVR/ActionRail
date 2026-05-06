@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 import actionrail.overlay as overlay
+import actionrail.runtime as runtime
 from actionrail.overlay import (
     _anchored_position,
     _collapsed_handle_position,
@@ -311,7 +312,9 @@ def test_overlay_snapshot_uses_resolved_panel(monkeypatch: pytest.MonkeyPatch) -
         *,
         state_snapshot: object | None = None,
         cmds_module: object | None = None,
+        slot_edit_callbacks: object | None = None,
     ) -> FakeWidget:
+        captured["slot_edit_callbacks"] = slot_edit_callbacks
         captured["build_state_snapshot"] = state_snapshot
         captured["build_cmds"] = cmds_module
         return FakeWidget()
@@ -390,7 +393,9 @@ def test_overlay_uses_floating_maya_window_parent(monkeypatch: pytest.MonkeyPatc
         *,
         state_snapshot: object | None = None,
         cmds_module: object | None = None,
+        slot_edit_callbacks: object | None = None,
     ) -> FakeWidget:
+        captured["slot_edit_callbacks"] = slot_edit_callbacks
         return FakeWidget()
 
     monkeypatch.setattr(overlay, "load", lambda: FakeQt)
@@ -1342,6 +1347,72 @@ def test_timer_and_rendered_key_label_helpers(monkeypatch: pytest.MonkeyPatch) -
     host.refresh_state = lambda: (_ for _ in ()).throw(RuntimeError("failed"))
     host._refresh_predicates_from_timer()
     assert host.stopped is True
+
+
+def test_normal_mode_slot_edit_unlock_assigns_and_clears_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.panel = "modelPanel1"
+    host.cmds = object()
+    host._slot_edit_unlocked = False
+    host.spec = StackSpec(
+        id="custom_slots",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="custom_slots.a",
+                label="New",
+                key_label="1",
+            ),
+        ),
+    )
+    rebuilds = []
+    host._rebuild_widget = lambda state: rebuilds.append(state)
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: "state")
+
+    assert host.assign_slot_action_payload("custom_slots.a", "maya.tool.scale") is False
+    assert host.set_slot_edit_unlocked(True) is True
+    assert host.slot_edit_unlocked() is True
+    assert rebuilds == ["state"]
+
+    assert host.assign_slot_action_payload("custom_slots.a", "maya.tool.scale") is True
+    slot = host.spec.items[0]
+    assert slot.id == "custom_slots.a"
+    assert slot.key_label == "1"
+    assert slot.action == "maya.tool.scale"
+    assert slot.label == "Scale"
+    assert slot.icon == "maya.scale"
+    assert slot.active_when == "maya.tool == scale"
+
+    assert host.clear_slot_payload("custom_slots.a") is True
+    slot = host.spec.items[0]
+    assert slot.id == "custom_slots.a"
+    assert slot.key_label == "1"
+    assert slot.action == ""
+    assert slot.label == "New"
+    assert slot.icon == ""
+    assert slot.active_when == ""
+    assert rebuilds == ["state", "state", "state"]
+
+
+def test_runtime_normal_mode_slot_lock_toggles_active_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Host:
+        def __init__(self) -> None:
+            self.values = []
+
+        def set_slot_edit_unlocked(self, unlocked: bool) -> bool:
+            self.values.append(unlocked)
+            return True
+
+    host = Host()
+    monkeypatch.setattr(runtime, "_OVERLAYS", {"rail": host})
+
+    assert runtime.unlock_rail_slots("rail") is True
+    assert runtime.lock_rail_slots("rail") is True
+    assert runtime.set_rail_slots_unlocked("missing", True) is False
+    assert host.values == [True, False]
 
 
 def test_map_to_global_and_deferred_delete_helpers_handle_failures() -> None:

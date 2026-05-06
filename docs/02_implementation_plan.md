@@ -329,13 +329,12 @@ Status: done.
   and spacing guides.
 - Added left-click selected-rail position controls with arrow nudges, numeric
   X/Y coordinates, and Reset.
-- Added right-click routing from a rail/frame to that rail's options section.
 - Added Sticky Frames behavior so dragged rails can snap to other rails for
   quick alignment.
 - Persisted edited layout offsets and saveable layout values to user presets or
   user override sidecars for read-only built-in/studio presets.
-- Added initial slot editing affordances; the current 2.6 surface replaces
-  slot add/remove/reorder with stable slot containers and payload assignment.
+- Removed the right-click frame options popover so Edit Mode stays focused on
+  whole-rail layout editing.
 
 Done when an artist can recreate the reference stack and create a distinct rail
 layout from Maya UI only, then save those changes outside locked built-in
@@ -348,9 +347,8 @@ Research hints:
 - Look at Maya guide/snap UX before designing ActionRail grid and snap guides;
   viewport tools should feel precise, quiet, optional, and non-decorative.
 - Use the attached edit-mode reference for frame selection semantics:
-  left-click opens precise X/Y placement controls, right-click opens
-  frame-specific options, Sticky Frames snaps frames together, and Grid Size
-  controls the edit-only grid.
+  left-click opens precise X/Y placement controls, Sticky Frames snaps frames
+  together, and Grid Size controls the edit-only grid.
 - Revisit the local `research/` reference images when tuning hit boxes and
   spacing for the transform-stack regression target.
 
@@ -369,13 +367,11 @@ Validate Draft, includes the concrete blocking issue in save errors, reports
 stale slot-command cleanup from Save + Publish, and preserves custom user
 preset stores in published shelf toggles; Quick Create draft conversion also
 infers active-state predicates for persistent Maya tool actions while leaving
-one-shot commands inactive. Guide/slot-affordance polish now draws
-axis-aligned Sticky Frames guides and replaces the old slot reorder controls
-with stable slot containers: frame options expose an action palette, selected
-slots report their target, payload assignment/move/swap/clear keeps the slot id
-and key label in place, and Edit Mode Maya smoke covers the behavior. The Quick
-Create Maya smoke verifies the Save + Publish shelf command carries that
-custom store path.
+one-shot commands inactive. Guide polish now draws axis-aligned Sticky Frames
+guides. The old Edit Mode frame options popover and slot payload editor have
+been removed; slot payload assignment/clear now belongs to Normal Mode rail
+lock/unlock helpers. The Quick Create Maya smoke verifies the Save + Publish
+shelf command carries that custom store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
@@ -395,6 +391,8 @@ custom store path.
   publishing from Quick Create Save + Publish; custom user preset store paths
   are preserved in published shelf toggles, and stale slot-command cleanup is
   reported. Explicit hotkey assignment remains Bind Mode territory.
+- Keep Edit Mode layout-only. Slot payload changes belong to Normal Mode rail
+  lock/unlock helpers, not the Edit Mode layout map.
 
 Done when an artist can collapse a custom rail to a side handle, expand it
 again, and keep layout, actions, and bindings intact.
@@ -468,8 +466,8 @@ Goal: add native viewport drawing only after Qt overlay is stable.
 Phase 2 steps 2.1-2.5 are complete and verified locally. The draft authoring
 model, safe user-preset storage, shared preset resolver, dockable Quick Create
 panel, preview cleanup, load-existing support, save/reload workflow, Edit Mode
-layout-map shell, direct manipulation, snap/sticky guides, right-click options,
-slot edits, and user override persistence are in place.
+layout-map shell, direct manipulation, snap/sticky guides, Normal Mode slot
+payload lock/unlock helpers, and user override persistence are in place.
 
 Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
 publish polish. The collapse schema/runtime first pass is implemented and

@@ -40,6 +40,7 @@ __all__ = [
     "STYLE_SHEET",
     "ActionRailRoot",
     "PredicateRefreshResult",
+    "SlotEditCallbacks",
     "SlotRenderState",
     "build_rail",
     "build_collapsed_handle",
@@ -71,6 +72,17 @@ class PredicateRefreshResult:
     needs_rebuild: bool
     visible_slot_ids: tuple[str, ...]
     rendered_slot_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SlotEditCallbacks:
+    """Runtime slot-edit hooks used when a rail is unlocked in Normal Mode."""
+
+    unlocked: bool
+    unlock_rail: Callable[[], bool]
+    lock_rail: Callable[[], bool]
+    assign_action: Callable[[str, str], bool]
+    clear_slot: Callable[[str], bool]
 
 
 class ActionRailRoot:
@@ -113,6 +125,7 @@ def build_rail(
     theme: ActionRailTheme = DEFAULT_THEME,
     state_snapshot: MayaStateSnapshot | None = None,
     cmds_module: object | None = None,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     """Build an ActionRail widget from a stack spec."""
 
@@ -155,6 +168,7 @@ def build_rail(
                         theme,
                         spec.layout.orientation,
                         context,
+                        slot_edit_callbacks,
                     ),
                 )
             )
@@ -178,6 +192,7 @@ def build_rail(
                     theme,
                     spec.layout.orientation,
                     context,
+                    slot_edit_callbacks,
                 ),
             )
         )
@@ -189,11 +204,12 @@ def build_rail(
                 _build_cluster(
                     tuple(pending_tools),
                     registry,
-                    theme,
-                    spec.layout.orientation,
-                    context,
-                ),
-            )
+                theme,
+                spec.layout.orientation,
+                context,
+                slot_edit_callbacks,
+            ),
+        )
         )
 
     widget_index = 0
@@ -297,6 +313,7 @@ def build_transform_stack(
     theme: ActionRailTheme = DEFAULT_THEME,
     state_snapshot: MayaStateSnapshot | None = None,
     cmds_module: object | None = None,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     """Compatibility wrapper for the generic ActionRail rail builder."""
 
@@ -306,6 +323,7 @@ def build_transform_stack(
         theme=theme,
         state_snapshot=state_snapshot,
         cmds_module=cmds_module,
+        slot_edit_callbacks=slot_edit_callbacks,
     )
 
 
@@ -315,6 +333,7 @@ def _build_cluster(
     theme: ActionRailTheme,
     orientation: str,
     context: PredicateContext | None = None,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
@@ -334,7 +353,7 @@ def _build_cluster(
     layout.setSpacing(theme.frame_spacing)
 
     for item in items:
-        layout.addWidget(_build_button(item, registry, theme, context))
+        layout.addWidget(_build_button(item, registry, theme, context, slot_edit_callbacks))
 
     main_axis_size = _frame_main_axis_size(len(items), theme)
     if orientation == "horizontal":
@@ -350,6 +369,7 @@ def _build_single_button(
     theme: ActionRailTheme,
     orientation: str,
     context: PredicateContext | None = None,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     qt = load()
     frame = qt.QtWidgets.QFrame()
@@ -362,7 +382,7 @@ def _build_single_button(
         theme.frame_padding,
     )
     layout.setSpacing(0)
-    layout.addWidget(_build_button(item, registry, theme, context))
+    layout.addWidget(_build_button(item, registry, theme, context, slot_edit_callbacks))
 
     frame.setFixedSize(theme.rail_width, theme.rail_width)
     return frame
@@ -382,12 +402,17 @@ def _build_button(
     registry: ActionRegistry,
     theme: ActionRailTheme,
     context: PredicateContext | None = None,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     qt = load()
     state = resolve_slot_render_state(item, registry, context)
     button = _button_class(qt)(state.text)
     button.setProperty("actionRailRole", "button")
     button.setProperty("actionRailSlotId", item.id)
+    button.setProperty(
+        "actionRailSlotEditUnlocked",
+        "true" if slot_edit_callbacks is not None and slot_edit_callbacks.unlocked else "false",
+    )
     button.setProperty("actionRailButtonIconSize", theme.button_size)
     button.setProperty("actionRailButtonIconInset", theme.button_border_width)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
@@ -396,11 +421,84 @@ def _build_button(
         qt.QtCore.Qt.PointingHandCursor if item.action else qt.QtCore.Qt.ArrowCursor
     )
     _apply_slot_render_state(button, state)
-    if item.action:
+    if slot_edit_callbacks is not None:
+        _install_slot_edit_menu(button, item, registry, slot_edit_callbacks)
+    if item.action and not (
+        slot_edit_callbacks is not None and slot_edit_callbacks.unlocked
+    ):
         button.clicked.connect(
             lambda _checked=False, action_id=item.action: registry.run(action_id)
         )
     return button
+
+
+def _install_slot_edit_menu(
+    button: object,
+    item: StackItem,
+    registry: ActionRegistry,
+    callbacks: SlotEditCallbacks,
+) -> None:
+    qt = load()
+    with suppress(Exception):
+        if callbacks.unlocked:
+            button.setToolTip("Rail unlocked: right-click to edit this slot.")
+    if not hasattr(button, "setContextMenuPolicy") or not hasattr(
+        button, "customContextMenuRequested"
+    ):
+        return
+    try:
+        button.setContextMenuPolicy(qt.QtCore.Qt.CustomContextMenu)
+        button.customContextMenuRequested.connect(
+            lambda point, slot_id=item.id: _show_slot_edit_menu(
+                button,
+                point,
+                slot_id,
+                bool(item.action or item.icon or item.label.strip()),
+                registry,
+                callbacks,
+            )
+        )
+    except Exception:
+        return
+
+
+def _show_slot_edit_menu(
+    button: object,
+    point: object,
+    slot_id: str,
+    has_payload: bool,
+    registry: ActionRegistry,
+    callbacks: SlotEditCallbacks,
+) -> None:
+    qt = load()
+    menu_class = getattr(qt.QtWidgets, "QMenu", None)
+    if menu_class is None:
+        return
+    menu = menu_class(button)
+    if callbacks.unlocked:
+        assign_menu = menu.addMenu("Assign Action")
+        for action in sorted(registry.actions(), key=lambda item: item.label):
+            action_item = assign_menu.addAction(action.label)
+            action_item.setToolTip(action.tooltip or action.id)
+            action_item.triggered.connect(
+                lambda _checked=False, target=slot_id, action_id=action.id: (
+                    callbacks.assign_action(
+                        target,
+                        action_id,
+                    )
+                )
+            )
+        clear_action = menu.addAction("Clear Slot")
+        clear_action.setEnabled(has_payload)
+        clear_action.triggered.connect(lambda _checked=False: callbacks.clear_slot(slot_id))
+        menu.addSeparator()
+        lock_action = menu.addAction("Lock Rail")
+        lock_action.triggered.connect(lambda _checked=False: callbacks.lock_rail())
+    else:
+        unlock_action = menu.addAction("Unlock Rail")
+        unlock_action.triggered.connect(lambda _checked=False: callbacks.unlock_rail())
+    with suppress(Exception):
+        menu.exec(button.mapToGlobal(point))
 
 
 def _button_class(qt: object) -> type:

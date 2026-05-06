@@ -60,7 +60,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/widgets.py",
-        "owns": "Qt rail/widget construction, custom button painting, diagnostic badge display",
+        "owns": (
+            "Qt rail/widget construction, custom button painting, diagnostic badge "
+            "display, and Normal Mode slot-edit context menus"
+        ),
         "tests": (
             "tests/test_widgets.py",
             "tests/maya_smoke/actionrail_diagnostic_badges_smoke.py",
@@ -68,8 +71,16 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/overlay.py",
-        "owns": "Maya model-panel anchoring, floating rail host, overlay cleanup",
+        "owns": (
+            "Maya model-panel anchoring, floating rail host, overlay cleanup, "
+            "and active rail slot-edit lock state"
+        ),
         "tests": ("tests/test_overlay.py", "tests/maya_smoke/actionrail_overlay_cleanup_smoke.py"),
+    },
+    {
+        "path": "scripts/actionrail/slot_payloads.py",
+        "owns": "stable slot payload assignment and clear helpers for Normal Mode editing",
+        "tests": ("tests/test_overlay.py",),
     },
     {
         "path": "scripts/actionrail/actions.py",
@@ -140,7 +151,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/edit_mode.py",
         "owns": (
             "Edit Mode layout-map overlay, grid settings, rail selection, "
-            "slot payload editing, placement popover, and user-preset layout saves"
+            "placement popover, and user-preset layout saves"
         ),
         "tests": (
             "tests/test_edit_mode.py",
@@ -183,7 +194,7 @@ def about() -> dict[str, object]:
                 "Phase 2 step 2.6 collapsible edge-tab handle placement and "
                 "publish polish first pass Maya-smoke verified; validation UX "
                 "publish follow-up locally verified with Quick Create Maya smoke; "
-                "stable slot payload and guide polish Maya-smoke verified"
+                "Edit Mode options cleanup and Normal Mode slot-edit locking locally verified"
             ),
             "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
             "blockers_doc": "docs/04_status.md#blockers",

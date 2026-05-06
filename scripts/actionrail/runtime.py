@@ -16,12 +16,15 @@ __all__ = [
     "active_overlay_states",
     "hide_all",
     "hide_example",
+    "lock_rail_slots",
     "reload",
     "run_action",
     "run_slot",
+    "set_rail_slots_unlocked",
     "show_example",
     "show_preset",
     "show_spec",
+    "unlock_rail_slots",
     "update_slot_key_label",
 ]
 
@@ -139,6 +142,30 @@ def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
     if host is None:
         return 0
     return host.update_slot_key_label(_qualified_slot_id(preset_id, slot_id), key_label)
+
+
+def set_rail_slots_unlocked(preset_id: str, unlocked: bool) -> bool:
+    """Toggle Normal Mode slot payload editing for an active rail."""
+
+    host = _OVERLAYS.get(preset_id)
+    if host is None:
+        return False
+    setter = getattr(host, "set_slot_edit_unlocked", None)
+    if not callable(setter):
+        return False
+    return bool(setter(bool(unlocked)))
+
+
+def unlock_rail_slots(preset_id: str) -> bool:
+    """Unlock an active rail so Normal Mode can assign or clear slot payloads."""
+
+    return set_rail_slots_unlocked(preset_id, True)
+
+
+def lock_rail_slots(preset_id: str) -> bool:
+    """Lock an active rail so Normal Mode clicks run actions normally."""
+
+    return set_rail_slots_unlocked(preset_id, False)
 
 
 def run_action(action_id: str, *, registry: ActionRegistry | None = None) -> Any:
