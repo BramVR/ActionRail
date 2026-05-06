@@ -107,6 +107,52 @@ def test_snap_to_grid_and_sticky_frame_alignment() -> None:
     assert edit_mode._nudge_delta(0, 64) == 0
 
 
+def test_guide_segments_use_axis_aligned_sticky_guides() -> None:
+    moving = edit_mode.RailFrameInfo(
+        preset_id="moving",
+        label="Moving",
+        x=60,
+        y=160,
+        width=40,
+        height=40,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="horizontal",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+    target = replace(moving, preset_id="target", x=100, y=200)
+
+    selected_only = edit_mode._guide_segments(
+        moving,
+        (moving, target),
+        edit_mode.EditModeSettings(sticky_frames=False),
+        640,
+        480,
+    )
+    assert len(selected_only) == 6
+    assert {segment.kind for segment in selected_only} == {"selected"}
+
+    sticky_segments = edit_mode._guide_segments(
+        moving,
+        (moving, target),
+        edit_mode.EditModeSettings(sticky_frames=True),
+        640,
+        480,
+    )
+    sticky_only = [segment for segment in sticky_segments if segment.kind == "sticky"]
+
+    assert edit_mode._GuideSegment(100, 160, 100, 240, "sticky") in sticky_only
+    assert edit_mode._GuideSegment(200, 60, 140, 200, "sticky") not in sticky_only
+    assert all(
+        segment.x1 == segment.x2 or segment.y1 == segment.y2
+        for segment in sticky_only
+    )
+
+
 def test_snapped_position_clamps_to_safe_bounds() -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="moving",

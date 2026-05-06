@@ -110,6 +110,17 @@ class EditModeState:
     options_preset_id: str = ""
 
 
+@dataclass(frozen=True)
+class _GuideSegment:
+    """Paint-ready edit guide segment in viewport-local coordinates."""
+
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+    kind: str
+
+
 _EDIT_HOST: EditModeOverlayHost | None = None
 _SETTINGS = EditModeSettings()
 _SELECTED_PRESET_ID = ""
@@ -1330,21 +1341,66 @@ def _paint_guides(  # pragma: no cover - covered by Maya smoke screenshots.
     frames: tuple[RailFrameInfo, ...],
     settings: EditModeSettings,
 ) -> None:
-    guide = qt.QtGui.QColor(112, 226, 255, 135)
-    painter.setPen(qt.QtGui.QPen(guide, 1))
-    for x_pos in (frame.x, frame.x + int(frame.width / 2), frame.right):
-        painter.drawLine(x_pos, 0, x_pos, rect.height())
-    for y_pos in (frame.y, frame.y + int(frame.height / 2), frame.bottom):
-        painter.drawLine(0, y_pos, rect.width(), y_pos)
+    selected_pen = qt.QtGui.QPen(qt.QtGui.QColor(112, 226, 255, 100), 1)
+    sticky_pen = qt.QtGui.QPen(qt.QtGui.QColor(255, 211, 0, 185), 2)
+    for segment in _guide_segments(frame, frames, settings, rect.width(), rect.height()):
+        painter.setPen(sticky_pen if segment.kind == "sticky" else selected_pen)
+        painter.drawLine(segment.x1, segment.y1, segment.x2, segment.y2)
+
+
+def _guide_segments(
+    frame: RailFrameInfo,
+    frames: tuple[RailFrameInfo, ...],
+    settings: EditModeSettings,
+    width: int,
+    height: int,
+) -> tuple[_GuideSegment, ...]:
+    segments: list[_GuideSegment] = []
+    for x_pos in _edge_candidates(frame.x, frame.width):
+        segments.append(_GuideSegment(x_pos, 0, x_pos, max(0, height), "selected"))
+    for y_pos in _edge_candidates(frame.y, frame.height):
+        segments.append(_GuideSegment(0, y_pos, max(0, width), y_pos, "selected"))
     if not settings.sticky_frames:
-        return
+        return tuple(segments)
+    segments.extend(_sticky_guide_segments(frame, frames))
+    return tuple(segments)
+
+
+def _sticky_guide_segments(
+    frame: RailFrameInfo,
+    frames: tuple[RailFrameInfo, ...],
+) -> tuple[_GuideSegment, ...]:
+    segments: list[_GuideSegment] = []
+    moving_x_edges = _edge_candidates(frame.x, frame.width)
+    moving_y_edges = _edge_candidates(frame.y, frame.height)
     for other in frames:
         if other.preset_id == frame.preset_id:
             continue
-        if abs(other.x - frame.right) <= STICKY_SNAP_THRESHOLD:
-            painter.drawLine(frame.right, frame.y, other.x, other.y)
-        if abs(other.y - frame.bottom) <= STICKY_SNAP_THRESHOLD:
-            painter.drawLine(frame.x, frame.bottom, other.x, other.y)
+        for moving_edge in moving_x_edges:
+            for target_edge in _edge_candidates(other.x, other.width):
+                if abs(moving_edge - target_edge) <= STICKY_SNAP_THRESHOLD:
+                    segments.append(
+                        _GuideSegment(
+                            target_edge,
+                            min(frame.y, other.y),
+                            target_edge,
+                            max(frame.bottom, other.bottom),
+                            "sticky",
+                        )
+                    )
+        for moving_edge in moving_y_edges:
+            for target_edge in _edge_candidates(other.y, other.height):
+                if abs(moving_edge - target_edge) <= STICKY_SNAP_THRESHOLD:
+                    segments.append(
+                        _GuideSegment(
+                            min(frame.x, other.x),
+                            target_edge,
+                            max(frame.right, other.right),
+                            target_edge,
+                            "sticky",
+                        )
+                    )
+    return tuple(dict.fromkeys(segments))
 
 
 def _paint_grid(  # pragma: no cover - covered by Maya smoke screenshots.
