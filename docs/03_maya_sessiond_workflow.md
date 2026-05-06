@@ -167,7 +167,8 @@ Useful variants:
 - `actionrail_diagnostic_badges_smoke.py`: visible missing-action, missing-icon, missing-command, and missing-plugin badge rendering.
 - `actionrail_edit_mode_smoke.py`: Edit Mode layout-map overlay, grid/settings
   controls, frame selection, in-session movement, sticky-frame alignment,
-  right-click routing, and screenshot capture.
+  stable slot payload assignment/move/swap/clear, right-click routing,
+  collapse, and screenshot capture.
 - `actionrail_missing_maya_icon_resource_smoke.py`: missing curated Maya
   resource icon diagnostics and widget rendering fallback behavior.
 - `actionrail_quick_create_smoke.py`: dockable Quick Create panel template

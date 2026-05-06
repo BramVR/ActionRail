@@ -41,9 +41,10 @@ Working surface:
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
   snap/spacing guides, axis-aligned sticky alignment guides, right-click
-  options, X/Y movement for unlocked rails, slot add/remove/reorder controls
-  with last-slot affordance text, real edge-tab collapse/expand controls, safe
-  movement clamps, Save Position/user-preset persistence for unlocked
+  options, X/Y movement for unlocked rails, stable slot containers with action
+  palette assignment, payload move/swap/clear behavior, selected-slot status,
+  key labels retained on slot containers, real edge-tab collapse/expand
+  controls, safe movement clamps, Save Position/user-preset persistence for unlocked
   runtime/user rails, and user override saves/resolution for unlocked built-in
   and studio rails.
 - Optional collapsible rail schema/runtime: JSON `collapse` settings for edge,
@@ -97,7 +98,8 @@ $env:PYTHONPATH = "scripts"
    and Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
    verified; the validation UX/publish follow-up is locally verified, and Quick
    Create Maya smoke covers the custom-store Save + Publish shelf command path.
-   The first guide/slot-affordance polish pass is locally verified.
+   The guide/slot-affordance polish pass is Maya-smoke verified, including the
+   stable slot payload model.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -139,8 +141,10 @@ $env:PYTHONPATH = "scripts"
   slots reflect Maya's active tool context without marking one-shot commands
   like Set Key active.
 - The May 6 guide/slot-affordance polish pass replaces Sticky Frames diagonal
-  hints with axis-aligned alignment guides and makes frame options report the
-  last editable action slot while disabling unavailable slot moves.
+  hints with axis-aligned alignment guides and replaces slot reorder controls
+  with stable slot containers, action-palette assignment, selected-slot status,
+  and payload move/swap/clear behavior that keeps hotkey labels attached to the
+  slot container.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -246,11 +250,17 @@ $env:PYTHONPATH = "scripts"
   to `[2, 5]`, Button Size updating live preview scale to `1.25`, Save +
   Publish runtime commands, shelf toggle, and screenshot capture.
 - Latest focused Edit Mode validation:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py`
-  -> 37 passed.
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py tests\\test_hotkeys.py`
+  -> 87 passed.
 - Latest focused Edit Mode Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py tests\\test_edit_mode.py`
   -> all checks passed.
+- Latest Edit Mode Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
+  -> passed; verified action palette presence, retired slot reorder controls
+  absent, selected-slot status, stable slot ids/key labels through payload
+  assign/clear/move/swap/clear, layout movement, save, collapse persistence,
+  `run_slot()` while collapsed, handle expansion, and screenshot capture.
 
 ## Decisions
 

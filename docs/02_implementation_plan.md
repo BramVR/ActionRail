@@ -334,7 +334,8 @@ Status: done.
   quick alignment.
 - Persisted edited layout offsets and saveable layout values to user presets or
   user override sidecars for read-only built-in/studio presets.
-- Added controls for slot add/remove/reorder and rail layout changes.
+- Added initial slot editing affordances; the current 2.6 surface replaces
+  slot add/remove/reorder with stable slot containers and payload assignment.
 
 Done when an artist can recreate the reference stack and create a distinct rail
 layout from Maya UI only, then save those changes outside locked built-in
@@ -368,11 +369,13 @@ Validate Draft, includes the concrete blocking issue in save errors, reports
 stale slot-command cleanup from Save + Publish, and preserves custom user
 preset stores in published shelf toggles; Quick Create draft conversion also
 infers active-state predicates for persistent Maya tool actions while leaving
-one-shot commands inactive. A first guide/slot-affordance polish pass now draws
-axis-aligned Sticky Frames guides and makes frame options identify the last
-editable action slot while disabling unavailable slot moves. The Quick Create
-Maya smoke verifies the Save + Publish shelf command carries that custom store
-path.
+one-shot commands inactive. Guide/slot-affordance polish now draws
+axis-aligned Sticky Frames guides and replaces the old slot reorder controls
+with stable slot containers: frame options expose an action palette, selected
+slots report their target, payload assignment/move/swap/clear keeps the slot id
+and key label in place, and Edit Mode Maya smoke covers the behavior. The Quick
+Create Maya smoke verifies the Save + Publish shelf command carries that
+custom store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.

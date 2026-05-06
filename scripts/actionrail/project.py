@@ -140,7 +140,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/edit_mode.py",
         "owns": (
             "Edit Mode layout-map overlay, grid settings, rail selection, "
-            "placement popover, and user-preset layout saves"
+            "slot payload editing, placement popover, and user-preset layout saves"
         ),
         "tests": (
             "tests/test_edit_mode.py",
@@ -183,7 +183,7 @@ def about() -> dict[str, object]:
                 "Phase 2 step 2.6 collapsible edge-tab handle placement and "
                 "publish polish first pass Maya-smoke verified; validation UX "
                 "publish follow-up locally verified with Quick Create Maya smoke; "
-                "guide and slot-edit affordance polish locally verified"
+                "stable slot payload and guide polish Maya-smoke verified"
             ),
             "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
             "blockers_doc": "docs/04_status.md#blockers",

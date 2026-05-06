@@ -18,9 +18,11 @@ manipulation surface are implemented and Maya-smoke verified. Phase 2 step 2.6
 has started: frame options now toggle real collapsible edge-tab state instead
 of the earlier opacity-only placeholder, and the first collapse path is
 Maya-smoke verified. The current 2.6 polish pass also improves collapsed-handle
-edge placement and hit targets, and that latest handle tuning is now covered by
-Maya smoke. A local guide/slot-affordance pass now draws axis-aligned Sticky
-Frames guides and shows which action slot the frame options controls will edit.
+edge placement and hit targets. Guide/slot-affordance work now draws
+axis-aligned Sticky Frames guides and changes slot editing to stable slot
+containers: key labels stay on the slot, while the action payload can be
+assigned, moved, swapped, or cleared. The latest Edit Mode smoke covers this
+behavior in Maya.
 
 ## What It Shows
 
@@ -62,8 +64,11 @@ Inside Edit Mode:
 - left-click and drag an unlocked rail frame to move it directly
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
 - right-click a rail frame to open options routing for that rail
-- use frame options to add/remove/reorder the last editable action slot; the
-  options popover reports the target slot and disables unavailable moves
+- select a rail slot to make frame options report the target slot
+- drag an action from the frame options action palette onto an unlocked slot to
+  replace that slot's payload
+- Shift+left-drag a populated unlocked slot to move its payload to another
+  slot, or drag it out of the bar to clear it
 - use frame options to collapse an edge-anchored rail to a small handle or
   expand it again
 - enable Grid to show or hide the edit-only grid
@@ -107,18 +112,22 @@ State objects:
 - `EditModeSettings`: `show_grid`, `snap_to_grid`, `sticky_frames`,
   `grid_size`
 - `EditModeState`: `enabled`, `selected_preset_id`, `settings`, `rail_count`,
-  `options_preset_id`
+  `options_preset_id`, `selected_slot_id`
 - `RailFrameInfo`: viewport-local frame geometry, layout metadata, lock state,
   collapse state, and source layer
+- `RailSlotInfo`: viewport-local slot geometry, stable slot id, visible label,
+  action payload, lock state, and payload-present state
 
 Implementation ownership:
 
 - `scripts/actionrail/edit_mode.py`: state model, layout-map overlay, grid,
-  frame selection, options routing, and non-persistent rail nudging
+  frame/slot selection, options routing, payload assignment/move/clear, and
+  rail nudging
 - `scripts/actionrail/maya_ui.py`: Maya menu entry point
 - `tests/test_edit_mode.py`: pure Python API/model coverage
 - `tests/maya_smoke/actionrail_edit_mode_smoke.py`: Maya layout-map,
-  selection, movement, sticky-frame, right-click routing, and screenshot smoke
+  selection, movement, sticky-frame, slot-payload editing, right-click routing,
+  collapse, and screenshot smoke
 
 ## Current Limits
 
@@ -135,7 +144,9 @@ Implemented now:
 - selected-frame snap/spacing guide rendering with axis-aligned Sticky Frames
   alignment hints
 - right-click frame options routing marker
-- frame options for slot add/remove/reorder with target-slot status text
+- frame options action palette for replacing selected slot payloads
+- stable slot containers where ids and key labels stay fixed while payloads
+  move, swap, or clear
 - edge-tab collapse/expand control backed by persisted `collapse` settings and
   larger edge-clamped collapsed handles
 - Save Position for unlocked runtime/user rails
