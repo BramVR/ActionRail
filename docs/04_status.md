@@ -164,7 +164,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 449 passed.
+  -> 450 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -179,14 +179,14 @@ $env:PYTHONPATH = "scripts"
   -> `Local Markdown links OK`.
 - Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
-  -> passed after restarting a stale Sessiond state; verified layout-map
-  overlay, Grid Size 64, Snap to Grid, Sticky Frames, left-click selection, X
-  coordinate movement, sticky-frame alignment, right-click options routing,
-  collapsed handle-only widget sizing, collapsed-state save persistence,
-  `run_slot()` while collapsed, handle-click expansion, saved layout offset
-  `[51, -133]`, user preset save path
-  `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and screenshot
-  capture at
+  -> passed; verified layout-map overlay, Grid Size 64, Snap to Grid, Sticky
+  Frames, left-click selection, X coordinate movement, sticky-frame alignment,
+  right-click options routing, action palette presence, retired slot reorder
+  controls absent, selected-slot status, stable slot ids/key labels through
+  payload assign/clear/move/swap/clear, collapsed handle-only widget sizing,
+  collapsed-state save persistence, `run_slot()` while collapsed, handle-click
+  expansion, saved layout offset `[51, -133]`, user preset save path
+  `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
 - Custom user-preset store Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_custom_preset_store_smoke.py -Timeout 240`
@@ -205,9 +205,9 @@ $env:PYTHONPATH = "scripts"
   hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
   icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
   transform-stack state. Edit Mode smoke covered the axis-aligned Sticky Frames
-  position path, collapsed-state persistence, handle expansion, and screenshot
-  capture; Quick Create smoke verifies Save + Publish creates four slot runtime
-  commands plus a preset shelf toggle.
+  position path, stable slot payload editing, collapsed-state persistence,
+  handle expansion, and screenshot capture; Quick Create smoke verifies Save +
+  Publish creates four slot runtime commands plus a preset shelf toggle.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified Save + Publish creates four slot runtime commands, creates
