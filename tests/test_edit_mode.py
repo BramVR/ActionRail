@@ -907,6 +907,75 @@ def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None
     assert runtime_host.rebuilds == 3
 
 
+def test_slot_edit_state_reports_last_action_affordances() -> None:
+    items = (
+        StackItem(type="button", id="custom.a", label="A"),
+        StackItem(type="button", id="custom.b", label="B"),
+        StackItem(type="spacer", id="custom.gap", size=8),
+    )
+
+    state = edit_mode._slot_edit_state(items)
+
+    assert state.count == 3
+    assert state.target_index == 1
+    assert state.target_label == "B"
+    assert state.can_remove is True
+    assert state.can_move_up is True
+    assert state.can_move_down is True
+    assert (
+        edit_mode._slot_status_text(
+            edit_mode.RailFrameInfo(
+                preset_id="custom",
+                label="Custom",
+                x=0,
+                y=0,
+                width=40,
+                height=40,
+                anchor="viewport.left.top",
+                offset=(0, 0),
+                orientation="horizontal",
+                rows=1,
+                columns=1,
+                scale=1.0,
+                opacity=1.0,
+                locked=False,
+            ),
+            state,
+        )
+        == "Editing last action slot: B (2 of 3)."
+    )
+
+
+def test_slot_edit_state_handles_empty_and_locked_frames() -> None:
+    empty_state = edit_mode._slot_edit_state(())
+    assert empty_state.count == 0
+    assert empty_state.target_index is None
+    assert empty_state.can_remove is False
+    assert empty_state.can_move_up is False
+    assert empty_state.can_move_down is False
+
+    locked = edit_mode.RailFrameInfo(
+        preset_id="locked",
+        label="Locked",
+        x=0,
+        y=0,
+        width=40,
+        height=40,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="horizontal",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=True,
+    )
+    assert (
+        edit_mode._slot_status_text(locked, empty_state)
+        == "Slot edits are unavailable on locked rails."
+    )
+
+
 def test_edit_mode_options_toggle_edge_tab_collapsed_state(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="edge_tab",

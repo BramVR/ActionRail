@@ -121,6 +121,27 @@ class _GuideSegment:
     kind: str
 
 
+@dataclass(frozen=True)
+class _SlotEditState:
+    """Current slot edit affordance state for the frame options popover."""
+
+    count: int
+    target_index: int | None = None
+    target_label: str = ""
+
+    @property
+    def can_remove(self) -> bool:
+        return self.target_index is not None
+
+    @property
+    def can_move_up(self) -> bool:
+        return self.target_index is not None and self.target_index > 0
+
+    @property
+    def can_move_down(self) -> bool:
+        return self.target_index is not None and self.target_index < self.count - 1
+
+
 _EDIT_HOST: EditModeOverlayHost | None = None
 _SETTINGS = EditModeSettings()
 _SELECTED_PRESET_ID = ""
@@ -437,6 +458,16 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         _replace_host_spec(host, dataclass_replace(spec, items=(*spec.items, item)))
         self.refresh()
         return True
+
+    def slot_edit_state_for_selected(self) -> _SlotEditState:
+        selected = self.selected_frame()
+        if selected is None or selected.locked:
+            return _SlotEditState(count=0)
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        if host is None or spec is None:
+            return _SlotEditState(count=0)
+        return _slot_edit_state(spec.items)
 
     def remove_slot_from_selected(self) -> bool:
         selected = self.selected_frame()
@@ -880,12 +911,14 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.details.setWordWrap(True)
                 self.status = qt.QtWidgets.QLabel("")
                 self.status.setWordWrap(True)
+                self.slot_status = qt.QtWidgets.QLabel("")
+                self.slot_status.setWordWrap(True)
                 self.save = qt.QtWidgets.QPushButton("Save Position")
                 self.reset = qt.QtWidgets.QPushButton("Reset Position")
                 self.add_slot = qt.QtWidgets.QPushButton("Add Slot")
                 self.remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
-                self.slot_up = qt.QtWidgets.QPushButton("Slot Up")
-                self.slot_down = qt.QtWidgets.QPushButton("Slot Down")
+                self.slot_up = qt.QtWidgets.QPushButton("Move Up")
+                self.slot_down = qt.QtWidgets.QPushButton("Move Down")
                 self.collapse = qt.QtWidgets.QPushButton("Collapse Edge Tab")
                 self.close_button = qt.QtWidgets.QToolButton()
                 self.close_button.setText("x")
@@ -895,11 +928,12 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 layout.addWidget(self.status, 2, 0, 1, 3)
                 layout.addWidget(self.save, 3, 0, 1, 3)
                 layout.addWidget(self.reset, 4, 0, 1, 3)
-                layout.addWidget(self.add_slot, 5, 0, 1, 3)
-                layout.addWidget(self.remove_slot, 6, 0, 1, 3)
-                layout.addWidget(self.slot_up, 7, 0)
-                layout.addWidget(self.slot_down, 7, 1)
-                layout.addWidget(self.collapse, 8, 0, 1, 3)
+                layout.addWidget(self.slot_status, 5, 0, 1, 3)
+                layout.addWidget(self.add_slot, 6, 0, 1, 3)
+                layout.addWidget(self.remove_slot, 7, 0, 1, 3)
+                layout.addWidget(self.slot_up, 8, 0)
+                layout.addWidget(self.slot_down, 8, 1)
+                layout.addWidget(self.collapse, 9, 0, 1, 3)
                 self.setFixedWidth(260)
                 self.close_button.clicked.connect(self._close_options)
                 self.save.clicked.connect(self._save_options)
@@ -924,12 +958,14 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                     f"{'collapsed' if frame.collapsed else 'expanded'}"
                 )
                 self.status.setText(_save_status_text(frame))
+                slot_state = self._owner._host.slot_edit_state_for_selected()
+                self.slot_status.setText(_slot_status_text(frame, slot_state))
                 self.save.setEnabled(_can_save_frame(frame))
                 self.reset.setEnabled(not frame.locked)
                 self.add_slot.setEnabled(not frame.locked)
-                self.remove_slot.setEnabled(not frame.locked)
-                self.slot_up.setEnabled(not frame.locked)
-                self.slot_down.setEnabled(not frame.locked)
+                self.remove_slot.setEnabled(not frame.locked and slot_state.can_remove)
+                self.slot_up.setEnabled(not frame.locked and slot_state.can_move_up)
+                self.slot_down.setEnabled(not frame.locked and slot_state.can_move_down)
                 self.collapse.setEnabled(not frame.locked and _can_toggle_collapse(frame))
                 self.collapse.setText(
                     "Expand Edge Tab" if frame.collapsed else "Collapse Edge Tab"
@@ -1106,6 +1142,26 @@ def _last_action_item_index(items: tuple[Any, ...]) -> int | None:
         if getattr(items[index], "type", "") != "spacer":
             return index
     return None
+
+
+def _slot_edit_state(items: tuple[Any, ...]) -> _SlotEditState:
+    target_index = _last_action_item_index(items)
+    if target_index is None:
+        return _SlotEditState(count=len(items))
+    item = items[target_index]
+    return _SlotEditState(
+        count=len(items),
+        target_index=target_index,
+        target_label=_slot_display_label(item),
+    )
+
+
+def _slot_display_label(item: Any) -> str:
+    label = str(getattr(item, "label", "")).strip()
+    if label:
+        return label
+    item_id = str(getattr(item, "id", "")).strip()
+    return item_id or "unnamed"
 
 
 def _is_edge_anchor(anchor: str) -> bool:
@@ -1542,6 +1598,17 @@ def _save_status_text(frame: RailFrameInfo) -> str:
     if frame.source_layer == "runtime":
         return "Save creates a user preset."
     return "Save updates the user preset."
+
+
+def _slot_status_text(frame: RailFrameInfo, state: _SlotEditState) -> str:
+    if frame.locked:
+        return "Slot edits are unavailable on locked rails."
+    if state.target_index is None:
+        return "No editable action slots yet."
+    return (
+        f"Editing last action slot: {state.target_label} "
+        f"({state.target_index + 1} of {state.count})."
+    )
 
 
 def _frame_label(preset_id: str) -> str:
