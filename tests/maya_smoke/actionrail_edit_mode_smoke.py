@@ -49,18 +49,21 @@ custom_spec = actionrail.StackSpec(
             id="edit_mode_custom.move",
             label="Move",
             action="maya.tool.move",
+            key_label="1",
         ),
         actionrail.StackItem(
             type="button",
             id="edit_mode_custom.rotate",
             label="Rot",
             action="maya.tool.rotate",
+            key_label="2",
         ),
         actionrail.StackItem(
             type="button",
             id="edit_mode_custom.key",
             label="Key",
             action="maya.anim.set_key",
+            key_label="3",
         ),
     ),
 )
@@ -80,12 +83,14 @@ target_spec = actionrail.StackSpec(
             id="edit_mode_target.one",
             label="One",
             action="maya.tool.move",
+            key_label="4",
         ),
         actionrail.StackItem(
             type="button",
             id="edit_mode_target.two",
             label="Two",
             action="maya.tool.rotate",
+            key_label="5",
         ),
     ),
 )
@@ -288,6 +293,155 @@ options_popover = edit_widget.findChild(
 )
 if options_popover is None or not options_popover.isVisible():
     raise AssertionError("Right click did not open the frame options popover.")
+
+action_list = options_popover.findChild(QtWidgets.QListWidget)
+if action_list is None or action_list.count() <= 0:
+    raise AssertionError("Frame options popover did not expose the action palette.")
+if not action_list.isEnabled():
+    raise AssertionError("Action palette was disabled for an unlocked rail.")
+
+retired_slot_controls = {"Add Slot", "Remove Slot", "Move Up", "Move Down"}
+visible_button_texts = {
+    button.text()
+    for button in options_popover.findChildren(QtWidgets.QPushButton)
+    if button.isVisible()
+}
+if retired_slot_controls & visible_button_texts:
+    raise AssertionError(
+        "Frame options popover still exposes retired slot reorder controls: "
+        f"{sorted(retired_slot_controls & visible_button_texts)}"
+    )
+
+custom_key_slot_id = "edit_mode_custom.key"
+custom_rotate_slot_id = "edit_mode_custom.rotate"
+target_one_slot_id = "edit_mode_target.one"
+
+host.open_options("edit_mode_custom", custom_key_slot_id)
+app.processEvents()
+state_after_slot_select = actionrail.edit_mode_state()
+if state_after_slot_select.selected_slot_id != custom_key_slot_id:
+    raise AssertionError(f"Slot selection did not track the chosen slot: {state_after_slot_select}")
+slot_status_texts = {
+    label.text()
+    for label in options_popover.findChildren(QtWidgets.QLabel)
+    if label.isVisible()
+}
+if "Selected slot: Key (key)." not in slot_status_texts:
+    raise AssertionError(f"Selected slot status was not rendered: {slot_status_texts}")
+
+
+def _runtime_item(preset_id: str, slot_id: str) -> actionrail.StackItem:
+    runtime_host = edit_mode._runtime_hosts().get(preset_id)
+    if runtime_host is None:
+        raise AssertionError(f"Runtime host is missing: {preset_id}")
+    for item in runtime_host.spec.items:
+        if item.id == slot_id:
+            return item
+    raise AssertionError(f"Runtime slot is missing: {preset_id}/{slot_id}")
+
+
+def _assert_slot_payload(
+    preset_id: str,
+    slot_id: str,
+    *,
+    label: str,
+    action: str,
+    key_label: str,
+) -> None:
+    item = _runtime_item(preset_id, slot_id)
+    if item.id != slot_id:
+        raise AssertionError(f"Slot id changed: {item.id} != {slot_id}")
+    if item.key_label != key_label:
+        raise AssertionError(
+            f"Slot key label changed for {slot_id}: {item.key_label!r} != {key_label!r}"
+        )
+    if item.label != label or item.action != action:
+        raise AssertionError(
+            f"Unexpected slot payload for {slot_id}: "
+            f"{item.label!r}/{item.action!r} != {label!r}/{action!r}"
+        )
+
+
+if not host.assign_slot_action_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    "maya.tool.rotate",
+):
+    raise AssertionError("Could not assign an action payload to a selected slot.")
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    label="Rotate",
+    action="maya.tool.rotate",
+    key_label="3",
+)
+if not host.clear_slot_payload("edit_mode_custom", custom_key_slot_id):
+    raise AssertionError("Could not clear a slot payload.")
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    label=edit_mode.EMPTY_SLOT_LABEL,
+    action="",
+    key_label="3",
+)
+if not host.move_slot_payload(
+    "edit_mode_target",
+    target_one_slot_id,
+    "edit_mode_custom",
+    custom_key_slot_id,
+):
+    raise AssertionError("Could not move a payload between rails.")
+_assert_slot_payload(
+    "edit_mode_target",
+    target_one_slot_id,
+    label=edit_mode.EMPTY_SLOT_LABEL,
+    action="",
+    key_label="4",
+)
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    label="One",
+    action="maya.tool.move",
+    key_label="3",
+)
+if not host.move_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    "edit_mode_custom",
+    custom_rotate_slot_id,
+):
+    raise AssertionError("Could not swap payloads within a rail.")
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    label="Rot",
+    action="maya.tool.rotate",
+    key_label="3",
+)
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_rotate_slot_id,
+    label="One",
+    action="maya.tool.move",
+    key_label="2",
+)
+if not host.clear_slot_payload("edit_mode_custom", custom_key_slot_id):
+    raise AssertionError("Could not clear a payload after a swap.")
+_assert_slot_payload(
+    "edit_mode_custom",
+    custom_key_slot_id,
+    label=edit_mode.EMPTY_SLOT_LABEL,
+    action="",
+    key_label="3",
+)
+_assert_slot_payload(
+    "edit_mode_custom",
+    "edit_mode_custom.move",
+    label="Move",
+    action="maya.tool.move",
+    key_label="1",
+)
 
 save_dir = output_path.parent.parent / "user_presets"
 saved_path = actionrail.save_edit_mode_layout(user_preset_dir=save_dir)
