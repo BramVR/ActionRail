@@ -160,7 +160,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 445 passed.
+  -> 449 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -200,8 +200,10 @@ $env:PYTHONPATH = "scripts"
   hidden visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge,
   hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
   icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
-  transform-stack state. Quick Create smoke now also verifies Save + Publish
-  creates four slot runtime commands plus a preset shelf toggle.
+  transform-stack state. Edit Mode smoke covered the axis-aligned Sticky Frames
+  position path, collapsed-state persistence, handle expansion, and screenshot
+  capture; Quick Create smoke verifies Save + Publish creates four slot runtime
+  commands plus a preset shelf toggle.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified Save + Publish creates four slot runtime commands, creates
