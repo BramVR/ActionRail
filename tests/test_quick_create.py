@@ -156,6 +156,38 @@ def test_build_quick_create_draft_uses_edited_values() -> None:
     assert spec.items[0].tooltip == "maya.anim.set_key"
     assert spec.items[0].key_label == "S"
     assert spec.items[0].icon == "maya.set_key"
+    assert spec.items[0].active_when == ""
+
+
+def test_build_quick_create_draft_infers_persistent_tool_active_state() -> None:
+    values = QuickCreateDraftInput(
+        preset_id="tool_states",
+        template_id="vertical_stack",
+        slots=(
+            QuickCreateSlotInput(id="move", label="M", action="maya.tool.move"),
+            QuickCreateSlotInput(id="rotate", label="R", action="maya.tool.rotate"),
+            QuickCreateSlotInput(id="scale", label="S", action="maya.tool.scale"),
+            QuickCreateSlotInput(id="key", label="K", action="maya.anim.set_key"),
+            QuickCreateSlotInput(
+                id="custom",
+                label="C",
+                action="maya.tool.move",
+                active_when="false",
+            ),
+        ),
+        anchor="viewport.left.center",
+        orientation="vertical",
+    )
+
+    spec = build_draft_spec(build_quick_create_draft(values))
+
+    assert [item.active_when for item in spec.items] == [
+        "maya.tool == move",
+        "maya.tool == rotate",
+        "maya.tool == scale",
+        "",
+        "false",
+    ]
 
 
 def test_build_quick_create_draft_normalizes_layout_capacity() -> None:
@@ -609,6 +641,7 @@ def test_load_quick_create_preset_returns_editable_values(tmp_path) -> None:
             key_label="W",
             icon="maya.move",
             tooltip="maya.tool.move",
+            active_when="maya.tool == move",
         ),
     )
 

@@ -47,6 +47,13 @@ ANCHOR_CHOICES = (
     "viewport.center",
 )
 
+_PERSISTENT_TOOL_ACTIVE_PREDICATES = {
+    "maya.tool.move": "maya.tool == move",
+    "maya.tool.translate": "maya.tool == move",
+    "maya.tool.rotate": "maya.tool == rotate",
+    "maya.tool.scale": "maya.tool == scale",
+}
+
 
 @dataclass(frozen=True)
 class QuickCreateSlotInput:
@@ -439,9 +446,15 @@ def _draft_slot_from_input(slot: QuickCreateSlotInput) -> DraftSlot:
         tooltip=_slot_tooltip(slot),
         visible_when=slot.visible_when,
         enabled_when=slot.enabled_when,
-        active_when=slot.active_when,
+        active_when=_slot_active_when(slot),
         size=slot.size,
     )
+
+
+def _slot_active_when(slot: QuickCreateSlotInput) -> str:
+    if slot.active_when.strip():
+        return slot.active_when
+    return _PERSISTENT_TOOL_ACTIVE_PREDICATES.get(slot.action, "")
 
 
 def _slot_tooltip(slot: QuickCreateSlotInput) -> str:

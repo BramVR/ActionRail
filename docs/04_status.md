@@ -57,6 +57,10 @@ Working surface:
   publish diagnostics before save, blocked saves include the concrete
   diagnostic issue, Save + Publish reports stale slot-command cleanup, and
   published shelf toggles preserve custom user preset stores.
+- Quick Create draft conversion now infers `active_when` predicates for
+  persistent Maya tool actions (`move`, `translate`, `rotate`, and `scale`) so
+  saved Quick Create rails show active tool styling; one-shot actions remain
+  inactive unless a slot has an explicit custom predicate.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
@@ -128,6 +132,10 @@ $env:PYTHONPATH = "scripts"
   or trims slot rows, extra generated slots are blank/no-icon after the
   template's icon-backed slots, and Buttons Per Row/Button Size/offset/alpha
   changes refresh the active viewport preview immediately.
+- Quick Create now fills blank `active_when` values for known persistent Maya
+  tool actions during draft conversion, so newly saved Move/Rotate/Scale tool
+  slots reflect Maya's active tool context without marking one-shot commands
+  like Set Key active.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -212,6 +220,15 @@ $env:PYTHONPATH = "scripts"
 - Latest focused Quick Create preview validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_widgets.py`
   -> 72 passed.
+- Latest focused Quick Create active-state validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py`
+  -> 34 passed.
+- Latest focused Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py tests\\test_quick_create.py`
+  -> all checks passed.
+- Latest project map:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
+  -> passed.
 - Latest focused Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py scripts\\actionrail\\quick_create_ui.py scripts\\actionrail\\widgets.py tests\\test_quick_create.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
   -> all checks passed.

@@ -38,6 +38,9 @@
   changing button count, buttons per row, offsets, alpha, or button size now
   refreshes the viewport preview immediately, and increasing the button count
   generates extra blank slots after the template's icon-backed slots.
+- Made Quick Create infer active-state predicates for persistent Maya tool
+  actions so saved Move/Translate/Rotate/Scale slots highlight when that tool
+  context is active, while one-shot actions such as Set Key remain inactive.
 - Darkened locked/no-action slots so generated empty Quick Create buttons read
   more like recessed sockets while keeping the existing square shape.
 - Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows

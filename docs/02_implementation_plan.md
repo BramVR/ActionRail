@@ -366,8 +366,10 @@ Create presets to slot runtime commands plus an idempotent shelf toggle. A
 local validation UX follow-up now uses publish diagnostics in Quick Create
 Validate Draft, includes the concrete blocking issue in save errors, reports
 stale slot-command cleanup from Save + Publish, and preserves custom user
-preset stores in published shelf toggles; the Quick Create Maya smoke verifies
-the Save + Publish shelf command carries that custom store path.
+preset stores in published shelf toggles; Quick Create draft conversion also
+infers active-state predicates for persistent Maya tool actions while leaving
+one-shot commands inactive. The Quick Create Maya smoke verifies the Save +
+Publish shelf command carries that custom store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.

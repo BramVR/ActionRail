@@ -41,6 +41,9 @@ Snapshot:
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.
+- Quick Create saved rails infer active-state predicates for persistent Maya
+  tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
+  unless the slot explicitly defines `active_when`.
 - Built-in preset ids currently include `transform_stack`,
   `horizontal_tools`, and `maya_tools`.
 - Icons now support provider-backed logical ids: manifest/local icons such as
