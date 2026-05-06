@@ -82,6 +82,9 @@ Focus the next slice on:
 
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
+- adding the Normal Mode unlocked-slot drag/drop workflow: Shift-drag a
+  populated slot to another slot to move/swap payloads, or drag it out of the
+  rail to clear it
 
 Do not start Bind Mode, flyouts, command rings, profile layers,
 marking-menu export, or Viewport 2.0 in this slice.
@@ -148,6 +151,9 @@ $env:PYTHONPATH = "scripts"
   Edit Mode slot payload surface. Slot payload assignment/clear now belongs to
   Normal Mode rail lock/unlock helpers, while Edit Mode keeps the
   axis-aligned Sticky Frames layout guides.
+- Normal Mode unlocked-slot editing currently supports context-menu
+  assignment/clear. Shift-drag payload move/swap/clear-out is the next focused
+  implementation slice and is not implemented yet.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.

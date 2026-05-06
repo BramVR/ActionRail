@@ -82,6 +82,10 @@ In Normal Mode, the rendered slot context menu can unlock the active rail. Once
 unlocked, that same menu can assign an action payload or clear the slot. Lock
 the rail again when the bar should return to normal action execution.
 
+Planned next: while a rail is unlocked in Normal Mode, Shift-drag a populated
+slot to another slot to move/swap the action payload, or drag it outside the
+rail to clear it. That gesture is not implemented yet.
+
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
 to the user preset store. Unlocked built-in and studio rail saves write a
@@ -158,6 +162,7 @@ Implemented now:
 
 Not implemented yet:
 
+- Normal Mode Shift-drag slot payload move/swap/clear-out gestures
 - Bind Mode, flyouts, command rings, profile layers, marking-menu export, and
   Viewport 2.0 drawing
 
