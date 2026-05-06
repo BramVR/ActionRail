@@ -791,6 +791,10 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                     ):
                         self._slot_drag_source = slot
                         self._slot_drag_start = event.pos()
+                    elif not frame.locked:
+                        point = event.pos()
+                        self._drag_preset_id = frame.preset_id
+                        self._drag_offset = (point.x() - frame.x, point.y() - frame.y)
                 else:
                     self._host.select_rail(frame.preset_id)
                     if not frame.locked:

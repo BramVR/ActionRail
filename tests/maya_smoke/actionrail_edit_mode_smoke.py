@@ -166,6 +166,45 @@ target_frame = next(
 if target_frame is None:
     raise AssertionError(f"Target rail frame was not present: {host.frames}")
 
+move_slot = next(
+    (slot for slot in host.slot_frames if slot.slot_id == "edit_mode_custom.move"),
+    None,
+)
+if move_slot is None:
+    raise AssertionError(f"Custom move slot was not present: {host.slot_frames}")
+slot_drag_start = QtCore.QPoint(
+    move_slot.x + move_slot.width // 2,
+    move_slot.y + move_slot.height // 2,
+)
+slot_drag_end = QtCore.QPoint(slot_drag_start.x() + 48, slot_drag_start.y())
+QtTest.QTest.mousePress(
+    edit_widget,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    slot_drag_start,
+)
+QtTest.QTest.mouseMove(edit_widget, slot_drag_end)
+QtTest.QTest.mouseRelease(
+    edit_widget,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    slot_drag_end,
+)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+custom_frame_after_slot_drag = next(
+    frame for frame in host.frames if frame.preset_id == "edit_mode_custom"
+)
+state_after_slot_drag = actionrail.edit_mode_state()
+if state_after_slot_drag.selected_slot_id != "edit_mode_custom.move":
+    raise AssertionError(f"Slot click did not select the dragged slot: {state_after_slot_drag}")
+if custom_frame_after_slot_drag.x == custom_frame.x:
+    raise AssertionError(
+        "Dragging from a slot without Shift did not move the unlocked rail frame."
+    )
+custom_frame = custom_frame_after_slot_drag
+
 click_point = QtCore.QPoint(custom_frame.x + custom_frame.width // 2, custom_frame.y + 8)
 state_after_left_click = actionrail.edit_mode_state()
 for _attempt in range(3):
