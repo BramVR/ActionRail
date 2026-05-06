@@ -12,6 +12,17 @@ This archive preserves older verification history. Keep `docs/04_status.md` focu
 
 ## History
 
+- 2026-05-06 48-hour regression audit:
+  - Reviewed commits from the last 48 hours and past Codex logs; the review of
+    `869467f` found three collapsible edge-tab regressions, fixed by
+    `13a7d2b`.
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 429 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json` -> passed.
+  - `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-audit -Port 7221 -Script all -Timeout 300 -StopAfter` -> passed against a fresh MayaSessiond state on port `7221`; the audit session stopped cleanly after the run.
+  - Screenshot inspection confirmed `actionrail_edit_mode_layout_map.png`,
+    `actionrail_quick_create_panel.png`, and
+    `actionrail_horizontal_tools_widget.png` rendered visible, coherent UI.
 - 2026-04-27 local venv:
   - `.\\.venv\\Scripts\\python.exe -m pytest` -> 13 passed.
   - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.

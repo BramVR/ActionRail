@@ -154,13 +154,13 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified safe diagnostics and `safe_start("transform_stack")`
   still start an overlay after the built-in override diagnostics fix.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
-  -> passed against MayaSessiond on port `7217`; covered capture, custom
-  user-preset store layout saves, diagnostic badges, diagnostics window, hidden
-  visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge, hotkey
-  label sync, import/recovery diagnostics, menu/shelf UI, missing Maya icon
-  resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
-  transform-stack state.
+  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-audit -Port 7221 -Script all -Timeout 300 -StopAfter`
+  -> passed against a fresh MayaSessiond state on port `7221`; covered capture,
+  custom user-preset store layout saves, diagnostic badges, diagnostics window,
+  hidden visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge,
+  hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
+  icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
+  transform-stack state. The audit session stopped cleanly.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
