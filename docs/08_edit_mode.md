@@ -16,8 +16,10 @@ positioned without triggering their buttons.
 The Edit Mode shell and Phase 2 step 2.5 layout persistence/direct
 manipulation surface are implemented and Maya-smoke verified. Phase 2 step 2.6
 has started: frame options now toggle real collapsible edge-tab state instead
-of the earlier opacity-only placeholder, and the new collapse path is
-Maya-smoke verified.
+of the earlier opacity-only placeholder, and the first collapse path is
+Maya-smoke verified. The current 2.6 polish pass also improves collapsed-handle
+edge placement and hit targets, and that latest handle tuning is now covered by
+Maya smoke.
 
 ## What It Shows
 
@@ -130,7 +132,8 @@ Implemented now:
 - selected-frame snap/spacing guide rendering
 - right-click frame options routing marker
 - frame options for slot add/remove/reorder
-- edge-tab collapse/expand control backed by persisted `collapse` settings
+- edge-tab collapse/expand control backed by persisted `collapse` settings and
+  larger edge-clamped collapsed handles
 - Save Position for unlocked runtime/user rails
 - Save Position user-overrides for unlocked built-in and studio rails
 - public layout-save helper that persists adjusted offsets to user presets

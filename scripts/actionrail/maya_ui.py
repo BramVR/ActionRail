@@ -18,6 +18,7 @@ MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
 SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
+SHELF_BUTTON_PREFIX = "ActionRailTogglePresetShelfButton"
 QUICK_CREATE_WORKSPACE_CONTROL = "ActionRailQuickCreateWorkspaceControl"
 _QUICK_CREATE_USER_PRESET_DIR: str | Path | None = None
 
@@ -28,6 +29,8 @@ def toggle_default(
     preset_id: str = TRANSFORM_STACK_ID,
     *,
     panel: str | None = None,
+    user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
 ) -> ToggleResult:
     """Show the default preset when hidden, or hide it when visible."""
 
@@ -35,7 +38,12 @@ def toggle_default(
         runtime.hide_example(preset_id)
         return "hidden"
 
-    runtime.show_preset(preset_id, panel=panel)
+    kwargs: dict[str, Any] = {"panel": panel}
+    if user_preset_dir is not None:
+        kwargs["user_preset_dir"] = user_preset_dir
+    if studio_preset_dir is not None:
+        kwargs["studio_preset_dir"] = studio_preset_dir
+    runtime.show_preset(preset_id, **kwargs)
     return "shown"
 
 
@@ -175,6 +183,47 @@ def install_shelf_toggle(
     )
 
 
+def install_preset_shelf_toggle(
+    preset_id: str,
+    *,
+    parent: str | None = None,
+    label: str = "",
+    user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
+    cmds_module: Any | None = None,
+    mel_module: Any | None = None,
+) -> str:
+    """Install an idempotent shelf button for a saved or bundled preset."""
+
+    cmds = _require_cmds(cmds_module)
+    shelf_parent = parent or _default_shelf_parent(mel_module)
+    if not cmds.shelfLayout(SHELF_NAME, exists=True):
+        cmds.shelfLayout(SHELF_NAME, parent=shelf_parent)
+
+    button_name = _preset_shelf_button_name(preset_id)
+    if cmds.shelfButton(button_name, exists=True):
+        cmds.deleteUI(button_name, control=True)
+
+    button_label = label or _preset_shelf_label(preset_id)
+    return str(
+        cmds.shelfButton(
+            button_name,
+            label=button_label,
+            annotation=f"Show or hide ActionRail preset '{preset_id}'.",
+            command=toggle_command(
+                preset_id,
+                user_preset_dir=user_preset_dir,
+                studio_preset_dir=studio_preset_dir,
+            ),
+            parent=SHELF_NAME,
+            sourceType="python",
+            imageOverlayLabel=_shelf_overlay_label(button_label),
+            width=34,
+            height=34,
+        )
+    )
+
+
 def uninstall_shelf_toggle(*, cmds_module: Any | None = None) -> None:
     """Remove the ActionRail shelf button created by :func:`install_shelf_toggle`."""
 
@@ -191,12 +240,23 @@ def uninstall_shelf_toggle(*, cmds_module: Any | None = None) -> None:
             cmds.deleteUI(SHELF_NAME, layout=True)
 
 
-def toggle_command(preset_id: str = TRANSFORM_STACK_ID) -> str:
+def toggle_command(
+    preset_id: str = TRANSFORM_STACK_ID,
+    *,
+    user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
+) -> str:
     """Return the Python command string used by Maya menu and shelf entries."""
 
-    if preset_id == TRANSFORM_STACK_ID:
+    kwargs = _toggle_command_kwargs(
+        user_preset_dir=user_preset_dir,
+        studio_preset_dir=studio_preset_dir,
+    )
+    if preset_id == TRANSFORM_STACK_ID and not kwargs:
         return "import actionrail; actionrail.toggle_default()"
-    return f"import actionrail; actionrail.toggle_default({preset_id!r})"
+    args = [] if preset_id == TRANSFORM_STACK_ID else [repr(preset_id)]
+    args.extend(kwargs)
+    return f"import actionrail; actionrail.toggle_default({', '.join(args)})"
 
 
 def toggle_edit_mode_command() -> str:
@@ -339,6 +399,33 @@ def _toggle_label(preset_id: str) -> str:
     if preset_id == TRANSFORM_STACK_ID:
         return "Toggle Transform Stack"
     return f"Toggle {preset_id.replace('_', ' ').title()}"
+
+
+def _toggle_command_kwargs(
+    *,
+    user_preset_dir: str | Path | None = None,
+    studio_preset_dir: str | Path | None = None,
+) -> list[str]:
+    kwargs: list[str] = []
+    if user_preset_dir is not None:
+        kwargs.append(f"user_preset_dir={str(user_preset_dir)!r}")
+    if studio_preset_dir is not None:
+        kwargs.append(f"studio_preset_dir={str(studio_preset_dir)!r}")
+    return kwargs
+
+
+def _preset_shelf_button_name(preset_id: str) -> str:
+    safe = "".join(char if char.isalnum() else "_" for char in preset_id).strip("_")
+    return f"{SHELF_BUTTON_PREFIX}_{safe or 'preset'}"
+
+
+def _preset_shelf_label(preset_id: str) -> str:
+    return preset_id.replace("_", " ").replace("-", " ").title()
+
+
+def _shelf_overlay_label(label: str) -> str:
+    initials = "".join(word[0] for word in label.split() if word[:1].isalnum())
+    return (initials or "AR")[:3].upper()
 
 
 def _default_shelf_parent(mel_module: Any | None = None) -> str:

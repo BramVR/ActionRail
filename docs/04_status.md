@@ -17,7 +17,9 @@ through Quick Create preview/save/load, Edit Mode layout-map/direct
 manipulation controls, user preset saves, built-in layout override saves, and
 studio layout override saves. Phase 2 step 2.6 is now in progress with the
 first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
-verified.
+verified, a Maya-smoke verified handle/publish polish pass, and a locally
+verified validation UX/saved-preset publish follow-up with Quick Create Maya
+smoke coverage for the custom-store Save + Publish shelf command path.
 
 Working surface:
 
@@ -44,6 +46,15 @@ Working surface:
   handle icon, reveal trigger, and default collapsed state; Quick Create
   edge-tab defaults/settings; collapsed handle-only Qt overlays; click/hover
   reveal hooks; and user-preset persistence.
+- Collapsed edge handles now use larger hit targets, hug the configured
+  viewport edge, preserve only tangent layout offset while collapsed, and clamp
+  inside the viewport.
+- Quick Create saves now run publish-facing diagnostics before writing; saved
+  presets can optionally publish slot runtime commands and an idempotent preset
+  shelf toggle through the Save + Publish path. Validate Draft now surfaces
+  publish diagnostics before save, blocked saves include the concrete
+  diagnostic issue, Save + Publish reports stale slot-command cleanup, and
+  published shelf toggles preserve custom user preset stores.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
@@ -57,9 +68,7 @@ Local `.spec/` reports are ignored and not part of the Git-tracked handoff.
 
 Focus the next slice on:
 
-- polishing collapsed-handle placement/hit targets, guide behavior, and
-  slot-edit affordances
-- continuing validation/publish polish for saved user presets
+- polishing guide behavior and slot-edit affordances
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 
@@ -78,7 +87,9 @@ $env:PYTHONPATH = "scripts"
 
 3. Continue Phase 2 step 2.6 on top of the completed Phase 2 step 2.5 Edit Mode
    layout editing surface. The collapse schema/runtime first pass is in place
-   and Maya-smoke verified; broaden publish polish next.
+   and Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
+   verified; the validation UX/publish follow-up is locally verified, and Quick
+   Create Maya smoke covers the custom-store Save + Publish shelf command path.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -103,6 +114,16 @@ $env:PYTHONPATH = "scripts"
 - The May 5 audit items are fixed in focused conventional commits through
   `feat(edit-mode): add direct manipulation controls`, the diagnostics
   follow-up, and the status/changelog hygiene updates.
+- The May 6 handle/publish polish pass enlarges and edge-clamps collapsed
+  handles, adds `diagnose_publish_spec()`, blocks Quick Create saves with
+  diagnostic errors, records warning diagnostics for publish review, and adds
+  optional slot runtime-command plus shelf-toggle publishing from Quick Create.
+- The May 6 validation UX/publish follow-up routes Quick Create Validate Draft
+  through publish diagnostics, includes concrete diagnostic details in blocked
+  save errors, reports stale slot-command cleanup from Save + Publish, and
+  preserves custom user preset stores in published preset shelf toggles.
+- Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
+  scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
 
 ## Blockers
@@ -120,7 +141,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 429 passed.
+  -> 441 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -154,13 +175,20 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified safe diagnostics and `safe_start("transform_stack")`
   still start an overlay after the built-in override diagnostics fix.
 - Full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -StateDir .gg-maya-sessiond-audit -Port 7221 -Script all -Timeout 300 -StopAfter`
-  -> passed against a fresh MayaSessiond state on port `7221`; covered capture,
+  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
+  -> passed against the running MayaSessiond state on port `7217`; covered capture,
   custom user-preset store layout saves, diagnostic badges, diagnostics window,
   hidden visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge,
   hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
   icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
-  transform-stack state. The audit session stopped cleanly.
+  transform-stack state. Quick Create smoke now also verifies Save + Publish
+  creates four slot runtime commands plus a preset shelf toggle.
+- Quick Create Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
+  -> passed; verified Save + Publish creates four slot runtime commands, creates
+  a preset shelf toggle, reports publish status, and preserves the custom user
+  preset store path in the shelf command. The latest run also verifies Quick
+  Create resizes with its Maya workspace-control parent.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
@@ -169,6 +197,12 @@ $env:PYTHONPATH = "scripts"
 - Latest Maya note: Maya smoke used the installed MCP package in the Sessiond
   venv; do not pass `--mcp-src ../GG_MayaMCP` until the sibling repo
   compatibility blocker is resolved.
+- Latest local focused validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_quick_create.py tests\\test_maya_ui.py tests\\test_diagnostics.py`
+  -> 123 passed.
+- Latest targeted Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_cleanup_state.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
+  -> all checks passed.
 
 ## Decisions
 

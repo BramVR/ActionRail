@@ -180,10 +180,13 @@ def about() -> dict[str, object]:
         "version": getattr(package, "__version__", "0.0.0"),
         "status": {
             "phase": (
-                "Phase 2 step 2.6 collapsible edge-tab runtime/persistence "
-                "Maya-smoke verified"
+                "Phase 2 step 2.6 collapsible edge-tab handle placement and "
+                "publish polish first pass Maya-smoke verified; validation UX "
+                "publish follow-up locally verified with Quick Create Maya smoke"
             ),
-            "next_slice": "Phase 2 step 2.6 publish polish and handle tuning",
+            "next_slice": (
+                "Phase 2 step 2.6 guide behavior and slot-edit polish"
+            ),
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

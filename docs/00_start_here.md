@@ -48,8 +48,16 @@ Snapshot:
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
   publish polish. The first collapse schema/runtime pass is implemented and
-  Maya-smoke verified; hit-target polish, validation polish, and saved preset
-  publish polish remain. Phase 2 step 2.5 layout editing and direct
+  Maya-smoke verified. A Maya-smoke verified handle/publish polish pass now makes
+  collapsed handles larger, positions them flush to viewport edges, adds
+  publish-facing diagnostics for missing actions/icons/hotkey label conflicts,
+  and lets Quick Create saves publish slot runtime commands plus a preset shelf
+  toggle. A local validation UX follow-up now routes Quick Create Validate Draft
+  through publish diagnostics, reports blocked-save issue details, reports stale
+  slot-command cleanup, and preserves custom user preset stores in published
+  shelf toggles; Quick Create Maya smoke covers the custom-store shelf command
+  path. Broader guide behavior and slot-edit affordance polish remain.
+  Phase 2 step 2.5 layout editing and direct
   manipulation is complete; Edit Mode can save unlocked runtime/user rail
   offsets plus unlocked built-in and studio user override presets. Do not start
   Bind Mode, flyouts, command rings, profile layers, marking-menu export, or
@@ -101,8 +109,8 @@ user-preset, built-in user-override, and studio user-override layout-save paths.
 Continue Phase 2 with collapsible edge tabs and publish polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Tune collapsed-handle hit targets and placement, then continue validation
-   and saved-preset publish polish.
+2. Continue guide behavior and slot-edit affordance polish on top of the
+   validated collapsed-handle and Save + Publish path.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

@@ -161,11 +161,16 @@ target_frame = next(
 if target_frame is None:
     raise AssertionError(f"Target rail frame was not present: {host.frames}")
 
-click_point = QtCore.QPoint(custom_frame.x + 4, custom_frame.y + 4)
-QtTest.QTest.mouseClick(edit_widget, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier, click_point)
-app.processEvents()
-
+click_point = QtCore.QPoint(custom_frame.x + custom_frame.width // 2, custom_frame.y + 8)
 state_after_left_click = actionrail.edit_mode_state()
+for _attempt in range(3):
+    QtTest.QTest.mouseClick(edit_widget, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier, click_point)
+    app.processEvents()
+    cmds.refresh(force=True)
+    app.processEvents()
+    state_after_left_click = actionrail.edit_mode_state()
+    if state_after_left_click.selected_preset_id == "edit_mode_custom":
+        break
 if state_after_left_click.selected_preset_id != "edit_mode_custom":
     raise AssertionError(f"Left click did not select custom rail: {state_after_left_click}")
 
@@ -306,7 +311,8 @@ if not getattr(custom_runtime_host, "_collapsed", False):
 if not custom_runtime_host.spec.collapse.default_collapsed:
     raise AssertionError("Collapsed state was not written to the runtime spec default.")
 collapsed_widget = custom_runtime_host.widget
-if collapsed_widget.width() > 48 or collapsed_widget.height() > 48:
+collapsed_handle_size = sorted((collapsed_widget.width(), collapsed_widget.height()))
+if collapsed_handle_size[0] > 28 or collapsed_handle_size[1] > 56:
     raise AssertionError(
         "Collapsed edge handle is too large: "
         f"{collapsed_widget.width()}x{collapsed_widget.height()}"

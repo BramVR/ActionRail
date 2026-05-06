@@ -359,18 +359,34 @@ Status: in progress. The first runtime/persistence slice is implemented and
 Maya-smoke verified for the optional `collapse` schema, Quick Create edge-tab
 template/settings, small collapsed Qt handles, click/hover reveal hooks, Edit
 Mode collapse/expand toggling, user-preset round-trips, and in-memory hotkey
-label retention while collapsed.
+label retention while collapsed. A focused Maya-smoke verified polish pass now
+improves collapsed-handle size/edge placement, adds publish-facing diagnostics,
+blocks Quick Create saves with diagnostic errors, and can publish saved Quick
+Create presets to slot runtime commands plus an idempotent shelf toggle. A
+local validation UX follow-up now uses publish diagnostics in Quick Create
+Validate Draft, includes the concrete blocking issue in save errors, reports
+stale slot-command cleanup from Save + Publish, and preserves custom user
+preset stores in published shelf toggles; the Quick Create Maya smoke verifies
+the Save + Publish shelf command carries that custom store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
 - Render a small edge handle when collapsed without creating a viewport-sized
-  transparent hit area. First pass done through a handle-only overlay widget.
+  transparent hit area. First pass done through a handle-only overlay widget;
+  hit-target and placement polish now uses larger edge handles that hug the
+  viewport side and preserve only tangent layout offset while collapsed.
 - Preserve actions, runtime-command publishing, and hotkey labels while a rail
   is collapsed. First pass done for no-overlay slot execution and visible label
   restoration after expand.
 - Surface validation for missing actions, missing icons, and hotkey conflicts
-  before save or publish.
+  before save or publish. First publish-facing diagnostics pass is done through
+  `diagnose_publish_spec()` and Quick Create save validation; Quick Create
+  Validate Draft now surfaces the same publish diagnostics locally before save.
 - Publish saved user presets to shelf/hotkey/runtime command where possible.
+  First pass is done for slot runtime-command publishing and preset shelf-toggle
+  publishing from Quick Create Save + Publish; custom user preset store paths
+  are preserved in published shelf toggles, and stale slot-command cleanup is
+  reported. Explicit hotkey assignment remains Bind Mode territory.
 
 Done when an artist can collapse a custom rail to a side handle, expand it
 again, and keep layout, actions, and bindings intact.
@@ -449,8 +465,10 @@ slot edits, and user override persistence are in place.
 
 Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
 publish polish. The collapse schema/runtime first pass is implemented and
-Maya-smoke verified; next work should tune handle placement/hit targets and
-continue publish polish for validation and saved preset command publishing.
+Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
+verified. A local validation UX/saved-preset publishing polish follow-up is in
+place, and Quick Create Maya smoke now covers the custom-store Save + Publish
+shelf command path.
 Carry forward only polish that naturally supports 2.6, such as guide behavior,
 slot-edit affordances, Quick Create round-trip stability, and locked
 built-in/studio read-only behavior. Keep
@@ -463,8 +481,7 @@ yet.
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Polish Phase 2 step 2.6 collapsed edge-tab handle behavior, then finish
-   publish polish.
+1. Verify and continue Phase 2 step 2.6 guide behavior and slot-edit polish.
 2. Add Bind Mode, then flyouts, then command rings.
 3. Broaden the workflow action library beyond transform/keyframe.
 4. Add profile layers for built-in, studio, project, scene/asset, and user

@@ -33,6 +33,36 @@ from actionrail.quick_create_ui import (
 from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
+class PublishCmds:
+    def __init__(self) -> None:
+        self.runtime_commands: dict[str, dict[str, object]] = {}
+        self.name_commands: dict[str, dict[str, object]] = {}
+
+    def runTimeCommand(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("userCommandArray"):
+            return tuple(self.runtime_commands)
+        if kwargs.get("exists"):
+            return name in self.runtime_commands
+        if kwargs.get("query") and kwargs.get("command"):
+            return self.runtime_commands[name].get("command")
+        if kwargs.get("delete"):
+            self.runtime_commands.pop(name, None)
+            return None
+        payload = dict(kwargs)
+        payload.pop("edit", None)
+        self.runtime_commands[name] = payload
+        return name
+
+    def nameCommand(self, name: str, **kwargs: object) -> str:  # noqa: N802
+        self.name_commands[name] = dict(kwargs)
+        return name
+
+    def hotkey(self, *args: object, **kwargs: object) -> object:
+        if kwargs.get("query"):
+            return None
+        return None
+
+
 @pytest.fixture(autouse=True)
 def clear_runtime_overlays() -> None:
     runtime.hide_all()
@@ -309,6 +339,32 @@ def test_quick_create_valid_status_uses_runtime_schema() -> None:
         _valid_draft_status_text(invalid_draft)
 
 
+def test_quick_create_valid_status_surfaces_publish_diagnostics() -> None:
+    warning_draft = DraftRail(
+        id="warning_draft",
+        slots=(
+            DraftSlot(
+                id="move",
+                label="Move",
+                action="maya.tool.move",
+                icon="missing.icon",
+            ),
+        ),
+    )
+
+    assert (
+        _valid_draft_status_text(warning_draft)
+        == "Valid draft: warning_draft (1 slots); warnings: 1: missing_icon [warning_draft.move]"
+    )
+
+    error_draft = DraftRail(
+        id="error_draft",
+        slots=(DraftSlot(id="missing", label="Missing", action="missing.action"),),
+    )
+    with pytest.raises(ValueError, match=r"Draft has errors: 1: missing_action"):
+        _valid_draft_status_text(error_draft)
+
+
 def test_quick_create_preview_uses_runtime_and_cleans_previous_preview(monkeypatch) -> None:
     events: list[tuple[str, str]] = []
 
@@ -384,7 +440,74 @@ def test_save_quick_create_preset_can_save_without_showing(tmp_path) -> None:
     assert result.preset_id == "quick-vertical-stack"
     assert result.path == tmp_path / "quick-vertical-stack.json"
     assert result.host is None
+    assert result.diagnostics is not None
     assert result.path.is_file()
+
+
+def test_save_quick_create_preset_rejects_diagnostic_errors(tmp_path) -> None:
+    draft = DraftRail(
+        id="broken_save",
+        slots=(DraftSlot(id="missing", label="Missing", action="missing.action"),),
+    )
+
+    with pytest.raises(ValueError, match=r"missing_action \[broken_save.missing\]"):
+        save_quick_create_preset(draft, preset_dir=tmp_path, show=False)
+
+    import actionrail
+
+    report = actionrail.last_report()
+    assert report is not None
+    assert [issue.code for issue in report.errors] == ["missing_action"]
+    assert not (tmp_path / "broken_save.json").exists()
+
+
+def test_save_quick_create_preset_can_publish_slot_runtime_commands(tmp_path) -> None:
+    cmds = PublishCmds()
+    draft = build_quick_create_draft(make_default_input())
+
+    result = save_quick_create_preset(
+        draft,
+        preset_dir=tmp_path,
+        show=False,
+        publish=True,
+        cmds_module=cmds,
+    )
+
+    assert [command.runtime_command for command in result.published] == [
+        "ActionRail_slot_quick_vertical_stack_move",
+        "ActionRail_slot_quick_vertical_stack_rotate",
+        "ActionRail_slot_quick_vertical_stack_scale",
+        "ActionRail_slot_quick_vertical_stack_set_key",
+    ]
+    assert "ActionRail_slot_quick_vertical_stack_move" in cmds.runtime_commands
+    command_text = str(
+        cmds.runtime_commands["ActionRail_slot_quick_vertical_stack_move"]["command"]
+    )
+    assert f"user_preset_dir={str(tmp_path)!r}" in command_text
+
+
+def test_save_quick_create_preset_reports_removed_stale_slot_commands(tmp_path) -> None:
+    cmds = PublishCmds()
+    cmds.runtime_commands["ActionRail_slot_quick_vertical_stack_old"] = {
+        "command": (
+            "import actionrail; "
+            "actionrail.run_slot('quick-vertical-stack', 'quick-vertical-stack.old')"
+        )
+    }
+    draft = build_quick_create_draft(make_default_input())
+
+    result = save_quick_create_preset(
+        draft,
+        preset_dir=tmp_path,
+        show=False,
+        publish=True,
+        cmds_module=cmds,
+    )
+
+    assert [command.runtime_command for command in result.unpublished] == [
+        "ActionRail_slot_quick_vertical_stack_old"
+    ]
+    assert "ActionRail_slot_quick_vertical_stack_old" not in cmds.runtime_commands
 
 
 def test_save_quick_create_preset_requires_explicit_overwrite(tmp_path) -> None:

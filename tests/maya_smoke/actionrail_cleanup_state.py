@@ -43,7 +43,7 @@ def _delete_actionrail_widgets(app: QtWidgets.QApplication) -> int:
             object_name = widget.objectName()
         except Exception:
             continue
-        if not object_name.startswith("ActionRailViewportOverlay"):
+        if not object_name.startswith("ActionRail"):
             continue
         identifier = int(getCppPointer(widget)[0])
         if identifier in seen:

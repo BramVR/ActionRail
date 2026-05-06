@@ -17,6 +17,7 @@ from actionrail.diagnostics import (
     clear_last_report,
     collect_diagnostics,
     diagnose_icon_import,
+    diagnose_publish_spec,
     diagnose_spec,
     format_report,
     last_report,
@@ -72,6 +73,29 @@ class RuntimeCmds(AvailabilityCmds):
         return name
 
 
+class PublishCmds(RuntimeCmds):
+    def __init__(self) -> None:
+        super().__init__()
+        self.hotkeys: dict[tuple[str, bool, bool, bool, bool, bool], str] = {}
+
+    def hotkey(self, *args: object, **kwargs: object) -> object:
+        key_shortcut = args[0] if args else kwargs["keyShortcut"]
+        key = (
+            str(key_shortcut),
+            bool(kwargs.get("ctrlModifier", False)),
+            bool(kwargs.get("altModifier", False)),
+            bool(kwargs.get("shiftModifier", False)),
+            bool(kwargs.get("commandModifier", False)),
+            "releaseName" in kwargs,
+        )
+        if kwargs.get("query"):
+            return self.hotkeys.get(key)
+        value = kwargs.get("releaseName", kwargs.get("name"))
+        if value:
+            self.hotkeys[key] = str(value)
+        return None
+
+
 def test_builtin_preset_ids_are_discovered_from_presets_directory() -> None:
     assert builtin_preset_ids() == ("horizontal_tools", "maya_tools", "transform_stack")
 
@@ -95,6 +119,55 @@ def test_diagnose_spec_reports_missing_action() -> None:
     assert report.has_errors is True
     assert [issue.code for issue in report.errors] == ["missing_action"]
     assert report.errors[0].action_id == "maya.missing.action"
+
+
+def test_diagnose_publish_spec_reports_hotkey_label_conflict() -> None:
+    cmds = PublishCmds()
+    cmds.hotkeys[("K", True, False, False, False, False)] = "ExistingNameCommand"
+    spec = StackSpec(
+        id="artist_tools",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="artist_tools.set_key",
+                label="K",
+                action="maya.anim.set_key",
+                key_label="Ctrl+K",
+            ),
+        ),
+    )
+
+    report = diagnose_publish_spec(spec, cmds_module=cmds)
+
+    assert report.has_errors is False
+    assert [issue.code for issue in report.warnings] == ["hotkey_conflict"]
+    assert report.warnings[0].slot_id == "artist_tools.set_key"
+    assert report.warnings[0].target == "Ctrl+K"
+
+
+def test_diagnose_publish_spec_accepts_matching_actionrail_binding() -> None:
+    cmds = PublishCmds()
+    cmds.hotkeys[("K", True, False, False, False, False)] = (
+        "ActionRail_slot_artist_tools_set_key_NameCommand"
+    )
+    spec = StackSpec(
+        id="artist_tools",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="artist_tools.set_key",
+                label="K",
+                action="maya.anim.set_key",
+                key_label="Ctrl+K",
+            ),
+        ),
+    )
+
+    report = diagnose_publish_spec(spec, cmds_module=cmds)
+
+    assert [issue.code for issue in report.warnings] == []
 
 
 def test_diagnose_spec_reports_invalid_predicate() -> None:

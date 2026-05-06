@@ -33,6 +33,7 @@ import actionrail  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
 from actionrail.quick_create_ui import (  # noqa: E402
     PANEL_OBJECT_NAME,
+    PUBLISH_BUTTON_OBJECT_NAME,
     STATUS_OBJECT_NAME,
     TABS_OBJECT_NAME,
     TEMPLATE_COMBO_OBJECT_NAME,
@@ -66,15 +67,37 @@ if visible_panel is None:
 
 status_label = visible_panel.findChild(QtWidgets.QLabel, STATUS_OBJECT_NAME)
 template_combo = visible_panel.findChild(QtWidgets.QComboBox, TEMPLATE_COMBO_OBJECT_NAME)
+publish_button = visible_panel.findChild(QtWidgets.QPushButton, PUBLISH_BUTTON_OBJECT_NAME)
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
 preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
-if status_label is None or template_combo is None or tabs is None or preset_id_edit is None:
+if (
+    status_label is None
+    or template_combo is None
+    or publish_button is None
+    or tabs is None
+    or preset_id_edit is None
+):
     raise AssertionError("Quick Create panel is missing expected child widgets.")
 
 if template_combo.count() != 3:
     raise AssertionError(f"Unexpected template count: {template_combo.count()}")
 if "Valid draft:" not in status_label.text():
     raise AssertionError(f"Quick Create status did not validate the draft: {status_label.text()}")
+
+workspace_parent = visible_panel.parentWidget()
+if workspace_parent is not None:
+    workspace_parent.resize(1040, 760)
+    app.processEvents()
+    parent_rect = workspace_parent.rect()
+    if (
+        visible_panel.geometry().width() != parent_rect.width()
+        or visible_panel.geometry().height() != parent_rect.height()
+    ):
+        raise AssertionError(
+            "Quick Create panel did not resize with workspace parent: "
+            f"panel={visible_panel.geometry().getRect()} "
+            f"parent={parent_rect.getRect()}"
+        )
 
 current_draft = visible_panel._actionrail_current_draft()
 if current_draft.id != "quick-vertical-stack":
@@ -130,6 +153,26 @@ loaded_draft = visible_panel._actionrail_current_draft()
 if loaded_draft.id != "quick-horizontal-strip" or loaded_draft.layout.orientation != "horizontal":
     raise AssertionError(f"Load Existing did not restore saved bar: {loaded_draft}")
 
+visible_panel._actionrail_save_publish_draft()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+published_runtime = "ActionRail_slot_quick_horizontal_strip_move"
+published_shelf = "ActionRailTogglePresetShelfButton_quick_horizontal_strip"
+if not cmds.runTimeCommand(published_runtime, exists=True):
+    raise AssertionError(f"Save + Publish did not create runtime command: {published_runtime}")
+if not cmds.shelfButton(published_shelf, exists=True):
+    raise AssertionError(f"Save + Publish did not create shelf button: {published_shelf}")
+shelf_command = str(cmds.shelfButton(published_shelf, query=True, command=True))
+escaped_user_preset_dir = str(user_preset_dir).replace("\\", "\\\\")
+if escaped_user_preset_dir not in shelf_command:
+    raise AssertionError(
+        "Save + Publish shelf button did not preserve custom user preset dir: "
+        f"{shelf_command}"
+    )
+if "Published" not in status_label.text():
+    raise AssertionError(f"Save + Publish did not report publish status: {status_label.text()}")
+
 actionrail.reload("quick-horizontal-strip")
 app.processEvents()
 cmds.refresh(force=True)
@@ -167,7 +210,11 @@ result = {
     "horizontal_orientation": horizontal_draft.layout.orientation,
     "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
+    "parent_resize_synced": workspace_parent is not None,
     "quick_create_menu_command": maya_ui.show_quick_create_panel_command(),
+    "published_runtime_exists": cmds.runTimeCommand(published_runtime, exists=True),
+    "published_shelf_command": shelf_command,
+    "published_shelf_exists": cmds.shelfButton(published_shelf, exists=True),
     "saved_preset": str(saved_path),
     "saved_preset_exists": saved_path.is_file(),
     "screenshot": str(output_path),
@@ -183,5 +230,7 @@ actionrail.hide_all()
 app.processEvents()
 if cmds.workspaceControl(maya_ui.QUICK_CREATE_WORKSPACE_CONTROL, exists=True):
     cmds.deleteUI(maya_ui.QUICK_CREATE_WORKSPACE_CONTROL, control=True)
+if cmds.shelfButton(published_shelf, exists=True):
+    cmds.deleteUI(published_shelf, control=True)
 
 print(json.dumps(result, sort_keys=True))

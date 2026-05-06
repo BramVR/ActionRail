@@ -106,6 +106,10 @@ class QuickCreateSaveResult:
     preset_id: str
     path: Path
     host: Any | None = None
+    diagnostics: Any | None = None
+    published: tuple[Any, ...] = ()
+    unpublished: tuple[Any, ...] = ()
+    shelf_button: str = ""
 
 
 _PREVIEW_IDS: set[str] = set()
@@ -299,21 +303,76 @@ def save_quick_create_preset(
     preset_dir: str | Path | None = None,
     overwrite: bool = False,
     show: bool = True,
+    publish: bool = False,
+    install_shelf: bool = False,
     panel: str | None = None,
+    cmds_module: Any | None = None,
+    mel_module: Any | None = None,
 ) -> QuickCreateSaveResult:
     """Save a Quick Create draft as a user preset and optionally show it."""
 
     spec = build_draft_spec(draft)
     _validate_quick_create_id(spec.id)
+
+    from . import diagnostics
+
+    report = diagnostics.diagnose_publish_spec(spec, cmds_module=cmds_module)
+    if report.has_errors:
+        detail = _diagnostic_blocking_detail(report)
+        msg = (
+            "ActionRail Quick Create save has diagnostic errors; "
+            f"{detail} Run actionrail.show_last_report() for details."
+        )
+        raise ValueError(msg)
+
     path = save_user_preset(spec, preset_dir=preset_dir, overwrite=overwrite)
+    effective_preset_dir = path.parent.resolve()
     clear_quick_create_previews(spec.id)
 
     host = None
     if show:
         from . import runtime
 
-        host = runtime.show_preset(spec.id, panel=panel, user_preset_dir=preset_dir)
-    return QuickCreateSaveResult(spec.id, path, host)
+        host = runtime.show_preset(
+            spec.id,
+            panel=panel,
+            user_preset_dir=effective_preset_dir,
+        )
+
+    published: tuple[Any, ...] = ()
+    unpublished: tuple[Any, ...] = ()
+    if publish:
+        from . import hotkeys
+
+        sync_result = hotkeys.sync_preset_slots(
+            spec.id,
+            spec=spec,
+            user_preset_dir=effective_preset_dir,
+            cmds_module=cmds_module,
+        )
+        published = sync_result.published
+        unpublished = sync_result.unpublished
+
+    shelf_button = ""
+    if install_shelf:
+        from . import maya_ui
+
+        shelf_button = maya_ui.install_preset_shelf_toggle(
+            spec.id,
+            user_preset_dir=effective_preset_dir,
+            cmds_module=cmds_module,
+            mel_module=mel_module,
+        )
+
+    return QuickCreateSaveResult(
+        spec.id,
+        path,
+        host,
+        report,
+        published,
+        unpublished,
+        shelf_button,
+    )
 
 
 def load_quick_create_preset(
@@ -449,3 +508,16 @@ def _validate_quick_create_id(preset_id: str) -> str:
         msg = f"Quick Create preset id '{preset_id}' would overwrite a locked built-in preset."
         raise ValueError(msg)
     return preset_id
+
+
+def _diagnostic_blocking_detail(report: Any) -> str:
+    errors = tuple(getattr(report, "errors", ()))
+    if not errors:
+        return ""
+    first = errors[0]
+    slot_id = getattr(first, "slot_id", "")
+    target = slot_id or getattr(first, "preset_id", "") or getattr(first, "target", "")
+    target_text = f" [{target}]" if target else ""
+    remaining = len(errors) - 1
+    suffix = f" and {remaining} more" if remaining else ""
+    return f"{getattr(first, 'code', 'diagnostic_error')}{target_text}{suffix}."

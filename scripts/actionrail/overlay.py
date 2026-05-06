@@ -29,6 +29,7 @@ from .widgets import (
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
 DEFAULT_MARGIN = 12
+COLLAPSED_HANDLE_EDGE_MARGIN = 4
 PREDICATE_REFRESH_INTERVAL_MS = 250
 
 __all__ = [
@@ -439,19 +440,25 @@ class ViewportOverlayHost:
             size = self.widget.size()
 
         x_pos, y_pos = _anchored_position(
-            (
-                self.spec.collapse.edge
-                if getattr(self, "_collapsed", False) and self.spec.collapse.enabled
-                else self.spec.anchor
-            ),
+            self.spec.anchor,
             parent_rect.width(),
             parent_rect.height(),
             size.width(),
             size.height(),
             self.margin,
         )
-        x_pos += self.spec.layout.offset[0]
-        y_pos += self.spec.layout.offset[1]
+        if getattr(self, "_collapsed", False) and self.spec.collapse.enabled:
+            x_pos, y_pos = _collapsed_handle_position(
+                self.spec.collapse.edge,
+                parent_rect.width(),
+                parent_rect.height(),
+                size.width(),
+                size.height(),
+                self.spec.layout.offset,
+            )
+        else:
+            x_pos += self.spec.layout.offset[0]
+            y_pos += self.spec.layout.offset[1]
         if self._floating:
             self.widget.move(_map_to_global(self.parent, x_pos, y_pos, self.qt))
         else:
@@ -662,6 +669,40 @@ def _anchored_position(
         y_pos = int((parent_height - widget_height) / 2)
 
     return max(margin, x_pos), max(margin, y_pos)
+
+
+def _collapsed_handle_position(
+    edge: str,
+    parent_width: int,
+    parent_height: int,
+    widget_width: int,
+    widget_height: int,
+    layout_offset: tuple[int, int],
+    *,
+    margin: int = COLLAPSED_HANDLE_EDGE_MARGIN,
+) -> tuple[int, int]:
+    """Return a small edge-tab position without reusing the rail's inward offset."""
+
+    offset_x, offset_y = layout_offset
+    if edge == "right":
+        x_pos = parent_width - widget_width - margin
+        y_pos = int((parent_height - widget_height) / 2) + offset_y
+    elif edge == "top":
+        x_pos = int((parent_width - widget_width) / 2) + offset_x
+        y_pos = margin
+    elif edge == "bottom":
+        x_pos = int((parent_width - widget_width) / 2) + offset_x
+        y_pos = parent_height - widget_height - margin
+    else:
+        x_pos = margin
+        y_pos = int((parent_height - widget_height) / 2) + offset_y
+
+    max_x = max(margin, parent_width - widget_width - margin)
+    max_y = max(margin, parent_height - widget_height - margin)
+    return (
+        min(max(margin, x_pos), max_x),
+        min(max(margin, y_pos), max_y),
+    )
 
 
 def _floating_window_flags(qt: Any) -> Any:

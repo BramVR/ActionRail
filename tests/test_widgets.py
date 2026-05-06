@@ -5,7 +5,7 @@ import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
 from actionrail.predicates import PredicateContext
 from actionrail.qt import QtBinding
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
 from actionrail.state import MayaStateSnapshot
 from actionrail.widgets import (
     SlotRenderState,
@@ -191,6 +191,24 @@ class BuildButton(FakeButton):
 
     def setIconSize(self, size) -> None:  # noqa: N802
         self.icon_size = size
+
+
+def test_collapsed_handle_size_uses_larger_click_target_and_scale() -> None:
+    vertical_spec = StackSpec(
+        id="edge",
+        layout=RailLayout(anchor="viewport.left.center", scale=1.0),
+        items=(StackItem(type="button", id="edge.move", label="M"),),
+        collapse=RailCollapse(enabled=True, edge="left"),
+    )
+    horizontal_spec = StackSpec(
+        id="edge",
+        layout=RailLayout(anchor="viewport.top.center", scale=1.5),
+        items=(StackItem(type="button", id="edge.move", label="M"),),
+        collapse=RailCollapse(enabled=True, edge="top"),
+    )
+
+    assert widgets._collapsed_handle_size(vertical_spec) == (24, 52)
+    assert widgets._collapsed_handle_size(horizontal_spec) == (78, 36)
 
 
 class FakeLayout:

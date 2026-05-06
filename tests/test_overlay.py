@@ -9,6 +9,7 @@ import pytest
 import actionrail.overlay as overlay
 from actionrail.overlay import (
     _anchored_position,
+    _collapsed_handle_position,
     _map_to_global,
     _qt_widget_identity,
     _qt_widget_is_valid,
@@ -53,6 +54,18 @@ def test_anchored_position_supports_common_viewport_anchors() -> None:
     assert _anchored_position("viewport.left.center", 800, 600, 40, 196, 12) == (12, 202)
     assert _anchored_position("viewport.right.top", 800, 600, 40, 196, 12) == (748, 12)
     assert _anchored_position("viewport.bottom.center", 800, 600, 200, 40, 12) == (300, 548)
+
+
+def test_collapsed_handle_position_hugs_edge_and_preserves_tangent_offset() -> None:
+    assert _collapsed_handle_position("left", 800, 600, 24, 52, (80, 30)) == (4, 304)
+    assert _collapsed_handle_position("right", 800, 600, 24, 52, (-80, -30)) == (772, 244)
+    assert _collapsed_handle_position("top", 800, 600, 52, 24, (40, 90)) == (414, 4)
+    assert _collapsed_handle_position("bottom", 800, 600, 52, 24, (-40, -90)) == (334, 572)
+
+
+def test_collapsed_handle_position_clamps_to_viewport_bounds() -> None:
+    assert _collapsed_handle_position("left", 120, 80, 24, 52, (0, -999)) == (4, 4)
+    assert _collapsed_handle_position("bottom", 120, 80, 52, 24, (999, 0)) == (64, 52)
 
 
 def test_active_model_panel_prefers_focused_model_panel() -> None:

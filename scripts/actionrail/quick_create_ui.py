@@ -37,6 +37,7 @@ TABS_OBJECT_NAME = "ActionRailQuickCreateTabs"
 PREVIEW_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePreviewButton"
 CLEAR_PREVIEW_BUTTON_OBJECT_NAME = "ActionRailQuickCreateClearPreviewButton"
 SAVE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateSaveButton"
+PUBLISH_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePublishButton"
 LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
 OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
 
@@ -55,6 +56,7 @@ __all__ = [
     "LOAD_BUTTON_OBJECT_NAME",
     "OVERWRITE_BUTTON_OBJECT_NAME",
     "PREVIEW_BUTTON_OBJECT_NAME",
+    "PUBLISH_BUTTON_OBJECT_NAME",
     "SAVE_BUTTON_OBJECT_NAME",
     "STATUS_OBJECT_NAME",
     "TABS_OBJECT_NAME",
@@ -91,6 +93,9 @@ def show_quick_create_panel(  # pragma: no cover - Maya-hosted Qt panel.
     panel.setAttribute(qt.QtCore.Qt.WA_DeleteOnClose, True)
     if panel_parent is None:
         panel.setWindowFlags(qt.QtCore.Qt.Tool)
+    else:
+        _sync_to_parent_size(panel, panel_parent)
+        _install_parent_resize_filter(qt, panel, panel_parent)
 
     panel._actionrail_user_preset_dir = user_preset_dir
     _build_panel(panel, qt, user_preset_dir=user_preset_dir)
@@ -100,6 +105,32 @@ def show_quick_create_panel(  # pragma: no cover - Maya-hosted Qt panel.
     panel.raise_()
     panel.activateWindow()
     return panel
+
+
+def _install_parent_resize_filter(
+    qt: QtBinding,
+    panel: Any,
+    panel_parent: Any,
+) -> None:  # pragma: no cover - Maya-hosted Qt resize behavior.
+    class ParentResizeFilter(qt.QtCore.QObject):  # type: ignore[misc, valid-type]
+        def eventFilter(self, watched: Any, event: Any) -> bool:  # noqa: N802
+            event_type = event.type()
+            if event_type in (
+                qt.QtCore.QEvent.Resize,
+                qt.QtCore.QEvent.Show,
+                qt.QtCore.QEvent.LayoutRequest,
+            ):
+                _sync_to_parent_size(panel, watched)
+            return False
+
+    resize_filter = ParentResizeFilter(panel)
+    panel_parent.installEventFilter(resize_filter)
+    panel._actionrail_parent_resize_filter = resize_filter
+
+
+def _sync_to_parent_size(panel: Any, panel_parent: Any) -> None:
+    rect = panel_parent.rect()
+    panel.setGeometry(rect)
 
 
 def _build_panel(
@@ -406,6 +437,29 @@ def _build_panel(
             f"Saved and showing user preset: {result.preset_id} ({result.path})",
         )
 
+    def save_and_publish_draft() -> None:
+        try:
+            result = save_quick_create_preset(
+                current_draft(),
+                overwrite=True,
+                publish=True,
+                install_shelf=True,
+                preset_dir=user_preset_dir,
+            )
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        warnings = len(getattr(result.diagnostics, "warnings", ()))
+        detail = (
+            f"Published {len(result.published)} slot commands"
+            + (f", shelf {result.shelf_button}" if result.shelf_button else "")
+        )
+        if result.unpublished:
+            detail = f"{detail}; removed {len(result.unpublished)} stale commands"
+        if warnings:
+            detail = f"{detail}; {warnings} warnings in diagnostics"
+        _set_status(qt, status, "ok", f"Saved user preset: {result.preset_id}. {detail}")
+
     def refresh_template(index: int) -> None:
         if template_list.currentRow() != index:
             template_list.setCurrentRow(index)
@@ -423,10 +477,12 @@ def _build_panel(
     clear_preview_button = qt.QtWidgets.QPushButton("Clear Preview")
     save = qt.QtWidgets.QPushButton("Save Preset")
     overwrite = qt.QtWidgets.QPushButton("Overwrite Preset")
+    publish = qt.QtWidgets.QPushButton("Save + Publish")
     load_existing_button = qt.QtWidgets.QPushButton("Load Existing")
     preview.setObjectName(PREVIEW_BUTTON_OBJECT_NAME)
     clear_preview_button.setObjectName(CLEAR_PREVIEW_BUTTON_OBJECT_NAME)
     save.setObjectName(SAVE_BUTTON_OBJECT_NAME)
+    publish.setObjectName(PUBLISH_BUTTON_OBJECT_NAME)
     overwrite.setObjectName(OVERWRITE_BUTTON_OBJECT_NAME)
     load_existing_button.setObjectName(LOAD_BUTTON_OBJECT_NAME)
     for button in (
@@ -437,6 +493,7 @@ def _build_panel(
         clear_preview_button,
         save,
         overwrite,
+        publish,
         load_existing_button,
     ):
         button.setProperty("actionRailRole", "dialogButton")
@@ -449,6 +506,7 @@ def _build_panel(
     panel._actionrail_preview_draft = preview_draft
     panel._actionrail_clear_preview = clear_preview
     panel._actionrail_save_draft = save_draft
+    panel._actionrail_save_publish_draft = save_and_publish_draft
     panel._actionrail_load_existing = load_existing
 
     template_combo.currentIndexChanged.connect(refresh_template)
@@ -477,6 +535,7 @@ def _build_panel(
     clear_preview_button.clicked.connect(clear_preview)
     save.clicked.connect(lambda: save_draft(overwrite=False))
     overwrite.clicked.connect(lambda: save_draft(overwrite=True))
+    publish.clicked.connect(save_and_publish_draft)
     load_existing_button.clicked.connect(load_existing)
     template_list.setCurrentRow(0)
     tabs.setCurrentIndex(1)
@@ -671,7 +730,26 @@ def _widget_value_from_slider(value: int, scale_factor: int) -> int | float:
 
 def _valid_draft_status_text(draft: DraftRail) -> str:
     spec = build_draft_spec(draft)
+    from . import diagnostics
+
+    report = diagnostics.diagnose_publish_spec(spec, record=False)
+    if report.has_errors:
+        raise ValueError(_diagnostic_status_text("Draft has errors", report.errors))
+    if report.warnings:
+        return (
+            f"Valid draft: {spec.id} ({len(spec.items)} slots); "
+            f"{_diagnostic_status_text('warnings', report.warnings)}"
+        )
     return f"Valid draft: {spec.id} ({len(spec.items)} slots)"
+
+
+def _diagnostic_status_text(prefix: str, issues: tuple[Any, ...]) -> str:
+    first = issues[0]
+    target = getattr(first, "slot_id", "") or getattr(first, "target", "")
+    target_text = f" [{target}]" if target else ""
+    remaining = len(issues) - 1
+    suffix = f", +{remaining} more" if remaining else ""
+    return f"{prefix}: {len(issues)}: {getattr(first, 'code', 'diagnostic')}{target_text}{suffix}"
 
 
 def _set_status(qt: QtBinding, status: Any, state: str, text: str) -> None:  # pragma: no cover

@@ -23,6 +23,19 @@
   disabled collapse edge defaults from each template anchor.
 - Updated status, architecture, Edit Mode, roadmap, and project-map docs so the
   next slice is handle tuning plus publish polish for saved presets.
+- Polished the first 2.6 publish/handle pass: collapsed handles now use larger
+  edge-clamped hit targets, Quick Create saves run publish-facing diagnostics
+  before writing, saved drafts can publish slot runtime commands, and Quick
+  Create exposes a Save + Publish path that also installs an idempotent preset
+  shelf toggle.
+- Continued the 2.6 validation/publish polish: Quick Create Validate Draft now
+  surfaces publish diagnostics before save, blocked saves include the concrete
+  diagnostic issue, Save + Publish reports stale slot-command cleanup, and
+  preset shelf toggles preserve custom user preset stores.
+- Fixed the Quick Create workspace-control resize behavior so the panel fills
+  the resized Maya window instead of staying at its initial dimensions.
+- Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows
+  are removed between smoke scripts instead of stealing later Edit Mode clicks.
 
 ## 2026-05-05
 

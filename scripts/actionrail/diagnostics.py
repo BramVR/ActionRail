@@ -35,6 +35,7 @@ __all__ = [
     "clear_last_report",
     "collect_diagnostics",
     "diagnose_icon_import",
+    "diagnose_publish_spec",
     "diagnose_spec",
     "format_report",
     "last_report",
@@ -433,6 +434,29 @@ def diagnose_spec(
     return _record_report(report)
 
 
+def diagnose_publish_spec(
+    spec: StackSpec,
+    *,
+    registry: ActionRegistry | None = None,
+    cmds_module: Any | None = None,
+    record: bool = True,
+) -> DiagnosticReport:
+    """Collect diagnostics that matter before saving or publishing a preset."""
+
+    resolved_cmds = _resolve_cmds_module(cmds_module)
+    report = diagnose_spec(
+        spec,
+        registry=registry,
+        cmds_module=resolved_cmds,
+        record=False,
+    )
+    publish_issues = _hotkey_label_conflict_diagnostics(spec, resolved_cmds)
+    report = report.with_issues(publish_issues)
+    if not record:
+        return report
+    return _record_report(report)
+
+
 def diagnose_icon_import(
     source_path: str,
     icon_id: str,
@@ -702,6 +726,123 @@ def _icon_import_issue(issue: object) -> DiagnosticIssue:
         field=getattr(issue, "field", ""),
         hint=getattr(issue, "hint", ""),
     )
+
+
+def _hotkey_label_conflict_diagnostics(
+    spec: StackSpec,
+    cmds_module: Any | None,
+) -> tuple[DiagnosticIssue, ...]:
+    if cmds_module is None:
+        return ()
+
+    issues: list[DiagnosticIssue] = []
+    for item in spec.items:
+        if not item.action or not item.key_label.strip():
+            continue
+        chord = _parse_key_label(item.key_label)
+        if chord is None:
+            continue
+
+        try:
+            from .hotkeys import (
+                format_hotkey,
+                name_command_name,
+                query_hotkey_binding,
+                runtime_command_name,
+                slot_target_id,
+            )
+
+            binding = query_hotkey_binding(**chord, cmds_module=cmds_module)
+            if binding is None:
+                continue
+
+            expected_target = slot_target_id(spec.id, item.id)
+            expected_runtime = runtime_command_name("slot", expected_target)
+            expected_name = name_command_name(expected_runtime)
+            if binding.name == expected_name:
+                continue
+
+            issues.append(
+                DiagnosticIssue(
+                    code="hotkey_conflict",
+                    severity="warning",
+                    message=(
+                        f"Preset '{spec.id}' slot '{item.id}' displays "
+                        f"hotkey '{item.key_label}', but that key is already "
+                        f"assigned to '{binding.name}'."
+                    ),
+                    preset_id=spec.id,
+                    slot_id=item.id,
+                    action_id=item.action,
+                    target=format_hotkey(
+                        chord["key"],
+                        ctrl=chord["ctrl"],
+                        alt=chord["alt"],
+                        shift=chord["shift"],
+                        command=chord["command"],
+                    ),
+                    hint=(
+                        "Choose a different displayed key label or publish with "
+                        "an explicit overwrite after reviewing the Maya hotkey."
+                    ),
+                )
+            )
+        except Exception:
+            continue
+    return tuple(issues)
+
+
+def _parse_key_label(label: str) -> dict[str, Any] | None:
+    text = label.strip()
+    if not text:
+        return None
+
+    release = False
+    lowered = text.lower()
+    for suffix in (" up", " release"):
+        if lowered.endswith(suffix):
+            text = text[: -len(suffix)].strip()
+            release = True
+            break
+
+    parts = [part.strip() for part in text.split("+") if part.strip()]
+    if not parts:
+        return None
+
+    modifiers = {
+        "ctrl": False,
+        "alt": False,
+        "shift": False,
+        "command": False,
+    }
+    aliases = {
+        "control": "ctrl",
+        "ctrl": "ctrl",
+        "alt": "alt",
+        "option": "alt",
+        "shift": "shift",
+        "command": "command",
+        "cmd": "command",
+        "meta": "command",
+    }
+    key = ""
+    for part in parts:
+        modifier = aliases.get(part.lower())
+        if modifier is not None:
+            modifiers[modifier] = True
+            continue
+        key = part
+
+    if not key:
+        return None
+    return {
+        "key": key,
+        "ctrl": modifiers["ctrl"],
+        "alt": modifiers["alt"],
+        "shift": modifiers["shift"],
+        "command": modifiers["command"],
+        "release": release,
+    }
 
 
 def _user_preset_diagnostics(

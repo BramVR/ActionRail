@@ -22,6 +22,8 @@ from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
 BUTTON_OUTER_SIZE = DEFAULT_THEME.button_outer_size
+COLLAPSED_HANDLE_SHORT_SIDE = 24
+COLLAPSED_HANDLE_LONG_SIDE = 52
 FRAME_PADDING = DEFAULT_THEME.frame_padding
 FRAME_SPACING = DEFAULT_THEME.frame_spacing
 RAIL_WIDTH = DEFAULT_THEME.rail_width
@@ -30,6 +32,8 @@ STYLE_SHEET = generate_style_sheet(DEFAULT_THEME)
 __all__ = [
     "BUTTON_OUTER_SIZE",
     "BUTTON_SIZE",
+    "COLLAPSED_HANDLE_LONG_SIDE",
+    "COLLAPSED_HANDLE_SHORT_SIDE",
     "FRAME_PADDING",
     "FRAME_SPACING",
     "RAIL_WIDTH",
@@ -199,11 +203,7 @@ def _collapsed_handle_button(qt: object, spec: StackSpec, on_reveal: Callable[[]
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(qt.QtCore.Qt.PointingHandCursor)
     button.setToolTip(f"Show ActionRail rail: {spec.id}")
-    edge = spec.collapse.edge
-    if edge in {"left", "right"}:
-        button.setFixedSize(18, 42)
-    else:
-        button.setFixedSize(42, 18)
+    button.setFixedSize(*_collapsed_handle_size(spec))
     button.clicked.connect(lambda _checked=False: on_reveal())
     if spec.collapse.reveal_trigger == "hover":
         base_enter = button.enterEvent
@@ -214,6 +214,20 @@ def _collapsed_handle_button(qt: object, spec: StackSpec, on_reveal: Callable[[]
 
         button.enterEvent = enter_event  # type: ignore[method-assign]
     return button
+
+
+def _collapsed_handle_size(spec: StackSpec) -> tuple[int, int]:
+    short_side = max(
+        COLLAPSED_HANDLE_SHORT_SIDE,
+        round(COLLAPSED_HANDLE_SHORT_SIDE * spec.layout.scale),
+    )
+    long_side = max(
+        COLLAPSED_HANDLE_LONG_SIDE,
+        round(COLLAPSED_HANDLE_LONG_SIDE * spec.layout.scale),
+    )
+    if spec.collapse.edge in {"left", "right"}:
+        return short_side, long_side
+    return long_side, short_side
 
 
 def _collapse_handle_label(spec: StackSpec) -> str:

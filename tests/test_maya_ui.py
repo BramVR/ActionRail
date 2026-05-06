@@ -96,6 +96,10 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     assert maya_ui.toggle_command("horizontal_tools") == (
         "import actionrail; actionrail.toggle_default('horizontal_tools')"
     )
+    assert maya_ui.toggle_command("artist_tools", user_preset_dir="C:/custom/presets") == (
+        "import actionrail; actionrail.toggle_default('artist_tools', "
+        "user_preset_dir='C:/custom/presets')"
+    )
     assert maya_ui.diagnose_icon_import_from_maya_command() == (
         "import actionrail; actionrail.diagnose_icon_import_from_maya()"
     )
@@ -140,6 +144,34 @@ def test_toggle_default_shows_when_hidden_and_hides_when_visible(
     assert calls == [
         ("show", "transform_stack:modelPanel4"),
         ("hide", "transform_stack"),
+    ]
+
+
+def test_toggle_default_forwards_custom_preset_dirs(monkeypatch, tmp_path) -> None:
+    calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(maya_ui.runtime, "active_overlay_ids", lambda: ())
+    monkeypatch.setattr(
+        maya_ui.runtime,
+        "show_preset",
+        lambda preset_id, **kwargs: calls.append({"preset_id": preset_id, **kwargs}),
+    )
+
+    assert (
+        maya_ui.toggle_default(
+            "artist_tools",
+            user_preset_dir=tmp_path / "user",
+            studio_preset_dir=tmp_path / "studio",
+        )
+        == "shown"
+    )
+    assert calls == [
+        {
+            "preset_id": "artist_tools",
+            "panel": None,
+            "user_preset_dir": tmp_path / "user",
+            "studio_preset_dir": tmp_path / "studio",
+        }
     ]
 
 
@@ -593,6 +625,38 @@ def test_install_shelf_toggle_is_idempotent() -> None:
     assert cmds.shelves[maya_ui.SHELF_NAME]["parent"] == "ShelfLayout"
     assert cmds.shelf_buttons[maya_ui.SHELF_BUTTON_NAME]["command"] == maya_ui.toggle_command()
     assert cmds.deleted == [(maya_ui.SHELF_BUTTON_NAME, {"control": True})]
+
+
+def test_install_preset_shelf_toggle_uses_unique_button_name() -> None:
+    cmds = FakeCmds()
+
+    button = maya_ui.install_preset_shelf_toggle(
+        "artist-tools.main",
+        parent="ShelfLayout",
+        cmds_module=cmds,
+    )
+
+    assert button == "ActionRailTogglePresetShelfButton_artist_tools_main"
+    assert cmds.shelf_buttons[button]["command"] == (
+        "import actionrail; actionrail.toggle_default('artist-tools.main')"
+    )
+    assert cmds.shelf_buttons[button]["imageOverlayLabel"] == "AT"
+
+
+def test_install_preset_shelf_toggle_preserves_custom_user_preset_dir(tmp_path) -> None:
+    cmds = FakeCmds()
+
+    button = maya_ui.install_preset_shelf_toggle(
+        "artist_tools",
+        parent="ShelfLayout",
+        user_preset_dir=tmp_path,
+        cmds_module=cmds,
+    )
+
+    assert cmds.shelf_buttons[button]["command"] == (
+        "import actionrail; actionrail.toggle_default('artist_tools', "
+        f"user_preset_dir={str(tmp_path)!r})"
+    )
 
 
 def test_uninstall_shelf_toggle_removes_empty_actionrail_shelf_only() -> None:
