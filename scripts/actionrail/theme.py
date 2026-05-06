@@ -116,6 +116,20 @@ QPushButton[actionRailRole="button"]:disabled {{
     border-color: {theme.button_disabled_border};
     color: {theme.button_disabled_color};
 }}
+QPushButton[actionRailRole="button"][actionRailLocked="true"] {{
+    background: #3f3f46;
+    border-color: #4a4a52;
+    color: #858591;
+}}
+QPushButton[actionRailRole="button"][actionRailLocked="true"]:hover {{
+    background: #45454c;
+    border-color: #565660;
+}}
+QPushButton[actionRailRole="button"][actionRailLocked="true"]:disabled {{
+    background: #3f3f46;
+    border-color: #4a4a52;
+    color: #858591;
+}}
 QPushButton[actionRailRole="collapsedHandle"] {{
     border: {theme.button_border_width}px solid {theme.button_hover_border};
     border-radius: {theme.button_border_radius}px;

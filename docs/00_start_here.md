@@ -38,6 +38,9 @@ Snapshot:
   safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
   the diagnostics Qt window, and the SVG import helper with generated PNG
   fallbacks.
+- Quick Create Preview is live while visible: layout sliders refresh the active
+  viewport preview immediately, and raising the button count adds blank
+  generated slots after the template's icon-backed slots.
 - Built-in preset ids currently include `transform_stack`,
   `horizontal_tools`, and `maya_tools`.
 - Icons now support provider-backed logical ids: manifest/local icons such as

@@ -30,8 +30,12 @@ from maya import cmds  # noqa: E402
 from PySide6 import QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
+import actionrail.runtime as actionrail_runtime  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
 from actionrail.quick_create_ui import (  # noqa: E402
+    BUTTON_COUNT_OBJECT_NAME,
+    BUTTON_SIZE_OBJECT_NAME,
+    BUTTONS_PER_ROW_OBJECT_NAME,
     PANEL_OBJECT_NAME,
     PUBLISH_BUTTON_OBJECT_NAME,
     STATUS_OBJECT_NAME,
@@ -70,12 +74,18 @@ template_combo = visible_panel.findChild(QtWidgets.QComboBox, TEMPLATE_COMBO_OBJ
 publish_button = visible_panel.findChild(QtWidgets.QPushButton, PUBLISH_BUTTON_OBJECT_NAME)
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
 preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
+button_count = visible_panel.findChild(QtWidgets.QSpinBox, BUTTON_COUNT_OBJECT_NAME)
+buttons_per_row = visible_panel.findChild(QtWidgets.QSpinBox, BUTTONS_PER_ROW_OBJECT_NAME)
+button_size = visible_panel.findChild(QtWidgets.QDoubleSpinBox, BUTTON_SIZE_OBJECT_NAME)
 if (
     status_label is None
     or template_combo is None
     or publish_button is None
     or tabs is None
     or preset_id_edit is None
+    or button_count is None
+    or buttons_per_row is None
+    or button_size is None
 ):
     raise AssertionError("Quick Create panel is missing expected child widgets.")
 
@@ -118,6 +128,36 @@ app.processEvents()
 if "quick-horizontal-strip" not in actionrail.active_overlay_ids():
     raise AssertionError(
         f"Quick Create preview did not show overlay: {actionrail.active_overlay_ids()}"
+    )
+
+button_count.setValue(10)
+buttons_per_row.setValue(5)
+button_size.setValue(1.25)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+live_draft = visible_panel._actionrail_current_draft()
+if len(live_draft.slots) != 10:
+    raise AssertionError(f"Live Buttons slider did not create 10 slots: {live_draft.slots}")
+if live_draft.layout.rows != 2 or live_draft.layout.columns != 5:
+    raise AssertionError(f"Live Buttons Per Row did not wrap 10 slots as 2x5: {live_draft}")
+if live_draft.layout.scale != 1.25:
+    raise AssertionError(f"Live Button Size did not update draft scale: {live_draft.layout.scale}")
+host = actionrail_runtime._OVERLAYS.get("quick-horizontal-strip")
+if host is None:
+    raise AssertionError("Live preview refresh removed the Quick Create overlay.")
+if host.spec.layout.rows != 2 or host.spec.layout.columns != 5 or host.spec.layout.scale != 1.25:
+    raise AssertionError(f"Live preview host did not receive updated layout: {host.spec.layout}")
+preview_buttons = host.widget.findChildren(QtWidgets.QPushButton)
+slot_buttons = [
+    button for button in preview_buttons if button.property("actionRailSlotId")
+]
+if len(slot_buttons) != 10:
+    raise AssertionError(f"Live preview did not render 10 slot buttons: {len(slot_buttons)}")
+icons = [button.property("actionRailIcon") for button in slot_buttons]
+if icons[:4] != ["maya.move", "maya.rotate", "maya.scale", "maya.set_key"] or any(icons[4:]):
+    raise AssertionError(
+        f"Generated Quick Create slots did not preserve icons then blanks: {icons}"
     )
 
 visible_panel._actionrail_save_draft()
@@ -208,6 +248,10 @@ result = {
     "current_template": template_combo.currentText(),
     "default_slot_count": len(current_draft.slots),
     "horizontal_orientation": horizontal_draft.layout.orientation,
+    "live_preview_icons": icons,
+    "live_preview_layout": [live_draft.layout.rows, live_draft.layout.columns],
+    "live_preview_scale": live_draft.layout.scale,
+    "live_preview_slot_count": len(live_draft.slots),
     "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,

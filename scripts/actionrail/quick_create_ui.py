@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +26,6 @@ from .quick_create import (
 from .spec import (
     MAX_LAYOUT_COLUMNS,
     MAX_LAYOUT_OFFSET,
-    MAX_LAYOUT_ROWS,
     MAX_LAYOUT_SCALE,
 )
 from .theme import DEFAULT_THEME
@@ -40,6 +40,9 @@ SAVE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateSaveButton"
 PUBLISH_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePublishButton"
 LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
 OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
+BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
+BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
+BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
 
 _PANEL: Any | None = None
 _SLOT_COLUMNS = (
@@ -61,6 +64,9 @@ __all__ = [
     "STATUS_OBJECT_NAME",
     "TABS_OBJECT_NAME",
     "TEMPLATE_COMBO_OBJECT_NAME",
+    "BUTTON_COUNT_OBJECT_NAME",
+    "BUTTON_SIZE_OBJECT_NAME",
+    "BUTTONS_PER_ROW_OBJECT_NAME",
     "show_quick_create_panel",
 ]
 
@@ -203,11 +209,14 @@ def _build_panel(
     orientation_combo = qt.QtWidgets.QComboBox()
     orientation_combo.setObjectName("ActionRailQuickCreateOrientation")
     orientation_combo.addItems(("vertical", "horizontal"))
-    rows = _spin_box(qt, 1, MAX_LAYOUT_ROWS, 1)
-    columns = _spin_box(qt, 1, MAX_LAYOUT_COLUMNS, 1)
+    button_count = _spin_box(qt, 1, MAX_LAYOUT_COLUMNS, 1)
+    button_count.setObjectName(BUTTON_COUNT_OBJECT_NAME)
+    buttons_per_row = _spin_box(qt, 1, MAX_LAYOUT_COLUMNS, 1)
+    buttons_per_row.setObjectName(BUTTONS_PER_ROW_OBJECT_NAME)
     offset_x = _spin_box(qt, -MAX_LAYOUT_OFFSET, MAX_LAYOUT_OFFSET, 0)
     offset_y = _spin_box(qt, -MAX_LAYOUT_OFFSET, MAX_LAYOUT_OFFSET, 0)
     scale = _double_spin_box(qt, 0.1, MAX_LAYOUT_SCALE, 1.0, 0.05)
+    scale.setObjectName(BUTTON_SIZE_OBJECT_NAME)
     opacity = _double_spin_box(qt, 0.0, 1.0, 1.0, 0.05)
     locked = qt.QtWidgets.QCheckBox()
     collapse_enabled = qt.QtWidgets.QCheckBox()
@@ -256,8 +265,17 @@ def _build_panel(
     control_grid.setHorizontalSpacing(18)
     control_grid.setVerticalSpacing(12)
     layout_layout.addLayout(control_grid)
-    _add_slider_field(qt, control_grid, 0, 0, "Buttons", columns, 1, MAX_LAYOUT_COLUMNS)
-    _add_slider_field(qt, control_grid, 0, 2, "Buttons Per Row", rows, 1, MAX_LAYOUT_ROWS)
+    _add_slider_field(qt, control_grid, 0, 0, "Buttons", button_count, 1, MAX_LAYOUT_COLUMNS)
+    _add_slider_field(
+        qt,
+        control_grid,
+        0,
+        2,
+        "Buttons Per Row",
+        buttons_per_row,
+        1,
+        MAX_LAYOUT_COLUMNS,
+    )
     _add_slider_field(
         qt,
         control_grid,
@@ -329,6 +347,10 @@ def _build_panel(
     status = qt.QtWidgets.QLabel("")
     status.setObjectName(STATUS_OBJECT_NAME)
     status.setWordWrap(True)
+    state = {
+        "applying": False,
+        "preview_active": False,
+    }
 
     def set_template_selection(template_id: str) -> None:
         for index, template in enumerate(templates):
@@ -345,35 +367,42 @@ def _build_panel(
             return
 
     def apply_values(values: QuickCreateDraftInput) -> None:
-        set_template_selection(values.template_id)
-        preset_id.setText(values.preset_id)
-        _set_combo_text(anchor_combo, values.anchor)
-        _set_combo_text(orientation_combo, values.orientation)
-        rows.setValue(values.rows)
-        columns.setValue(values.columns)
-        offset_x.setValue(values.offset[0])
-        offset_y.setValue(values.offset[1])
-        scale.setValue(values.scale)
-        opacity.setValue(values.opacity)
-        locked.setChecked(values.locked)
-        collapse_enabled.setChecked(values.collapse_enabled)
-        _set_combo_text(collapse_edge, values.collapse_edge)
-        collapse_handle_icon.setText(values.collapse_handle_icon)
-        _set_combo_text(collapse_trigger, values.collapse_reveal_trigger)
-        collapse_default.setChecked(values.collapse_default_collapsed)
-        _clear_slot_rows(slot_rows, slots_layout)
-        for slot in values.slots:
-            _add_slot_row(qt, slots_layout, slot_rows, slot, actions, icons)
+        state["applying"] = True
+        try:
+            set_template_selection(values.template_id)
+            preset_id.setText(values.preset_id)
+            _set_combo_text(anchor_combo, values.anchor)
+            _set_combo_text(orientation_combo, values.orientation)
+            button_count.setValue(max(1, len(values.slots)))
+            buttons_per_row.setValue(_buttons_per_row_from_values(values))
+            offset_x.setValue(values.offset[0])
+            offset_y.setValue(values.offset[1])
+            scale.setValue(values.scale)
+            opacity.setValue(values.opacity)
+            locked.setChecked(values.locked)
+            collapse_enabled.setChecked(values.collapse_enabled)
+            _set_combo_text(collapse_edge, values.collapse_edge)
+            collapse_handle_icon.setText(values.collapse_handle_icon)
+            _set_combo_text(collapse_trigger, values.collapse_reveal_trigger)
+            collapse_default.setChecked(values.collapse_default_collapsed)
+            _clear_slot_rows(slot_rows, slots_layout)
+            for slot in values.slots:
+                _add_slot_row(qt, slots_layout, slot_rows, slot, actions, icons)
+        finally:
+            state["applying"] = False
 
     def current_input() -> QuickCreateDraftInput:
+        slot_count = max(1, len(slot_rows))
+        columns = min(max(1, buttons_per_row.value()), slot_count)
+        rows = _layout_rows_for_button_count(slot_count, columns)
         return QuickCreateDraftInput(
             preset_id=preset_id.text().strip(),
             template_id=templates[template_combo.currentIndex()].id,
             slots=tuple(_slot_input_from_row(row) for row in slot_rows),
             anchor=anchor_combo.currentText(),
             orientation=orientation_combo.currentText(),
-            rows=rows.value(),
-            columns=columns.value(),
+            rows=rows,
+            columns=columns,
             offset=(offset_x.value(), offset_y.value()),
             scale=scale.value(),
             opacity=opacity.value(),
@@ -404,11 +433,24 @@ def _build_panel(
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
+        state["preview_active"] = True
         _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
 
     def clear_preview() -> None:
         cleared = clear_quick_create_previews()
+        state["preview_active"] = False
         _set_status(qt, status, "ok", f"Cleared Quick Create previews: {cleared}")
+
+    def refresh_live_preview() -> None:
+        if state["applying"] or not state["preview_active"]:
+            return
+        try:
+            draft = current_draft()
+            preview_quick_create_draft(draft)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
 
     def load_existing() -> None:
         preset_text = preset_id.text().strip()
@@ -419,6 +461,7 @@ def _build_panel(
             _set_status(qt, status, "error", str(exc))
             return
         _set_status(qt, status, "ok", f"Loaded user preset: {preset_text}")
+        refresh_live_preview()
 
     def save_draft(*, overwrite: bool = False) -> None:
         try:
@@ -465,6 +508,7 @@ def _build_panel(
             template_list.setCurrentRow(index)
         apply_values(make_default_input(templates[index].id))
         validate_draft()
+        refresh_live_preview()
 
     button_row = qt.QtWidgets.QHBoxLayout()
     button_row.setContentsMargins(0, 0, 0, 0)
@@ -511,6 +555,13 @@ def _build_panel(
 
     template_combo.currentIndexChanged.connect(refresh_template)
     template_list.currentRowChanged.connect(template_combo.setCurrentIndex)
+    def sync_slot_count(value: int) -> None:
+        if state["applying"]:
+            return
+        _sync_slot_rows_to_count(qt, slots_layout, slot_rows, value, actions, icons)
+        validate_draft()
+        refresh_live_preview()
+
     def add_and_validate() -> None:
         _add_slot_row(
             qt,
@@ -520,11 +571,20 @@ def _build_panel(
             actions,
             icons,
         )
+        button_count.setValue(len(slot_rows))
         validate_draft()
+        refresh_live_preview()
 
     def remove_and_validate() -> None:
+        if len(slot_rows) <= 1:
+            button_count.setValue(1)
+            validate_draft()
+            refresh_live_preview()
+            return
         _remove_last_slot_row(slot_rows, slots_layout)
+        button_count.setValue(max(1, len(slot_rows)))
         validate_draft()
+        refresh_live_preview()
 
     add_slot.clicked.connect(add_and_validate)
     remove_slot.clicked.connect(remove_and_validate)
@@ -537,6 +597,15 @@ def _build_panel(
     overwrite.clicked.connect(lambda: save_draft(overwrite=True))
     publish.clicked.connect(save_and_publish_draft)
     load_existing_button.clicked.connect(load_existing)
+    button_count.valueChanged.connect(sync_slot_count)
+    for widget in (
+        buttons_per_row,
+        offset_x,
+        offset_y,
+        scale,
+        opacity,
+    ):
+        widget.valueChanged.connect(lambda _value: refresh_live_preview())
     template_list.setCurrentRow(0)
     tabs.setCurrentIndex(1)
     apply_values(make_default_input())
@@ -607,6 +676,29 @@ def _remove_last_slot_row(  # pragma: no cover
     widget.deleteLater()
 
 
+def _sync_slot_rows_to_count(  # pragma: no cover
+    qt: QtBinding,
+    parent_layout: Any,
+    rows: list[dict[str, Any]],
+    count: int,
+    actions: tuple[tuple[str, str, str], ...],
+    icons: tuple[Any, ...],
+) -> None:
+    target = max(1, count)
+    while len(rows) > target:
+        _remove_last_slot_row(rows, parent_layout)
+    while len(rows) < target:
+        index = len(rows) + 1
+        _add_slot_row(
+            qt,
+            parent_layout,
+            rows,
+            _generated_slot_input(index),
+            actions,
+            icons,
+        )
+
+
 def _slot_input_from_row(row: dict[str, Any]) -> QuickCreateSlotInput:  # pragma: no cover
     source = row.get("source")
     return QuickCreateSlotInput(
@@ -623,6 +715,24 @@ def _slot_input_from_row(row: dict[str, Any]) -> QuickCreateSlotInput:  # pragma
         active_when=getattr(source, "active_when", ""),
         size=getattr(source, "size", 0),
     )
+
+
+def _generated_slot_input(index: int) -> QuickCreateSlotInput:
+    return QuickCreateSlotInput(
+        id=f"slot_{index}",
+        label=str(index),
+        action="",
+        icon="",
+    )
+
+
+def _layout_rows_for_button_count(button_count: int, buttons_per_row: int) -> int:
+    return max(1, ceil(max(1, button_count) / max(1, buttons_per_row)))
+
+
+def _buttons_per_row_from_values(values: QuickCreateDraftInput) -> int:
+    slot_count = max(1, len(values.slots))
+    return max(1, min(values.columns, slot_count, MAX_LAYOUT_COLUMNS))
 
 
 def _spin_box(qt: QtBinding, minimum: int, maximum: int, value: int) -> Any:  # pragma: no cover

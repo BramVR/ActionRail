@@ -34,7 +34,9 @@ Working surface:
   diagnostics, Quick Create, and Toggle Edit Mode.
 - Dockable Quick Create panel with template selection, preview, clear preview,
   save, overwrite, custom user preset store support, custom action/icon id
-  preservation, and load-existing user preset workflow.
+  preservation, load-existing user preset workflow, live preview refresh for
+  layout sliders, and generated blank slots when the button-count control is
+  raised beyond the template's icon-backed slots.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
   snap/spacing guides, right-click options, X/Y movement for unlocked rails,
@@ -122,6 +124,10 @@ $env:PYTHONPATH = "scripts"
   through publish diagnostics, includes concrete diagnostic details in blocked
   save errors, reports stale slot-command cleanup from Save + Publish, and
   preserves custom user preset stores in published preset shelf toggles.
+- Quick Create Preview now stays live while visible: the Buttons slider grows
+  or trims slot rows, extra generated slots are blank/no-icon after the
+  template's icon-backed slots, and Buttons Per Row/Button Size/offset/alpha
+  changes refresh the active viewport preview immediately.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -141,7 +147,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 441 passed.
+  -> 445 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -203,6 +209,18 @@ $env:PYTHONPATH = "scripts"
 - Latest targeted Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check tests\\maya_smoke\\actionrail_cleanup_state.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
   -> all checks passed.
+- Latest focused Quick Create preview validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_widgets.py`
+  -> 72 passed.
+- Latest focused Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py scripts\\actionrail\\quick_create_ui.py scripts\\actionrail\\widgets.py tests\\test_quick_create.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
+  -> all checks passed.
+- Latest Quick Create Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
+  -> passed; verified live Preview slider refresh, Buttons=10 generating four
+  icon-backed template slots plus six blank slots, Buttons Per Row=5 wrapping
+  to `[2, 5]`, Button Size updating live preview scale to `1.25`, Save +
+  Publish runtime commands, shelf toggle, and screenshot capture.
 
 ## Decisions
 

@@ -34,6 +34,12 @@
   preset shelf toggles preserve custom user preset stores.
 - Fixed the Quick Create workspace-control resize behavior so the panel fills
   the resized Maya window instead of staying at its initial dimensions.
+- Made Quick Create previews live while the Preview overlay is visible:
+  changing button count, buttons per row, offsets, alpha, or button size now
+  refreshes the viewport preview immediately, and increasing the button count
+  generates extra blank slots after the template's icon-backed slots.
+- Darkened locked/no-action slots so generated empty Quick Create buttons read
+  more like recessed sockets while keeping the existing square shape.
 - Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows
   are removed between smoke scripts instead of stealing later Edit Mode clicks.
 

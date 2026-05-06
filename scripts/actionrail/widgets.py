@@ -16,7 +16,7 @@ from . import slot_state as _slot_state
 from .actions import ActionRegistry
 from .predicates import PredicateContext
 from .qt import load
-from .spec import StackItem, StackSpec
+from .spec import RailLayout, StackItem, StackSpec
 from .state import MayaStateSnapshot
 from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
@@ -123,16 +123,20 @@ def build_rail(
     root.setStyleSheet(generate_style_sheet(theme))
     root.setWindowOpacity(spec.layout.opacity)
 
-    layout_class = (
-        qt.QtWidgets.QHBoxLayout
-        if spec.layout.orientation == "horizontal"
-        else qt.QtWidgets.QVBoxLayout
-    )
-    layout = layout_class(root)
+    if _uses_wrapped_layout(spec.layout):
+        layout = qt.QtWidgets.QGridLayout(root)
+    else:
+        layout_class = (
+            qt.QtWidgets.QHBoxLayout
+            if spec.layout.orientation == "horizontal"
+            else qt.QtWidgets.QVBoxLayout
+        )
+        layout = layout_class(root)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(0)
 
     pending_tools: list[StackItem] = []
+    rendered_entries: list[tuple[str, object | int]] = []
     for item in spec.items:
         if not _is_item_visible(item, context):
             continue
@@ -142,31 +146,68 @@ def build_rail(
             continue
 
         if pending_tools:
-            layout.addWidget(
+            rendered_entries.append(
+                (
+                    "widget",
+                    _build_cluster(
+                        tuple(pending_tools),
+                        registry,
+                        theme,
+                        spec.layout.orientation,
+                        context,
+                    ),
+                )
+            )
+            pending_tools.clear()
+
+        if item.type == "spacer":
+            if _uses_wrapped_layout(spec.layout):
+                rendered_entries.append(
+                    ("widget", _build_spacer(qt, item.size, spec.layout.orientation))
+                )
+            else:
+                rendered_entries.append(("spacing", item.size))
+            continue
+
+        rendered_entries.append(
+            (
+                "widget",
+                _build_single_button(
+                    item,
+                    registry,
+                    theme,
+                    spec.layout.orientation,
+                    context,
+                ),
+            )
+        )
+
+    if pending_tools:
+        rendered_entries.append(
+            (
+                "widget",
                 _build_cluster(
                     tuple(pending_tools),
                     registry,
                     theme,
                     spec.layout.orientation,
                     context,
-                )
+                ),
             )
-            pending_tools.clear()
+        )
 
-        if item.type == "spacer":
-            layout.addSpacing(item.size)
+    widget_index = 0
+    for entry_type, value in rendered_entries:
+        if entry_type == "spacing":
+            layout.addSpacing(value)
             continue
-
-        layout.addWidget(
-            _build_single_button(item, registry, theme, spec.layout.orientation, context),
-            0,
-            qt.QtCore.Qt.AlignLeft,
-        )
-
-    if pending_tools:
-        layout.addWidget(
-            _build_cluster(tuple(pending_tools), registry, theme, spec.layout.orientation, context)
-        )
+        widget = value
+        if _uses_wrapped_layout(spec.layout):
+            row, column = _grid_position(widget_index, spec.layout)
+            layout.addWidget(widget, row, column, qt.QtCore.Qt.AlignLeft)
+        else:
+            layout.addWidget(widget, 0, qt.QtCore.Qt.AlignLeft)
+        widget_index += 1
 
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
@@ -325,6 +366,15 @@ def _build_single_button(
 
     frame.setFixedSize(theme.rail_width, theme.rail_width)
     return frame
+
+
+def _build_spacer(qt: object, size: int, orientation: str) -> object:
+    spacer = qt.QtWidgets.QWidget()
+    if orientation == "horizontal":
+        spacer.setFixedSize(size, 1)
+    else:
+        spacer.setFixedSize(1, size)
+    return spacer
 
 
 def _build_button(
@@ -821,6 +871,16 @@ def _frame_main_axis_size(item_count: int, theme: ActionRailTheme) -> int:
     spacing = theme.frame_spacing * max(item_count - 1, 0)
     outer_padding = (theme.frame_padding + theme.cluster_border_width) * 2
     return (theme.button_outer_size * item_count) + spacing + outer_padding
+
+
+def _uses_wrapped_layout(layout: RailLayout) -> bool:
+    return layout.rows > 1 and layout.columns > 1
+
+
+def _grid_position(index: int, layout: RailLayout) -> tuple[int, int]:
+    if layout.orientation == "horizontal":
+        return index // layout.columns, index % layout.columns
+    return index % layout.rows, index // layout.rows
 
 
 def _slot_buttons(root: object) -> dict[str, object]:

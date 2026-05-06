@@ -24,6 +24,9 @@ from actionrail.quick_create import (
     template_choices,
 )
 from actionrail.quick_create_ui import (
+    _buttons_per_row_from_values,
+    _generated_slot_input,
+    _layout_rows_for_button_count,
     _set_combo_text,
     _slider_label,
     _slot_input_from_row,
@@ -184,6 +187,27 @@ def test_build_quick_create_draft_normalizes_layout_capacity() -> None:
     assert vertical_spec.layout.rows == 4
 
 
+def test_build_quick_create_draft_preserves_authored_wrapped_capacity() -> None:
+    values = QuickCreateDraftInput(
+        preset_id="wrapped",
+        template_id="horizontal_strip",
+        slots=tuple(
+            QuickCreateSlotInput(id=f"slot_{index}", label=str(index))
+            for index in range(10)
+        ),
+        anchor="viewport.bottom.center",
+        orientation="horizontal",
+        rows=2,
+        columns=5,
+    )
+
+    spec = build_draft_spec(build_quick_create_draft(values))
+
+    assert spec.layout.rows == 2
+    assert spec.layout.columns == 5
+    assert len(spec.items) == 10
+
+
 def test_build_quick_create_draft_uses_label_tooltip_without_action() -> None:
     values = QuickCreateDraftInput(
         preset_id="notes",
@@ -241,6 +265,25 @@ def test_quick_create_slider_value_preserves_unscaled_integers() -> None:
     assert _widget_value_from_slider(7, 1) == 7
     assert isinstance(_widget_value_from_slider(7, 1), int)
     assert _widget_value_from_slider(125, 100) == 1.25
+
+
+def test_quick_create_button_count_helpers_generate_blank_extra_slots() -> None:
+    generated = _generated_slot_input(10)
+
+    assert generated.id == "slot_10"
+    assert generated.label == "10"
+    assert generated.action == ""
+    assert generated.icon == ""
+    assert _layout_rows_for_button_count(10, 4) == 3
+    assert _layout_rows_for_button_count(10, 5) == 2
+
+
+def test_quick_create_buttons_per_row_uses_columns_as_row_capacity() -> None:
+    horizontal = make_default_input("horizontal_strip")
+    vertical = make_default_input("vertical_stack")
+
+    assert _buttons_per_row_from_values(horizontal) == 4
+    assert _buttons_per_row_from_values(vertical) == 1
 
 
 def test_quick_create_combo_preserves_unknown_editable_text() -> None:

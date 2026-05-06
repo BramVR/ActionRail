@@ -215,6 +215,7 @@ class FakeLayout:
     def __init__(self, parent) -> None:
         self.parent = parent
         self.items = []
+        parent.layout = self
 
     def setContentsMargins(self, *margins) -> None:  # noqa: N802
         self.margins = margins
@@ -257,6 +258,7 @@ class BuildQtWidgets:
     QPushButton = BuildButton
     QVBoxLayout = FakeLayout
     QHBoxLayout = FakeLayout
+    QGridLayout = FakeLayout
 
 
 def build_qt_binding() -> QtBinding:
@@ -393,6 +395,33 @@ def test_build_transform_stack_constructs_scaled_horizontal_widget(monkeypatch) 
 
     buttons[0].clicked.emit()
     assert cmds.calls == [("setToolTo", "moveSuperContext")]
+
+
+def test_build_transform_stack_wraps_multi_row_layout(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    spec = StackSpec(
+        id="wrapped",
+        layout=RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            rows=2,
+            columns=3,
+        ),
+        items=tuple(
+            StackItem(type="button", id=f"wrapped.{index}", label=str(index))
+            for index in range(5)
+        ),
+    )
+
+    root = widgets.build_transform_stack(spec, create_default_registry(BuildCmds()))
+
+    assert [item[2] for item in root.layout.items] == [
+        (0, 0, BuildQtCore.Qt.AlignLeft),
+        (0, 1, BuildQtCore.Qt.AlignLeft),
+        (0, 2, BuildQtCore.Qt.AlignLeft),
+        (1, 0, BuildQtCore.Qt.AlignLeft),
+        (1, 1, BuildQtCore.Qt.AlignLeft),
+    ]
 
 
 def test_build_transform_stack_flushes_pending_vertical_tool_cluster(monkeypatch) -> None:

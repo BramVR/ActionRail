@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from pathlib import Path
 from typing import Any
 
@@ -224,10 +225,11 @@ def build_quick_create_draft(values: QuickCreateDraftInput) -> DraftRail:
     action_slot_count = sum(1 for slot in values.slots if slot.type != "spacer")
     rows = values.rows
     columns = values.columns
-    if values.orientation == "horizontal":
-        columns = max(columns, action_slot_count)
-    else:
-        rows = max(rows, action_slot_count)
+    if rows * columns < action_slot_count:
+        if values.orientation == "horizontal":
+            columns = ceil(action_slot_count / rows)
+        else:
+            rows = ceil(action_slot_count / columns)
 
     layout = RailLayout(
         anchor=values.anchor,

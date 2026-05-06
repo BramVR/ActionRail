@@ -31,6 +31,8 @@ def test_default_qss_preserves_reference_tones() -> None:
     assert "background: #666670;" in qss
     assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss
     assert 'QPushButton[actionRailRole="button"]:disabled' in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailLocked="true"]' in qss
+    assert "background: #3f3f46;" in qss
     assert qss.index('[actionRailTone="pink"]') < qss.index('[actionRailActive="true"]')
     assert 'QPushButton[actionRailTone="pink"]' in qss
     assert "background: #8b667f;" in qss
