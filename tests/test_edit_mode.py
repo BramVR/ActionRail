@@ -43,6 +43,27 @@ def test_rail_frame_contains_and_topmost_selection() -> None:
     assert edit_mode._topmost_frame_at((back, front), 121, 121) is None
 
 
+def test_rail_slot_contains_and_topmost_selection() -> None:
+    back = edit_mode.RailSlotInfo(
+        preset_id="bar",
+        slot_id="bar.one",
+        label="One",
+        action="maya.tool.move",
+        x=0,
+        y=0,
+        width=32,
+        height=32,
+        locked=False,
+    )
+    front = replace(back, slot_id="bar.two", label=edit_mode.EMPTY_SLOT_LABEL, action="", x=8)
+
+    assert back.contains(32, 32) is True
+    assert back.has_payload is True
+    assert front.has_payload is False
+    assert edit_mode._topmost_slot_at((back, front), 12, 12) is front
+    assert edit_mode._topmost_slot_at((back, front), 60, 12) is None
+
+
 def test_snap_to_grid_and_sticky_frame_alignment() -> None:
     moving = edit_mode.RailFrameInfo(
         preset_id="moving",
@@ -1013,8 +1034,23 @@ def test_slot_status_text_describes_container_payload_model() -> None:
     )
     locked = replace(unlocked, locked=True)
 
+    slot = edit_mode.RailSlotInfo(
+        preset_id="custom",
+        slot_id="custom.slot_01",
+        label="Move",
+        action="maya.tool.move",
+        x=0,
+        y=0,
+        width=32,
+        height=32,
+        locked=False,
+    )
+
     assert edit_mode._slot_status_text(unlocked) == (
-        "Slot payloads keep their hotkeys; drag actions onto slots to replace them."
+        "Select a slot, or drag an action from the list onto a slot."
+    )
+    assert edit_mode._slot_status_text(unlocked, slot) == (
+        "Selected slot: Move (slot_01)."
     )
     assert edit_mode._slot_status_text(locked) == (
         "Slot payload edits are unavailable on locked rails."
