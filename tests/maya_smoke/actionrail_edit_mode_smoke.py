@@ -293,6 +293,41 @@ if saved_spec.layout.offset != custom_frame_after_snap_sticky.offset:
         f"{saved_spec.layout.offset} != {custom_frame_after_snap_sticky.offset}"
     )
 
+custom_runtime_host = edit_mode._runtime_hosts().get("edit_mode_custom")
+if custom_runtime_host is None:
+    raise AssertionError("Custom runtime host disappeared before collapse verification.")
+if not host.toggle_selected_edge_tab():
+    raise AssertionError("Edit Mode failed to collapse the selected edge-tab rail.")
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if not getattr(custom_runtime_host, "_collapsed", False):
+    raise AssertionError("Runtime host did not enter collapsed state.")
+if not custom_runtime_host.spec.collapse.default_collapsed:
+    raise AssertionError("Collapsed state was not written to the runtime spec default.")
+collapsed_widget = custom_runtime_host.widget
+if collapsed_widget.width() > 48 or collapsed_widget.height() > 48:
+    raise AssertionError(
+        "Collapsed edge handle is too large: "
+        f"{collapsed_widget.width()}x{collapsed_widget.height()}"
+    )
+collapsed_save_path = actionrail.save_edit_mode_layout(user_preset_dir=save_dir)
+collapsed_saved_spec = actionrail.load_user_preset("edit_mode_custom", preset_dir=save_dir)
+if not collapsed_saved_spec.collapse.default_collapsed:
+    raise AssertionError("Edit Mode save did not persist collapsed edge-tab state.")
+actionrail.run_slot("edit_mode_custom", "move", user_preset_dir=save_dir)
+if cmds.currentCtx() != "moveSuperContext":
+    raise AssertionError("Collapsed rail slot action did not remain executable.")
+handle = collapsed_widget.findChild(QtWidgets.QPushButton)
+if handle is None or handle.property("actionRailCollapsedPresetId") != "edit_mode_custom":
+    raise AssertionError("Collapsed edge handle button was not rendered.")
+QtTest.QTest.mouseClick(handle, QtCore.Qt.LeftButton)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if getattr(custom_runtime_host, "_collapsed", True):
+    raise AssertionError("Clicking the collapsed edge handle did not expand the rail.")
+
 pixmap = edit_widget.grab()
 screenshot_saved = pixmap.save(str(output_path), "PNG")
 if not screenshot_saved or pixmap.width() <= 0 or pixmap.height() <= 0:
@@ -305,6 +340,8 @@ result = {
     "rail_count": len(host.frames),
     "saved_layout_offset": list(saved_spec.layout.offset),
     "saved_layout_path": str(saved_path),
+    "collapsed_layout_path": str(collapsed_save_path),
+    "collapsed_saved": bool(collapsed_saved_spec.collapse.default_collapsed),
     "screenshot": str(output_path),
     "screenshot_saved": bool(screenshot_saved),
     "screenshot_size": [pixmap.width(), pixmap.height()],

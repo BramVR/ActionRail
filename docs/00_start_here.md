@@ -47,10 +47,13 @@ Snapshot:
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
 - Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
-  publish polish. Phase 2 step 2.5 layout editing and direct manipulation is
-  complete; Edit Mode can save unlocked runtime/user rail offsets plus unlocked
-  built-in and studio user override presets. Do not start Bind Mode, flyouts,
-  command rings, profile layers, marking-menu export, or Viewport 2.0 yet.
+  publish polish. The first collapse schema/runtime pass is implemented and
+  Maya-smoke verified; hit-target polish, validation polish, and saved preset
+  publish polish remain. Phase 2 step 2.5 layout editing and direct
+  manipulation is complete; Edit Mode can save unlocked runtime/user rail
+  offsets plus unlocked built-in and studio user override presets. Do not start
+  Bind Mode, flyouts, command rings, profile layers, marking-menu export, or
+  Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -98,9 +101,8 @@ user-preset, built-in user-override, and studio user-override layout-save paths.
 Continue Phase 2 with collapsible edge tabs and publish polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Build on the completed Edit Mode layout editing surface; carry forward only
-   polish needed for Phase 2 step 2.6, such as handle hit targets, guide
-   behavior, and slot-edit affordances.
+2. Tune collapsed-handle hit targets and placement, then continue validation
+   and saved-preset publish polish.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

@@ -8,7 +8,7 @@ import pytest
 
 import actionrail.runtime as runtime
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
 
 
 @pytest.fixture(autouse=True)
@@ -40,6 +40,7 @@ def test_package_imports_without_maya_or_qt() -> None:
     assert callable(actionrail.show_spec)
     assert actionrail.StackItem is StackItem
     assert actionrail.StackSpec is StackSpec
+    assert actionrail.RailCollapse is RailCollapse
     assert actionrail.RailLayout is RailLayout
     assert callable(actionrail.build_draft_spec)
     assert callable(actionrail.save_user_preset)

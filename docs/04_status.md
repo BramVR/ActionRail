@@ -8,14 +8,16 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 ## Current Snapshot
 
 ActionRail has a verified declarative MVP and Phase 2 authoring foundation
 through Quick Create preview/save/load, Edit Mode layout-map/direct
 manipulation controls, user preset saves, built-in layout override saves, and
-studio layout override saves.
+studio layout override saves. Phase 2 step 2.6 is now in progress with the
+first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
+verified.
 
 Working surface:
 
@@ -34,10 +36,14 @@ Working surface:
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
   snap/spacing guides, right-click options, X/Y movement for unlocked rails,
-  slot add/remove/reorder controls, edge-tab opacity collapse, safe movement
-  clamps, Save Position/user-preset persistence for unlocked runtime/user
-  rails, and user override saves/resolution for unlocked built-in and studio
-  rails.
+  slot add/remove/reorder controls, real edge-tab collapse/expand controls,
+  safe movement clamps, Save Position/user-preset persistence for unlocked
+  runtime/user rails, and user override saves/resolution for unlocked built-in
+  and studio rails.
+- Optional collapsible rail schema/runtime: JSON `collapse` settings for edge,
+  handle icon, reveal trigger, and default collapsed state; Quick Create
+  edge-tab defaults/settings; collapsed handle-only Qt overlays; click/hover
+  reveal hooks; and user-preset persistence.
 
 Long-form implementation and verification history belongs in
 `docs/history/verification_log.md`.
@@ -46,12 +52,14 @@ Long-form implementation and verification history belongs in
 
 `docs/02_implementation_plan.md` is the source of truth for phase completion
 and next work. Phase 2 step 2.5 Layout Editing And Direct Manipulation is done;
-Phase 2 step 2.6 collapsible edge tabs and publish polish is next. Local
-`.spec/` reports are ignored and not part of the Git-tracked handoff.
+Phase 2 step 2.6 collapsible edge tabs and publish polish is in progress.
+Local `.spec/` reports are ignored and not part of the Git-tracked handoff.
 
 Focus the next slice on:
 
-- polishing handle hit targets, guide behavior, and slot-edit affordances
+- polishing collapsed-handle placement/hit targets, guide behavior, and
+  slot-edit affordances
+- continuing validation/publish polish for saved user presets
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 
@@ -68,8 +76,9 @@ $env:PYTHONPATH = "scripts"
 .\.venv\Scripts\python.exe -m actionrail --json
 ```
 
-3. Begin Phase 2 step 2.6 on top of the completed Phase 2 step 2.5 Edit Mode
-   layout editing surface.
+3. Continue Phase 2 step 2.6 on top of the completed Phase 2 step 2.5 Edit Mode
+   layout editing surface. The collapse schema/runtime first pass is in place
+   and Maya-smoke verified; broaden publish polish next.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -111,7 +120,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 422 passed.
+  -> 426 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -126,11 +135,14 @@ $env:PYTHONPATH = "scripts"
   -> `Local Markdown links OK`.
 - Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
-  -> passed; verified layout-map overlay, Grid Size 64, Snap to Grid, Sticky
-  Frames, left-click selection, X coordinate movement, sticky-frame alignment,
-  right-click options routing, saved layout offset `[51, -133]`, user preset
-  save path `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and
-  screenshot capture at
+  -> passed after restarting a stale Sessiond state; verified layout-map
+  overlay, Grid Size 64, Snap to Grid, Sticky Frames, left-click selection, X
+  coordinate movement, sticky-frame alignment, right-click options routing,
+  collapsed handle-only widget sizing, collapsed-state save persistence,
+  `run_slot()` while collapsed, handle-click expansion, saved layout offset
+  `[51, -133]`, user preset save path
+  `.gg-maya-sessiond/user_presets/edit_mode_custom.json`, and screenshot
+  capture at
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`.
 - Custom user-preset store Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_custom_preset_store_smoke.py -Timeout 240`

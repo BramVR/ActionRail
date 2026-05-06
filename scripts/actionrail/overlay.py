@@ -20,6 +20,7 @@ from .spec import StackSpec
 from .state import snapshot
 from .widgets import (
     PredicateRefreshResult,
+    build_collapsed_handle,
     build_transform_stack,
     refresh_predicate_state,
     set_slot_key_label,
@@ -376,6 +377,8 @@ class ViewportOverlayHost:
         self.predicate_refresh_interval_ms = predicate_refresh_interval_ms
         cleanup_overlay_widgets(self.parent, spec.id, self.qt)
         self._floating = self.window_parent is not None
+        self._collapsed = bool(spec.collapse.enabled and spec.collapse.default_collapsed)
+        self._runtime_key_labels: dict[str, str] = {}
         self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
@@ -385,12 +388,15 @@ class ViewportOverlayHost:
         self._install_event_filter(self.window_parent)
 
     def _build_widget(self, state_snapshot: object) -> Any:
-        widget = build_transform_stack(
-            self.spec,
-            self.registry,
-            state_snapshot=state_snapshot,
-            cmds_module=self.cmds,
-        )
+        if getattr(self, "_collapsed", False) and self.spec.collapse.enabled:
+            widget = build_collapsed_handle(self.spec, self.expand)
+        else:
+            widget = build_transform_stack(
+                self.spec,
+                self.registry,
+                state_snapshot=state_snapshot,
+                cmds_module=self.cmds,
+            )
         widget.setObjectName(f"{OBJECT_NAME_PREFIX}_{self.spec.id}")
         with suppress(Exception):
             widget._actionrail_host = self
@@ -433,7 +439,11 @@ class ViewportOverlayHost:
             size = self.widget.size()
 
         x_pos, y_pos = _anchored_position(
-            self.spec.anchor,
+            (
+                self.spec.collapse.edge
+                if getattr(self, "_collapsed", False) and self.spec.collapse.enabled
+                else self.spec.anchor
+            ),
             parent_rect.width(),
             parent_rect.height(),
             size.width(),
@@ -472,6 +482,14 @@ class ViewportOverlayHost:
     def refresh_state(self) -> PredicateRefreshResult:
         """Refresh predicate-driven button state from current Maya state."""
 
+        if getattr(self, "_collapsed", False) and self.spec.collapse.enabled:
+            return PredicateRefreshResult(
+                refreshed=0,
+                needs_rebuild=False,
+                visible_slot_ids=(),
+                rendered_slot_ids=(),
+            )
+
         state_snapshot = snapshot(self.cmds, active_panel=self.panel)
         result = refresh_predicate_state(
             self.widget,
@@ -487,7 +505,10 @@ class ViewportOverlayHost:
     def _rebuild_widget(self, state_snapshot: object) -> None:
         old_widget = self.widget
         was_visible = bool(old_widget is not None and old_widget.isVisible())
-        key_labels = _rendered_key_labels(old_widget, self.qt)
+        key_labels = {
+            **_rendered_key_labels(old_widget, self.qt),
+            **getattr(self, "_runtime_key_labels", {}),
+        }
         self.widget = self._build_widget(state_snapshot)
 
         for slot_id, key_label in key_labels.items():
@@ -506,9 +527,41 @@ class ViewportOverlayHost:
     def update_slot_key_label(self, slot_id: str, key_label: str) -> int:
         """Update the key label for a rendered slot."""
 
-        if self.widget is None:
+        if not hasattr(self, "_runtime_key_labels"):
+            self._runtime_key_labels = {}
+        if key_label:
+            self._runtime_key_labels[slot_id] = key_label
+        else:
+            self._runtime_key_labels.pop(slot_id, None)
+        if self.widget is None or getattr(self, "_collapsed", False):
             return 0
         return set_slot_key_label(self.widget, slot_id, key_label)
+
+    def expand(self) -> bool:
+        """Expand this rail when its collapsed edge handle is activated."""
+
+        return self.set_collapsed(False, persist_default=True)
+
+    def set_collapsed(self, collapsed: bool, *, persist_default: bool = False) -> bool:
+        """Set the live collapsed state and optionally update the spec default."""
+
+        if not self.spec.collapse.enabled:
+            return False
+        collapsed = bool(collapsed)
+        if persist_default and self.spec.collapse.default_collapsed != collapsed:
+            self.spec = dataclass_replace(
+                self.spec,
+                collapse=dataclass_replace(
+                    self.spec.collapse,
+                    default_collapsed=collapsed,
+                ),
+            )
+        if self._collapsed == collapsed:
+            self.position()
+            return True
+        self._collapsed = collapsed
+        self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
+        return True
 
     def update_layout_offset(self, offset: tuple[int, int]) -> tuple[int, int]:
         """Move this rail by updating its in-memory layout offset."""

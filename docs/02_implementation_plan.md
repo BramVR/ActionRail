@@ -355,12 +355,19 @@ Research hints:
 
 #### 2.6 Collapsible Edge Tabs And Publish Polish
 
+Status: in progress. The first runtime/persistence slice is implemented and
+Maya-smoke verified for the optional `collapse` schema, Quick Create edge-tab
+template/settings, small collapsed Qt handles, click/hover reveal hooks, Edit
+Mode collapse/expand toggling, user-preset round-trips, and in-memory hotkey
+label retention while collapsed.
+
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
-  collapsed state.
+  collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
 - Render a small edge handle when collapsed without creating a viewport-sized
-  transparent hit area.
+  transparent hit area. First pass done through a handle-only overlay widget.
 - Preserve actions, runtime-command publishing, and hotkey labels while a rail
-  is collapsed.
+  is collapsed. First pass done for no-overlay slot execution and visible label
+  restoration after expand.
 - Surface validation for missing actions, missing icons, and hotkey conflicts
   before save or publish.
 - Publish saved user presets to shelf/hotkey/runtime command where possible.
@@ -441,9 +448,12 @@ layout-map shell, direct manipulation, snap/sticky guides, right-click options,
 slot edits, and user override persistence are in place.
 
 Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
-publish polish. Carry forward only polish that naturally supports 2.6, such as
-handle hit targets, guide behavior, slot-edit affordances, Quick Create
-round-trip stability, and locked built-in/studio read-only behavior. Keep
+publish polish. The collapse schema/runtime first pass is implemented and
+Maya-smoke verified; next work should tune handle placement/hit targets and
+continue publish polish for validation and saved preset command publishing.
+Carry forward only polish that naturally supports 2.6, such as guide behavior,
+slot-edit affordances, Quick Create round-trip stability, and locked
+built-in/studio read-only behavior. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
 flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
 yet.
@@ -453,8 +463,8 @@ yet.
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Add Phase 2 step 2.6 collapsible edge-tab runtime, persistence, and publish
-   polish.
+1. Polish Phase 2 step 2.6 collapsed edge-tab handle behavior, then finish
+   publish polish.
 2. Add Bind Mode, then flyouts, then command rings.
 3. Broaden the workflow action library beyond transform/keyframe.
 4. Add profile layers for built-in, studio, project, scene/asset, and user

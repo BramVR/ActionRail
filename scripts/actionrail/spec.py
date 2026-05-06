@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,7 @@ __all__ = [
     "MAX_LAYOUT_ROWS",
     "MAX_LAYOUT_SCALE",
     "TRANSFORM_STACK_ID",
+    "RailCollapse",
     "RailLayout",
     "StackItem",
     "StackSpec",
@@ -50,6 +51,15 @@ class StackItem:
 
 
 @dataclass(frozen=True)
+class RailCollapse:
+    enabled: bool = False
+    edge: str = "left"
+    handle_icon: str = ""
+    reveal_trigger: str = "click"
+    default_collapsed: bool = False
+
+
+@dataclass(frozen=True)
 class RailLayout:
     anchor: str
     orientation: str = "vertical"
@@ -66,6 +76,7 @@ class StackSpec:
     id: str
     layout: RailLayout
     items: tuple[StackItem, ...]
+    collapse: RailCollapse = field(default_factory=RailCollapse)
 
     @property
     def anchor(self) -> str:
@@ -119,6 +130,7 @@ def parse_stack_spec(payload: Any, *, source: str = "<memory>") -> StackSpec:
 
     spec_id = _required_string(payload, "id", source)
     layout = _parse_layout(payload, source)
+    collapse = _parse_collapse(payload, layout, source)
     raw_items = payload.get("items")
     if not isinstance(raw_items, list) or not raw_items:
         msg = f"ActionRail preset items must be a non-empty list: {source}"
@@ -126,7 +138,7 @@ def parse_stack_spec(payload: Any, *, source: str = "<memory>") -> StackSpec:
 
     items = tuple(_parse_item(item, index, source, spec_id) for index, item in enumerate(raw_items))
     _validate_unique_item_ids(items, source)
-    return StackSpec(id=spec_id, layout=layout, items=items)
+    return StackSpec(id=spec_id, layout=layout, items=items, collapse=collapse)
 
 
 def action_ids(spec: StackSpec) -> tuple[str, ...]:
@@ -191,6 +203,71 @@ def _parse_layout(payload: dict[str, Any], source: str) -> RailLayout:
         scale=scale,
         opacity=opacity,
         locked=locked,
+    )
+
+
+def _parse_collapse(payload: dict[str, Any], layout: RailLayout, source: str) -> RailCollapse:
+    raw_collapse = payload.get("collapse", {})
+    if raw_collapse is None:
+        raw_collapse = {}
+    if not isinstance(raw_collapse, dict):
+        msg = f"ActionRail preset collapse must be an object: {source}"
+        raise ValueError(msg)
+
+    enabled = raw_collapse.get("enabled", False)
+    if not isinstance(enabled, bool):
+        msg = f"ActionRail preset collapse field 'enabled' must be a boolean: {source}"
+        raise ValueError(msg)
+
+    edge = _optional_string(
+        raw_collapse,
+        "edge",
+        _edge_from_anchor(layout.anchor),
+        source,
+        location=" collapse",
+    )
+    if edge not in {"left", "right", "top", "bottom"}:
+        msg = (
+            "ActionRail preset collapse field 'edge' must be one of "
+            f"'left', 'right', 'top', or 'bottom': {source}"
+        )
+        raise ValueError(msg)
+
+    handle_icon = _optional_string(
+        raw_collapse,
+        "handle_icon",
+        "",
+        source,
+        location=" collapse",
+    )
+    reveal_trigger = _optional_string(
+        raw_collapse,
+        "reveal_trigger",
+        "click",
+        source,
+        location=" collapse",
+    )
+    if reveal_trigger not in {"click", "hover"}:
+        msg = (
+            "ActionRail preset collapse field 'reveal_trigger' must be "
+            f"'click' or 'hover': {source}"
+        )
+        raise ValueError(msg)
+
+    default_collapsed = raw_collapse.get("default_collapsed", False)
+    if not isinstance(default_collapsed, bool):
+        msg = (
+            "ActionRail preset collapse field 'default_collapsed' must be a "
+            f"boolean: {source}"
+        )
+        raise ValueError(msg)
+
+    return RailCollapse(
+        enabled=enabled,
+        edge=edge,
+        handle_icon=handle_icon,
+        reveal_trigger=reveal_trigger,
+        default_collapsed=default_collapsed,
     )
 
 
@@ -261,6 +338,14 @@ def _validate_unique_item_ids(items: tuple[StackItem, ...], source: str) -> None
             msg = f"ActionRail preset item ids must be unique; duplicate id '{item.id}': {source}"
             raise ValueError(msg)
         seen.add(item.id)
+
+
+def _edge_from_anchor(anchor: str) -> str:
+    parts = anchor.split(".")
+    for edge in ("left", "right", "top", "bottom"):
+        if edge in parts:
+            return edge
+    return "left"
 
 
 def _required_string(

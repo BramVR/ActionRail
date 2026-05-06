@@ -82,6 +82,9 @@ class RailFrameInfo:
     scale: float
     opacity: float
     locked: bool
+    collapse_enabled: bool = False
+    collapse_edge: str = "left"
+    collapsed: bool = False
     source_layer: str = "runtime"
 
     @property
@@ -469,9 +472,22 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         spec = getattr(host, "spec", None)
         if host is None or spec is None:
             return False
-        opacity = 0.35 if float(getattr(spec.layout, "opacity", 1.0)) > 0.5 else 0.92
-        layout = dataclass_replace(spec.layout, opacity=opacity)
-        _replace_host_spec(host, dataclass_replace(spec, layout=layout))
+        from .spec import RailCollapse
+
+        edge = spec.collapse.edge if spec.collapse.enabled else _edge_from_anchor(selected.anchor)
+        collapsed = not bool(getattr(host, "_collapsed", False))
+        collapse = dataclass_replace(
+            spec.collapse if spec.collapse.enabled else RailCollapse(enabled=True),
+            enabled=True,
+            edge=edge,
+            default_collapsed=collapsed,
+        )
+        host.spec = dataclass_replace(spec, collapse=collapse)
+        set_collapsed = getattr(host, "set_collapsed", None)
+        if callable(set_collapsed):
+            set_collapsed(collapsed, persist_default=True)
+        else:
+            _replace_host_spec(host, host.spec)
         self.refresh()
         return True
 
@@ -892,7 +908,9 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.details.setText(
                     f"{frame.source_layer.title()} rail\n"
                     f"{frame.anchor}\n"
-                    f"Offset {frame.offset[0]}, {frame.offset[1]} | {lock_text}"
+                    f"Offset {frame.offset[0]}, {frame.offset[1]} | {lock_text}\n"
+                    f"Collapse {frame.collapse_edge} | "
+                    f"{'collapsed' if frame.collapsed else 'expanded'}"
                 )
                 self.status.setText(_save_status_text(frame))
                 self.save.setEnabled(_can_save_frame(frame))
@@ -902,6 +920,9 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.slot_up.setEnabled(not frame.locked)
                 self.slot_down.setEnabled(not frame.locked)
                 self.collapse.setEnabled(not frame.locked and _is_edge_anchor(frame.anchor))
+                self.collapse.setText(
+                    "Expand Edge Tab" if frame.collapsed else "Collapse Edge Tab"
+                )
                 self.setFixedHeight(self.sizeHint().height())
                 self.move(
                     _options_popover_position(
@@ -987,6 +1008,7 @@ def _rail_frame_info(
     layout = getattr(spec, "layout", None)
     if spec is None or layout is None:
         return None
+    collapse = getattr(spec, "collapse", None)
     return RailFrameInfo(
         preset_id=preset_id,
         label=_frame_label(preset_id),
@@ -1002,6 +1024,9 @@ def _rail_frame_info(
         scale=float(getattr(layout, "scale", 1.0)),
         opacity=float(getattr(layout, "opacity", 1.0)),
         locked=bool(getattr(layout, "locked", False)),
+        collapse_enabled=bool(getattr(collapse, "enabled", False)),
+        collapse_edge=str(getattr(collapse, "edge", "left")),
+        collapsed=bool(getattr(host, "_collapsed", False)),
         source_layer=_preset_source_layer(
             preset_id,
             user_preset_dir=getattr(host, "user_preset_dir", None),
@@ -1073,7 +1098,14 @@ def _last_action_item_index(items: tuple[Any, ...]) -> int | None:
 
 
 def _is_edge_anchor(anchor: str) -> bool:
-    return ".left." in anchor or ".right." in anchor
+    return any(f".{edge}." in anchor for edge in ("left", "right", "top", "bottom"))
+
+
+def _edge_from_anchor(anchor: str) -> str:
+    for edge in ("left", "right", "top", "bottom"):
+        if f".{edge}." in anchor:
+            return edge
+    return "left"
 
 
 def _user_override_spec(spec: Any) -> Any:
@@ -1352,6 +1384,8 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     label = f"{frame.label}\n{frame.source_layer.title()}"
     if frame.locked:
         label = f"{label}\nLocked"
+    elif frame.collapse_enabled:
+        label = f"{label}\n{'Collapsed' if frame.collapsed else 'Expanded'}"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
 
 

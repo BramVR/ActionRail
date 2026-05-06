@@ -17,7 +17,7 @@ from .authoring import (
 from .icon_catalog import list_icon_descriptors
 from .icon_types import IconDescriptor
 from .preset_store import resolve_preset
-from .spec import RailLayout, builtin_preset_ids
+from .spec import RailCollapse, RailLayout, builtin_preset_ids
 
 __all__ = [
     "ANCHOR_CHOICES",
@@ -73,6 +73,7 @@ class QuickCreateTemplate:
     label: str
     layout: RailLayout
     slots: tuple[QuickCreateSlotInput, ...]
+    collapse: RailCollapse = RailCollapse()
     description: str = ""
 
 
@@ -91,6 +92,11 @@ class QuickCreateDraftInput:
     scale: float = 1.0
     opacity: float = 1.0
     locked: bool = False
+    collapse_enabled: bool = False
+    collapse_edge: str = "left"
+    collapse_handle_icon: str = ""
+    collapse_reveal_trigger: str = "click"
+    collapse_default_collapsed: bool = False
 
 
 @dataclass(frozen=True)
@@ -156,6 +162,7 @@ _TEMPLATES = (
         slots=(
             QuickCreateSlotInput("primary", "Tool", "maya.tool.move", "", "maya.move"),
         ),
+        collapse=RailCollapse(enabled=True, edge="left", handle_icon="chevron-right"),
     ),
 )
 
@@ -194,6 +201,11 @@ def make_default_input(template_id: str = "vertical_stack") -> QuickCreateDraftI
         scale=template.layout.scale,
         opacity=template.layout.opacity,
         locked=template.layout.locked,
+        collapse_enabled=template.collapse.enabled,
+        collapse_edge=template.collapse.edge,
+        collapse_handle_icon=template.collapse.handle_icon,
+        collapse_reveal_trigger=template.collapse.reveal_trigger,
+        collapse_default_collapsed=template.collapse.default_collapsed,
     )
 
 
@@ -226,6 +238,13 @@ def build_quick_create_draft(values: QuickCreateDraftInput) -> DraftRail:
     draft = DraftRail(
         id=values.preset_id,
         layout=layout,
+        collapse=RailCollapse(
+            enabled=values.collapse_enabled,
+            edge=values.collapse_edge,
+            handle_icon=values.collapse_handle_icon,
+            reveal_trigger=values.collapse_reveal_trigger,
+            default_collapsed=values.collapse_default_collapsed,
+        ),
         slots=tuple(_draft_slot_from_input(slot) for slot in values.slots),
     )
     return draft
@@ -311,7 +330,7 @@ def load_quick_create_preset(
 
     return QuickCreateDraftInput(
         preset_id=spec.id,
-        template_id=_template_id_for_layout(spec.layout, len(spec.items)),
+        template_id=_template_id_for_spec(spec),
         slots=tuple(_slot_input_from_item(spec.id, item) for item in spec.items),
         anchor=spec.layout.anchor,
         orientation=spec.layout.orientation,
@@ -321,6 +340,11 @@ def load_quick_create_preset(
         scale=spec.layout.scale,
         opacity=spec.layout.opacity,
         locked=spec.layout.locked,
+        collapse_enabled=spec.collapse.enabled,
+        collapse_edge=spec.collapse.edge,
+        collapse_handle_icon=spec.collapse.handle_icon,
+        collapse_reveal_trigger=spec.collapse.reveal_trigger,
+        collapse_default_collapsed=spec.collapse.default_collapsed,
     )
 
 
@@ -391,10 +415,12 @@ def _unqualified_slot_id(preset_id: str, slot_id: str) -> str:
     return slot_id
 
 
-def _template_id_for_layout(layout: RailLayout, item_count: int) -> str:
-    if layout.orientation == "horizontal":
+def _template_id_for_spec(spec: Any) -> str:
+    if getattr(spec.collapse, "enabled", False):
+        return "edge_tab_rail"
+    if spec.layout.orientation == "horizontal":
         return "horizontal_strip"
-    if item_count == 1 and layout.opacity < 1.0:
+    if len(spec.items) == 1 and spec.layout.opacity < 1.0:
         return "edge_tab_rail"
     return "vertical_stack"
 

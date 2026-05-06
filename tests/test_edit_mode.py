@@ -8,7 +8,7 @@ import actionrail.edit_mode as edit_mode
 import actionrail.overlay as overlay
 import actionrail.runtime as runtime
 from actionrail.authoring import load_user_preset, save_user_preset
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
 
 
 def test_edit_mode_settings_clamp_grid_size() -> None:
@@ -861,7 +861,7 @@ def test_edit_mode_options_can_add_remove_and_reorder_slots(monkeypatch) -> None
     assert runtime_host.rebuilds == 3
 
 
-def test_edit_mode_options_toggle_edge_tab_opacity(monkeypatch) -> None:
+def test_edit_mode_options_toggle_edge_tab_collapsed_state(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="edge_tab",
         label="Edge Tab",
@@ -882,14 +882,22 @@ def test_edit_mode_options_toggle_edge_tab_opacity(monkeypatch) -> None:
     runtime_host = type(
         "RuntimeHost",
         (),
-        {
-            "spec": StackSpec(
-                id="edge_tab",
-                layout=RailLayout(anchor="viewport.left.center", opacity=0.92),
-                items=(StackItem(type="button", id="edge_tab.a", label="A"),),
-            )
-        },
+        {},
     )()
+    runtime_host.spec = StackSpec(
+        id="edge_tab",
+        layout=RailLayout(anchor="viewport.left.center", opacity=0.92),
+        items=(StackItem(type="button", id="edge_tab.a", label="A"),),
+    )
+    runtime_host._collapsed = False
+    collapsed_updates = []
+
+    def set_collapsed(value: bool, *, persist_default: bool = False) -> bool:
+        runtime_host._collapsed = value
+        collapsed_updates.append((value, persist_default))
+        return True
+
+    runtime_host.set_collapsed = set_collapsed
     host = object.__new__(edit_mode.EditModeOverlayHost)
     host.frames = (frame,)
     host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
@@ -898,9 +906,16 @@ def test_edit_mode_options_toggle_edge_tab_opacity(monkeypatch) -> None:
     host.select_rail("edge_tab")
 
     assert host.toggle_selected_edge_tab() is True
-    assert runtime_host.spec.layout.opacity == 0.35
-    assert host.toggle_selected_edge_tab() is True
     assert runtime_host.spec.layout.opacity == 0.92
+    assert runtime_host.spec.collapse == RailCollapse(
+        enabled=True,
+        edge="left",
+        default_collapsed=True,
+    )
+    assert collapsed_updates == [(True, True)]
+    assert host.toggle_selected_edge_tab() is True
+    assert runtime_host.spec.collapse.default_collapsed is False
+    assert collapsed_updates == [(True, True), (False, True)]
 
 
 def test_locked_frame_does_not_nudge(monkeypatch) -> None:

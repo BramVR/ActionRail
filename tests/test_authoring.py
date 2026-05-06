@@ -18,7 +18,7 @@ from actionrail.authoring import (
     user_preset_ids,
     validate_preset_id,
 )
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
 
 
 def test_build_draft_save_reload_user_preset_without_touching_builtins(tmp_path) -> None:
@@ -87,6 +87,32 @@ def test_save_user_preset_accepts_stack_spec_and_canonicalizes_payload(tmp_path)
 
     assert payload == spec_to_payload(spec)
     assert load_user_preset("manual_spec", preset_dir=tmp_path) == spec
+
+
+def test_user_preset_round_trips_collapse_settings(tmp_path) -> None:
+    spec = StackSpec(
+        id="edge_spec",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id="edge_spec.move", label="M"),),
+        collapse=RailCollapse(
+            enabled=True,
+            edge="left",
+            handle_icon="chevron-right",
+            default_collapsed=True,
+        ),
+    )
+
+    saved_path = save_user_preset(spec, preset_dir=tmp_path)
+    payload = json.loads(saved_path.read_text(encoding="utf-8"))
+    reloaded = load_user_preset("edge_spec", preset_dir=tmp_path)
+
+    assert payload["collapse"] == {
+        "default_collapsed": True,
+        "edge": "left",
+        "enabled": True,
+        "handle_icon": "chevron-right",
+    }
+    assert reloaded.collapse == spec.collapse
 
 
 def test_save_user_preset_rejects_existing_file_without_overwrite(tmp_path) -> None:

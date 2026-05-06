@@ -179,6 +179,13 @@ def _build_panel(
     scale = _double_spin_box(qt, 0.1, MAX_LAYOUT_SCALE, 1.0, 0.05)
     opacity = _double_spin_box(qt, 0.0, 1.0, 1.0, 0.05)
     locked = qt.QtWidgets.QCheckBox()
+    collapse_enabled = qt.QtWidgets.QCheckBox()
+    collapse_edge = qt.QtWidgets.QComboBox()
+    collapse_edge.addItems(("left", "right", "top", "bottom"))
+    collapse_handle_icon = qt.QtWidgets.QLineEdit()
+    collapse_trigger = qt.QtWidgets.QComboBox()
+    collapse_trigger.addItems(("click", "hover"))
+    collapse_default = qt.QtWidgets.QCheckBox()
 
     tabs = qt.QtWidgets.QTabWidget()
     tabs.setObjectName(TABS_OBJECT_NAME)
@@ -199,6 +206,11 @@ def _build_panel(
     _add_grid_field(qt, general_grid, 1, 0, "Preset Id", preset_id)
     _add_grid_field(qt, general_grid, 1, 2, "Anchor Point", anchor_combo)
     _add_grid_field(qt, general_grid, 2, 0, "Direction", orientation_combo)
+    _add_grid_field(qt, general_grid, 2, 2, "Collapse", collapse_enabled)
+    _add_grid_field(qt, general_grid, 3, 0, "Collapse Edge", collapse_edge)
+    _add_grid_field(qt, general_grid, 3, 2, "Handle Icon", collapse_handle_icon)
+    _add_grid_field(qt, general_grid, 4, 0, "Reveal", collapse_trigger)
+    _add_grid_field(qt, general_grid, 4, 2, "Starts Collapsed", collapse_default)
     general_grid.setColumnStretch(1, 1)
     general_grid.setColumnStretch(3, 1)
     general_layout.addStretch(1)
@@ -313,6 +325,11 @@ def _build_panel(
         scale.setValue(values.scale)
         opacity.setValue(values.opacity)
         locked.setChecked(values.locked)
+        collapse_enabled.setChecked(values.collapse_enabled)
+        _set_combo_text(collapse_edge, values.collapse_edge)
+        collapse_handle_icon.setText(values.collapse_handle_icon)
+        _set_combo_text(collapse_trigger, values.collapse_reveal_trigger)
+        collapse_default.setChecked(values.collapse_default_collapsed)
         _clear_slot_rows(slot_rows, slots_layout)
         for slot in values.slots:
             _add_slot_row(qt, slots_layout, slot_rows, slot, actions, icons)
@@ -330,6 +347,11 @@ def _build_panel(
             scale=scale.value(),
             opacity=opacity.value(),
             locked=locked.isChecked(),
+            collapse_enabled=collapse_enabled.isChecked(),
+            collapse_edge=collapse_edge.currentText(),
+            collapse_handle_icon=collapse_handle_icon.text().strip(),
+            collapse_reveal_trigger=collapse_trigger.currentText(),
+            collapse_default_collapsed=collapse_default.isChecked(),
         )
 
     def current_draft() -> object:

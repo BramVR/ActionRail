@@ -116,6 +116,20 @@ QPushButton[actionRailRole="button"]:disabled {{
     border-color: {theme.button_disabled_border};
     color: {theme.button_disabled_color};
 }}
+QPushButton[actionRailRole="collapsedHandle"] {{
+    border: {theme.button_border_width}px solid {theme.button_hover_border};
+    border-radius: {theme.button_border_radius}px;
+    background: {theme.cluster_background};
+    color: {theme.button_color};
+    font-size: 11px;
+    font-weight: {theme.button_font_weight};
+    letter-spacing: 0px;
+    padding: 0px;
+}}
+QPushButton[actionRailRole="collapsedHandle"]:hover {{
+    background: {theme.button_hover_background};
+    border-color: {theme.button_active_border};
+}}
 """
 
     for tone_name, tone in theme.tones:

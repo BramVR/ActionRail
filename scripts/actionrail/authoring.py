@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .spec import (
+    RailCollapse,
     RailLayout,
     StackItem,
     StackSpec,
@@ -63,6 +64,7 @@ class DraftRail:
     layout: RailLayout = field(
         default_factory=lambda: RailLayout(anchor="viewport.left.center")
     )
+    collapse: RailCollapse = field(default_factory=RailCollapse)
 
 
 def build_draft_spec(draft: DraftRail) -> StackSpec:
@@ -172,6 +174,7 @@ def spec_to_payload(spec: StackSpec) -> dict[str, Any]:
     return {
         "id": spec.id,
         "layout": _layout_to_payload(spec.layout),
+        **_collapse_payload_entry(spec.collapse),
         "items": [_item_to_payload(item) for item in spec.items],
     }
 
@@ -183,6 +186,7 @@ def draft_to_payload(draft: DraftRail) -> dict[str, Any]:
     return {
         "id": draft.id,
         "layout": _layout_to_payload(draft.layout),
+        **_collapse_payload_entry(draft.collapse),
         "items": [_draft_slot_to_payload(draft.id, slot) for slot in draft.slots],
     }
 
@@ -207,6 +211,31 @@ def _layout_to_payload(layout: RailLayout) -> dict[str, object]:
         "opacity": layout.opacity,
         "locked": layout.locked,
     }
+
+
+def _collapse_payload_entry(collapse: RailCollapse) -> dict[str, object]:
+    if not _should_write_collapse(collapse):
+        return {}
+    payload: dict[str, object] = {"enabled": collapse.enabled}
+    if collapse.edge != "left" or collapse.enabled:
+        payload["edge"] = collapse.edge
+    if collapse.handle_icon:
+        payload["handle_icon"] = collapse.handle_icon
+    if collapse.reveal_trigger != "click":
+        payload["reveal_trigger"] = collapse.reveal_trigger
+    if collapse.default_collapsed:
+        payload["default_collapsed"] = collapse.default_collapsed
+    return {"collapse": payload}
+
+
+def _should_write_collapse(collapse: RailCollapse) -> bool:
+    return (
+        collapse.enabled
+        or collapse.edge != "left"
+        or bool(collapse.handle_icon)
+        or collapse.reveal_trigger != "click"
+        or collapse.default_collapsed
+    )
 
 
 def _draft_slot_to_payload(preset_id: str, slot: DraftSlot) -> dict[str, object]:

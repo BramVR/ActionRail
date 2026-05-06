@@ -71,8 +71,11 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
 
     output = capsys.readouterr().out
     assert "ActionRail" in output
-    assert "Status: Phase 2 step 2.5 layout editing/direct manipulation done" in output
-    assert "Next: Phase 2 step 2.6 collapsible edge tabs and publish polish" in output
+    assert (
+        "Status: Phase 2 step 2.6 collapsible edge-tab runtime/persistence "
+        "Maya-smoke verified"
+    ) in output
+    assert "Next: Phase 2 step 2.6 publish polish and handle tuning" in output
     assert "Use --json" in output
 
 

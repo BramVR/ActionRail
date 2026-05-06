@@ -9,6 +9,7 @@ from actionrail.spec import (
     MAX_LAYOUT_ROWS,
     MAX_LAYOUT_SCALE,
     TRANSFORM_STACK_ID,
+    RailCollapse,
     StackItem,
     _default_item_id,
     action_ids,
@@ -193,6 +194,50 @@ def test_parse_stack_spec_supports_optional_icon_id() -> None:
     )
 
     assert spec.items[0].icon == "lucide.key"
+
+
+def test_parse_stack_spec_supports_collapsible_edge_tab_settings() -> None:
+    spec = parse_stack_spec(
+        {
+            "id": "edge_tools",
+            "layout": {"anchor": "viewport.right.center"},
+            "collapse": {
+                "enabled": True,
+                "edge": "right",
+                "handle_icon": "chevron-left",
+                "reveal_trigger": "click",
+                "default_collapsed": True,
+            },
+            "items": [{"type": "button", "id": "edge_tools.move", "label": "M"}],
+        }
+    )
+
+    assert spec.collapse == RailCollapse(
+        enabled=True,
+        edge="right",
+        handle_icon="chevron-left",
+        reveal_trigger="click",
+        default_collapsed=True,
+    )
+
+
+def test_parse_stack_spec_rejects_bad_collapse_settings() -> None:
+    for field, value, match in (
+        ("enabled", "yes", "enabled"),
+        ("edge", "diagonal", "edge"),
+        ("handle_icon", 123, "handle_icon"),
+        ("reveal_trigger", "press", "reveal_trigger"),
+        ("default_collapsed", "yes", "default_collapsed"),
+    ):
+        with pytest.raises(ValueError, match=match):
+            parse_stack_spec(
+                {
+                    "id": f"bad_{field}",
+                    "layout": {"anchor": "viewport.left.center"},
+                    "collapse": {field: value},
+                    "items": [{"type": "button", "label": "K"}],
+                }
+            )
 
 
 def test_parse_stack_spec_allows_unassigned_placeholder_slot() -> None:

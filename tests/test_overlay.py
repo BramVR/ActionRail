@@ -21,7 +21,7 @@ from actionrail.overlay import (
     maya_main_window,
     model_panel_widget,
 )
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
 
 
 class FakeCmds:
@@ -409,6 +409,57 @@ def test_overlay_uses_floating_maya_window_parent(monkeypatch: pytest.MonkeyPatc
         ("viewport", FakeResizeEventFilter.object),
         ("maya_window", FakeResizeEventFilter.object),
     ]
+
+
+def test_overlay_builds_small_handle_for_collapsed_specs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+
+    class FakeQt:
+        class QtCore:
+            class Qt:
+                Widget = 0
+
+    class FakeWidget:
+        def setObjectName(self, _name: str) -> None:  # noqa: N802
+            events.append("name")
+
+        def setParent(self, _parent: object) -> None:  # noqa: N802
+            events.append("parent")
+
+        def setWindowFlags(self, _flags: object) -> None:  # noqa: N802
+            events.append("flags")
+
+    def collapsed_handle(spec: StackSpec, on_reveal: object) -> FakeWidget:
+        events.append(f"collapsed:{spec.id}:{callable(on_reveal)}")
+        return FakeWidget()
+
+    def full_stack(*_args: object, **_kwargs: object) -> FakeWidget:
+        events.append("full")
+        return FakeWidget()
+
+    monkeypatch.setattr(overlay, "build_collapsed_handle", collapsed_handle)
+    monkeypatch.setattr(overlay, "build_transform_stack", full_stack)
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.qt = FakeQt
+    host.spec = StackSpec(
+        id="edge",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id="edge.move", label="M"),),
+        collapse=RailCollapse(enabled=True, default_collapsed=True),
+    )
+    host.registry = object()
+    host.cmds = object()
+    host.parent = object()
+    host.window_parent = None
+    host._floating = False
+    host._collapsed = True
+
+    widget = host._build_widget(object())
+
+    assert isinstance(widget, FakeWidget)
+    assert events == ["collapsed:edge:True", "name", "parent", "flags"]
 
 
 def test_overlay_starts_predicate_refresh_timer_and_stops_on_close(

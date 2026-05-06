@@ -8,6 +8,7 @@ Tests: `tests/test_widgets.py` and widget-focused Maya smoke scripts.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, replace
 
@@ -37,6 +38,7 @@ __all__ = [
     "PredicateRefreshResult",
     "SlotRenderState",
     "build_rail",
+    "build_collapsed_handle",
     "build_transform_stack",
     "refresh_predicate_state",
     "resolve_slot_render_state",
@@ -165,6 +167,73 @@ def build_rail(
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
     return root
+
+
+def build_collapsed_handle(
+    spec: StackSpec,
+    on_reveal: Callable[[], None],
+    theme: ActionRailTheme = DEFAULT_THEME,
+) -> object:
+    """Build the small edge-tab handle shown while a rail is collapsed."""
+
+    qt = load()
+    theme = _scaled_theme(theme, spec.layout.scale)
+    root = ActionRailRoot.create()
+    root.setStyleSheet(generate_style_sheet(theme))
+    root.setWindowOpacity(spec.layout.opacity)
+
+    layout = qt.QtWidgets.QVBoxLayout(root)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+    handle = _collapsed_handle_button(qt, spec, on_reveal)
+    layout.addWidget(handle)
+    root.adjustSize()
+    root.setFixedSize(root.sizeHint())
+    return root
+
+
+def _collapsed_handle_button(qt: object, spec: StackSpec, on_reveal: Callable[[], None]) -> object:
+    button = qt.QtWidgets.QPushButton(_collapse_handle_label(spec))
+    button.setProperty("actionRailRole", "collapsedHandle")
+    button.setProperty("actionRailCollapsedPresetId", spec.id)
+    button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
+    button.setCursor(qt.QtCore.Qt.PointingHandCursor)
+    button.setToolTip(f"Show ActionRail rail: {spec.id}")
+    edge = spec.collapse.edge
+    if edge in {"left", "right"}:
+        button.setFixedSize(18, 42)
+    else:
+        button.setFixedSize(42, 18)
+    button.clicked.connect(lambda _checked=False: on_reveal())
+    if spec.collapse.reveal_trigger == "hover":
+        base_enter = button.enterEvent
+
+        def enter_event(event):  # type: ignore[no-untyped-def]
+            on_reveal()
+            return base_enter(event)
+
+        button.enterEvent = enter_event  # type: ignore[method-assign]
+    return button
+
+
+def _collapse_handle_label(spec: StackSpec) -> str:
+    icon = spec.collapse.handle_icon
+    chevrons = {
+        "chevron-left": "<",
+        "chevron-right": ">",
+        "chevron-up": "^",
+        "chevron-down": "v",
+    }
+    if icon in chevrons:
+        return chevrons[icon]
+    if icon:
+        return icon[:3]
+    return {
+        "left": ">",
+        "right": "<",
+        "top": "v",
+        "bottom": "^",
+    }.get(spec.collapse.edge, ">")
 
 
 def build_transform_stack(

@@ -10,6 +10,16 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-06
+
+- Started Phase 2 step 2.6 with real collapsible edge-tab schema/runtime
+  support: optional persisted `collapse` settings, Quick Create edge-tab
+  defaults/settings, collapsed handle-only Qt overlays, Edit Mode
+  collapse/expand controls, hotkey label restoration after expand, and Maya
+  smoke coverage for collapse/save/run/expand.
+- Updated status, architecture, Edit Mode, roadmap, and project-map docs so the
+  next slice is handle tuning plus publish polish for saved presets.
+
 ## 2026-05-05
 
 - Fixed Quick Create rich preset round-trips so loading and rebuilding saved

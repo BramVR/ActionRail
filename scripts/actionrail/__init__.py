@@ -77,6 +77,7 @@ from .runtime import (
     update_slot_key_label,
 )
 from .spec import (
+    RailCollapse,
     RailLayout,
     StackItem,
     StackSpec,
@@ -98,6 +99,7 @@ __all__ = [
     "DraftSlot",
     "EditModeSettings",
     "EditModeState",
+    "RailCollapse",
     "RailLayout",
     "RailFrameInfo",
     "StackItem",

@@ -63,13 +63,16 @@ def test_horizontal_template_uses_bottom_strip_layout() -> None:
     assert values.offset == (0, -36)
 
 
-def test_edge_tab_template_is_valid_without_phase_2_6_collapse_schema() -> None:
+def test_edge_tab_template_includes_phase_2_6_collapse_schema() -> None:
     values = make_default_input("edge_tab_rail")
     draft = build_quick_create_draft(values)
 
     assert draft.layout.anchor == "viewport.left.center"
     assert draft.layout.orientation == "vertical"
     assert draft.layout.opacity == 0.92
+    assert draft.collapse.enabled is True
+    assert draft.collapse.edge == "left"
+    assert draft.collapse.handle_icon == "chevron-right"
     assert draft.slots[0].id == "primary"
 
 
@@ -495,6 +498,9 @@ def test_load_quick_create_preset_infers_vertical_and_edge_templates(tmp_path) -
         anchor="viewport.left.center",
         orientation="vertical",
         opacity=0.92,
+        collapse_enabled=True,
+        collapse_edge="left",
+        collapse_handle_icon="chevron-right",
     )
     save_quick_create_preset(
         build_quick_create_draft(edge_values),
@@ -508,6 +514,8 @@ def test_load_quick_create_preset_infers_vertical_and_edge_templates(tmp_path) -
     assert loose_loaded.template_id == "vertical_stack"
     assert loose_loaded.slots[0].id == "loose"
     assert edge_loaded.template_id == "edge_tab_rail"
+    assert edge_loaded.collapse_enabled is True
+    assert edge_loaded.collapse_handle_icon == "chevron-right"
 
 
 def test_load_quick_create_preset_rejects_builtins() -> None:

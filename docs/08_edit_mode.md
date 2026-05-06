@@ -14,7 +14,10 @@ edit-only layout map over the active Maya viewport so rails can be selected and
 positioned without triggering their buttons.
 
 The Edit Mode shell and Phase 2 step 2.5 layout persistence/direct
-manipulation surface are implemented and Maya-smoke verified.
+manipulation surface are implemented and Maya-smoke verified. Phase 2 step 2.6
+has started: frame options now toggle real collapsible edge-tab state instead
+of the earlier opacity-only placeholder, and the new collapse path is
+Maya-smoke verified.
 
 ## What It Shows
 
@@ -56,7 +59,8 @@ Inside Edit Mode:
 - edit the X/Y fields or use the arrow controls to nudge an unlocked rail
 - right-click a rail frame to open options routing for that rail
 - use frame options to add/remove/reorder placeholder slots
-- use frame options to collapse or expand edge-tab opacity
+- use frame options to collapse an edge-anchored rail to a small handle or
+  expand it again
 - enable Grid to show or hide the edit-only grid
 - adjust Grid Size to change the grid spacing
 - enable Snap to Grid to snap authoring movement to the grid
@@ -100,7 +104,7 @@ State objects:
 - `EditModeState`: `enabled`, `selected_preset_id`, `settings`, `rail_count`,
   `options_preset_id`
 - `RailFrameInfo`: viewport-local frame geometry, layout metadata, lock state,
-  and source layer
+  collapse state, and source layer
 
 Implementation ownership:
 
@@ -126,7 +130,7 @@ Implemented now:
 - selected-frame snap/spacing guide rendering
 - right-click frame options routing marker
 - frame options for slot add/remove/reorder
-- edge-tab collapse opacity control
+- edge-tab collapse/expand control backed by persisted `collapse` settings
 - Save Position for unlocked runtime/user rails
 - Save Position user-overrides for unlocked built-in and studio rails
 - public layout-save helper that persists adjusted offsets to user presets
