@@ -466,7 +466,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
 
     def toggle_selected_edge_tab(self) -> bool:
         selected = self.selected_frame()
-        if selected is None or selected.locked or not _is_edge_anchor(selected.anchor):
+        if selected is None or selected.locked or not _can_toggle_collapse(selected):
             return False
         host = _runtime_hosts().get(selected.preset_id)
         spec = getattr(host, "spec", None)
@@ -919,7 +919,7 @@ class _FrameOptionsPopover:  # pragma: no cover - covered by Maya smoke tests.
                 self.remove_slot.setEnabled(not frame.locked)
                 self.slot_up.setEnabled(not frame.locked)
                 self.slot_down.setEnabled(not frame.locked)
-                self.collapse.setEnabled(not frame.locked and _is_edge_anchor(frame.anchor))
+                self.collapse.setEnabled(not frame.locked and _can_toggle_collapse(frame))
                 self.collapse.setText(
                     "Expand Edge Tab" if frame.collapsed else "Collapse Edge Tab"
                 )
@@ -1099,6 +1099,10 @@ def _last_action_item_index(items: tuple[Any, ...]) -> int | None:
 
 def _is_edge_anchor(anchor: str) -> bool:
     return any(f".{edge}." in anchor for edge in ("left", "right", "top", "bottom"))
+
+
+def _can_toggle_collapse(frame: RailFrameInfo) -> bool:
+    return frame.collapse_enabled or _is_edge_anchor(frame.anchor)
 
 
 def _edge_from_anchor(anchor: str) -> str:

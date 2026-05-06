@@ -918,6 +918,55 @@ def test_edit_mode_options_toggle_edge_tab_collapsed_state(monkeypatch) -> None:
     assert collapsed_updates == [(True, True), (False, True)]
 
 
+def test_edit_mode_options_toggle_configured_collapse_for_center_anchor(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="center_tab",
+        label="Center Tab",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.center",
+        offset=(12, 24),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=0.92,
+        locked=False,
+        collapse_enabled=True,
+        collapse_edge="bottom",
+        source_layer="runtime",
+    )
+    runtime_host = type("RuntimeHost", (), {})()
+    runtime_host.spec = StackSpec(
+        id="center_tab",
+        layout=RailLayout(anchor="viewport.center", opacity=0.92),
+        items=(StackItem(type="button", id="center_tab.a", label="A"),),
+        collapse=RailCollapse(enabled=True, edge="bottom"),
+    )
+    runtime_host._collapsed = False
+    collapsed_updates = []
+
+    def set_collapsed(value: bool, *, persist_default: bool = False) -> bool:
+        runtime_host._collapsed = value
+        collapsed_updates.append((value, persist_default))
+        return True
+
+    runtime_host.set_collapsed = set_collapsed
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.frames = (frame,)
+    host.widget = type("Widget", (), {"refresh_from_host": lambda self: None})()
+    host.refresh = lambda: None
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"center_tab": runtime_host})
+    host.select_rail("center_tab")
+
+    assert host.toggle_selected_edge_tab() is True
+    assert runtime_host.spec.collapse.edge == "bottom"
+    assert runtime_host.spec.collapse.default_collapsed is True
+    assert collapsed_updates == [(True, True)]
+
+
 def test_locked_frame_does_not_nudge(monkeypatch) -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="locked",

@@ -462,6 +462,28 @@ def test_overlay_builds_small_handle_for_collapsed_specs(
     assert events == ["collapsed:edge:True", "name", "parent", "flags"]
 
 
+def test_collapsed_handle_expand_does_not_mutate_default_collapsed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = StackSpec(
+        id="edge",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id="edge.move", label="M"),),
+        collapse=RailCollapse(enabled=True, default_collapsed=True),
+    )
+    host = object.__new__(overlay.ViewportOverlayHost)
+    host.spec = spec
+    host._collapsed = True
+    host.cmds = object()
+    host.panel = "modelPanel4"
+    host._rebuild_widget = lambda _state: None
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: object())
+
+    assert host.expand() is True
+    assert host._collapsed is False
+    assert host.spec.collapse.default_collapsed is True
+
+
 def test_overlay_starts_predicate_refresh_timer_and_stops_on_close(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

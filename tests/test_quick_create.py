@@ -61,6 +61,15 @@ def test_horizontal_template_uses_bottom_strip_layout() -> None:
     assert values.orientation == "horizontal"
     assert values.columns == 4
     assert values.offset == (0, -36)
+    assert values.collapse_enabled is False
+    assert values.collapse_edge == "bottom"
+
+
+def test_vertical_template_uses_anchor_edge_for_disabled_collapse_defaults() -> None:
+    values = make_default_input("vertical_stack")
+
+    assert values.collapse_enabled is False
+    assert values.collapse_edge == "left"
 
 
 def test_edge_tab_template_includes_phase_2_6_collapse_schema() -> None:

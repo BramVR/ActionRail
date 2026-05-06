@@ -540,7 +540,7 @@ class ViewportOverlayHost:
     def expand(self) -> bool:
         """Expand this rail when its collapsed edge handle is activated."""
 
-        return self.set_collapsed(False, persist_default=True)
+        return self.set_collapsed(False)
 
     def set_collapsed(self, collapsed: bool, *, persist_default: bool = False) -> bool:
         """Set the live collapsed state and optionally update the spec default."""

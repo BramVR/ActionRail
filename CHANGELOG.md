@@ -17,6 +17,10 @@
   defaults/settings, collapsed handle-only Qt overlays, Edit Mode
   collapse/expand controls, hotkey label restoration after expand, and Maya
   smoke coverage for collapse/save/run/expand.
+- Fixed review issues in the collapsible edge-tab slice: temporary handle
+  reveal no longer changes saved default collapse state, Edit Mode can toggle
+  configured collapse rails with non-edge anchors, and Quick Create infers
+  disabled collapse edge defaults from each template anchor.
 - Updated status, architecture, Edit Mode, roadmap, and project-map docs so the
   next slice is handle tuning plus publish polish for saved presets.
 

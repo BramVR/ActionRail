@@ -202,7 +202,7 @@ def make_default_input(template_id: str = "vertical_stack") -> QuickCreateDraftI
         opacity=template.layout.opacity,
         locked=template.layout.locked,
         collapse_enabled=template.collapse.enabled,
-        collapse_edge=template.collapse.edge,
+        collapse_edge=_template_collapse_edge(template),
         collapse_handle_icon=template.collapse.handle_icon,
         collapse_reveal_trigger=template.collapse.reveal_trigger,
         collapse_default_collapsed=template.collapse.default_collapsed,
@@ -423,6 +423,19 @@ def _template_id_for_spec(spec: Any) -> str:
     if len(spec.items) == 1 and spec.layout.opacity < 1.0:
         return "edge_tab_rail"
     return "vertical_stack"
+
+
+def _template_collapse_edge(template: QuickCreateTemplate) -> str:
+    if template.collapse.enabled:
+        return template.collapse.edge
+    return _edge_from_anchor(template.layout.anchor)
+
+
+def _edge_from_anchor(anchor: str) -> str:
+    for edge in ("left", "right", "top", "bottom"):
+        if f".{edge}." in anchor:
+            return edge
+    return "left"
 
 
 def _default_preset_id(template_id: str) -> str:

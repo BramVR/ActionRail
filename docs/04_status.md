@@ -120,7 +120,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 426 passed.
+  -> 429 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
