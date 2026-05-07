@@ -13,6 +13,7 @@ from contextlib import suppress
 from dataclasses import dataclass, replace
 
 from . import slot_state as _slot_state
+from .action_book import ACTION_BOOK_MIME_TYPE, action_book_action_id_from_mime_text
 from .actions import ActionRegistry
 from .predicates import PredicateContext
 from .qt import load
@@ -440,6 +441,7 @@ def _build_button(
     if slot_edit_callbacks is not None:
         button._actionrail_slot_edit_callbacks = slot_edit_callbacks
         _install_slot_edit_menu(button, item, registry, slot_edit_callbacks)
+        _install_action_book_drop(button, item, slot_edit_callbacks)
         _install_slot_drag_edit(button, item, slot_edit_callbacks)
     if item.action and not (
         slot_edit_callbacks is not None and slot_edit_callbacks.unlocked
@@ -517,6 +519,101 @@ def _show_slot_edit_menu(
         unlock_action.triggered.connect(lambda _checked=False: callbacks.unlock_rail())
     with suppress(Exception):
         menu.exec(button.mapToGlobal(point))
+
+
+def _install_action_book_drop(
+    button: object,
+    item: StackItem,
+    callbacks: SlotEditCallbacks,
+) -> None:
+    set_accept_drops = getattr(button, "setAcceptDrops", None)
+    if not callable(set_accept_drops):
+        return
+    with suppress(Exception):
+        set_accept_drops(True)
+
+    base_drag_enter = getattr(button, "dragEnterEvent", None)
+    base_drop = getattr(button, "dropEvent", None)
+
+    def drag_enter_event(event: object) -> object | None:
+        live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
+        if (
+            getattr(live_callbacks, "unlocked", False)
+            and _action_book_action_id_from_event(event)
+        ):
+            _accept_proposed_event(event)
+            return None
+        if callable(base_drag_enter):
+            return base_drag_enter(event)
+        return None
+
+    def drop_event(event: object) -> object | None:
+        live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
+        action_id = _action_book_action_id_from_event(event)
+        if not getattr(live_callbacks, "unlocked", False) or not action_id:
+            if callable(base_drop):
+                return base_drop(event)
+            return None
+        if live_callbacks.assign_action(item.id, action_id):
+            _accept_proposed_event(event)
+        return None
+
+    button.dragEnterEvent = drag_enter_event  # type: ignore[method-assign]
+    button.dropEvent = drop_event  # type: ignore[method-assign]
+
+
+def _action_book_action_id_from_event(event: object) -> str:
+    mime_data = _mime_data_from_event(event)
+    if mime_data is None:
+        return ""
+    raw_text = _mime_payload_text(mime_data)
+    if not raw_text:
+        return ""
+    with suppress(Exception):
+        return action_book_action_id_from_mime_text(raw_text)
+    return ""
+
+
+def _mime_data_from_event(event: object) -> object | None:
+    mime_data = getattr(event, "mimeData", None)
+    if callable(mime_data):
+        with suppress(Exception):
+            return mime_data()
+    return None
+
+
+def _mime_payload_text(mime_data: object) -> str:
+    has_format = getattr(mime_data, "hasFormat", None)
+    data = getattr(mime_data, "data", None)
+    if callable(has_format) and callable(data):
+        with suppress(Exception):
+            if has_format(ACTION_BOOK_MIME_TYPE):
+                return _decode_mime_bytes(data(ACTION_BOOK_MIME_TYPE))
+    has_text = getattr(mime_data, "hasText", None)
+    text = getattr(mime_data, "text", None)
+    if callable(has_text) and callable(text):
+        with suppress(Exception):
+            if has_text():
+                return str(text())
+    return ""
+
+
+def _decode_mime_bytes(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    try:
+        return bytes(value).decode("utf-8")
+    except Exception:
+        return str(value)
+
+
+def _accept_proposed_event(event: object) -> None:
+    accept_proposed = getattr(event, "acceptProposedAction", None)
+    if callable(accept_proposed):
+        with suppress(Exception):
+            accept_proposed()
+            return
+    _accept_event(event)
 
 
 def _install_slot_drag_edit(

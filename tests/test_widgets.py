@@ -470,6 +470,106 @@ def test_build_transform_stack_locked_slot_edit_menu_keeps_actions_enabled(
     assert cmds.calls == [("setToolTo", "moveSuperContext")]
 
 
+def test_unlocked_slot_accepts_action_book_drop_payload() -> None:
+    events: list[tuple[str, str]] = []
+
+    class DropButton:
+        def __init__(self) -> None:
+            self.accept_drops = False
+
+        def setAcceptDrops(self, enabled: bool) -> None:  # noqa: N802
+            self.accept_drops = enabled
+
+    class MimeData:
+        def hasFormat(self, mime_type: str) -> bool:  # noqa: N802
+            return mime_type == "application/x-actionrail-action-id"
+
+        def data(self, _mime_type: str) -> bytes:
+            return b"maya.tool.scale"
+
+    class DropEvent:
+        def __init__(self) -> None:
+            self.accepted = False
+
+        def mimeData(self) -> MimeData:  # noqa: N802
+            return MimeData()
+
+        def acceptProposedAction(self) -> None:  # noqa: N802
+            self.accepted = True
+
+    button = DropButton()
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=True,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda slot_id, action_id: events.append((slot_id, action_id)) or True,
+        clear_slot=lambda _slot_id: True,
+    )
+    button._actionrail_slot_edit_callbacks = callbacks
+
+    widgets._install_action_book_drop(
+        button,
+        StackItem(type="button", id="drop.slot", label="New"),
+        callbacks,
+    )
+    drag_event = DropEvent()
+    drop_event = DropEvent()
+
+    button.dragEnterEvent(drag_event)
+    button.dropEvent(drop_event)
+
+    assert button.accept_drops is True
+    assert drag_event.accepted is True
+    assert drop_event.accepted is True
+    assert events == [("drop.slot", "maya.tool.scale")]
+
+
+def test_locked_slot_ignores_action_book_drop_payload() -> None:
+    events: list[tuple[str, str]] = []
+
+    class DropButton:
+        def setAcceptDrops(self, _enabled: bool) -> None:  # noqa: N802
+            return None
+
+    class MimeData:
+        def hasFormat(self, _mime_type: str) -> bool:  # noqa: N802
+            return True
+
+        def data(self, _mime_type: str) -> bytes:
+            return b"maya.tool.scale"
+
+    class DropEvent:
+        accepted = False
+
+        def mimeData(self) -> MimeData:  # noqa: N802
+            return MimeData()
+
+        def acceptProposedAction(self) -> None:  # noqa: N802
+            self.accepted = True
+
+    button = DropButton()
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=False,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda slot_id, action_id: events.append((slot_id, action_id)) or True,
+        clear_slot=lambda _slot_id: True,
+    )
+    button._actionrail_slot_edit_callbacks = callbacks
+
+    widgets._install_action_book_drop(
+        button,
+        StackItem(type="button", id="drop.slot", label="New"),
+        callbacks,
+    )
+    event = DropEvent()
+
+    button.dropEvent(event)
+
+    assert event.accepted is False
+    assert events == []
+
+
 def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
     events: list[tuple[str, ...]] = []
 
