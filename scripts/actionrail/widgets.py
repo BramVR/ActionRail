@@ -23,6 +23,9 @@ from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
 BUTTON_OUTER_SIZE = DEFAULT_THEME.button_outer_size
+ACTION_RAIL_ROOT_OBJECT_NAME = "ActionRailRoot"
+ACTION_RAIL_ROOT_PROPERTY = "actionRailRoot"
+ACTION_RAIL_VIEWPORT_OVERLAY_PREFIX = "ActionRailViewportOverlay_"
 COLLAPSED_HANDLE_SHORT_SIDE = 24
 COLLAPSED_HANDLE_LONG_SIDE = 52
 FRAME_PADDING = DEFAULT_THEME.frame_padding
@@ -101,7 +104,8 @@ class ActionRailRoot:
         class _ActionRailRoot(qt.QtWidgets.QWidget):
             def __init__(self) -> None:
                 super().__init__()
-                self.setObjectName("ActionRailRoot")
+                self.setObjectName(ACTION_RAIL_ROOT_OBJECT_NAME)
+                self.setProperty(ACTION_RAIL_ROOT_PROPERTY, "true")
                 self.setAttribute(qt.QtCore.Qt.WA_TranslucentBackground, True)
                 self.setAttribute(qt.QtCore.Qt.WA_NoSystemBackground, True)
                 self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
@@ -1324,13 +1328,23 @@ def _slot_button_ancestor(qt: object, widget: object | None) -> object | None:
 
 def _rail_root_widget(widget: object | None) -> object | None:
     while widget is not None:
+        property_value = getattr(widget, "property", None)
+        with suppress(Exception):
+            if callable(property_value) and property_value(ACTION_RAIL_ROOT_PROPERTY) == "true":
+                return widget
         object_name = getattr(widget, "objectName", None)
         with suppress(Exception):
-            if callable(object_name) and object_name() == "ActionRailRoot":
+            if callable(object_name) and _is_action_rail_root_object_name(object_name()):
                 return widget
         parent = getattr(widget, "parent", None)
         widget = parent() if callable(parent) else None
     return None
+
+
+def _is_action_rail_root_object_name(name: object) -> bool:
+    return name == ACTION_RAIL_ROOT_OBJECT_NAME or (
+        isinstance(name, str) and name.startswith(ACTION_RAIL_VIEWPORT_OVERLAY_PREFIX)
+    )
 
 
 def _accept_event(event: object) -> None:

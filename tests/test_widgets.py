@@ -343,6 +343,7 @@ def test_action_rail_root_ignores_mouse_and_wheel_events(monkeypatch) -> None:
     root.wheelEvent(event)
 
     assert ignored == [True, True, True, True]
+    assert root.properties["actionRailRoot"] == "true"
 
 
 def test_build_transform_stack_constructs_scaled_horizontal_widget(monkeypatch) -> None:
@@ -502,7 +503,7 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
 
     class Root:
         def objectName(self) -> str:  # noqa: N802
-            return "ActionRailRoot"
+            return "ActionRailViewportOverlay_transform_stack"
 
         def parent(self) -> None:
             return None
@@ -579,11 +580,23 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
     source.mouseReleaseEvent(Event(10, 0))
     assert events == [("drag.source", "drag.target")]
 
+    other_root = Root()
+    other_target = DragButton("drag.other", other_root)
+    DragQt.QtWidgets.target = other_target
+    source.mousePressEvent(Event(0, 0))
+    source.mouseMoveEvent(Event(10, 0))
+    source.mouseReleaseEvent(Event(10, 0))
+    assert events == [("drag.source", "drag.target"), ("clear", "drag.source")]
+
     DragQt.QtWidgets.target = None
     source.mousePressEvent(Event(0, 0))
     source.mouseMoveEvent(Event(0, 10))
     source.mouseReleaseEvent(Event(0, 10))
-    assert events == [("drag.source", "drag.target"), ("clear", "drag.source")]
+    assert events == [
+        ("drag.source", "drag.target"),
+        ("clear", "drag.source"),
+        ("clear", "drag.source"),
+    ]
 
     DragQt.QtWidgets.target = source
     source.mousePressEvent(Event(0, 0))
@@ -591,6 +604,7 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
     source.mouseReleaseEvent(Event(10, 0))
     assert events == [
         ("drag.source", "drag.target"),
+        ("clear", "drag.source"),
         ("clear", "drag.source"),
         ("clear", "drag.source"),
     ]
@@ -627,7 +641,7 @@ def test_slot_drag_release_target_prefers_rail_geometry_over_widget_at() -> None
             self.buttons: list[DragButton] = []
 
         def objectName(self) -> str:  # noqa: N802
-            return "ActionRailRoot"
+            return "ActionRailViewportOverlay_transform_stack"
 
         def parent(self) -> None:
             return None

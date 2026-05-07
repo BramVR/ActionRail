@@ -54,6 +54,9 @@
 - Fixed Normal Mode Shift-drag release hit-testing so dropping a slot outside
   the rail reliably clears the source payload before later swaps rebuild the
   rail.
+- Fixed Normal Mode Shift-drag slot-drop hit-testing for active viewport
+  overlays so overlay-hosted rails still move or swap payloads when Qt's
+  `widgetAt()` fallback misses the target button.
 - Darkened locked/no-action slots so generated empty Quick Create buttons read
   more like recessed sockets while keeping the existing square shape.
 - Hardened Maya smoke cleanup so ActionRail diagnostics and authoring windows
