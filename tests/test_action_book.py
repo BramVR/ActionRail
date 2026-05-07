@@ -25,6 +25,30 @@ def test_default_action_book_entries_have_spellbook_metadata() -> None:
             keywords=("key", "keyframe", "animation", "set key", "s"),
         ),
         ActionBookEntry(
+            id="maya.modeling.center_pivot",
+            label="Center Pivot",
+            tooltip="Center pivot on current selection",
+            category="Modeling",
+            icon="maya.center_pivot",
+            keywords=("center", "pivot", "modeling", "transform"),
+        ),
+        ActionBookEntry(
+            id="maya.modeling.delete_history",
+            label="Delete History",
+            tooltip="Delete construction history on current selection",
+            category="Modeling",
+            icon="maya.objects",
+            keywords=("delete", "history", "construction", "modeling", "cleanup"),
+        ),
+        ActionBookEntry(
+            id="maya.modeling.freeze_transforms",
+            label="Freeze Transforms",
+            tooltip="Freeze transforms on current selection",
+            category="Modeling",
+            icon="maya.freeze_transform",
+            keywords=("freeze", "transforms", "modeling", "zero", "apply"),
+        ),
+        ActionBookEntry(
             id="maya.selection.clear",
             label="Clear Selection",
             tooltip="Clear current selection",
@@ -88,6 +112,14 @@ def test_default_action_book_entries_have_spellbook_metadata() -> None:
             icon="maya.grid",
             keywords=("grid", "viewport", "display", "toggle"),
         ),
+        ActionBookEntry(
+            id="maya.view.toggle_isolate_selected",
+            label="Toggle Isolate Selected",
+            tooltip="Toggle isolate selected in the active viewport",
+            category="Viewport",
+            icon="maya.isolate_selected",
+            keywords=("isolate", "selection", "viewport", "display", "toggle"),
+        ),
     )
 
 
@@ -126,3 +158,6 @@ def test_public_api_exposes_action_book_entries() -> None:
     assert actionrail.action_book_entry_by_id("maya.tool.move").icon == "maya.move"
     assert actionrail.action_book_entry_by_id("maya.display.toggle_grid").icon == "maya.grid"
     assert actionrail.action_book_entry_by_id("maya.tool.select").icon == "maya.objects"
+    assert actionrail.action_book_entry_by_id("maya.modeling.center_pivot").icon == (
+        "maya.center_pivot"
+    )

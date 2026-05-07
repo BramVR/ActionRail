@@ -12,11 +12,15 @@ from actionrail.actions import (
     SELECT_CONTEXT,
     Action,
     ActionRegistry,
+    center_pivot,
     clear_selection,
     create_default_registry,
+    delete_history,
     frame_selection,
+    freeze_transforms,
     set_tool_context,
     toggle_grid,
+    toggle_isolate_selected,
     validate_action_ids,
 )
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
@@ -27,6 +31,8 @@ class FakeCmds:
     def __init__(self) -> None:
         self.calls: list[tuple[str, object]] = []
         self.grid_visible = True
+        self.isolate_selected = False
+        self.model_panel = "modelPanel4"
         self.selection: list[str] = ["cube"]
 
     def setToolTo(self, context: str) -> None:
@@ -51,6 +57,60 @@ class FakeCmds:
     def viewFit(self) -> None:  # noqa: N802
         self.calls.append(("viewFit", None))
 
+    def xform(self, centerPivots: bool = False) -> None:  # noqa: N803
+        self.calls.append(("xform", {"centerPivots": centerPivots}))
+
+    def makeIdentity(
+        self,
+        apply: bool = False,  # noqa: A002
+        translate: bool = False,
+        rotate: bool = False,
+        scale: bool = False,
+        normal: bool = False,
+    ) -> None:
+        self.calls.append(
+            (
+                "makeIdentity",
+                {
+                    "apply": apply,
+                    "translate": translate,
+                    "rotate": rotate,
+                    "scale": scale,
+                    "normal": normal,
+                },
+            )
+        )
+
+    def delete(self, constructionHistory: bool = False) -> None:  # noqa: N803
+        self.calls.append(("delete", {"constructionHistory": constructionHistory}))
+
+    def getPanel(
+        self,
+        withFocus: bool = False,  # noqa: N803
+        visiblePanels: bool = False,  # noqa: N803
+        typeOf: str = "",  # noqa: N803
+    ) -> str | list[str]:
+        if withFocus:
+            return self.model_panel
+        if visiblePanels:
+            return [self.model_panel]
+        if typeOf:
+            return "modelPanel" if typeOf == self.model_panel else "window"
+        return ""
+
+    def isolateSelect(
+        self,
+        panel: str,
+        query: bool = False,
+        state: bool | None = None,
+    ) -> bool | None:  # noqa: N802
+        if query:
+            return self.isolate_selected
+        if state is not None:
+            self.isolate_selected = bool(state)
+            self.calls.append(("isolateSelect", {"panel": panel, "state": bool(state)}))
+        return None
+
 
 class FakeSelectionCmds(FakeCmds):
     def __init__(self, selection: list[str]) -> None:
@@ -74,8 +134,12 @@ def test_default_registry_contains_phase_zero_actions() -> None:
         "maya.tool.scale",
         "maya.anim.set_key",
         "maya.selection.clear",
+        "maya.modeling.center_pivot",
+        "maya.modeling.freeze_transforms",
+        "maya.modeling.delete_history",
         "maya.view.frame_selection",
         "maya.display.toggle_grid",
+        "maya.view.toggle_isolate_selected",
     )
 
 
@@ -89,8 +153,27 @@ def test_default_registry_contains_phase_zero_actions() -> None:
         ("maya.tool.scale", ("setToolTo", SCALE_CONTEXT)),
         ("maya.anim.set_key", ("setKeyframe", None)),
         ("maya.selection.clear", ("select", "clear")),
+        ("maya.modeling.center_pivot", ("xform", {"centerPivots": True})),
+        (
+            "maya.modeling.freeze_transforms",
+            (
+                "makeIdentity",
+                {
+                    "apply": True,
+                    "translate": True,
+                    "rotate": True,
+                    "scale": True,
+                    "normal": False,
+                },
+            ),
+        ),
+        ("maya.modeling.delete_history", ("delete", {"constructionHistory": True})),
         ("maya.view.frame_selection", ("viewFit", None)),
         ("maya.display.toggle_grid", ("grid", False)),
+        (
+            "maya.view.toggle_isolate_selected",
+            ("isolateSelect", {"panel": "modelPanel4", "state": True}),
+        ),
     ],
 )
 def test_default_actions_call_maya_cmds(
@@ -122,6 +205,53 @@ def test_selection_actions_use_maya_selection_commands() -> None:
     assert frame_selection(cmds) == "viewFit"
 
     assert cmds.calls == [("select", "clear"), ("viewFit", None)]
+
+
+def test_modeling_actions_skip_empty_selection_without_throwing() -> None:
+    cmds = FakeSelectionCmds([])
+
+    assert center_pivot(cmds) == "centerPivotSkipped:noSelection"
+    assert freeze_transforms(cmds) == "freezeTransformsSkipped:noSelection"
+    assert delete_history(cmds) == "deleteHistorySkipped:noSelection"
+
+    assert cmds.calls == []
+
+
+def test_toggle_isolate_selected_uses_focused_model_panel() -> None:
+    cmds = FakeCmds()
+
+    assert toggle_isolate_selected(cmds) == "isolateSelected:on"
+    assert toggle_isolate_selected(cmds) == "isolateSelected:off"
+
+    assert cmds.calls == [
+        ("isolateSelect", {"panel": "modelPanel4", "state": True}),
+        ("isolateSelect", {"panel": "modelPanel4", "state": False}),
+    ]
+
+
+def test_toggle_isolate_selected_falls_back_to_visible_model_panel() -> None:
+    cmds = FakeCmds()
+    cmds.model_panel = "modelPanel7"
+
+    def get_panel(
+        withFocus: bool = False,  # noqa: N803
+        visiblePanels: bool = False,  # noqa: N803
+        typeOf: str = "",  # noqa: N803
+    ) -> str | list[str]:
+        if withFocus:
+            return "scriptEditorPanel1"
+        if visiblePanels:
+            return ["scriptEditorPanel1", "modelPanel7"]
+        if typeOf:
+            return "modelPanel" if typeOf == "modelPanel7" else "window"
+        return ""
+
+    cmds.getPanel = get_panel  # type: ignore[method-assign]
+
+    assert toggle_isolate_selected(cmds) == "isolateSelected:on"
+    assert cmds.calls == [
+        ("isolateSelect", {"panel": "modelPanel7", "state": True}),
+    ]
 
 
 def test_registry_rejects_duplicate_action_ids() -> None:

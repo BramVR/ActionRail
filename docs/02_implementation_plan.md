@@ -528,9 +528,12 @@ Quick Create now also has a Maya-smoke verified `Edit Slots` handoff that
 previews the current draft, exits Edit Mode, and unlocks the visible bar for
 Normal Mode slot payload editing.
 The Action Book backend has also expanded beyond the original transform/key/grid
-seed set with Maya-smoke verified Select, Clear Selection, and Frame Selection
-entries; the smoke writes a catalog JSON artifact for review until a dedicated
-Action Book UI exists.
+seed set with Maya-smoke verified selection, viewport, and modeling entries:
+Select, Clear Selection, Frame Selection, Toggle Isolate Selected, Center
+Pivot, Freeze Transforms, and Delete History. The smoke writes a catalog JSON
+artifact for review until a dedicated Action Book UI exists. Stop broadening
+the catalog one item at a time for now; treat this as a useful starter set and
+move the next effort back to workflow-level architecture.
 Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and

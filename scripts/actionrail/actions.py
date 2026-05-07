@@ -21,12 +21,16 @@ __all__ = [
     "Action",
     "ActionCallback",
     "ActionRegistry",
+    "center_pivot",
     "clear_selection",
     "create_default_registry",
+    "delete_history",
     "frame_selection",
+    "freeze_transforms",
     "set_keyframe",
     "set_tool_context",
     "toggle_grid",
+    "toggle_isolate_selected",
     "validate_action_ids",
 ]
 
@@ -95,8 +99,7 @@ def set_keyframe(cmds_module: Any | None = None) -> str:
     """Set a keyframe on the current Maya selection."""
 
     cmds = _require_cmds(cmds_module)
-    list_selection = getattr(cmds, "ls", None)
-    if callable(list_selection) and not (list_selection(selection=True) or []):
+    if not _current_selection(cmds):
         return "setKeyframeSkipped:noSelection"
     cmds.setKeyframe()
     return "setKeyframe"
@@ -118,6 +121,36 @@ def frame_selection(cmds_module: Any | None = None) -> str:
     return "viewFit"
 
 
+def center_pivot(cmds_module: Any | None = None) -> str:
+    """Center pivots for the current Maya selection."""
+
+    cmds = _require_cmds(cmds_module)
+    if not _current_selection(cmds):
+        return "centerPivotSkipped:noSelection"
+    cmds.xform(centerPivots=True)
+    return "centerPivot"
+
+
+def freeze_transforms(cmds_module: Any | None = None) -> str:
+    """Freeze transforms for the current Maya selection."""
+
+    cmds = _require_cmds(cmds_module)
+    if not _current_selection(cmds):
+        return "freezeTransformsSkipped:noSelection"
+    cmds.makeIdentity(apply=True, translate=True, rotate=True, scale=True, normal=False)
+    return "freezeTransforms"
+
+
+def delete_history(cmds_module: Any | None = None) -> str:
+    """Delete construction history for the current Maya selection."""
+
+    cmds = _require_cmds(cmds_module)
+    if not _current_selection(cmds):
+        return "deleteHistorySkipped:noSelection"
+    cmds.delete(constructionHistory=True)
+    return "deleteHistory"
+
+
 def toggle_grid(cmds_module: Any | None = None) -> str:
     """Toggle Maya viewport grid visibility and return the new state."""
 
@@ -126,6 +159,61 @@ def toggle_grid(cmds_module: Any | None = None) -> str:
     next_state = not is_visible
     cmds.grid(toggle=next_state)
     return f"grid:{'on' if next_state else 'off'}"
+
+
+def toggle_isolate_selected(cmds_module: Any | None = None) -> str:
+    """Toggle isolate selected in the active Maya model panel."""
+
+    cmds = _require_cmds(cmds_module)
+    panel = _active_model_panel(cmds)
+    if not panel:
+        return "isolateSelectedSkipped:noModelPanel"
+    current_state = bool(cmds.isolateSelect(panel, query=True, state=True))
+    next_state = not current_state
+    cmds.isolateSelect(panel, state=next_state)
+    return f"isolateSelected:{'on' if next_state else 'off'}"
+
+
+def _current_selection(cmds: Any) -> tuple[str, ...]:
+    list_selection = getattr(cmds, "ls", None)
+    if not callable(list_selection):
+        return ("__unknown_selection__",)
+    return tuple(str(item) for item in (list_selection(selection=True) or ()))
+
+
+def _active_model_panel(cmds: Any) -> str:
+    panel = _model_panel_from_focus(cmds)
+    if panel:
+        return panel
+
+    get_panel = getattr(cmds, "getPanel", None)
+    if not callable(get_panel):
+        return ""
+    visible_panels = get_panel(visiblePanels=True) or ()
+    for candidate in visible_panels:
+        if _is_model_panel(cmds, str(candidate)):
+            return str(candidate)
+    return ""
+
+
+def _model_panel_from_focus(cmds: Any) -> str:
+    get_panel = getattr(cmds, "getPanel", None)
+    if not callable(get_panel):
+        return ""
+    focused = get_panel(withFocus=True) or ""
+    if focused and _is_model_panel(cmds, str(focused)):
+        return str(focused)
+    return ""
+
+
+def _is_model_panel(cmds: Any, panel: str) -> bool:
+    get_panel = getattr(cmds, "getPanel", None)
+    if not callable(get_panel):
+        return False
+    try:
+        return get_panel(typeOf=panel) == "modelPanel"
+    except Exception:
+        return False
 
 
 def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
@@ -194,6 +282,30 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
     )
     registry.register(
         Action(
+            id="maya.modeling.center_pivot",
+            label="Center Pivot",
+            tooltip="Center pivot on current selection",
+            callback=lambda: center_pivot(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.modeling.freeze_transforms",
+            label="Freeze Transforms",
+            tooltip="Freeze transforms on current selection",
+            callback=lambda: freeze_transforms(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.modeling.delete_history",
+            label="Delete History",
+            tooltip="Delete construction history on current selection",
+            callback=lambda: delete_history(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
             id="maya.view.frame_selection",
             label="Frame Selection",
             tooltip="Frame current selection",
@@ -206,6 +318,14 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
             label="Toggle Grid",
             tooltip="Toggle viewport grid",
             callback=lambda: toggle_grid(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.view.toggle_isolate_selected",
+            label="Toggle Isolate Selected",
+            tooltip="Toggle isolate selected in the active viewport",
+            callback=lambda: toggle_isolate_selected(cmds_module),
         )
     )
     return registry

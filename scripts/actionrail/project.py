@@ -211,7 +211,7 @@ def about() -> dict[str, object]:
                 "cross-rail unlocked slot transfers Maya-smoke verified; "
                 "architecture reframed around WoW-style frames, Action Book, "
                 "Macro Book, and Bind Mode; Action Book Toggle Grid viewport "
-                "action plus Select/Clear Selection/Frame Selection entries "
+                "action plus selection/viewport/modeling starter entries "
                 "Maya-smoke verified with saved catalog artifact; Quick Create "
                 "five-template starter set Maya-smoke verified; public "
                 "slot binding-target metadata "

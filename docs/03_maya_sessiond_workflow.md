@@ -175,7 +175,8 @@ Useful variants:
 - `actionrail_missing_maya_icon_resource_smoke.py`: missing curated Maya
   resource icon diagnostics and widget rendering fallback behavior.
 - `actionrail_action_book_smoke.py`: Action Book metadata and real Maya
-  command execution for placeable non-transform actions such as Toggle Grid.
+  command execution for the current starter action set, including viewport,
+  selection, and modeling commands; writes the reviewable catalog JSON artifact.
 - `actionrail_quick_create_smoke.py`: dockable Quick Create panel template
   switching, draft validation, preview, save, overwrite, load, and screenshots.
 - `actionrail_stackitem_abi_smoke.py`: public `StackItem(...)` positional

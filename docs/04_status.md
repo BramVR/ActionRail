@@ -49,6 +49,10 @@ that catalog for action picker choices, and Toggle Grid is now Maya-smoke
 verified as the first non-transform viewport action in the catalog. The latest
 Action Book backend expansion adds Select, Clear Selection, and Frame Selection
 as Maya-smoke verified entries and saves a catalog JSON artifact for review.
+The newest Action Book starter-set pass adds Toggle Isolate Selected, Center
+Pivot, Freeze Transforms, and Delete History, bringing the smoke-verified
+catalog to 13 entries. Do not keep expanding the catalog one item at a time in
+Phase 2.6; move the next work back to workflow-level architecture.
 
 Working surface:
 
@@ -63,7 +67,10 @@ Working surface:
   by Quick Create picker choices, including the Maya-smoke verified
   `maya.display.toggle_grid` viewport action and the Maya-smoke verified
   `maya.tool.select`, `maya.selection.clear`, and
-  `maya.view.frame_selection` selection/viewport entries.
+  `maya.view.frame_selection` selection/viewport entries. The current
+  starter set also includes Maya-smoke verified `maya.view.toggle_isolate_selected`,
+  `maya.modeling.center_pivot`, `maya.modeling.freeze_transforms`, and
+  `maya.modeling.delete_history`.
 - Safe diagnostics, diagnostic badges, diagnostics Qt window, icon import
   preflight, generated SVG PNG fallbacks, and fallback preset recovery.
 - User preset storage and shared bundled/user preset resolver.
@@ -225,6 +232,10 @@ $env:PYTHONPATH = "scripts"
   Frame Selection entries and saves the smoke-tested Action Book catalog to
   `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json` for
   review until the full Action Book UI exists.
+- The newest Action Book starter-set follow-up adds Toggle Isolate Selected,
+  Center Pivot, Freeze Transforms, and Delete History, and verifies all four
+  against real Maya commands. Treat that as enough backend catalog expansion for
+  now and move on to the next workflow-level slice.
 - Quick Create now offers two broader starter templates: Blank Bar for empty
   action sockets and Viewport Display Strip seeded with the Toggle Grid Action
   Book entry.
@@ -414,11 +425,14 @@ $env:PYTHONPATH = "scripts"
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.
 - Latest Action Book viewport validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_smoke.py -Timeout 240`
-  -> passed; verified nine Action Book entries; `maya.display.toggle_grid`
+  -> passed; verified 13 Action Book entries; `maya.display.toggle_grid`
   metadata (`Viewport`, `maya.grid`) and real Maya grid state transitions from
   on to off and back on; Select changes Maya to `selectSuperContext`; Frame
-  Selection executes `viewFit`; Clear Selection empties Maya selection; and
-  the viewable catalog artifact was saved to
+  Selection executes `viewFit`; Clear Selection empties Maya selection; Center
+  Pivot executes on a selected cube; Freeze Transforms resets translate/rotate/
+  scale channels; Delete History removes bevel construction history; Toggle
+  Isolate Selected flips active model-panel isolate state; and the viewable
+  catalog artifact was saved to
   `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json`.
 - Latest hotkey binding-target validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_hotkey_bridge_smoke.py -Timeout 240`

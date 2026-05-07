@@ -49,6 +49,10 @@
 - Expanded the Action Book backend beyond transform/key/grid entries with
   Select, Clear Selection, and Frame Selection actions, including Maya smoke
   verification and a saved catalog JSON artifact for review.
+- Added a compact Action Book starter set for common modeling/viewport commands:
+  Toggle Isolate Selected, Center Pivot, Freeze Transforms, and Delete History,
+  with Maya smoke verification and the saved catalog artifact updated to 13
+  entries.
 
 ## 2026-05-06
 

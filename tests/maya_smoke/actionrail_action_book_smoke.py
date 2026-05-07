@@ -29,6 +29,10 @@ grid_entry = actionrail.action_book_entry_by_id("maya.display.toggle_grid")
 select_entry = actionrail.action_book_entry_by_id("maya.tool.select")
 clear_entry = actionrail.action_book_entry_by_id("maya.selection.clear")
 frame_entry = actionrail.action_book_entry_by_id("maya.view.frame_selection")
+center_pivot_entry = actionrail.action_book_entry_by_id("maya.modeling.center_pivot")
+freeze_entry = actionrail.action_book_entry_by_id("maya.modeling.freeze_transforms")
+history_entry = actionrail.action_book_entry_by_id("maya.modeling.delete_history")
+isolate_entry = actionrail.action_book_entry_by_id("maya.view.toggle_isolate_selected")
 choices = actionrail.action_book_entries()
 
 before = bool(cmds.grid(query=True, toggle=True))
@@ -41,6 +45,32 @@ cube = cmds.polyCube(name="actionrailActionBookCube")[0]
 cmds.select(cube, replace=True)
 select_result = actionrail.run_action("maya.tool.select")
 context_after_select = cmds.currentCtx()
+center_pivot_result = actionrail.run_action("maya.modeling.center_pivot")
+cmds.setAttr(f"{cube}.translateX", 3)
+cmds.setAttr(f"{cube}.rotateY", 20)
+cmds.setAttr(f"{cube}.scaleZ", 2)
+freeze_result = actionrail.run_action("maya.modeling.freeze_transforms")
+translate_x_after_freeze = cmds.getAttr(f"{cube}.translateX")
+rotate_y_after_freeze = cmds.getAttr(f"{cube}.rotateY")
+scale_z_after_freeze = cmds.getAttr(f"{cube}.scaleZ")
+cmds.polyBevel(cube, segments=1, offset=0.1)
+history_before_delete = cmds.listHistory(cube) or []
+history_result = actionrail.run_action("maya.modeling.delete_history")
+history_after_delete = cmds.listHistory(cube) or []
+panel = cmds.getPanel(withFocus=True) or ""
+if not panel or cmds.getPanel(typeOf=panel) != "modelPanel":
+    panel = next(
+        (
+            candidate
+            for candidate in (cmds.getPanel(visiblePanels=True) or [])
+            if cmds.getPanel(typeOf=candidate) == "modelPanel"
+        ),
+        "",
+    )
+isolate_before = bool(cmds.isolateSelect(panel, query=True, state=True)) if panel else False
+isolate_result = actionrail.run_action("maya.view.toggle_isolate_selected")
+isolate_after = bool(cmds.isolateSelect(panel, query=True, state=True)) if panel else False
+actionrail.run_action("maya.view.toggle_isolate_selected")
 cmds.select(cube, replace=True)
 frame_result = actionrail.run_action("maya.view.frame_selection")
 selection_before_clear = cmds.ls(selection=True) or []
@@ -59,6 +89,29 @@ if after_second != before:
     )
 if context_after_select != "selectSuperContext":
     raise AssertionError(f"Select action did not enter select tool: {context_after_select}")
+if center_pivot_result != "centerPivot":
+    raise AssertionError(f"Center Pivot returned unexpected result: {center_pivot_result}")
+if (
+    abs(translate_x_after_freeze) > 0.001
+    or abs(rotate_y_after_freeze) > 0.001
+    or abs(scale_z_after_freeze - 1.0) > 0.001
+):
+    raise AssertionError(
+        "Freeze Transforms did not reset transform channels: "
+        f"tx={translate_x_after_freeze} ry={rotate_y_after_freeze} sz={scale_z_after_freeze}"
+    )
+if not any("polyBevel" in item for item in history_before_delete):
+    raise AssertionError(
+        "Delete History setup did not create bevel history: "
+        f"{history_before_delete}"
+    )
+if any("polyBevel" in item for item in history_after_delete):
+    raise AssertionError(f"Delete History left bevel history behind: {history_after_delete}")
+if panel and isolate_after == isolate_before:
+    raise AssertionError(
+        "Toggle Isolate Selected did not flip isolate state: "
+        f"panel={panel} before={isolate_before} after={isolate_after}"
+    )
 if cube not in selection_before_clear:
     raise AssertionError(f"Frame Selection setup lost cube selection: {selection_before_clear}")
 if selection_after_clear:
@@ -86,9 +139,13 @@ result = {
     "action_count": len(choices),
     "catalog_path": str(catalog_path),
     "catalog_saved": catalog_path.is_file(),
+    "center_pivot_entry_category": center_pivot_entry.category,
+    "center_pivot_result": center_pivot_result,
     "clear_entry_category": clear_entry.category,
     "clear_result": clear_result,
     "context_after_select": context_after_select,
+    "freeze_entry_category": freeze_entry.category,
+    "freeze_result": freeze_result,
     "frame_entry_category": frame_entry.category,
     "frame_result": frame_result,
     "grid_after_first": after_first,
@@ -100,16 +157,35 @@ result = {
     "grid_entry_label": grid_entry.label,
     "grid_result_first": first_result,
     "grid_result_second": second_result,
+    "has_center_pivot_choice": any(
+        choice.id == "maya.modeling.center_pivot" for choice in choices
+    ),
     "has_clear_selection_choice": any(
         choice.id == "maya.selection.clear" for choice in choices
+    ),
+    "has_delete_history_choice": any(
+        choice.id == "maya.modeling.delete_history" for choice in choices
+    ),
+    "has_freeze_transforms_choice": any(
+        choice.id == "maya.modeling.freeze_transforms" for choice in choices
     ),
     "has_frame_selection_choice": any(
         choice.id == "maya.view.frame_selection" for choice in choices
     ),
     "has_select_choice": any(choice.id == "maya.tool.select" for choice in choices),
+    "has_toggle_isolate_selected_choice": any(
+        choice.id == "maya.view.toggle_isolate_selected" for choice in choices
+    ),
     "has_toggle_grid_choice": any(
         choice.id == "maya.display.toggle_grid" for choice in choices
     ),
+    "history_after_delete": history_after_delete,
+    "history_before_delete": history_before_delete,
+    "history_entry_category": history_entry.category,
+    "isolate_after": isolate_after,
+    "isolate_before": isolate_before,
+    "isolate_entry_category": isolate_entry.category,
+    "isolate_result": isolate_result,
     "select_entry_category": select_entry.category,
     "select_entry_icon": select_entry.icon,
     "select_result": select_result,

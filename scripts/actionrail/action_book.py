@@ -65,6 +65,21 @@ _ACTION_METADATA: dict[str, dict[str, object]] = {
         "icon": "maya.objects",
         "keywords": ("clear", "deselect", "selection"),
     },
+    "maya.modeling.center_pivot": {
+        "category": "Modeling",
+        "icon": "maya.center_pivot",
+        "keywords": ("center", "pivot", "modeling", "transform"),
+    },
+    "maya.modeling.freeze_transforms": {
+        "category": "Modeling",
+        "icon": "maya.freeze_transform",
+        "keywords": ("freeze", "transforms", "modeling", "zero", "apply"),
+    },
+    "maya.modeling.delete_history": {
+        "category": "Modeling",
+        "icon": "maya.objects",
+        "keywords": ("delete", "history", "construction", "modeling", "cleanup"),
+    },
     "maya.view.frame_selection": {
         "category": "Viewport",
         "icon": "maya.camera",
@@ -74,6 +89,11 @@ _ACTION_METADATA: dict[str, dict[str, object]] = {
         "category": "Viewport",
         "icon": "maya.grid",
         "keywords": ("grid", "viewport", "display", "toggle"),
+    },
+    "maya.view.toggle_isolate_selected": {
+        "category": "Viewport",
+        "icon": "maya.isolate_selected",
+        "keywords": ("isolate", "selection", "viewport", "display", "toggle"),
     },
 }
 
