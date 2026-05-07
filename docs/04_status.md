@@ -27,7 +27,9 @@ The latest Edit Mode panel polish turns the selected rail state into a
 clickable Lock/Unlock action and makes the compact panel draggable so it can be
 moved away from rails underneath it. The latest Normal Mode slot-edit fix lets
 Shift-drag transfer or swap payloads between different unlocked rails without
-clearing the source when the target rail is locked.
+clearing the source when the target rail is locked. The newest follow-up keeps
+that cross-rail drop path stable after rail rebuilds by resolving stale Qt
+slot-button callback snapshots against the live target host unlock state.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -193,6 +195,10 @@ $env:PYTHONPATH = "scripts"
 - Normal Mode unlocked-slot editing supports context-menu assignment/clear plus
   Shift-drag payload move/swap/clear-out gestures, including cross-rail
   transfers between unlocked rails.
+- The latest May 7 follow-up fixes a MayaSessiond-only cross-rail Shift-drag
+  failure after a same-rail payload move rebuilt the source rail; target slot
+  callbacks now use the live target host lock state instead of stale Qt button
+  snapshots.
 - The May 7 Edit Mode panel polish changes the selected rail button from a
   passive Locked/Unlocked label to a clickable Lock/Unlock action and lets the
   compact panel be dragged aside when it covers a rail.
@@ -235,7 +241,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 471 passed.
+  -> 478 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -278,6 +284,17 @@ $env:PYTHONPATH = "scripts"
   collapsed-state persistence, handle expansion, and screenshot capture; Quick
   Create smoke verifies five templates, Save + Publish creates four slot
   runtime commands plus a preset shelf toggle, and the screenshot capture path.
+- Latest focused cross-rail Shift-drag validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_overlay.py`
+  -> 83 passed.
+- Latest focused cross-rail Shift-drag Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\widgets.py tests\\test_widgets.py`
+  -> all checks passed.
+- Latest Edit Mode Maya smoke after the stale-callback fix:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
+  -> passed; verified same-rail move/clear followed by cross-rail payload
+  transfer between unlocked Normal Mode rails, plus the existing Edit Mode
+  layout, collapse, persistence, and screenshot checks.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified Save + Publish creates four slot runtime commands, creates

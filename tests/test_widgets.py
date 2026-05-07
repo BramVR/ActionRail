@@ -775,6 +775,225 @@ def test_slot_drag_release_target_prefers_rail_geometry_over_widget_at() -> None
     assert [(point.x(), point.y()) for point in event_points] == [(12, 12), (200, 12)]
 
 
+def test_slot_drag_cross_rail_target_falls_back_to_application_geometry() -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x_pos = x_pos
+            self._y_pos = y_pos
+
+        def x(self) -> int:
+            return self._x_pos
+
+        def y(self) -> int:
+            return self._y_pos
+
+    class Rect:
+        def __init__(self, x_pos: int, y_pos: int, width: int, height: int) -> None:
+            self.x_pos = x_pos
+            self.y_pos = y_pos
+            self.width = width
+            self.height = height
+
+        def contains(self, point: Point) -> bool:
+            return (
+                self.x_pos <= point.x() < self.x_pos + self.width
+                and self.y_pos <= point.y() < self.y_pos + self.height
+            )
+
+    class Root:
+        def __init__(self, name: str, rect: Rect) -> None:
+            self._name = name
+            self._rect = rect
+
+        def objectName(self) -> str:  # noqa: N802
+            return self._name
+
+        def parent(self) -> None:
+            return None
+
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def rect(self) -> Rect:
+            return self._rect
+
+    class DragButton:
+        def __init__(self, slot_id: str, parent: Root, rect: Rect) -> None:
+            self.slot_id = slot_id
+            self._parent = parent
+            self._rect = rect
+            self._actionrail_slot_edit_callbacks = widgets.SlotEditCallbacks(
+                unlocked=True,
+                unlock_rail=lambda: True,
+                lock_rail=lambda: True,
+                assign_action=lambda _slot_id, _action_id: True,
+                clear_slot=lambda _slot_id: True,
+                move_slot=lambda _source_id, _target_id: True,
+            )
+
+        def property(self, name: str) -> object:
+            if name == "actionRailSlotId":
+                return self.slot_id
+            return None
+
+        def parent(self) -> Root:
+            return self._parent
+
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def rect(self) -> Rect:
+            return self._rect
+
+    source_root = Root("ActionRailViewportOverlay_source", Rect(0, 0, 40, 40))
+    target_root = Root("ActionRailViewportOverlay_target", Rect(80, 0, 40, 40))
+    source = DragButton("source.move", source_root, Rect(0, 0, 40, 40))
+    target = DragButton("target.empty", target_root, Rect(80, 0, 40, 40))
+
+    class DragQt:
+        class QtWidgets:
+            class QApplication:
+                @staticmethod
+                def widgetAt(_point: Point) -> None:  # noqa: N802
+                    return None
+
+                @staticmethod
+                def allWidgets() -> list[object]:  # noqa: N802
+                    return [source_root, target_root, source, target]
+
+    drop_target = widgets._slot_drag_cross_rail_target(
+        DragQt,
+        source_root,
+        (Point(88, 12),),
+    )
+
+    assert drop_target.slot_id == "target.empty"
+    assert drop_target.callbacks is target._actionrail_slot_edit_callbacks
+    assert drop_target.inside_action_rail is True
+    assert drop_target.same_rail is False
+
+
+def test_slot_drag_cross_rail_target_resolves_slot_when_widget_at_returns_root() -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self._x_pos = x_pos
+            self._y_pos = y_pos
+
+        def x(self) -> int:
+            return self._x_pos
+
+        def y(self) -> int:
+            return self._y_pos
+
+    class Rect:
+        def __init__(self, x_pos: int, y_pos: int, width: int, height: int) -> None:
+            self.x_pos = x_pos
+            self.y_pos = y_pos
+            self.width = width
+            self.height = height
+
+        def contains(self, point: Point) -> bool:
+            return (
+                self.x_pos <= point.x() < self.x_pos + self.width
+                and self.y_pos <= point.y() < self.y_pos + self.height
+            )
+
+    class Root:
+        def __init__(self, name: str) -> None:
+            self._name = name
+            self.buttons: list[DragButton] = []
+
+        def objectName(self) -> str:  # noqa: N802
+            return self._name
+
+        def parent(self) -> None:
+            return None
+
+        def findChildren(self, _button_class: object) -> list[object]:  # noqa: N802
+            return list(self.buttons)
+
+    class DragButton:
+        def __init__(self, slot_id: str, parent: Root, rect: Rect) -> None:
+            self.slot_id = slot_id
+            self._parent = parent
+            self._rect = rect
+            self._actionrail_slot_edit_callbacks = widgets.SlotEditCallbacks(
+                unlocked=True,
+                unlock_rail=lambda: True,
+                lock_rail=lambda: True,
+                assign_action=lambda _slot_id, _action_id: True,
+                clear_slot=lambda _slot_id: True,
+                move_slot=lambda _source_id, _target_id: True,
+            )
+            parent.buttons.append(self)
+
+        def property(self, name: str) -> object:
+            if name == "actionRailSlotId":
+                return self.slot_id
+            return None
+
+        def parent(self) -> Root:
+            return self._parent
+
+        def mapFromGlobal(self, point: Point) -> Point:  # noqa: N802
+            return point
+
+        def rect(self) -> Rect:
+            return self._rect
+
+    source_root = Root("ActionRailViewportOverlay_source")
+    target_root = Root("ActionRailViewportOverlay_target")
+    source = DragButton("source.move", source_root, Rect(0, 0, 40, 40))
+    target = DragButton("target.empty", target_root, Rect(80, 0, 40, 40))
+
+    class DragQt:
+        class QtWidgets:
+            QPushButton = DragButton
+
+            class QApplication:
+                @staticmethod
+                def widgetAt(_point: Point) -> Root:  # noqa: N802
+                    return target_root
+
+    drop_target = widgets._slot_drag_cross_rail_target(
+        DragQt,
+        source_root,
+        (Point(88, 12),),
+    )
+
+    assert drop_target.slot_id == "target.empty"
+    assert drop_target.callbacks is target._actionrail_slot_edit_callbacks
+    assert drop_target.inside_action_rail is True
+    assert drop_target.same_rail is False
+    assert source.parent() is source_root
+
+
+def test_slot_edit_callbacks_from_button_uses_live_owner_unlock_state() -> None:
+    class Owner:
+        def slot_edit_unlocked(self) -> bool:
+            return True
+
+    class Button:
+        pass
+
+    button = Button()
+    button._actionrail_slot_edit_callbacks = widgets.SlotEditCallbacks(
+        unlocked=False,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda _slot_id: True,
+        move_slot=lambda _source_id, _target_id: True,
+        owner=Owner(),
+    )
+
+    callbacks = widgets._slot_edit_callbacks_from_button(button)
+
+    assert callbacks is not None
+    assert callbacks.unlocked is True
+    assert button._actionrail_slot_edit_callbacks.unlocked is False
+
+
 def test_build_transform_stack_wraps_multi_row_layout(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     spec = StackSpec(

@@ -39,6 +39,9 @@
 - Fixed Normal Mode unlocked slot dragging across bars: Shift-drag now moves or
   swaps payloads between different unlocked rails, and dropping onto a locked
   different rail preserves the source instead of clearing it.
+- Fixed the MayaSessiond cross-bar Shift-drag path after rail rebuilds by
+  resolving slot-edit callbacks against the live target host unlock state, so
+  rebuilt/stale Qt button snapshots no longer block valid transfers.
 
 ## 2026-05-06
 

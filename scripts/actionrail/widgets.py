@@ -1339,13 +1339,71 @@ def _slot_drag_cross_rail_target(
             )
         hit_root = _rail_root_widget(hit_widget)
         if hit_root is not None and hit_root is not source_root:
+            target_button = _slot_button_at_global_point(qt, hit_root, point)
+            if target_button is not None:
+                slot_id = target_button.property("actionRailSlotId")
+                return _SlotDragDropTarget(
+                    slot_id=slot_id if isinstance(slot_id, str) else None,
+                    callbacks=_slot_edit_callbacks_from_button(target_button),
+                    inside_action_rail=True,
+                    same_rail=False,
+                )
             return _SlotDragDropTarget(inside_action_rail=True)
+    return _slot_drag_cross_rail_target_from_geometry(qt, source_root, points)
+
+
+def _slot_drag_cross_rail_target_from_geometry(
+    qt: object,
+    source_root: object,
+    points: tuple[object, ...],
+) -> _SlotDragDropTarget:
+    widgets = _application_widgets(qt)
+    if not widgets:
+        return _SlotDragDropTarget()
+
+    for widget in widgets:
+        slot_id = _slot_id_from_button(widget)
+        if slot_id is None:
+            continue
+        target_root = _rail_root_widget(widget)
+        if target_root is None or target_root is source_root:
+            continue
+        if any(_global_point_inside_widget(widget, point) for point in points):
+            return _SlotDragDropTarget(
+                slot_id=slot_id,
+                callbacks=_slot_edit_callbacks_from_button(widget),
+                inside_action_rail=True,
+                same_rail=False,
+            )
+
+    seen_roots: set[int] = set()
+    for widget in widgets:
+        target_root = _rail_root_widget(widget)
+        if target_root is None or target_root is source_root:
+            continue
+        root_identity = id(target_root)
+        if root_identity in seen_roots:
+            continue
+        seen_roots.add(root_identity)
+        if any(_global_point_inside_widget(target_root, point) for point in points):
+            return _SlotDragDropTarget(inside_action_rail=True, same_rail=False)
+
     return _SlotDragDropTarget()
 
 
 def _slot_edit_callbacks_from_button(button: object | None) -> SlotEditCallbacks | None:
     callbacks = getattr(button, "_actionrail_slot_edit_callbacks", None)
-    return callbacks if isinstance(callbacks, SlotEditCallbacks) else None
+    if not isinstance(callbacks, SlotEditCallbacks):
+        return None
+    owner = callbacks.owner
+    slot_edit_unlocked = getattr(owner, "slot_edit_unlocked", None)
+    if not callable(slot_edit_unlocked):
+        return callbacks
+    with suppress(Exception):
+        live_unlocked = bool(slot_edit_unlocked())
+        if live_unlocked != callbacks.unlocked:
+            return replace(callbacks, unlocked=live_unlocked)
+    return callbacks
 
 
 def _slot_id_from_button(button: object) -> str | None:
@@ -1431,6 +1489,29 @@ def _widget_at_global_point(qt: object, global_point: object | None) -> object |
     with suppress(Exception):
         return widget_at(global_point)
     return None
+
+
+def _application_widgets(qt: object) -> tuple[object, ...]:
+    app_class = getattr(getattr(qt, "QtWidgets", None), "QApplication", None)
+    if app_class is None:
+        return ()
+
+    owners: list[object] = [app_class]
+    instance = getattr(app_class, "instance", None)
+    if callable(instance):
+        with suppress(Exception):
+            app = instance()
+            if app is not None:
+                owners.append(app)
+
+    for owner in owners:
+        all_widgets = getattr(owner, "allWidgets", None)
+        if not callable(all_widgets):
+            continue
+        with suppress(Exception):
+            widgets = all_widgets()
+            return tuple(widgets) if widgets is not None else ()
+    return ()
 
 
 def _slot_button_ancestor(qt: object, widget: object | None) -> object | None:
