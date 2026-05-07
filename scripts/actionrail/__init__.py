@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .action_book import ActionBookEntry, action_book_entries, action_book_entry_by_id
+from .action_book import (
+    ACTION_BOOK_MIME_TYPE,
+    ActionBookEntry,
+    action_book_entries,
+    action_book_entry_by_id,
+    action_book_search,
+)
 from .authoring import (
     DraftRail,
     DraftSlot,
@@ -110,6 +116,7 @@ from .spec import (
 
 __all__ = [
     "DiagnosticIssue",
+    "ACTION_BOOK_MIME_TYPE",
     "ActionBookEntry",
     "HotkeyBinding",
     "HotkeyConflictError",
@@ -135,6 +142,7 @@ __all__ = [
     "active_overlay_states",
     "action_book_entries",
     "action_book_entry_by_id",
+    "action_book_search",
     "assign_slot_hotkey",
     "about",
     "action_ids",

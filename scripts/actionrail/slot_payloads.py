@@ -108,15 +108,15 @@ def spec_with_moved_slot_payload(spec: Any, source_slot_id: str, target_slot_id:
 def payload_from_action(action_id: str) -> SlotPayload:
     """Resolve default slot payload fields from a registered action id."""
 
-    from .actions import create_default_registry
+    from .action_book import action_book_entry_by_id
 
-    action = create_default_registry().get(action_id)
+    entry = action_book_entry_by_id(action_id)
     return SlotPayload(
-        label=action.label,
-        action=action.id,
-        tooltip=action.tooltip or action.id,
-        icon=ACTION_ICON_DEFAULTS.get(action.id, ""),
-        active_when=PERSISTENT_ACTION_PREDICATES.get(action.id, ""),
+        label=entry.label,
+        action=entry.id,
+        tooltip=entry.tooltip or entry.id,
+        icon=entry.icon or ACTION_ICON_DEFAULTS.get(entry.id, ""),
+        active_when=PERSISTENT_ACTION_PREDICATES.get(entry.id, ""),
     )
 
 

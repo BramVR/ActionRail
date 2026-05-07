@@ -8,11 +8,17 @@ from dataclasses import dataclass
 from .actions import Action, ActionRegistry, create_default_registry
 
 __all__ = [
+    "ACTION_BOOK_MIME_TYPE",
     "ActionBookEntry",
+    "action_book_action_id_from_mime_text",
     "action_book_entries",
     "action_book_entry_by_id",
     "action_book_choices",
+    "action_book_search",
+    "action_book_mime_text",
 ]
+
+ACTION_BOOK_MIME_TYPE = "application/x-actionrail-action-id"
 
 
 @dataclass(frozen=True)
@@ -132,6 +138,39 @@ def action_book_choices(
     )
 
 
+def action_book_search(
+    query: str = "",
+    *,
+    registry: ActionRegistry | None = None,
+) -> tuple[ActionBookEntry, ...]:
+    """Return Action Book entries matching a label/category/keyword query."""
+
+    entries = action_book_entries(registry)
+    terms = tuple(term.casefold() for term in query.split() if term.strip())
+    if not terms:
+        return entries
+    return tuple(entry for entry in entries if _entry_matches_terms(entry, terms))
+
+
+def action_book_mime_text(action_id: str) -> str:
+    """Return a stable drag/drop payload for one Action Book action."""
+
+    if not action_id.strip():
+        msg = "Action Book drag payload requires a non-empty action id."
+        raise ValueError(msg)
+    return action_id.strip()
+
+
+def action_book_action_id_from_mime_text(text: str) -> str:
+    """Return an action id from a Spell Book drag/drop payload."""
+
+    action_id = str(text).strip()
+    if not action_id:
+        msg = "Action Book drag payload is empty."
+        raise ValueError(msg)
+    return action_id
+
+
 def _entry_from_action(action: Action) -> ActionBookEntry:
     metadata = _ACTION_METADATA.get(action.id, {})
     return ActionBookEntry(
@@ -156,3 +195,18 @@ def _metadata_keywords(value: object) -> tuple[str, ...]:
 
 def _entry_sort_key(entry: ActionBookEntry) -> tuple[str, str, str]:
     return (entry.category.casefold(), entry.label.casefold(), entry.id)
+
+
+def _entry_matches_terms(entry: ActionBookEntry, terms: tuple[str, ...]) -> bool:
+    haystack = " ".join(
+        (
+            entry.id,
+            entry.label,
+            entry.tooltip,
+            entry.category,
+            entry.source,
+            entry.kind,
+            *entry.keywords,
+        )
+    ).casefold()
+    return all(term in haystack for term in terms)

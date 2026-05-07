@@ -1386,6 +1386,13 @@ def test_normal_mode_slot_edit_unlock_assigns_and_clears_payload(
     assert slot.icon == "maya.scale"
     assert slot.active_when == "maya.tool == scale"
 
+    assert host.assign_slot_action_payload("custom_slots.a", "maya.modeling.center_pivot") is True
+    slot = host.spec.items[0]
+    assert slot.action == "maya.modeling.center_pivot"
+    assert slot.label == "Center Pivot"
+    assert slot.icon == "maya.center_pivot"
+    assert slot.active_when == ""
+
     assert host.clear_slot_payload("custom_slots.a") is True
     slot = host.spec.items[0]
     assert slot.id == "custom_slots.a"
@@ -1394,7 +1401,7 @@ def test_normal_mode_slot_edit_unlock_assigns_and_clears_payload(
     assert slot.label == "New"
     assert slot.icon == ""
     assert slot.active_when == ""
-    assert rebuilds == ["state", "state", "state"]
+    assert rebuilds == ["state", "state", "state", "state"]
 
 
 def test_normal_mode_slot_edit_moves_and_swaps_payloads(

@@ -4,10 +4,14 @@ import pytest
 
 import actionrail
 from actionrail.action_book import (
+    ACTION_BOOK_MIME_TYPE,
     ActionBookEntry,
+    action_book_action_id_from_mime_text,
     action_book_choices,
     action_book_entries,
     action_book_entry_by_id,
+    action_book_mime_text,
+    action_book_search,
 )
 from actionrail.actions import Action, ActionRegistry, create_default_registry
 
@@ -153,8 +157,34 @@ def test_action_book_entry_by_id_reports_unknown_actions() -> None:
         action_book_entry_by_id("missing.action")
 
 
+def test_action_book_search_matches_categories_keywords_and_tooltips() -> None:
+    assert [entry.id for entry in action_book_search("viewport toggle")] == [
+        "maya.display.toggle_grid",
+        "maya.view.toggle_isolate_selected",
+    ]
+    assert [entry.id for entry in action_book_search("freeze")] == [
+        "maya.modeling.freeze_transforms"
+    ]
+    assert [entry.id for entry in action_book_search("deselect")] == [
+        "maya.selection.clear",
+    ]
+
+
+def test_action_book_mime_payload_uses_stable_action_id() -> None:
+    assert ACTION_BOOK_MIME_TYPE == "application/x-actionrail-action-id"
+    assert action_book_mime_text(" maya.tool.move ") == "maya.tool.move"
+    assert action_book_action_id_from_mime_text(" maya.tool.move ") == "maya.tool.move"
+
+    with pytest.raises(ValueError, match="non-empty"):
+        action_book_mime_text("")
+    with pytest.raises(ValueError, match="empty"):
+        action_book_action_id_from_mime_text("")
+
+
 def test_public_api_exposes_action_book_entries() -> None:
     assert actionrail.ActionBookEntry is ActionBookEntry
+    assert actionrail.ACTION_BOOK_MIME_TYPE == ACTION_BOOK_MIME_TYPE
+    assert actionrail.action_book_search("freeze")[0].id == "maya.modeling.freeze_transforms"
     assert actionrail.action_book_entry_by_id("maya.tool.move").icon == "maya.move"
     assert actionrail.action_book_entry_by_id("maya.display.toggle_grid").icon == "maya.grid"
     assert actionrail.action_book_entry_by_id("maya.tool.select").icon == "maya.objects"
