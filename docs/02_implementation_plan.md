@@ -294,7 +294,7 @@ Status: complete for the first shell slice.
 - Add a global Edit Mode toggle and Maya-facing command/menu entry.
   Done through `actionrail.toggle_edit_mode()`, `enter_edit_mode()`,
   `exit_edit_mode()`, `edit_mode_state()`, and the ActionRail Maya menu.
-- In Edit Mode, show a layout-map view of rails/frames as labeled translucent
+- In Edit Mode, show a layout-map view of rails/frames as labeled dark
   rectangles over the viewport, plus rail outlines, hit boxes, selected-state
   styling, source layer, and lock state. Done for active runtime rails.
 - Add a selected-rail inspector for anchor, offset, orientation, rows/columns,
@@ -324,9 +324,9 @@ Research hints:
 
 Status: done.
 
-- Added drag handles for moving rails in the active viewport.
-- Added anchor pins, safe margins, optional snap-to-grid behavior, snap guides,
-  and spacing guides.
+- Added direct frame dragging for moving rails in the active viewport.
+- Added safe margins, optional snap-to-grid behavior, snap guides, and spacing
+  guides.
 - Added left-click selected-rail position controls with arrow nudges, numeric
   X/Y coordinates, and Reset.
 - Added Sticky Frames behavior so dragged rails can snap to other rails for

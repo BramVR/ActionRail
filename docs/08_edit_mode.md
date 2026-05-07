@@ -28,10 +28,9 @@ When Edit Mode is enabled, ActionRail draws:
 
 - a viewport-sized layout-map overlay owned by Maya's main window
 - an optional placement grid
-- one translucent labeled frame for each active runtime rail
+- one dark labeled frame for each active runtime rail
 - selected-frame styling
-- drag handles, anchor pins, selected-frame guide lines, and axis-aligned
-  Sticky Frames alignment guides
+- selected-frame guide lines and axis-aligned Sticky Frames alignment guides
 - rail source layer and lock state labels
 - a draggable compact Edit Mode panel with Grid, Grid Size, Snap to Grid,
   Sticky Frames, and selected Lock/Unlock control
@@ -155,7 +154,7 @@ Implemented now:
 - draggable Edit Mode control panel
 - selected-frame Lock/Unlock panel control
 - X/Y movement for unlocked rails
-- drag handles and anchor pins
+- direct frame dragging
 - snap-to-grid and Sticky Frames during movement
 - selected-frame snap/spacing guide rendering with axis-aligned Sticky Frames
   alignment hints

@@ -69,8 +69,8 @@ Conceptual states:
   clicks are edit gestures rather than action execution. The overlay host avoids
   viewport-sized transparent hit areas so normal Maya viewport interaction
   remains available outside visible controls.
-- **Edit Mode**: rails switch into a layout-map view with labeled translucent
-  frame rectangles, outlines, anchors, handles, optional placement grid overlay,
+- **Edit Mode**: rails switch into a layout-map view with labeled dark frame
+  rectangles, outlines, optional placement grid overlay,
   optional snap-to-grid, snap guides, and safe margins. Edit Mode is for rail
   layout, not slot payload editing.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.

@@ -174,9 +174,8 @@ Edit Mode has the first layout-map shell and should continue toward direct
 manipulation:
 
 - rail outlines and hit boxes
-- layout-map view of bars/frames as labeled translucent rectangles
-- drag handles
-- anchor pins
+- layout-map view of bars/frames as labeled dark rectangles
+- direct frame dragging
 - optional grid overlay
 - optional snap-to-grid
 - optional sticky-frame snapping between rails

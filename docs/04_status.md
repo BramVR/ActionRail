@@ -46,7 +46,7 @@ Working surface:
   layout sliders, and generated blank slots when the button-count control is
   raised beyond the template's icon-backed slots.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
-  Frames, active rail frames, selection, drag handles, anchor pins,
+  Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
   unlocked rails, a clickable selected-rail Lock/Unlock panel action,
   draggable compact panel placement, safe movement clamps,

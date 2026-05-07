@@ -1303,14 +1303,12 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     selected: bool,
 ) -> None:
     rect = qt.QtCore.QRect(frame.x, frame.y, frame.width, frame.height)
-    painter.fillRect(rect, qt.QtGui.QColor(2, 8, 12, 178))
+    painter.fillRect(rect, qt.QtGui.QColor(2, 8, 12, 235))
     outline = qt.QtGui.QColor(0, 176, 255, 235)
     if selected:
         outline = qt.QtGui.QColor(255, 211, 0, 255)
     painter.setPen(qt.QtGui.QPen(outline, 2 if selected else 1))
     painter.drawRect(rect.adjusted(0, 0, -1, -1))
-    _paint_drag_handle(qt, painter, frame)
-    _paint_anchor_pin(qt, painter, frame)
     painter.setPen(qt.QtGui.QColor(0, 184, 255, 255))
     font = painter.font()
     font.setBold(True)
@@ -1322,36 +1320,6 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     elif frame.collapse_enabled:
         label = f"{label}\n{'Collapsed' if frame.collapsed else 'Expanded'}"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
-
-
-def _paint_drag_handle(  # pragma: no cover - covered by Maya smoke screenshots.
-    qt: Any,
-    painter: Any,
-    frame: RailFrameInfo,
-) -> None:
-    handle = qt.QtCore.QRect(frame.right - 16, frame.y + 4, 12, 12)
-    painter.fillRect(handle, qt.QtGui.QColor(112, 226, 255, 190))
-
-
-def _paint_anchor_pin(  # pragma: no cover - covered by Maya smoke screenshots.
-    qt: Any,
-    painter: Any,
-    frame: RailFrameInfo,
-) -> None:
-    radius = 5
-    x_pos = frame.x + int(frame.width / 2)
-    y_pos = frame.y + int(frame.height / 2)
-    if ".left." in frame.anchor:
-        x_pos = frame.x + radius + 2
-    elif ".right." in frame.anchor:
-        x_pos = frame.right - radius - 2
-    if ".top." in frame.anchor:
-        y_pos = frame.y + radius + 2
-    elif ".bottom." in frame.anchor:
-        y_pos = frame.bottom - radius - 2
-    painter.setBrush(qt.QtGui.QColor(155, 216, 200, 210))
-    painter.setPen(qt.QtGui.QPen(qt.QtGui.QColor(5, 30, 38, 220), 1))
-    painter.drawEllipse(x_pos - radius, y_pos - radius, radius * 2, radius * 2)
 
 
 def _frame_label_font_size(frame: RailFrameInfo) -> int:

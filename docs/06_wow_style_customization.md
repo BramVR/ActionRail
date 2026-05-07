@@ -48,11 +48,10 @@ rail returns those clicks to normal action execution.
 
 Edit Mode should show:
 
-- a layout-map view where each rail/frame is shown as a labeled translucent
-  rectangle over the viewport
+- a layout-map view where each rail/frame is shown as a labeled dark rectangle
+  over the viewport
 - rail outlines and hit boxes
-- drag handles
-- anchor pins
+- direct frame dragging
 - optional grid overlay for precise placement
 - optional snap-to-grid while dragging rails
 - optional sticky-frame snapping so dragged rails can align to nearby rails
@@ -84,10 +83,10 @@ Frame-level Edit Mode interaction should stay direct:
   placement
 
 The visual treatment should make placement obvious at a glance: rails/frames
-should render as dark translucent blocks with thin high-contrast outlines and
-compact centered names, even when their normal buttons are not the focus. This
-is an edit-only overview of layout footprints and hit boxes, not the Normal Mode
-look of the final rail.
+should render as dark blocks with thin high-contrast outlines and compact
+centered names, even when their normal buttons are not the focus. This is an
+edit-only overview of layout footprints and hit boxes, not the Normal Mode look
+of the final rail.
 
 ### Collapsible Rails
 
@@ -351,7 +350,7 @@ Build the user-facing authoring workflow in medium slices:
    rail outlines, hit boxes, selected-rail inspector, source-layer badges,
    lock-state display, and optional grid overlay visibility for placement
    preview. Status: first shell implemented and Maya-smoke verified.
-5. Layout editing and direct manipulation: drag handles, anchor pins, safe
+5. Layout editing and direct manipulation: direct frame dragging, safe
    margins, left-click position popover with X/Y and Reset, optional
    snap-to-grid, optional sticky-frame snapping to nearby rails, snap/spacing
    guides, and persisted layout edits. Status: user-preset layout saves are
