@@ -198,7 +198,8 @@ def about() -> dict[str, object]:
                 "publish polish first pass Maya-smoke verified; validation UX "
                 "publish follow-up locally verified with Quick Create Maya smoke; "
                 "Edit Mode options cleanup and Normal Mode slot-edit locking/dragging "
-                "locally verified"
+                "locally verified; Edit Mode panel Lock/Unlock and drag polish "
+                "Maya-smoke verified"
             ),
             "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
             "blockers_doc": "docs/04_status.md#blockers",

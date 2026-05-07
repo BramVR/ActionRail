@@ -227,8 +227,25 @@ grid_size_spin = panel.findChild(QtWidgets.QSpinBox)
 lock_button = panel.findChild(QtWidgets.QPushButton)
 if grid_check is None or grid_size_spin is None or lock_button is None:
     raise AssertionError("Edit Mode panel is missing expected grid or lock controls.")
-if lock_button.text() != "No selection":
+if lock_button.text() != "Select Rail":
     raise AssertionError(f"Expected neutral lock text before selection, got {lock_button.text()!r}")
+panel_start = panel.pos()
+QtTest.QTest.mousePress(
+    panel,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    QtCore.QPoint(12, 12),
+)
+QtTest.QTest.mouseMove(panel, QtCore.QPoint(96, 40))
+QtTest.QTest.mouseRelease(
+    panel,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    QtCore.QPoint(96, 40),
+)
+app.processEvents()
+if panel.pos() == panel_start:
+    raise AssertionError("Edit Mode panel did not move after drag.")
 grid_check.setChecked(False)
 app.processEvents()
 if grid_size_spin.isEnabled():
@@ -298,6 +315,44 @@ for _attempt in range(3):
         break
 if state_after_left_click.selected_preset_id != "edit_mode_custom":
     raise AssertionError(f"Left click did not select custom rail: {state_after_left_click}")
+if lock_button.text() != "Lock":
+    raise AssertionError(
+        f"Expected Lock action after unlocked selection, got {lock_button.text()!r}"
+    )
+
+before_lock_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+QtTest.QTest.mouseClick(lock_button, QtCore.Qt.LeftButton)
+app.processEvents()
+locked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+if lock_button.text() != "Unlock" or not locked_frame.locked:
+    raise AssertionError(
+        "Edit Mode Lock button did not lock the selected rail: "
+        f"{lock_button.text()!r}, {locked_frame}"
+    )
+host.nudge_selected(32, 0)
+app.processEvents()
+still_locked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+if still_locked_frame.x != before_lock_frame.x:
+    raise AssertionError("Locked rail moved after Edit Mode nudge.")
+QtTest.QTest.mouseClick(lock_button, QtCore.Qt.LeftButton)
+app.processEvents()
+unlocked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+if lock_button.text() != "Lock" or unlocked_frame.locked:
+    raise AssertionError(
+        "Edit Mode Unlock button did not unlock the selected rail: "
+        f"{lock_button.text()!r}, {unlocked_frame}"
+    )
+runtime_widget = edit_mode._runtime_hosts()["edit_mode_custom"].widget
+top_widget = QtWidgets.QApplication.widgetAt(
+    edit_widget.mapToGlobal(
+        QtCore.QPoint(unlocked_frame.x + 8, unlocked_frame.y + 8),
+    )
+)
+cursor = top_widget
+while cursor is not None:
+    if cursor is runtime_widget:
+        raise AssertionError("Live rail buttons were raised above the Edit Mode overlay.")
+    cursor = cursor.parent()
 
 popover = edit_widget.findChild(QtWidgets.QFrame, edit_mode.POSITION_POPOVER_OBJECT_NAME)
 if popover is None or not popover.isVisible():

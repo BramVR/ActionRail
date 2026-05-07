@@ -1011,6 +1011,62 @@ def test_locked_frame_does_not_nudge(monkeypatch) -> None:
     assert frame.offset == (10, 20)
 
 
+def test_toggle_selected_lock_updates_runtime_spec(monkeypatch) -> None:
+    frame = edit_mode.RailFrameInfo(
+        preset_id="locked",
+        label="Locked",
+        x=50,
+        y=60,
+        width=40,
+        height=80,
+        anchor="viewport.left.top",
+        offset=(10, 20),
+        orientation="vertical",
+        rows=1,
+        columns=1,
+        scale=1.0,
+        opacity=1.0,
+        locked=True,
+    )
+    runtime_host = type("RuntimeHost", (), {})()
+    runtime_host.spec = StackSpec(
+        id="locked",
+        layout=RailLayout(anchor="viewport.left.top", locked=True),
+        items=(StackItem(type="button", id="locked.a", label="A"),),
+    )
+    runtime_host._rebuild_widget = lambda _state: None
+
+    class Widget:
+        def __init__(self) -> None:
+            self.raised = 0
+
+        def refresh_from_host(self) -> None:
+            pass
+
+        def raise_(self) -> None:
+            self.raised += 1
+
+    widget = Widget()
+    host = object.__new__(edit_mode.EditModeOverlayHost)
+    host.qt = object()
+    host.parent = object()
+    host.frames = (frame,)
+    host._original_offsets = {}
+    host._qt_widget_is_valid = lambda _widget: True
+    host.widget = widget
+    monkeypatch.setattr(edit_mode, "_runtime_hosts", lambda: {"locked": runtime_host})
+    monkeypatch.setattr(
+        edit_mode,
+        "_rail_frame_infos",
+        lambda _qt, _parent: (replace(frame, locked=False),),
+    )
+    host.select_rail("locked")
+
+    assert host.toggle_selected_lock() is True
+    assert runtime_host.spec.layout.locked is False
+    assert widget.raised == 1
+
+
 def test_runtime_hosts_uses_runtime_registry(monkeypatch) -> None:
     monkeypatch.setattr(
         runtime,
@@ -1050,6 +1106,12 @@ def test_popover_position_and_panel_style() -> None:
                 def __init__(self, x_pos: int, y_pos: int) -> None:
                     self.value = (x_pos, y_pos)
 
+                def x(self) -> int:
+                    return self.value[0]
+
+                def y(self) -> int:
+                    return self.value[1]
+
     class Canvas:
         _host = type("Host", (), {"qt": Qt})()
 
@@ -1058,6 +1120,13 @@ def test_popover_position_and_panel_style() -> None:
 
         def height(self) -> int:
             return 140
+
+    class Panel:
+        def width(self) -> int:
+            return 80
+
+        def height(self) -> int:
+            return 60
 
     frame = edit_mode.RailFrameInfo(
         preset_id="frame",
@@ -1077,6 +1146,14 @@ def test_popover_position_and_panel_style() -> None:
     )
 
     assert edit_mode._popover_position(Canvas(), frame, 80, 60).value == (92, 72)
+    assert (
+        edit_mode._clamped_panel_position(
+            Canvas(),
+            Panel(),
+            Qt.QtCore.QPoint(-20, 200),
+        ).value
+        == (8, 72)
+    )
     assert edit_mode._panel_width(0, 540) == 540
     assert edit_mode._panel_width(500, 540) == 484
     assert "Sticky" not in edit_mode._panel_style_sheet()
@@ -1103,8 +1180,9 @@ def test_panel_summary_and_lock_text_are_readable_without_selection() -> None:
     )
 
     assert edit_mode._panel_summary_text(None, 1) == "1 rail frame(s) | no frame selected"
-    assert edit_mode._lock_button_text(None) == "No selection"
-    assert edit_mode._lock_button_text(frame) == "Unlocked"
+    assert edit_mode._lock_button_text(None) == "Select Rail"
+    assert edit_mode._lock_button_text(frame) == "Lock"
+    assert edit_mode._lock_button_text(replace(frame, locked=True)) == "Unlock"
     assert (
         edit_mode._panel_summary_text(frame, 1)
         == "Frame\nruntime | viewport.left.top | x 150, y 120"

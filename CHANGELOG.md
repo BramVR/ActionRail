@@ -10,6 +10,12 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-07
+
+- Improved Edit Mode control-panel usability: the selected rail state is now a
+  clickable Lock/Unlock action, and the compact panel can be dragged aside when
+  it covers a rail in the viewport.
+
 ## 2026-05-06
 
 - Started Phase 2 step 2.6 with real collapsible edge-tab schema/runtime

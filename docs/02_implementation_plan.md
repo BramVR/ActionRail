@@ -372,9 +372,10 @@ guides. The old Edit Mode frame options popover and slot payload editor have
 been removed; slot payload assignment/clear now belongs to Normal Mode rail
 lock/unlock helpers, and unlocked populated slots can now be Shift-dragged to
 move/swap payloads or clear them when released anywhere that is not a
-different slot. The Quick
-Create Maya smoke verifies the Save + Publish shelf command carries that custom
-store path.
+different slot. Edit Mode panel polish now exposes selected rail state as a
+clickable Lock/Unlock action and lets the compact panel be dragged away from
+covered rails. The Quick Create Maya smoke verifies the Save + Publish shelf
+command carries that custom store path.
 
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
@@ -399,6 +400,10 @@ store path.
   assignment/clear and Shift-drag move/swap/clear-out are implemented for
   unlocked Normal Mode rails; locking the rail returns populated slot clicks to
   normal action execution.
+- Make Edit Mode controls practical in dense viewports. First panel polish is
+  Maya-smoke verified: the selected rail button now says Lock or Unlock and
+  toggles whether that rail can move in the current Edit Mode session, while
+  the compact panel itself can be dragged aside when it covers a rail.
 
 Done when an artist can collapse a custom rail to a side handle, expand it
 again, and keep layout, actions, and bindings intact.
@@ -480,8 +485,8 @@ publish polish. The collapse schema/runtime first pass is implemented and
 Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
 verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
-command path, and the first guide/slot-edit affordance polish pass is locally
-verified.
+command path, and the first guide/slot-edit/control-panel affordance polish
+pass is Maya-smoke verified.
 Carry forward only polish that naturally supports 2.6, such as Quick Create
 round-trip stability and locked built-in/studio read-only behavior. Keep
 `docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,

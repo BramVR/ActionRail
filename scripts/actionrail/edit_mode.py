@@ -330,7 +330,7 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         self.refresh()
         self.position()
         self.widget.show()
-        self.widget.raise_()
+        self._raise_widget()
         self.position()
 
     def close(self) -> None:
@@ -371,6 +371,15 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
         if _SELECTED_PRESET_ID not in active_preset_ids:
             _SELECTED_PRESET_ID = ""
         self.widget.refresh_from_host()
+        self._raise_widget()
+
+    def _raise_widget(self) -> None:
+        widget = getattr(self, "widget", None)
+        is_valid = getattr(self, "_qt_widget_is_valid", lambda _widget: True)
+        if widget is None or not is_valid(widget):
+            return
+        with suppress(Exception):
+            widget.raise_()
 
     def set_settings(self, settings: EditModeSettings) -> None:
         self.settings = settings.normalized()
@@ -437,6 +446,25 @@ class EditModeOverlayHost:  # pragma: no cover - covered by Maya smoke tests.
             return
         _set_host_offset(host, original)
         self.refresh()
+
+    def toggle_selected_lock(self) -> bool:
+        """Toggle the selected rail's Edit Mode movement lock in the runtime spec."""
+
+        selected = self.selected_frame()
+        if selected is None:
+            return False
+        host = _runtime_hosts().get(selected.preset_id)
+        spec = getattr(host, "spec", None)
+        layout = getattr(spec, "layout", None)
+        if host is None or spec is None or layout is None:
+            return False
+        updated_spec = dataclass_replace(
+            spec,
+            layout=dataclass_replace(layout, locked=not selected.locked),
+        )
+        _replace_host_spec(host, updated_spec)
+        self.refresh()
+        return True
 
     def toggle_selected_edge_tab(self) -> bool:
         selected = self.selected_frame()
@@ -607,10 +635,7 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
 
             def resizeEvent(self, event: Any) -> None:  # noqa: N802
                 self._panel.sync()
-                self._panel.move(
-                    max(8, int((self.width() - self._panel.width()) / 2)),
-                    18,
-                )
+                self._panel.place_after_owner_resize()
                 self._sync_popover()
                 super().resizeEvent(event)
 
@@ -633,6 +658,9 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
             def __init__(self, owner: Any) -> None:
                 super().__init__(owner)
                 self._owner = owner
+                self._dragging = False
+                self._drag_offset = qt.QtCore.QPoint(0, 0)
+                self._user_positioned = False
                 self.setObjectName(EDIT_PANEL_OBJECT_NAME)
                 self.setFrameShape(qt.QtWidgets.QFrame.StyledPanel)
                 self.setStyleSheet(_panel_style_sheet())
@@ -655,6 +683,9 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 self.grid_size_label = qt.QtWidgets.QLabel("Grid Size")
                 self.lock_button = qt.QtWidgets.QPushButton("Lock")
                 self.lock_button.setEnabled(False)
+                self.lock_button.setToolTip(
+                    "Toggle whether the selected rail can move in Edit Mode."
+                )
 
                 layout.addWidget(self.title, 0, 0, 1, 4)
                 layout.addWidget(self.summary, 1, 0, 1, 4)
@@ -679,6 +710,7 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 self.grid_size.valueChanged.connect(
                     lambda value: set_edit_mode_options(grid_size=value)
                 )
+                self.lock_button.clicked.connect(self._owner._host.toggle_selected_lock)
                 self.sync()
 
             def sync(self) -> None:
@@ -697,8 +729,41 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                     )
                 )
                 self.lock_button.setText(_lock_button_text(selected))
+                self.lock_button.setEnabled(selected is not None)
                 self._resize_to_owner()
                 self.setFixedHeight(self.sizeHint().height())
+                self._clamp_to_owner()
+
+            def place_after_owner_resize(self) -> None:
+                if self._user_positioned:
+                    self._clamp_to_owner()
+                    return
+                self.move(
+                    max(8, int((self._owner.width() - self.width()) / 2)),
+                    18,
+                )
+
+            def mousePressEvent(self, event: Any) -> None:  # noqa: N802
+                if event.button() != qt.QtCore.Qt.LeftButton:
+                    super().mousePressEvent(event)
+                    return
+                self._dragging = True
+                self._drag_offset = event.pos()
+                self.raise_()
+                event.accept()
+
+            def mouseMoveEvent(self, event: Any) -> None:  # noqa: N802
+                if not self._dragging:
+                    super().mouseMoveEvent(event)
+                    return
+                target = self.pos() + event.pos() - self._drag_offset
+                self.move(_clamped_panel_position(self._owner, self, target))
+                self._user_positioned = True
+                event.accept()
+
+            def mouseReleaseEvent(self, event: Any) -> None:  # noqa: N802
+                self._dragging = False
+                event.accept()
 
             def _resize_to_owner(self) -> None:
                 self.setFixedWidth(
@@ -707,6 +772,9 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                         max(540, self.sizeHint().width()),
                     )
                 )
+
+            def _clamp_to_owner(self) -> None:
+                self.move(_clamped_panel_position(self._owner, self, self.pos()))
 
             def _set_checked(self, checkbox: Any, checked: bool) -> None:
                 blocked = checkbox.blockSignals(True)
@@ -1299,6 +1367,14 @@ def _popover_position(canvas: Any, frame: RailFrameInfo, width: int, height: int
     return canvas._host.qt.QtCore.QPoint(x_pos, y_pos)
 
 
+def _clamped_panel_position(owner: Any, panel: Any, point: Any) -> Any:
+    max_x = max(8, int(owner.width()) - int(panel.width()) - 8)
+    max_y = max(8, int(owner.height()) - int(panel.height()) - 8)
+    x_pos = min(max(8, int(point.x())), max_x)
+    y_pos = min(max(8, int(point.y())), max_y)
+    return owner._host.qt.QtCore.QPoint(x_pos, y_pos)
+
+
 def _panel_width(canvas_width: int, desired_width: int) -> int:
     desired_width = max(320, desired_width)
     if canvas_width <= 0:
@@ -1320,8 +1396,8 @@ def _panel_summary_text(
 
 def _lock_button_text(selected: RailFrameInfo | None) -> str:
     if selected is None:
-        return "No selection"
-    return "Locked" if selected.locked else "Unlocked"
+        return "Select Rail"
+    return "Unlock" if selected.locked else "Lock"
 
 
 def _frame_label(preset_id: str) -> str:

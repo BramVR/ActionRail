@@ -23,6 +23,9 @@ smoke coverage for the custom-store Save + Publish shelf command path. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
+The latest Edit Mode panel polish turns the selected rail state into a
+clickable Lock/Unlock action and makes the compact panel draggable so it can be
+moved away from rails underneath it.
 
 Working surface:
 
@@ -43,10 +46,12 @@ Working surface:
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, drag handles, anchor pins,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
-  unlocked rails, safe movement clamps, Save Position/user-preset persistence
-  for unlocked runtime/user rails, and user override saves/resolution for
-  unlocked built-in and studio rails. Edit Mode no longer opens the right-click
-  frame options window and no longer edits slot payloads.
+  unlocked rails, a clickable selected-rail Lock/Unlock panel action,
+  draggable compact panel placement, safe movement clamps,
+  Save Position/user-preset persistence for unlocked runtime/user rails, and
+  user override saves/resolution for unlocked built-in and studio rails. Edit
+  Mode no longer opens the right-click frame options window and no longer edits
+  slot payloads.
 - Normal Mode active rails can be unlocked and locked for slot payload editing;
   while unlocked, rendered slot context menus can assign or clear payloads, and
   Shift-drag moves a populated slot payload to another slot, swaps with a
@@ -156,6 +161,9 @@ $env:PYTHONPATH = "scripts"
   axis-aligned Sticky Frames layout guides.
 - Normal Mode unlocked-slot editing supports context-menu assignment/clear plus
   Shift-drag payload move/swap/clear-out gestures.
+- The May 7 Edit Mode panel polish changes the selected rail button from a
+  passive Locked/Unlocked label to a clickable Lock/Unlock action and lets the
+  compact panel be dragged aside when it covers a rail.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -273,11 +281,12 @@ $env:PYTHONPATH = "scripts"
 - Latest Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
   -> passed; verified layout-map overlay, frame selection/movement, Grid Size
-  64, Snap to Grid, Sticky Frames alignment, layout save, collapse-state save
-  persistence, `run_slot()` while collapsed, handle-click expansion, Normal
-  Mode unlocked Shift-drag payload move-to-empty-slot, Normal Mode host payload
-  clear, screenshot capture, and absence of the removed frame options payload
-  path.
+  64, Snap to Grid, Sticky Frames alignment, draggable Edit Mode panel
+  placement, clickable selected-rail Lock/Unlock toggling, locked-frame nudge
+  blocking, layout save, collapse-state save persistence, `run_slot()` while
+  collapsed, handle-click expansion, Normal Mode unlocked Shift-drag payload
+  move-to-empty-slot, Normal Mode host payload clear, screenshot capture, and
+  absence of the removed frame options payload path.
 
 ## Decisions
 
