@@ -11,15 +11,19 @@ ActionCallback = Callable[[], Any]
 MOVE_CONTEXT = "moveSuperContext"
 ROTATE_CONTEXT = "RotateSuperContext"
 SCALE_CONTEXT = "scaleSuperContext"
+SELECT_CONTEXT = "selectSuperContext"
 
 __all__ = [
     "MOVE_CONTEXT",
     "ROTATE_CONTEXT",
     "SCALE_CONTEXT",
+    "SELECT_CONTEXT",
     "Action",
     "ActionCallback",
     "ActionRegistry",
+    "clear_selection",
     "create_default_registry",
+    "frame_selection",
     "set_keyframe",
     "set_tool_context",
     "toggle_grid",
@@ -98,6 +102,22 @@ def set_keyframe(cmds_module: Any | None = None) -> str:
     return "setKeyframe"
 
 
+def clear_selection(cmds_module: Any | None = None) -> str:
+    """Clear Maya's current selection."""
+
+    cmds = _require_cmds(cmds_module)
+    cmds.select(clear=True)
+    return "selection:cleared"
+
+
+def frame_selection(cmds_module: Any | None = None) -> str:
+    """Frame the current selection in Maya's active viewport."""
+
+    cmds = _require_cmds(cmds_module)
+    cmds.viewFit()
+    return "viewFit"
+
+
 def toggle_grid(cmds_module: Any | None = None) -> str:
     """Toggle Maya viewport grid visibility and return the new state."""
 
@@ -116,6 +136,14 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
     """
 
     registry = ActionRegistry()
+    registry.register(
+        Action(
+            id="maya.tool.select",
+            label="Select",
+            tooltip="Select tool",
+            callback=lambda: set_tool_context(SELECT_CONTEXT, cmds_module),
+        )
+    )
     registry.register(
         Action(
             id="maya.tool.move",
@@ -154,6 +182,22 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
             label="Set Key",
             tooltip="Set keyframe",
             callback=lambda: set_keyframe(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.selection.clear",
+            label="Clear Selection",
+            tooltip="Clear current selection",
+            callback=lambda: clear_selection(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.view.frame_selection",
+            label="Frame Selection",
+            tooltip="Frame current selection",
+            callback=lambda: frame_selection(cmds_module),
         )
     )
     registry.register(

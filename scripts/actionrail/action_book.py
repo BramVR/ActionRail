@@ -30,6 +30,11 @@ class ActionBookEntry:
 
 
 _ACTION_METADATA: dict[str, dict[str, object]] = {
+    "maya.tool.select": {
+        "category": "Selection",
+        "icon": "maya.objects",
+        "keywords": ("select", "selection", "tool", "q"),
+    },
     "maya.tool.move": {
         "category": "Transform",
         "icon": "maya.move",
@@ -54,6 +59,16 @@ _ACTION_METADATA: dict[str, dict[str, object]] = {
         "category": "Animation",
         "icon": "maya.set_key",
         "keywords": ("key", "keyframe", "animation", "set key", "s"),
+    },
+    "maya.selection.clear": {
+        "category": "Selection",
+        "icon": "maya.objects",
+        "keywords": ("clear", "deselect", "selection"),
+    },
+    "maya.view.frame_selection": {
+        "category": "Viewport",
+        "icon": "maya.camera",
+        "keywords": ("frame", "fit", "selection", "camera", "viewport", "f"),
     },
     "maya.display.toggle_grid": {
         "category": "Viewport",

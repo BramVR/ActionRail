@@ -46,7 +46,9 @@ integration rather than the primary artist-facing workflow. The first Action
 Book backend slice is now implemented: `actionrail.action_book` exposes
 category/icon/keyword metadata for registered Maya actions, Quick Create uses
 that catalog for action picker choices, and Toggle Grid is now Maya-smoke
-verified as the first non-transform viewport action in the catalog.
+verified as the first non-transform viewport action in the catalog. The latest
+Action Book backend expansion adds Select, Clear Selection, and Frame Selection
+as Maya-smoke verified entries and saves a catalog JSON artifact for review.
 
 Working surface:
 
@@ -59,7 +61,9 @@ Working surface:
   nameCommands for saved bars.
 - Action Book backend metadata for registered Maya actions, currently consumed
   by Quick Create picker choices, including the Maya-smoke verified
-  `maya.display.toggle_grid` viewport action.
+  `maya.display.toggle_grid` viewport action and the Maya-smoke verified
+  `maya.tool.select`, `maya.selection.clear`, and
+  `maya.view.frame_selection` selection/viewport entries.
 - Safe diagnostics, diagnostic badges, diagnostics Qt window, icon import
   preflight, generated SVG PNG fallbacks, and fallback preset recovery.
 - User preset storage and shared bundled/user preset resolver.
@@ -217,6 +221,10 @@ $env:PYTHONPATH = "scripts"
 - The latest Action Book follow-up adds `maya.display.toggle_grid` with
   `maya.grid` metadata and a Maya smoke that verifies it toggles the real Maya
   viewport grid off and back on.
+- The newest Action Book backend follow-up adds Select, Clear Selection, and
+  Frame Selection entries and saves the smoke-tested Action Book catalog to
+  `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json` for
+  review until the full Action Book UI exists.
 - Quick Create now offers two broader starter templates: Blank Bar for empty
   action sockets and Viewport Display Strip seeded with the Toggle Grid Action
   Book entry.
@@ -406,8 +414,12 @@ $env:PYTHONPATH = "scripts"
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.
 - Latest Action Book viewport validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_smoke.py -Timeout 240`
-  -> passed; verified `maya.display.toggle_grid` metadata (`Viewport`,
-  `maya.grid`) and real Maya grid state transitions from on to off and back on.
+  -> passed; verified nine Action Book entries; `maya.display.toggle_grid`
+  metadata (`Viewport`, `maya.grid`) and real Maya grid state transitions from
+  on to off and back on; Select changes Maya to `selectSuperContext`; Frame
+  Selection executes `viewFit`; Clear Selection empties Maya selection; and
+  the viewable catalog artifact was saved to
+  `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json`.
 - Latest hotkey binding-target validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_hotkey_bridge_smoke.py -Timeout 240`
   -> passed; verified four published `transform_stack` binding targets and the

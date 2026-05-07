@@ -80,6 +80,14 @@ def test_predicates_evaluate_selection_tool_and_active_context() -> None:
     assert evaluate_predicate("selection.count <= 2", context) is True
 
 
+def test_predicates_alias_select_tool_context() -> None:
+    context = PredicateContext(
+        state=MayaStateSnapshot(current_tool="selectSuperContext", selection_count=0)
+    )
+
+    assert evaluate_predicate("maya.tool == select", context) is True
+
+
 def test_predicates_evaluate_action_command_and_plugin_availability() -> None:
     item = StackItem(type="button", label="K", action="maya.anim.set_key")
     context = PredicateContext(

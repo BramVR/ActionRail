@@ -9,9 +9,12 @@ from actionrail.actions import (
     MOVE_CONTEXT,
     ROTATE_CONTEXT,
     SCALE_CONTEXT,
+    SELECT_CONTEXT,
     Action,
     ActionRegistry,
+    clear_selection,
     create_default_registry,
+    frame_selection,
     set_tool_context,
     toggle_grid,
     validate_action_ids,
@@ -24,6 +27,7 @@ class FakeCmds:
     def __init__(self) -> None:
         self.calls: list[tuple[str, object]] = []
         self.grid_visible = True
+        self.selection: list[str] = ["cube"]
 
     def setToolTo(self, context: str) -> None:
         self.calls.append(("setToolTo", context))
@@ -38,6 +42,14 @@ class FakeCmds:
             self.grid_visible = bool(toggle)
             self.calls.append(("grid", self.grid_visible))
         return None
+
+    def select(self, clear: bool = False) -> None:
+        if clear:
+            self.selection = []
+        self.calls.append(("select", "clear" if clear else ""))
+
+    def viewFit(self) -> None:  # noqa: N802
+        self.calls.append(("viewFit", None))
 
 
 class FakeSelectionCmds(FakeCmds):
@@ -55,11 +67,14 @@ def test_default_registry_contains_phase_zero_actions() -> None:
     registry = create_default_registry(FakeCmds())
 
     assert registry.ids() == (
+        "maya.tool.select",
         "maya.tool.move",
         "maya.tool.translate",
         "maya.tool.rotate",
         "maya.tool.scale",
         "maya.anim.set_key",
+        "maya.selection.clear",
+        "maya.view.frame_selection",
         "maya.display.toggle_grid",
     )
 
@@ -67,11 +82,14 @@ def test_default_registry_contains_phase_zero_actions() -> None:
 @pytest.mark.parametrize(
     ("action_id", "expected_call"),
     [
+        ("maya.tool.select", ("setToolTo", SELECT_CONTEXT)),
         ("maya.tool.move", ("setToolTo", MOVE_CONTEXT)),
         ("maya.tool.translate", ("setToolTo", MOVE_CONTEXT)),
         ("maya.tool.rotate", ("setToolTo", ROTATE_CONTEXT)),
         ("maya.tool.scale", ("setToolTo", SCALE_CONTEXT)),
         ("maya.anim.set_key", ("setKeyframe", None)),
+        ("maya.selection.clear", ("select", "clear")),
+        ("maya.view.frame_selection", ("viewFit", None)),
         ("maya.display.toggle_grid", ("grid", False)),
     ],
 )
@@ -94,6 +112,16 @@ def test_toggle_grid_toggles_maya_grid_state() -> None:
     assert toggle_grid(cmds) == "grid:on"
 
     assert cmds.calls == [("grid", False), ("grid", True)]
+
+
+def test_selection_actions_use_maya_selection_commands() -> None:
+    cmds = FakeCmds()
+
+    assert clear_selection(cmds) == "selection:cleared"
+    assert cmds.selection == []
+    assert frame_selection(cmds) == "viewFit"
+
+    assert cmds.calls == [("select", "clear"), ("viewFit", None)]
 
 
 def test_registry_rejects_duplicate_action_ids() -> None:

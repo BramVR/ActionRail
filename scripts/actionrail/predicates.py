@@ -7,7 +7,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from .actions import MOVE_CONTEXT, ROTATE_CONTEXT, SCALE_CONTEXT, ActionRegistry
+from .actions import (
+    MOVE_CONTEXT,
+    ROTATE_CONTEXT,
+    SCALE_CONTEXT,
+    SELECT_CONTEXT,
+    ActionRegistry,
+)
 from .spec import StackItem
 from .state import MayaStateSnapshot
 
@@ -247,6 +253,7 @@ def _tool_alias(context_name: str) -> str:
         MOVE_CONTEXT: "move",
         ROTATE_CONTEXT: "rotate",
         SCALE_CONTEXT: "scale",
+        SELECT_CONTEXT: "select",
     }
     return aliases.get(context_name, context_name)
 

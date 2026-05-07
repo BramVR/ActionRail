@@ -87,8 +87,9 @@ Snapshot:
   now have picker-facing category/icon/keyword metadata through
   `actionrail.action_book`, Quick Create action choices route through that
   catalog instead of reading raw registry actions directly, and the catalog now
-  includes a Maya-smoke verified viewport Toggle Grid action beyond the
-  original transform/keyframe examples.
+  includes Maya-smoke verified viewport and selection actions beyond the
+  original transform/keyframe examples: Toggle Grid, Select, Clear Selection,
+  and Frame Selection.
 - Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
   authoring workflow polish. The first collapse schema/runtime pass is implemented and
   Maya-smoke verified. A Maya-smoke verified handle/publish polish pass now makes

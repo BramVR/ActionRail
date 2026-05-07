@@ -51,6 +51,7 @@ ANCHOR_CHOICES = (
 )
 
 _PERSISTENT_TOOL_ACTIVE_PREDICATES = {
+    "maya.tool.select": "maya.tool == select",
     "maya.tool.move": "maya.tool == move",
     "maya.tool.translate": "maya.tool == move",
     "maya.tool.rotate": "maya.tool == rotate",

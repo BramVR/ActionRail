@@ -527,6 +527,10 @@ guide/slot-edit/control-panel affordance polish pass is Maya-smoke verified.
 Quick Create now also has a Maya-smoke verified `Edit Slots` handoff that
 previews the current draft, exits Edit Mode, and unlocks the visible bar for
 Normal Mode slot payload editing.
+The Action Book backend has also expanded beyond the original transform/key/grid
+seed set with Maya-smoke verified Select, Clear Selection, and Frame Selection
+entries; the smoke writes a catalog JSON artifact for review until a dedicated
+Action Book UI exists.
 Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and

@@ -25,6 +25,22 @@ def test_default_action_book_entries_have_spellbook_metadata() -> None:
             keywords=("key", "keyframe", "animation", "set key", "s"),
         ),
         ActionBookEntry(
+            id="maya.selection.clear",
+            label="Clear Selection",
+            tooltip="Clear current selection",
+            category="Selection",
+            icon="maya.objects",
+            keywords=("clear", "deselect", "selection"),
+        ),
+        ActionBookEntry(
+            id="maya.tool.select",
+            label="Select",
+            tooltip="Select tool",
+            category="Selection",
+            icon="maya.objects",
+            keywords=("select", "selection", "tool", "q"),
+        ),
+        ActionBookEntry(
             id="maya.tool.move",
             label="Move",
             tooltip="Move tool",
@@ -55,6 +71,14 @@ def test_default_action_book_entries_have_spellbook_metadata() -> None:
             category="Transform",
             icon="maya.move",
             keywords=("translate", "move", "tool", "transform", "w"),
+        ),
+        ActionBookEntry(
+            id="maya.view.frame_selection",
+            label="Frame Selection",
+            tooltip="Frame current selection",
+            category="Viewport",
+            icon="maya.camera",
+            keywords=("frame", "fit", "selection", "camera", "viewport", "f"),
         ),
         ActionBookEntry(
             id="maya.display.toggle_grid",
@@ -101,3 +125,4 @@ def test_public_api_exposes_action_book_entries() -> None:
     assert actionrail.ActionBookEntry is ActionBookEntry
     assert actionrail.action_book_entry_by_id("maya.tool.move").icon == "maya.move"
     assert actionrail.action_book_entry_by_id("maya.display.toggle_grid").icon == "maya.grid"
+    assert actionrail.action_book_entry_by_id("maya.tool.select").icon == "maya.objects"

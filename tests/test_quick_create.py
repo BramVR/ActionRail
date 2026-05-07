@@ -203,6 +203,7 @@ def test_build_quick_create_draft_infers_persistent_tool_active_state() -> None:
         preset_id="tool_states",
         template_id="vertical_stack",
         slots=(
+            QuickCreateSlotInput(id="select", label="Q", action="maya.tool.select"),
             QuickCreateSlotInput(id="move", label="M", action="maya.tool.move"),
             QuickCreateSlotInput(id="rotate", label="R", action="maya.tool.rotate"),
             QuickCreateSlotInput(id="scale", label="S", action="maya.tool.scale"),
@@ -221,6 +222,7 @@ def test_build_quick_create_draft_infers_persistent_tool_active_state() -> None:
     spec = build_draft_spec(build_quick_create_draft(values))
 
     assert [item.active_when for item in spec.items] == [
+        "maya.tool == select",
         "maya.tool == move",
         "maya.tool == rotate",
         "maya.tool == scale",
