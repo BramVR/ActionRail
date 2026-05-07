@@ -37,7 +37,10 @@ command buttons are split into edit-flow and save-flow rows so labels remain
 readable in Maya. The newest Quick Create UX pass makes blank action bars the
 default and removes Action/Icon assignment controls from the Slots tab so Quick
 Create stays focused on creating bars and slots; the separate future
-Spell Book/Action Book owns action browsing and placement.
+Spell Book/Action Book owns action browsing and placement. The first Spell
+Book UI slice is now implemented as a separate dockable Maya panel with search,
+icon-backed action entries, click-to-run behavior, and drag/drop placement onto
+unlocked action-bar slots.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -74,6 +77,11 @@ Working surface:
   starter set also includes Maya-smoke verified `maya.view.toggle_isolate_selected`,
   `maya.modeling.center_pivot`, `maya.modeling.freeze_transforms`, and
   `maya.modeling.delete_history`.
+- Dockable Spell Book panel opened from the ActionRail menu through
+  `actionrail.show_action_book_panel()`. It searches the Action Book catalog,
+  renders each entry with its slot icon and tooltip summary, executes clicked
+  entries for immediate feedback, and drags Action Book MIME payloads onto
+  unlocked Normal Mode slots.
 - Safe diagnostics, diagnostic badges, diagnostics Qt window, icon import
   preflight, generated SVG PNG fallbacks, and fallback preset recovery.
 - User preset storage and shared bundled/user preset resolver.
@@ -142,13 +150,16 @@ Focus the next slice on:
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 - making the template-to-Edit-Mode and Normal Mode slot-edit handoff feel like
-  one workflow that can later connect to Action Book and Bind Mode
+  one workflow that now connects to the first Spell Book action-placement slice
+  and can later connect to Bind Mode
 - keeping the Normal Mode unlocked-slot drag/drop workflow stable: Shift-drag
   moves/swaps populated slot payloads within a rail, transfers/swaps between
   unlocked rails, and preserves the source when dropped onto a locked rail
 
-Do not implement Bind Mode, Action Book UI, Macro Book UI, flyouts, command
-rings, profile layers, marking-menu export, or Viewport 2.0 in this slice.
+Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
+layers, marking-menu export, or Viewport 2.0 in this slice. Keep Spell Book
+growth focused on action placement and search, not on turning Quick Create into
+an action browser.
 
 ## Next Agent Start
 
@@ -236,7 +247,7 @@ $env:PYTHONPATH = "scripts"
 - The newest Action Book backend follow-up adds Select, Clear Selection, and
   Frame Selection entries and saves the smoke-tested Action Book catalog to
   `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json` for
-  review until the full Action Book UI exists.
+  backend review; the first Spell Book UI now renders the catalog for placement.
 - The newest Action Book starter-set follow-up adds Toggle Isolate Selected,
   Center Pivot, Freeze Transforms, and Delete History, and verifies all four
   against real Maya commands. Treat that as enough backend catalog expansion for
@@ -259,6 +270,10 @@ $env:PYTHONPATH = "scripts"
   exposes Action/Icon assignment controls. It edits slot id, label, and key text
   only, preserving existing payload metadata internally until the separate
   Spell Book/Action Book placement surface is implemented.
+- The first Spell Book/Action Book placement surface is implemented: it opens
+  as its own dockable Maya panel, searches the current 13-entry Action Book
+  starter catalog, runs clicked entries, and drops action payloads onto unlocked
+  slots using the same icons as the bar.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -278,7 +293,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 478 passed.
+  -> 498 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -449,6 +464,15 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified four published `transform_stack` binding targets and the
   Set Key slot's key label, runtime command, nameCommand, slot id, and target id
   through the public `actionrail.slot_binding_targets()` API.
+- Latest Spell Book UI validation:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_ui_smoke.py -Timeout 240`
+  -> passed; verified 13 rendered Spell Book entries, search narrowing to
+  `maya.tool.scale`, click-to-run Select changing Maya to `selectSuperContext`,
+  drag/drop assignment of `maya.tool.scale` onto an unlocked blank Quick Create
+  slot with `maya.scale`, and screenshots at
+  `.gg-maya-sessiond/screenshots/actionrail_spell_book_panel.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_spell_book_search_scale.png`, and
+  `.gg-maya-sessiond/screenshots/actionrail_spell_book_drop_bar.png`.
 
 ## Decisions
 

@@ -112,8 +112,14 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     assert maya_ui.show_quick_create_panel_command() == (
         "import actionrail; actionrail.show_quick_create_panel()"
     )
+    assert maya_ui.show_action_book_panel_command() == (
+        "import actionrail; actionrail.show_action_book_panel()"
+    )
     assert maya_ui.restore_quick_create_panel_command() == (
         "import actionrail; actionrail.restore_quick_create_panel()"
+    )
+    assert maya_ui.restore_action_book_panel_command() == (
+        "import actionrail; actionrail.restore_action_book_panel()"
     )
     assert maya_ui._toggle_label("horizontal_tools") == "Toggle Horizontal Tools"
 
@@ -187,6 +193,7 @@ def test_install_menu_toggle_is_idempotent() -> None:
         maya_ui.MENU_ITEM_NAME,
         maya_ui.MENU_EDIT_MODE_ITEM_NAME,
         maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
+        maya_ui.MENU_ACTION_BOOK_ITEM_NAME,
         maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME,
         maya_ui.MENU_DIAGNOSTICS_ITEM_NAME,
@@ -198,6 +205,9 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert cmds.menu_items[maya_ui.MENU_QUICK_CREATE_ITEM_NAME][
         "command"
     ] == maya_ui.show_quick_create_panel_command()
+    assert cmds.menu_items[maya_ui.MENU_ACTION_BOOK_ITEM_NAME][
+        "command"
+    ] == maya_ui.show_action_book_panel_command()
     assert cmds.menu_items[maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME][
         "command"
     ] == maya_ui.run_diagnostics_from_maya_command()
@@ -211,6 +221,7 @@ def test_install_menu_toggle_is_idempotent() -> None:
         (maya_ui.MENU_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_EDIT_MODE_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_ACTION_BOOK_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
@@ -228,6 +239,7 @@ def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
     assert (maya_ui.MENU_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_EDIT_MODE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_ACTION_BOOK_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (
@@ -541,6 +553,60 @@ def test_restore_quick_create_panel_forwards_custom_user_preset_dir(
     assert calls["show"] == {
         "parent": f"parent:{maya_ui.QUICK_CREATE_WORKSPACE_CONTROL}",
         "user_preset_dir": tmp_path,
+    }
+
+
+def test_show_action_book_panel_creates_workspace_control(monkeypatch) -> None:
+    cmds = FakeCmds()
+    calls: list[str] = []
+
+    def restore_action_book_panel() -> str:
+        calls.append("restore")
+        return "panel"
+
+    monkeypatch.setattr(maya_ui, "restore_action_book_panel", restore_action_book_panel)
+
+    assert maya_ui.show_action_book_panel(cmds_module=cmds) == "panel"
+
+    assert calls == ["restore"]
+    assert cmds.workspace_controls[maya_ui.ACTION_BOOK_WORKSPACE_CONTROL] == {
+        "label": "ActionRail Spell Book",
+        "retain": False,
+        "floating": True,
+        "initialWidth": 720,
+        "initialHeight": 680,
+        "uiScript": maya_ui.restore_action_book_panel_command(),
+    }
+
+
+def test_show_action_book_panel_reopens_existing_workspace_control(monkeypatch) -> None:
+    cmds = FakeCmds()
+    cmds.workspace_controls[maya_ui.ACTION_BOOK_WORKSPACE_CONTROL] = {"label": "Existing"}
+    monkeypatch.setattr(maya_ui, "restore_action_book_panel", lambda: "panel")
+
+    assert maya_ui.show_action_book_panel(cmds_module=cmds) == "panel"
+
+    assert cmds.workspace_controls[maya_ui.ACTION_BOOK_WORKSPACE_CONTROL]["edit"] is True
+    assert cmds.workspace_controls[maya_ui.ACTION_BOOK_WORKSPACE_CONTROL]["visible"] is True
+
+
+def test_restore_action_book_panel_uses_workspace_parent(monkeypatch) -> None:
+    calls: dict[str, object] = {}
+
+    def show_action_book_panel(**kwargs: object) -> str:
+        calls["show"] = kwargs
+        return "panel"
+
+    monkeypatch.setattr(maya_ui, "_workspace_control_parent", lambda name: f"parent:{name}")
+    monkeypatch.setattr(
+        maya_ui.action_book_ui,
+        "show_action_book_panel",
+        show_action_book_panel,
+    )
+
+    assert maya_ui.restore_action_book_panel() == "panel"
+    assert calls["show"] == {
+        "parent": f"parent:{maya_ui.ACTION_BOOK_WORKSPACE_CONTROL}",
     }
 
 

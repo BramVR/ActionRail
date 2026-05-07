@@ -8,6 +8,7 @@ import pytest
 
 import actionrail
 import actionrail.hotkeys as hotkeys
+from actionrail.actions import create_default_registry
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.hotkeys import (
     HotkeyConflictError,
@@ -226,12 +227,8 @@ def test_publish_default_actions_creates_one_command_per_registered_action() -> 
     published = publish_default_actions(cmds_module=cmds)
 
     assert [command.runtime_command for command in published] == [
-        "ActionRail_action_maya_tool_move",
-        "ActionRail_action_maya_tool_translate",
-        "ActionRail_action_maya_tool_rotate",
-        "ActionRail_action_maya_tool_scale",
-        "ActionRail_action_maya_anim_set_key",
-        "ActionRail_action_maya_display_toggle_grid",
+        runtime_command_name("action", action.id)
+        for action in create_default_registry().actions()
     ]
 
 

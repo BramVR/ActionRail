@@ -100,6 +100,11 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         ),
     },
     {
+        "path": "scripts/actionrail/action_book_ui.py",
+        "owns": "searchable Spell Book panel and drag-source action entries",
+        "tests": ("tests/maya_smoke/actionrail_action_book_ui_smoke.py",),
+    },
+    {
         "path": "scripts/actionrail/hotkeys.py",
         "owns": "Maya runtime-command publishing, nameCommands, hotkey labels",
         "tests": ("tests/test_hotkeys.py", "tests/maya_smoke/actionrail_hotkey_bridge_smoke.py"),
@@ -218,7 +223,8 @@ def about() -> dict[str, object]:
                 "slot binding-target metadata "
                 "and Quick Create Bindings tab Maya-smoke verified; Quick Create "
                 "Edit Slots handoff to unlocked Normal Mode slot editing "
-                "Maya-smoke verified"
+                "Maya-smoke verified; Spell Book UI connects searchable action "
+                "entries to unlocked action-bar slots"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

@@ -57,6 +57,9 @@
   Toggle Isolate Selected, Center Pivot, Freeze Transforms, and Delete History,
   with Maya smoke verification and the saved catalog artifact updated to 13
   entries.
+- Added the first separate Spell Book UI: a dockable, searchable, two-page
+  Maya panel with category tabs, icon-backed action rows, click-to-run action
+  previews, and drag/drop placement onto unlocked action-bar slots.
 
 ## 2026-05-06
 

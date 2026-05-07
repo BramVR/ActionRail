@@ -57,8 +57,8 @@ Snapshot:
 - Quick Create now defaults to a blank action bar and keeps its Slots tab
   focused on slot id, label, and displayed key text. It still has starter
   templates for vertical, horizontal, edge-tab, and viewport display bars, but
-  action/icon browsing belongs to the separate future Spell Book/Action Book
-  workflow rather than Quick Create.
+  action/icon browsing belongs to the separate Spell Book/Action Book workflow
+  rather than Quick Create.
 - Quick Create now has a read-only Bindings tab that lists action-bearing slots,
   their current key labels, and the Maya nameCommands used by the Hotkey Editor.
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
@@ -67,7 +67,7 @@ Snapshot:
 - Quick Create now has an Edit Slots handoff: it previews the current draft,
   exits Edit Mode if needed, and unlocks the visible bar so Normal Mode
   slot assignment/clear and Shift-drag rearrangement are one click away from
-  the builder. This is the bridge to the later separate Spell Book placement
+  the builder. This is the bridge to the separate Spell Book placement
   workflow; Quick Create itself should stay a minimal action-bar creator.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
@@ -94,6 +94,11 @@ Snapshot:
   original transform/keyframe examples: Toggle Grid, Select, Clear Selection,
   Frame Selection, Toggle Isolate Selected, Center Pivot, Freeze Transforms,
   and Delete History.
+- The first Spell Book/Action Book UI slice is implemented as a separate
+  dockable Maya panel, not part of Quick Create. It shows searchable Maya
+  action entries with the same icons used by action bars, supports click-to-run
+  action previews, and drags Action Book payloads onto unlocked Normal Mode
+  action-bar slots.
 - Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
   authoring workflow polish. The first collapse schema/runtime pass is implemented and
   Maya-smoke verified. A Maya-smoke verified handle/publish polish pass now makes
@@ -176,16 +181,17 @@ polish:
    optional Save + Publish paths.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
-4. Do not implement Bind Mode, Action Book UI, Macro Book UI, flyouts, command
-   rings, profile layers, marking-menu export, or Viewport 2.0 until the Phase 2
-   authoring surface has a stable first pass.
+4. Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
+   layers, marking-menu export, or Viewport 2.0 until the Phase 2 authoring
+   surface has a stable first pass. The current Spell Book UI is only the first
+   searchable action-placement slice.
 
 ## Working Rules
 
 - Keep docs current as work changes.
 - Prefer small implementation slices with visible Maya verification.
-- Keep Quick Create, icon import, and Edit Mode work scoped to the current
-  Phase 2 authoring slice; do not implement Bind Mode, Action Book UI,
-  Macro Book UI, flyouts, command rings, profile layers, marking-menu export,
-  or Viewport 2.0 yet.
+- Keep Quick Create, Spell Book, icon import, and Edit Mode work scoped to the
+  current Phase 2 authoring slice; do not implement Bind Mode, Macro Book UI,
+  flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
+  yet.
 - If Maya verification is blocked, record the exact blocker in `docs/04_status.md`.

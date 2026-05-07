@@ -42,6 +42,10 @@ def test_about_returns_json_safe_agent_map() -> None:
         module["path"] == "scripts/actionrail/edit_mode.py"
         for module in project["modules"]
     )
+    assert any(
+        module["path"] == "scripts/actionrail/action_book_ui.py"
+        for module in project["modules"]
+    )
 
 
 def test_package_exposes_about() -> None:

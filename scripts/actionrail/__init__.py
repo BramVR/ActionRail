@@ -62,8 +62,10 @@ from .maya_ui import (
     install_menu_toggle,
     install_preset_shelf_toggle,
     install_shelf_toggle,
+    restore_action_book_panel,
     restore_quick_create_panel,
     run_diagnostics_from_maya,
+    show_action_book_panel,
     show_quick_create_panel,
     toggle_default,
     uninstall_menu_toggle,
@@ -192,6 +194,7 @@ __all__ = [
     "select_edit_mode_rail",
     "set_edit_mode_options",
     "show_example",
+    "show_action_book_panel",
     "show_last_report",
     "show_preset",
     "show_quick_create_panel",
@@ -207,6 +210,7 @@ __all__ = [
     "uninstall_shelf_toggle",
     "user_preset_dir",
     "user_preset_ids",
+    "restore_action_book_panel",
     "restore_quick_create_panel",
 ]
 

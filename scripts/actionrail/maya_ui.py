@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from . import diagnostics, edit_mode, quick_create_ui, runtime
+from . import action_book_ui, diagnostics, edit_mode, quick_create_ui, runtime
 from .qt import load
 from .spec import TRANSFORM_STACK_ID
 
@@ -13,6 +13,7 @@ MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
 MENU_EDIT_MODE_ITEM_NAME = "ActionRailEditModeMenuItem"
 MENU_QUICK_CREATE_ITEM_NAME = "ActionRailQuickCreateMenuItem"
+MENU_ACTION_BOOK_ITEM_NAME = "ActionRailSpellBookMenuItem"
 MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
@@ -20,6 +21,7 @@ SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
 SHELF_BUTTON_PREFIX = "ActionRailTogglePresetShelfButton"
 QUICK_CREATE_WORKSPACE_CONTROL = "ActionRailQuickCreateWorkspaceControl"
+ACTION_BOOK_WORKSPACE_CONTROL = "ActionRailSpellBookWorkspaceControl"
 _QUICK_CREATE_USER_PRESET_DIR: str | Path | None = None
 
 ToggleResult = Literal["shown", "hidden"]
@@ -65,6 +67,8 @@ def install_menu_toggle(
         cmds.deleteUI(MENU_EDIT_MODE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_ACTION_BOOK_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_ACTION_BOOK_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_RUN_DIAGNOSTICS_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_RUN_DIAGNOSTICS_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -99,6 +103,14 @@ def install_menu_toggle(
         sourceType="python",
     )
     cmds.menuItem(
+        MENU_ACTION_BOOK_ITEM_NAME,
+        label="Spell Book...",
+        annotation="Open the searchable ActionRail Spell Book.",
+        command=show_action_book_panel_command(),
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    cmds.menuItem(
         MENU_RUN_DIAGNOSTICS_ITEM_NAME,
         label="Run Diagnostics",
         annotation="Collect current ActionRail diagnostics and show the report.",
@@ -129,6 +141,8 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
     """Remove the ActionRail menu toggle created by :func:`install_menu_toggle`."""
 
     cmds = _require_cmds(cmds_module)
+    if cmds.menuItem(MENU_ACTION_BOOK_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_ACTION_BOOK_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_EDIT_MODE_ITEM_NAME, exists=True):
@@ -344,6 +358,28 @@ def show_quick_create_panel(
     return restore_quick_create_panel(user_preset_dir=user_preset_dir)
 
 
+def show_action_book_panel(
+    *,
+    cmds_module: Any | None = None,
+) -> Any:
+    """Open the dockable Maya workspace-control Spell Book panel."""
+
+    cmds = _require_cmds(cmds_module)
+    if not cmds.workspaceControl(ACTION_BOOK_WORKSPACE_CONTROL, exists=True):
+        cmds.workspaceControl(
+            ACTION_BOOK_WORKSPACE_CONTROL,
+            label="ActionRail Spell Book",
+            retain=False,
+            floating=True,
+            initialWidth=720,
+            initialHeight=680,
+            uiScript=restore_action_book_panel_command(),
+        )
+    else:
+        cmds.workspaceControl(ACTION_BOOK_WORKSPACE_CONTROL, edit=True, visible=True)
+    return restore_action_book_panel()
+
+
 def restore_quick_create_panel(
     *,
     user_preset_dir: str | Path | None = None,
@@ -356,6 +392,14 @@ def restore_quick_create_panel(
     return quick_create_ui.show_quick_create_panel(
         parent=_workspace_control_parent(QUICK_CREATE_WORKSPACE_CONTROL),
         user_preset_dir=preset_dir,
+    )
+
+
+def restore_action_book_panel() -> Any:
+    """Restore the Spell Book Qt contents inside Maya's workspace control."""
+
+    return action_book_ui.show_action_book_panel(
+        parent=_workspace_control_parent(ACTION_BOOK_WORKSPACE_CONTROL),
     )
 
 
@@ -389,10 +433,22 @@ def show_quick_create_panel_command() -> str:
     return "import actionrail; actionrail.show_quick_create_panel()"
 
 
+def show_action_book_panel_command() -> str:
+    """Return the Python command string for the Maya Spell Book menu item."""
+
+    return "import actionrail; actionrail.show_action_book_panel()"
+
+
 def restore_quick_create_panel_command() -> str:
     """Return the Python command string used by Maya workspace-control restore."""
 
     return "import actionrail; actionrail.restore_quick_create_panel()"
+
+
+def restore_action_book_panel_command() -> str:
+    """Return the Python command string used by Maya workspace-control restore."""
+
+    return "import actionrail; actionrail.restore_action_book_panel()"
 
 
 def _toggle_label(preset_id: str) -> str:
