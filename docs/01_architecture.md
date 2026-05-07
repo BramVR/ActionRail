@@ -35,7 +35,10 @@ product model is:
 - **Bindings**: slot hotkeys backed by Maya runtime commands. Publishing those
   runtime commands is the implementation mechanism; the user-facing workflow is
   Bind Mode: hover/click a slot, press a shortcut, resolve conflicts, and see
-  the key label on the slot.
+  the key label on the slot. The current public bridge exposes
+  `SlotBindingTarget` records through `actionrail.slot_binding_targets()` so a
+  saved bar can list the exact slot ids, current key labels, runtime commands,
+  and Maya nameCommands before full Bind Mode exists.
 
 This vocabulary keeps the current rail implementation useful while leaving the
 schema open for WoW-like non-bar frames and later Maya-specific HUD widgets.
@@ -192,7 +195,12 @@ MVP action ids:
 
 Use `maya.cmds`. No PyMEL by default.
 
-ActionRail actions and action-bearing preset slots can be published as Maya runtime commands through `actionrail.hotkeys` so users can bind them through Maya's Hotkey Editor or through future ActionRail Bind Mode.
+ActionRail actions and action-bearing preset slots can be published as Maya
+runtime commands through `actionrail.hotkeys` so users can bind them through
+Maya's Hotkey Editor or through future ActionRail Bind Mode. For artist-facing
+tooling, prefer `actionrail.slot_binding_targets()` over showing raw command
+names first; it returns the slot label, action id, key label, runtime command,
+and nameCommand as one workflow object.
 
 The Action Book should not try to expose every Maya command at once. Start with
 curated provider-backed groups that behave like a WoW spellbook:

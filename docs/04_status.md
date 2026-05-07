@@ -47,6 +47,9 @@ Working surface:
 - Built-in presets: `transform_stack`, `horizontal_tools`, and `maya_tools`.
 - Qt overlay lifecycle, model-panel anchoring, predicate refresh, reusable Maya
   actions, and runtime-command hotkey publishing.
+- Public slot binding-target metadata through `actionrail.slot_binding_targets()`,
+  including slot ids, labels, key labels, runtime commands, and Maya
+  nameCommands for saved bars.
 - Action Book backend metadata for registered Maya actions, currently consumed
   by Quick Create picker choices, including the Maya-smoke verified
   `maya.display.toggle_grid` viewport action.
@@ -203,6 +206,9 @@ $env:PYTHONPATH = "scripts"
 - Quick Create now offers two broader starter templates: Blank Bar for empty
   action sockets and Viewport Display Strip seeded with the Toggle Grid Action
   Book entry.
+- Public hotkey workflow metadata now exposes saved-bar binding targets through
+  `actionrail.slot_binding_targets()`, so current Maya Hotkey Editor use and
+  future Bind Mode can work from visible slots instead of raw command naming.
 - Quick Create Edit Layout now connects the builder to Edit Mode by previewing
   the current draft and selecting it in the layout-map overlay.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
@@ -361,6 +367,11 @@ $env:PYTHONPATH = "scripts"
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_smoke.py -Timeout 240`
   -> passed; verified `maya.display.toggle_grid` metadata (`Viewport`,
   `maya.grid`) and real Maya grid state transitions from on to off and back on.
+- Latest hotkey binding-target validation:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_hotkey_bridge_smoke.py -Timeout 240`
+  -> passed; verified four published `transform_stack` binding targets and the
+  Set Key slot's key label, runtime command, nameCommand, slot id, and target id
+  through the public `actionrail.slot_binding_targets()` API.
 
 ## Decisions
 

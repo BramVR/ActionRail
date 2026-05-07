@@ -171,6 +171,10 @@ Goal: make the declarative MVP compatible with later Edit Mode, Bind Mode, flyou
 Goal: make ActionRail actions bindable through Maya-native hotkeys.
 
 Current state: runtime command publishing, paired nameCommands, conflict-aware hotkey assignment, no-overlay action/slot execution, visible key-label sync after ActionRail slot hotkey assignment, safe cleanup for renamed/removed runtime commands, initial predicate-driven slot state, manual live predicate refresh, and timer-driven automatic predicate refresh are started.
+Slot binding-target metadata is now exposed through
+`actionrail.slot_binding_targets()` so current Maya Hotkey Editor workflows and
+future Bind Mode can work from visible slot ids/key labels instead of raw
+runtime-command naming.
 
 ### Tasks
 
@@ -411,7 +415,9 @@ Edit Mode, bind slots in Bind Mode, then save.
   First pass is done for slot runtime-command publishing and preset shelf-toggle
   publishing from Quick Create Save + Publish; custom user preset store paths
   are preserved in published shelf toggles, and stale slot-command cleanup is
-  reported. Explicit hotkey assignment remains Bind Mode territory.
+  reported. Slot binding-target metadata is exposed for saved bars as the
+  Phase 2 bridge to Maya's Hotkey Editor and future Bind Mode. Explicit
+  hotkey assignment remains Bind Mode territory.
 - Keep Edit Mode layout-only. Slot payload changes belong to Normal Mode rail
   lock/unlock helpers, not the Edit Mode layout map. Context-menu
   assignment/clear and Shift-drag move/swap/clear-out are implemented for

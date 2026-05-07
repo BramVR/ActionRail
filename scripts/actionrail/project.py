@@ -212,7 +212,8 @@ def about() -> dict[str, object]:
                 "architecture reframed around WoW-style frames, Action Book, "
                 "Macro Book, and Bind Mode; Action Book Toggle Grid viewport "
                 "action Maya-smoke verified; Quick Create five-template starter "
-                "set Maya-smoke verified"
+                "set Maya-smoke verified; public slot binding-target metadata "
+                "Maya-smoke verified"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

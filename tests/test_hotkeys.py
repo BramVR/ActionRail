@@ -6,11 +6,13 @@ from types import ModuleType
 
 import pytest
 
+import actionrail
 import actionrail.hotkeys as hotkeys
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
 from actionrail.hotkeys import (
     HotkeyConflictError,
     PublishedCommand,
+    SlotBindingTarget,
     assign_hotkey,
     assign_published_hotkey,
     assign_slot_hotkey,
@@ -25,6 +27,7 @@ from actionrail.hotkeys import (
     publish_slot,
     query_hotkey_binding,
     runtime_command_name,
+    slot_binding_targets,
     slot_target_id,
     sync_default_actions,
     sync_preset_slots,
@@ -244,6 +247,122 @@ def test_publish_preset_slots_skips_spacers() -> None:
         "transform_stack.set_key",
     ]
     assert "gap" not in " ".join(cmds.runtime_commands)
+
+
+def test_slot_binding_targets_describe_action_bearing_slots() -> None:
+    targets = slot_binding_targets("transform_stack")
+
+    assert targets == (
+        SlotBindingTarget(
+            preset_id="transform_stack",
+            slot_id="move",
+            target_id="transform_stack.move",
+            label="M",
+            action="maya.tool.move",
+            key_label="",
+            runtime_command="ActionRail_slot_transform_stack_move",
+            name_command="ActionRail_slot_transform_stack_move_NameCommand",
+        ),
+        SlotBindingTarget(
+            preset_id="transform_stack",
+            slot_id="rotate",
+            target_id="transform_stack.rotate",
+            label="R",
+            action="maya.tool.rotate",
+            key_label="",
+            runtime_command="ActionRail_slot_transform_stack_rotate",
+            name_command="ActionRail_slot_transform_stack_rotate_NameCommand",
+        ),
+        SlotBindingTarget(
+            preset_id="transform_stack",
+            slot_id="scale",
+            target_id="transform_stack.scale",
+            label="S",
+            action="maya.tool.scale",
+            key_label="",
+            runtime_command="ActionRail_slot_transform_stack_scale",
+            name_command="ActionRail_slot_transform_stack_scale_NameCommand",
+        ),
+        SlotBindingTarget(
+            preset_id="transform_stack",
+            slot_id="set_key",
+            target_id="transform_stack.set_key",
+            label="K",
+            action="maya.anim.set_key",
+            key_label="S",
+            runtime_command="ActionRail_slot_transform_stack_set_key",
+            name_command="ActionRail_slot_transform_stack_set_key_NameCommand",
+        ),
+    )
+
+
+def test_slot_binding_targets_can_include_empty_slots(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="blank_tools",
+            slots=(
+                DraftSlot(id="move", label="M", action="maya.tool.move"),
+                DraftSlot(id="empty", label="2"),
+            ),
+        ),
+        preset_dir=tmp_path,
+    )
+
+    targets = slot_binding_targets(
+        "blank_tools",
+        user_preset_dir=tmp_path,
+        include_empty=True,
+    )
+
+    assert [target.slot_id for target in targets] == ["move", "empty"]
+    assert targets[1].action == ""
+    assert targets[1].runtime_command == "ActionRail_slot_blank_tools_empty"
+    assert targets[1].user_preset_dir == str(tmp_path)
+
+
+def test_slot_binding_targets_can_publish_exact_maya_commands(tmp_path) -> None:
+    save_user_preset(
+        DraftRail(
+            id="artist_tools",
+            slots=(DraftSlot(id="move", label="M", action="maya.tool.move"),),
+        ),
+        preset_dir=tmp_path,
+    )
+    cmds = FakeCmds()
+
+    targets = slot_binding_targets(
+        "artist_tools",
+        user_preset_dir=tmp_path,
+        publish=True,
+        cmds_module=cmds,
+    )
+
+    assert targets == (
+        SlotBindingTarget(
+            preset_id="artist_tools",
+            slot_id="move",
+            target_id="artist_tools.move",
+            label="M",
+            action="maya.tool.move",
+            key_label="",
+            runtime_command="ActionRail_slot_artist_tools_move",
+            name_command="ActionRail_slot_artist_tools_move_NameCommand",
+            published=True,
+            user_preset_dir=str(tmp_path),
+        ),
+    )
+    assert cmds.runtime_commands["ActionRail_slot_artist_tools_move"]["command"] == (
+        "import actionrail; actionrail.run_slot("
+        f"'artist_tools', 'artist_tools.move', user_preset_dir={str(tmp_path)!r})"
+    )
+
+
+def test_public_api_exposes_slot_binding_helpers() -> None:
+    assert actionrail.SlotBindingTarget is SlotBindingTarget
+    assert actionrail.slot_binding_targets("transform_stack")[0].target_id == (
+        "transform_stack.move"
+    )
+    assert actionrail.format_hotkey("K", ctrl=True) == "Ctrl+K"
 
 
 def test_publish_preset_slots_resolves_saved_user_preset(tmp_path) -> None:

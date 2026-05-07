@@ -34,6 +34,7 @@ __all__ = [
     "HotkeyBinding",
     "HotkeyConflictError",
     "PublishedCommand",
+    "SlotBindingTarget",
     "TargetKind",
     "assign_hotkey",
     "assign_published_hotkey",
@@ -50,6 +51,7 @@ __all__ = [
     "query_hotkey_binding",
     "runtime_command_name",
     "slot_target_id",
+    "slot_binding_targets",
     "sync_default_actions",
     "sync_preset_slots",
     "sync_visible_key_label",
@@ -101,6 +103,22 @@ class CommandSyncResult:
 
     published: tuple[PublishedCommand, ...]
     unpublished: tuple[PublishedCommand, ...]
+
+
+@dataclass(frozen=True)
+class SlotBindingTarget:
+    """User-facing binding metadata for one action-bearing preset slot."""
+
+    preset_id: str
+    slot_id: str
+    target_id: str
+    label: str
+    action: str
+    key_label: str
+    runtime_command: str
+    name_command: str
+    published: bool = False
+    user_preset_dir: str = ""
 
 
 class HotkeyConflictError(RuntimeError):
@@ -225,6 +243,57 @@ def sync_preset_slots(
     for command in stale:
         unpublish(command, cmds_module=cmds_module)
     return CommandSyncResult(published=published, unpublished=stale)
+
+
+def slot_binding_targets(
+    preset_id: str,
+    *,
+    spec: StackSpec | None = None,
+    user_preset_dir: str | Path | None = None,
+    include_empty: bool = False,
+    publish: bool = False,
+    cmds_module: Any | None = None,
+) -> tuple[SlotBindingTarget, ...]:
+    """Return bindable slot metadata for a preset.
+
+    This is the Phase 2 bridge between visible action slots and Maya hotkeys:
+    callers can inspect targets without publishing, or publish and receive the
+    exact Maya command names that should appear in the Hotkey Editor.
+    """
+
+    stack_spec = spec or resolve_preset(preset_id, user_preset_dir=user_preset_dir)
+    effective_preset_id = stack_spec.id or preset_id
+    targets: list[SlotBindingTarget] = []
+    for item in stack_spec.items:
+        if not item.action and not include_empty:
+            continue
+        target_id = slot_target_id(effective_preset_id, item.id)
+        runtime_name = runtime_command_name("slot", target_id)
+        published_command: PublishedCommand | None = None
+        if publish and item.action:
+            published_command = publish_slot(
+                effective_preset_id,
+                item.id,
+                label=item.label,
+                user_preset_dir=user_preset_dir,
+                cmds_module=cmds_module,
+            )
+            runtime_name = published_command.runtime_command
+        targets.append(
+            SlotBindingTarget(
+                preset_id=effective_preset_id,
+                slot_id=_slot_suffix(effective_preset_id, item.id),
+                target_id=target_id,
+                label=item.label,
+                action=item.action,
+                key_label=item.key_label,
+                runtime_command=runtime_name,
+                name_command=name_command_name(runtime_name),
+                published=published_command is not None,
+                user_preset_dir=_user_preset_dir_string(user_preset_dir),
+            )
+        )
+    return tuple(targets)
 
 
 def publish_slot(

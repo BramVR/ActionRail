@@ -47,6 +47,10 @@ Snapshot:
   safe-mode diagnostics, menu/shelf toggles, saved user preset id resolution,
   the diagnostics Qt window, and the SVG import helper with generated PNG
   fallbacks.
+- Saved action-bearing slots now expose public binding-target metadata through
+  `actionrail.slot_binding_targets()`, including slot ids, key labels, runtime
+  commands, and Maya nameCommands for current Hotkey Editor use and future
+  Bind Mode.
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.

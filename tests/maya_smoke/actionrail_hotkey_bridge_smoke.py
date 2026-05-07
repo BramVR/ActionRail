@@ -28,8 +28,12 @@ cmds.currentTime(1)
 action_command = publish_action("maya.tool.rotate", label="Rotate")
 action_command_after_republish = publish_action("maya.tool.rotate", label="Rotate")
 slot_commands = publish_preset_slots("transform_stack")
+binding_targets = actionrail.slot_binding_targets("transform_stack", publish=True)
 set_key_command = next(
     command for command in slot_commands if command.target_id.endswith(".set_key")
+)
+set_key_binding_target = next(
+    target for target in binding_targets if target.target_id.endswith(".set_key")
 )
 unqualified_set_key_command = publish_slot("transform_stack", "set_key", label="Set Key")
 stale_slot_command = publish_slot("transform_stack", "removed_slot", label="Removed")
@@ -50,6 +54,15 @@ result = {
     "action_republish_same_name": action_command.runtime_command
     == action_command_after_republish.runtime_command,
     "action_runtime_exists": cmds.runTimeCommand(action_command.runtime_command, exists=True),
+    "binding_target_count": len(binding_targets),
+    "binding_target_published": all(target.published for target in binding_targets),
+    "binding_target_set_key": {
+        "key_label": set_key_binding_target.key_label,
+        "name_command": set_key_binding_target.name_command,
+        "runtime_command": set_key_binding_target.runtime_command,
+        "slot_id": set_key_binding_target.slot_id,
+        "target_id": set_key_binding_target.target_id,
+    },
     "context_after_runtime_command": context_after_runtime_command,
     "keyframe_count": keyframe_count,
     "slot_count": len(slot_commands),
