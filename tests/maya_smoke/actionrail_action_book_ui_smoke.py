@@ -14,7 +14,7 @@ output_path = Path(
     __args__.get(
         "output_path",
         "C:/PROJECTS/GG/ScreenUI/.gg-maya-sessiond/screenshots/"
-        "actionrail_spell_book_panel.png",
+        "actionrail_action_book_panel.png",
     )
 )
 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,7 +52,7 @@ cmds.refresh(force=True)
 app.processEvents()
 
 if panel is None or panel.objectName() != PANEL_OBJECT_NAME:
-    raise AssertionError(f"Spell Book returned the wrong panel: {panel}")
+    raise AssertionError(f"Action Book returned the wrong panel: {panel}")
 
 visible_panel = next(
     (
@@ -63,12 +63,12 @@ visible_panel = next(
     None,
 )
 if visible_panel is None:
-    raise AssertionError("Spell Book panel did not become visible.")
+    raise AssertionError("Action Book panel did not become visible.")
 
 search = visible_panel.findChild(QtWidgets.QLineEdit, SEARCH_OBJECT_NAME)
 status_label = visible_panel.findChild(QtWidgets.QLabel, STATUS_OBJECT_NAME)
 if search is None or status_label is None:
-    raise AssertionError("Spell Book panel is missing search or status widgets.")
+    raise AssertionError("Action Book panel is missing search or status widgets.")
 
 
 def entry_buttons() -> list[QtWidgets.QToolButton]:
@@ -83,14 +83,14 @@ def entry_button(action_id: str) -> QtWidgets.QToolButton:
     for button in entry_buttons():
         if button.property("actionRailActionBookActionId") == action_id:
             return button
-    raise AssertionError(f"Spell Book entry button was not visible: {action_id}")
+    raise AssertionError(f"Action Book entry button was not visible: {action_id}")
 
 
 initial_entries = action_book_entries()
 initial_buttons = entry_buttons()
 if len(initial_entries) < 13 or len(initial_buttons) != len(initial_entries):
     raise AssertionError(
-        "Spell Book did not render the current Action Book catalog: "
+        "Action Book did not render the current catalog: "
         f"entries={len(initial_entries)} buttons={len(initial_buttons)}"
     )
 
@@ -105,7 +105,7 @@ if scale_button.icon().isNull():
 pixmap = visible_panel.grab()
 screenshot_saved = pixmap.save(str(output_path), "PNG")
 if not screenshot_saved or pixmap.width() <= 0 or pixmap.height() <= 0:
-    raise AssertionError(f"Failed to save Spell Book screenshot: {output_path}")
+    raise AssertionError(f"Failed to save Action Book screenshot: {output_path}")
 
 search.setText("scale")
 app.processEvents()
@@ -119,13 +119,13 @@ if "maya.tool.scale" not in search_action_ids or any(
     "scale" not in button.text().lower() and "scale" not in button.toolTip().lower()
     for button in search_buttons
 ):
-    raise AssertionError(f"Spell Book search did not filter to scale matches: {search_action_ids}")
+    raise AssertionError(f"Action Book search did not filter to scale matches: {search_action_ids}")
 
-search_path = output_path.with_name("actionrail_spell_book_search_scale.png")
+search_path = output_path.with_name("actionrail_action_book_search_scale.png")
 search_pixmap = visible_panel.grab()
 search_screenshot_saved = search_pixmap.save(str(search_path), "PNG")
 if not search_screenshot_saved or search_pixmap.width() <= 0 or search_pixmap.height() <= 0:
-    raise AssertionError(f"Failed to save Spell Book search screenshot: {search_path}")
+    raise AssertionError(f"Failed to save Action Book search screenshot: {search_path}")
 
 search.clear()
 app.processEvents()
@@ -143,7 +143,7 @@ app.processEvents()
 cmds.refresh(force=True)
 app.processEvents()
 if host is None or not host.slot_edit_unlocked():
-    raise AssertionError("Quick Create blank bar was not unlocked for Spell Book drop.")
+    raise AssertionError("Quick Create blank bar was not unlocked for Action Book drop.")
 
 slot_button = next(
     (
@@ -185,11 +185,11 @@ app.processEvents()
 
 updated_host = actionrail_runtime._OVERLAYS.get("quick-blank-bar")
 if updated_host is None:
-    raise AssertionError("Spell Book drop removed the Quick Create bar.")
+    raise AssertionError("Action Book drop removed the Quick Create bar.")
 assigned_item = updated_host.spec.items[0]
 if assigned_item.action != "maya.tool.scale" or assigned_item.icon != "maya.scale":
     raise AssertionError(
-        "Spell Book drop did not assign the scale payload with the catalog icon: "
+        "Action Book drop did not assign the scale payload with the catalog icon: "
         f"action={assigned_item.action} icon={assigned_item.icon}"
     )
 updated_slot = next(
@@ -203,11 +203,11 @@ updated_slot = next(
 if updated_slot is None or updated_slot.property("actionRailIcon") != "maya.scale":
     raise AssertionError("Assigned bar slot did not render the same scale icon.")
 
-drop_path = output_path.with_name("actionrail_spell_book_drop_bar.png")
+drop_path = output_path.with_name("actionrail_action_book_drop_bar.png")
 drop_pixmap = updated_host.widget.grab()
 drop_screenshot_saved = drop_pixmap.save(str(drop_path), "PNG")
 if not drop_screenshot_saved or drop_pixmap.width() <= 0 or drop_pixmap.height() <= 0:
-    raise AssertionError(f"Failed to save Spell Book drop screenshot: {drop_path}")
+    raise AssertionError(f"Failed to save Action Book drop screenshot: {drop_path}")
 
 result = {
     "action_count": len(initial_entries),

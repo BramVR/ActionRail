@@ -1,4 +1,4 @@
-"""Searchable Spell Book UI for ActionRail placeable actions."""
+"""Searchable Action Book UI for ActionRail placeable actions."""
 
 from __future__ import annotations
 
@@ -20,11 +20,11 @@ from .theme import DEFAULT_THEME
 
 ActionBookGroup = tuple[str, tuple[ActionBookEntry, ...]]
 
-PANEL_OBJECT_NAME = "ActionRailSpellBookPanel"
-SEARCH_OBJECT_NAME = "ActionRailSpellBookSearch"
-STATUS_OBJECT_NAME = "ActionRailSpellBookStatus"
-FILTER_TABS_OBJECT_NAME = "ActionRailSpellBookFilterTabs"
-ENTRY_BUTTON_OBJECT_NAME_PREFIX = "ActionRailSpellBookEntry"
+PANEL_OBJECT_NAME = "ActionRailActionBookPanel"
+SEARCH_OBJECT_NAME = "ActionRailActionBookSearch"
+STATUS_OBJECT_NAME = "ActionRailActionBookStatus"
+FILTER_TABS_OBJECT_NAME = "ActionRailActionBookFilterTabs"
+ENTRY_BUTTON_OBJECT_NAME_PREFIX = "ActionRailActionBookEntry"
 
 _PANEL: Any | None = None
 
@@ -44,14 +44,14 @@ def show_action_book_panel(  # pragma: no cover - Maya-hosted Qt panel.
     parent: Any | None = None,
     registry: ActionRegistry | None = None,
 ) -> Any:
-    """Show the searchable Spell Book panel and return it."""
+    """Show the searchable Action Book panel and return it."""
 
     global _PANEL
 
     qt = qt_binding or load()
     app = qt.QtWidgets.QApplication.instance()
     if app is None:
-        msg = "ActionRail Spell Book requires a QApplication inside Maya."
+        msg = "ActionRail Action Book requires a QApplication inside Maya."
         raise RuntimeError(msg)
 
     if _PANEL is not None:
@@ -60,7 +60,7 @@ def show_action_book_panel(  # pragma: no cover - Maya-hosted Qt panel.
     panel_parent = parent if parent is not None else maya_main_window(qt)
     panel = qt.QtWidgets.QWidget(panel_parent)
     panel.setObjectName(PANEL_OBJECT_NAME)
-    panel.setWindowTitle("ActionRail Spell Book")
+    panel.setWindowTitle("ActionRail Action Book")
     panel.setMinimumSize(620, 520)
     panel.resize(680, 620)
     panel.setAttribute(qt.QtCore.Qt.WA_DeleteOnClose, True)
@@ -111,8 +111,8 @@ def _build_panel(panel: Any, qt: QtBinding, *, registry: ActionRegistry) -> None
     header_layout = qt.QtWidgets.QHBoxLayout(header)
     header_layout.setContentsMargins(0, 0, 0, 0)
     header_layout.setSpacing(10)
-    title = qt.QtWidgets.QLabel("Spell Book")
-    title.setObjectName("ActionRailSpellBookTitle")
+    title = qt.QtWidgets.QLabel("Action Book")
+    title.setObjectName("ActionRailActionBookTitle")
     header_layout.addWidget(title)
     header_layout.addStretch(1)
 
@@ -133,13 +133,13 @@ def _build_panel(panel: Any, qt: QtBinding, *, registry: ActionRegistry) -> None
     root.addWidget(filter_tabs)
 
     scroll = qt.QtWidgets.QScrollArea()
-    scroll.setObjectName("ActionRailSpellBookScroll")
+    scroll.setObjectName("ActionRailActionBookScroll")
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(qt.QtWidgets.QFrame.NoFrame)
     root.addWidget(scroll, 1)
 
     content = qt.QtWidgets.QWidget()
-    content.setObjectName("ActionRailSpellBookPages")
+    content.setObjectName("ActionRailActionBookPages")
     content_layout = qt.QtWidgets.QHBoxLayout(content)
     content_layout.setContentsMargins(8, 8, 8, 8)
     content_layout.setSpacing(8)
@@ -156,7 +156,7 @@ def _build_panel(panel: Any, qt: QtBinding, *, registry: ActionRegistry) -> None
             _current_filter(filter_tabs),
         )
         _populate_entries(qt, content_layout, entries, registry)
-        status.setText(f"{len(entries)} spell(s)" + (f" for '{query}'" if query else ""))
+        status.setText(f"{len(entries)} action(s)" + (f" for '{query}'" if query else ""))
         panel._actionrail_entry_count = len(entries)
         panel._actionrail_entry_buttons = _entry_buttons(panel, qt)
         return entries
@@ -197,7 +197,7 @@ def _populate_entries(
     _clear_layout(content_layout)
     if not entries:
         empty = qt.QtWidgets.QLabel("No matching actions")
-        empty.setObjectName("ActionRailSpellBookEmpty")
+        empty.setObjectName("ActionRailActionBookEmpty")
         empty.setAlignment(qt.QtCore.Qt.AlignCenter)
         content_layout.addWidget(empty, 1)
         return
@@ -205,13 +205,13 @@ def _populate_entries(
     pages = _balanced_pages(_grouped_entries(entries))
     for page_index, page_groups in enumerate(pages):
         page = qt.QtWidgets.QWidget()
-        page.setObjectName("ActionRailSpellBookPage")
+        page.setObjectName("ActionRailActionBookPage")
         page_layout = qt.QtWidgets.QVBoxLayout(page)
         page_layout.setContentsMargins(12, 10, 12, 12)
         page_layout.setSpacing(8)
         for category, category_entries in page_groups:
             header = qt.QtWidgets.QLabel(category)
-            header.setObjectName("ActionRailSpellBookCategory")
+            header.setObjectName("ActionRailActionBookCategory")
             page_layout.addWidget(header)
             grid_holder = qt.QtWidgets.QWidget()
             grid = qt.QtWidgets.QGridLayout(grid_holder)
@@ -226,7 +226,7 @@ def _populate_entries(
         content_layout.addWidget(page, 1)
         if page_index == 0:
             divider = qt.QtWidgets.QFrame()
-            divider.setObjectName("ActionRailSpellBookDivider")
+            divider.setObjectName("ActionRailActionBookDivider")
             divider.setFrameShape(qt.QtWidgets.QFrame.VLine)
             content_layout.addWidget(divider)
 
@@ -274,7 +274,7 @@ def _entry_button(qt: QtBinding, entry: ActionBookEntry, registry: ActionRegistr
 
 
 def _spell_button_class(qt: QtBinding) -> type:
-    class SpellButton(qt.QtWidgets.QToolButton):  # type: ignore[misc, valid-type]
+    class ActionBookButton(qt.QtWidgets.QToolButton):  # type: ignore[misc, valid-type]
         def __init__(self, entry: ActionBookEntry, registry: ActionRegistry) -> None:
             super().__init__()
             self._actionrail_entry = entry
@@ -297,7 +297,7 @@ def _spell_button_class(qt: QtBinding) -> type:
             _start_entry_drag(qt, self, self._actionrail_entry)
             return None
 
-    return SpellButton
+    return ActionBookButton
 
 
 def _left_button_pressed(qt: QtBinding, event: Any) -> bool:
@@ -401,7 +401,7 @@ QWidget#{PANEL_OBJECT_NAME} {{
     background: {theme.cluster_background};
     color: {theme.button_color};
 }}
-QLabel#ActionRailSpellBookTitle {{
+QLabel#ActionRailActionBookTitle {{
     color: {theme.button_color};
     font-size: 18px;
     font-weight: 700;
@@ -438,29 +438,29 @@ QTabBar#{FILTER_TABS_OBJECT_NAME}::tab:selected {{
     color: {theme.button_color};
     border-color: {theme.button_hover_border};
 }}
-QScrollArea#ActionRailSpellBookScroll {{
+QScrollArea#ActionRailActionBookScroll {{
     background: rgba(35, 35, 38, 220);
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
     border-radius: {theme.cluster_border_radius}px;
 }}
-QWidget#ActionRailSpellBookPages {{
+QWidget#ActionRailActionBookPages {{
     background: rgba(35, 35, 38, 220);
 }}
-QWidget#ActionRailSpellBookPage {{
+QWidget#ActionRailActionBookPage {{
     background: rgba(55, 55, 59, 180);
     border: {theme.cluster_border_width}px solid rgba(95, 95, 105, 190);
     border-radius: {theme.cluster_border_radius}px;
 }}
-QFrame#ActionRailSpellBookDivider {{
+QFrame#ActionRailActionBookDivider {{
     color: rgba(120, 120, 130, 150);
 }}
-QLabel#ActionRailSpellBookCategory {{
+QLabel#ActionRailActionBookCategory {{
     color: {theme.button_color};
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0px;
 }}
-QLabel#ActionRailSpellBookEmpty {{
+QLabel#ActionRailActionBookEmpty {{
     color: #b9b9c4;
     font-size: 12px;
     letter-spacing: 0px;

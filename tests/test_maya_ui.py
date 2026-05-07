@@ -570,7 +570,7 @@ def test_show_action_book_panel_creates_workspace_control(monkeypatch) -> None:
 
     assert calls == ["restore"]
     assert cmds.workspace_controls[maya_ui.ACTION_BOOK_WORKSPACE_CONTROL] == {
-        "label": "ActionRail Spell Book",
+        "label": "ActionRail Action Book",
         "retain": False,
         "floating": True,
         "initialWidth": 720,

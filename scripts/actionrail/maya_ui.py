@@ -13,7 +13,7 @@ MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
 MENU_EDIT_MODE_ITEM_NAME = "ActionRailEditModeMenuItem"
 MENU_QUICK_CREATE_ITEM_NAME = "ActionRailQuickCreateMenuItem"
-MENU_ACTION_BOOK_ITEM_NAME = "ActionRailSpellBookMenuItem"
+MENU_ACTION_BOOK_ITEM_NAME = "ActionRailActionBookMenuItem"
 MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
 MENU_DIAGNOSTICS_ITEM_NAME = "ActionRailShowLastDiagnosticReportMenuItem"
 MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME = "ActionRailDiagnoseIconImportMenuItem"
@@ -21,7 +21,7 @@ SHELF_NAME = "ActionRail"
 SHELF_BUTTON_NAME = "ActionRailToggleTransformStackShelfButton"
 SHELF_BUTTON_PREFIX = "ActionRailTogglePresetShelfButton"
 QUICK_CREATE_WORKSPACE_CONTROL = "ActionRailQuickCreateWorkspaceControl"
-ACTION_BOOK_WORKSPACE_CONTROL = "ActionRailSpellBookWorkspaceControl"
+ACTION_BOOK_WORKSPACE_CONTROL = "ActionRailActionBookWorkspaceControl"
 _QUICK_CREATE_USER_PRESET_DIR: str | Path | None = None
 
 ToggleResult = Literal["shown", "hidden"]
@@ -104,8 +104,8 @@ def install_menu_toggle(
     )
     cmds.menuItem(
         MENU_ACTION_BOOK_ITEM_NAME,
-        label="Spell Book...",
-        annotation="Open the searchable ActionRail Spell Book.",
+        label="Action Book...",
+        annotation="Open the searchable ActionRail Action Book.",
         command=show_action_book_panel_command(),
         parent=MENU_NAME,
         sourceType="python",
@@ -362,13 +362,13 @@ def show_action_book_panel(
     *,
     cmds_module: Any | None = None,
 ) -> Any:
-    """Open the dockable Maya workspace-control Spell Book panel."""
+    """Open the dockable Maya workspace-control Action Book panel."""
 
     cmds = _require_cmds(cmds_module)
     if not cmds.workspaceControl(ACTION_BOOK_WORKSPACE_CONTROL, exists=True):
         cmds.workspaceControl(
             ACTION_BOOK_WORKSPACE_CONTROL,
-            label="ActionRail Spell Book",
+            label="ActionRail Action Book",
             retain=False,
             floating=True,
             initialWidth=720,
@@ -396,7 +396,7 @@ def restore_quick_create_panel(
 
 
 def restore_action_book_panel() -> Any:
-    """Restore the Spell Book Qt contents inside Maya's workspace control."""
+    """Restore the Action Book Qt contents inside Maya's workspace control."""
 
     return action_book_ui.show_action_book_panel(
         parent=_workspace_control_parent(ACTION_BOOK_WORKSPACE_CONTROL),
@@ -434,7 +434,7 @@ def show_quick_create_panel_command() -> str:
 
 
 def show_action_book_panel_command() -> str:
-    """Return the Python command string for the Maya Spell Book menu item."""
+    """Return the Python command string for the Maya Action Book menu item."""
 
     return "import actionrail; actionrail.show_action_book_panel()"
 

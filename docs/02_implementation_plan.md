@@ -246,7 +246,7 @@ Status: complete for the first Maya-facing authoring slice.
   `scripts/actionrail/quick_create.py` and the dockable Qt panel.
 - Provide an action picker from the registered ActionRail action ids. Done for
   the early Quick Create slice; Quick Create has since been narrowed back to
-  bar/slot creation, with action browsing moved to the separate Spell Book UI.
+  bar/slot creation, with action browsing moved to the separate Action Book UI.
 - Let users choose slot labels, key-label text, icons where available, and basic
   layout values. Done for the draft validation panel.
 - Show hotkey-ready slot binding targets without entering Bind Mode. Done
@@ -254,7 +254,7 @@ Status: complete for the first Maya-facing authoring slice.
   slots, key labels, and Maya nameCommands for the current draft.
 - Route action choices through the first Action Book backend metadata instead
   of raw action registry labels. Done through `actionrail.action_book`; the
-  first separate Spell Book UI now consumes the same metadata for placement.
+  first separate Action Book UI now consumes the same metadata for placement.
 
 Done when an artist can create a valid draft rail from Maya UI without editing
 JSON, even before direct viewport editing exists.
@@ -429,14 +429,14 @@ Edit Mode, bind slots in Bind Mode, then save.
   unlocked Normal Mode rails; locking the rail returns populated slot clicks to
   normal action execution. Quick Create now exposes this as an `Edit Slots`
   handoff for the current draft, keeping bar creation, frame placement, and
-  slot editing connected to the first Spell Book placement slice without
+  slot editing connected to the first Action Book placement slice without
   starting Bind Mode.
 - Keep Quick Create minimal. Its current default is a blank action bar, and its
   Slots tab edits only slot id, label, and displayed key text. Do not add
   Action/Icon assignment browsing back into Quick Create; action placement
-  belongs to a separate Spell Book/Action Book surface that can feed unlocked
+  belongs to a separate Action Book surface that can feed unlocked
   slots through the same slot-edit workflow.
-- Add the first separate Spell Book/Action Book placement surface. Done as a
+- Add the first separate Action Book placement surface. Done as a
   dockable Maya panel that searches Action Book entries, displays their action
   bar icons and brief tooltips, lets users click entries to run the Maya action,
   and drags Action Book MIME payloads onto unlocked Normal Mode slots.
@@ -468,7 +468,7 @@ Research hints:
 ## Phase 3: Action Book, Bind Mode, Macro Book, Flyouts, And Command Rings
 
 Goal: complete the WoW-style authoring loop: browse Maya actions like a
-spellbook, place them on action bar slots, bind keys by hovering a slot, create
+WoW-inspired action browser, place them on action bar slots, bind keys by hovering a slot, create
 user macro actions with icons, and then add compact grouped access patterns.
 
 ### Tasks
@@ -543,7 +543,7 @@ previews the current draft, exits Edit Mode, and unlocks the visible bar for
 Normal Mode slot payload editing. Quick Create has been narrowed back to a
 minimal action-bar creator: it opens on a blank bar, supports adding/removing
 slots and layout settings, and no longer exposes action/icon assignment controls
-in the Slots tab. The first separate Spell Book UI now owns action browsing and
+in the Slots tab. The first separate Action Book UI now owns action browsing and
 placement: it opens from the ActionRail Maya menu, searches the Action Book
 catalog, renders icon-backed entries, runs clicked entries, and drops actions
 onto those unlocked Quick Create/Normal Mode slots.
@@ -551,7 +551,7 @@ The Action Book backend has also expanded beyond the original transform/key/grid
 seed set with Maya-smoke verified selection, viewport, and modeling entries:
 Select, Clear Selection, Frame Selection, Toggle Isolate Selected, Center
 Pivot, Freeze Transforms, and Delete History. The smoke writes a catalog JSON
-artifact for backend review, and the dedicated Spell Book UI now renders that
+artifact for backend review, and the dedicated Action Book UI now renders that
 starter set for placement. Stop broadening the catalog one item at a time for
 now; treat this as a useful starter set and move the next effort back to
 workflow-level architecture.
@@ -559,7 +559,7 @@ Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and
 template-to-slot-edit handoffs, and slot editing that can later connect to
-Spell Book and Bind Mode. Keep `docs/06_wow_style_customization.md` in mind,
+Action Book and Bind Mode. Keep `docs/06_wow_style_customization.md` in mind,
 but do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
 layers, marking-menu export, or Viewport 2.0 yet.
 

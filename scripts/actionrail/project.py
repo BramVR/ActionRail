@@ -101,7 +101,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/action_book_ui.py",
-        "owns": "searchable Spell Book panel and drag-source action entries",
+        "owns": "searchable Action Book panel and drag-source action entries",
         "tests": ("tests/maya_smoke/actionrail_action_book_ui_smoke.py",),
     },
     {
@@ -223,7 +223,7 @@ def about() -> dict[str, object]:
                 "slot binding-target metadata "
                 "and Quick Create Bindings tab Maya-smoke verified; Quick Create "
                 "Edit Slots handoff to unlocked Normal Mode slot editing "
-                "Maya-smoke verified; Spell Book UI connects searchable action "
+                "Maya-smoke verified; Action Book UI connects searchable action "
                 "entries to unlocked action-bar slots"
             ),
             "next_slice": (

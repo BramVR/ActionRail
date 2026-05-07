@@ -162,7 +162,7 @@ def action_book_mime_text(action_id: str) -> str:
 
 
 def action_book_action_id_from_mime_text(text: str) -> str:
-    """Return an action id from a Spell Book drag/drop payload."""
+    """Return an action id from an Action Book drag/drop payload."""
 
     action_id = str(text).strip()
     if not action_id:

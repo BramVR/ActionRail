@@ -48,8 +48,8 @@
   not clip in Maya.
 - Refocused Quick Create on action-bar creation: it now opens on a blank
   six-slot action bar, and the Slots tab edits only slot id, label, and key
-  text while preserving loaded action/icon payloads internally for the future
-  separate Spell Book workflow.
+  text while preserving loaded action/icon payloads internally for the separate
+  Action Book workflow.
 - Expanded the Action Book backend beyond transform/key/grid entries with
   Select, Clear Selection, and Frame Selection actions, including Maya smoke
   verification and a saved catalog JSON artifact for review.
@@ -57,7 +57,7 @@
   Toggle Isolate Selected, Center Pivot, Freeze Transforms, and Delete History,
   with Maya smoke verification and the saved catalog artifact updated to 13
   entries.
-- Added the first separate Spell Book UI: a dockable, searchable, two-page
+- Added the first separate Action Book UI: a dockable, searchable, two-page
   Maya panel with category tabs, icon-backed action rows, click-to-run action
   previews, and drag/drop placement onto unlocked action-bar slots.
 

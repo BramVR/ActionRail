@@ -26,7 +26,7 @@ product model is:
 - **Action Book**: searchable catalog of Maya-native tools and commands that
   can be placed onto slots. The current action registry and icon catalog are
   now connected through the first `actionrail.action_book` backend slice; the
-  authoring UI should evolve toward a spellbook style browser for Maya actions
+  authoring UI should evolve toward a WoW-style browser for Maya actions
   such as transform tools, grid/display toggles, selection modes, playback,
   keying, viewport controls, and studio commands.
 - **Macro Book**: user-authored script actions. A macro should have a stable
@@ -203,7 +203,7 @@ names first; it returns the slot label, action id, key label, runtime command,
 and nameCommand as one workflow object.
 
 The Action Book should not try to expose every Maya command at once. Start with
-curated provider-backed groups that behave like a WoW spellbook:
+curated provider-backed groups that behave like a WoW ability browser:
 
 - transform and selection tools
 - grid, snapping, viewport display, and camera controls

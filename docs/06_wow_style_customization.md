@@ -69,7 +69,7 @@ interactions.
 
 ### Action Book
 
-The Action Book is the Maya equivalent of WoW's Spellbook. It is a searchable
+The Action Book uses WoW's ability-book workflow as a reference. It is a searchable
 catalog of placeable actions, not a bar by itself.
 
 Initial provider groups:

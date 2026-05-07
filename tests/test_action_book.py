@@ -16,7 +16,7 @@ from actionrail.action_book import (
 from actionrail.actions import Action, ActionRegistry, create_default_registry
 
 
-def test_default_action_book_entries_have_spellbook_metadata() -> None:
+def test_default_action_book_entries_have_picker_metadata() -> None:
     entries = action_book_entries(create_default_registry())
 
     assert entries == (
