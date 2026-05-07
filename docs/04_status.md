@@ -29,6 +29,14 @@ moved away from rails underneath it. The latest Normal Mode slot-edit fix lets
 Shift-drag transfer or swap payloads between different unlocked rails without
 clearing the source when the target rail is locked.
 
+Architecture direction is now explicitly WoW-style frames. Current rails are
+implemented action bar frames, not the whole product boundary. The planned
+authoring loop is: choose a frame/template, place Maya actions or macros from
+an Action Book/Macro Book onto slots, use Edit Mode for frame layout, use Bind
+Mode for hover/click-to-bind hotkeys, then save. Runtime-command and shelf
+publishing remain implementation plumbing for bindings and optional Maya
+integration rather than the primary artist-facing workflow.
+
 Working surface:
 
 - JSON presets and Python builder API for viewport rails.
@@ -85,19 +93,22 @@ Long-form implementation and verification history belongs in
 
 `docs/02_implementation_plan.md` is the source of truth for phase completion
 and next work. Phase 2 step 2.5 Layout Editing And Direct Manipulation is done;
-Phase 2 step 2.6 collapsible edge tabs and publish polish is in progress.
+Phase 2 step 2.6 collapsible edge tabs and authoring workflow polish is in
+progress.
 Local `.spec/` reports are ignored and not part of the Git-tracked handoff.
 
 Focus the next slice on:
 
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
+- making the template-to-Edit-Mode and Normal Mode slot-edit handoff feel like
+  one workflow that can later connect to Action Book and Bind Mode
 - keeping the Normal Mode unlocked-slot drag/drop workflow stable: Shift-drag
   moves/swaps populated slot payloads within a rail, transfers/swaps between
   unlocked rails, and preserves the source when dropped onto a locked rail
 
-Do not start Bind Mode, flyouts, command rings, profile layers,
-marking-menu export, or Viewport 2.0 in this slice.
+Do not implement Bind Mode, Action Book UI, Macro Book UI, flyouts, command
+rings, profile layers, marking-menu export, or Viewport 2.0 in this slice.
 
 ## Next Agent Start
 
@@ -115,7 +126,9 @@ $env:PYTHONPATH = "scripts"
    verified; the validation UX/publish follow-up is locally verified, and Quick
    Create Maya smoke covers the custom-store Save + Publish shelf command path.
    Edit Mode slot-payload controls have since moved out of Edit Mode and into
-   Normal Mode rail lock/unlock helpers.
+   Normal Mode rail lock/unlock helpers. Treat publishing as optional
+   infrastructure; keep the main UX vocabulary aligned to frames, Action Book,
+   Macro Book, Edit Mode, and Bind Mode.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -167,6 +180,10 @@ $env:PYTHONPATH = "scripts"
 - The May 7 Edit Mode panel polish changes the selected rail button from a
   passive Locked/Unlocked label to a clickable Lock/Unlock action and lets the
   compact panel be dragged aside when it covers a rail.
+- The May 7 architecture docs update reframes ActionRail around WoW-style
+  frames, action bar frames, Action Book, Macro Book, and Bind Mode so future
+  info frames, object frames, and macro workflows fit without making rails the
+  only top-level product primitive.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -305,9 +322,9 @@ $env:PYTHONPATH = "scripts"
   for scene/native drawing such as labels, guides, or object-bound graphics.
 - Quick Create and the first Edit Mode shell are implemented; continue them
   through focused Phase 2 authoring slices instead of starting later modes.
-- WoW-style customization remains the long-term authoring model: Edit Mode,
-  action slots, hover-to-bind hotkeys, flyouts, command rings, and
-  preset/profile layers.
+- WoW-style customization remains the long-term authoring model: movable
+  frames, action bar frames, Action Book, Macro Book, Edit Mode, action slots,
+  hover-to-bind hotkeys, flyouts, command rings, and preset/profile layers.
 - Treat `M/T/R/S/K` as a proof preset and regression target; ActionRail's
   product goal is broader user-authored viewport UI.
 - Build the hotkey bridge through Maya runtime commands so bindings remain

@@ -10,9 +10,18 @@ read_when:
 
 ## Goal
 
-ActionRail is a Maya framework for polished, user-created viewport UI: compact rails, action bars, buttons, hotkey badges, and later authoring tools like Quick Create.
+ActionRail is a Maya framework for polished, user-created viewport UI. Its
+long-term model follows WoW-style UI customization: movable frames, action bar
+frames, slots, hotkey badges, an Action Book for Maya tools/commands, and a
+Macro Book for user script actions.
 
-The `M/T/R/S/K` transform stack is the first proof preset, not the product boundary. ActionRail should be able to recreate it, but the broader goal is to let users compose their own rails, slots, hotkey badges, flyouts, and command layouts without changing framework code. Think of buttons as user-authored action slots/macros: each slot defines what it does and which state predicates it uses; the theme defines how active, disabled, locked, hovered, or warning states look.
+The `M/T/R/S/K` transform stack is the first proof preset and regression target,
+not the product boundary. ActionRail should be able to recreate it, but the
+broader goal is to let users compose their own frames, action bars, slots,
+hotkey badges, flyouts, command layouts, and macros without changing framework
+code. Think of buttons as user-authored action slots/macros: each slot defines
+what it does and which state predicates it uses; the theme defines how active,
+disabled, locked, hovered, or warning states look.
 
 The proof-preset visual references live in local `research/` checkouts when present.
 That folder is ignored by Git; committed documentation images live in `docs/assets/`.
@@ -52,8 +61,14 @@ Snapshot:
   should use the provider catalog instead of import/write/fallback code.
 - Icon import diagnostics are now exposed through a Maya menu flow that
   preflights a local SVG and opens the copyable diagnostics window.
+- Architecture direction has been reframed around WoW-style frames: current
+  rails are action bar frames; the next authoring layers should connect Quick
+  Create, Edit Mode, Normal Mode slot editing, an Action Book, Macro Book, and
+  Bind Mode into one workflow. Runtime-command publishing remains
+  infrastructure for bindings and optional Maya shelf integration, not the
+  primary artist-facing concept.
 - Current next implementation slice: Phase 2 step 2.6 collapsible edge tabs and
-  publish polish. The first collapse schema/runtime pass is implemented and
+  authoring workflow polish. The first collapse schema/runtime pass is implemented and
   Maya-smoke verified. A Maya-smoke verified handle/publish polish pass now makes
   collapsed handles larger, positions them flush to viewport edges, adds
   publish-facing diagnostics for missing actions/icons/hotkey label conflicts,
@@ -112,31 +127,37 @@ Build PySide6/Qt overlay first.
 - Viewport 2.0 is later, only for native scene/viewport drawing.
 - Web tools are for authoring/import only, not the core runtime.
 - Core UX is user-authored declarative presets plus reusable Maya actions.
-- Longer-term authoring UX borrows from WoW-style action bar customization: Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and user/project/studio profiles.
+- Longer-term authoring UX borrows from WoW-style customization: movable
+  frames, action bars, Action Book, Macro Book, Edit Mode, action slots,
+  hover-to-bind hotkeys, flyouts, command rings, and user/project/studio
+  profiles.
 
 ## Current Priority
 
 Phase 1 declarative MVP and Phase 2 steps 2.1-2.5 are complete for their first
 useful slices. Phase 2 step 2.5 has direct-manipulation controls plus
 user-preset, built-in user-override, and studio user-override layout-save paths.
-Continue Phase 2 with collapsible edge tabs and publish polish:
+Continue Phase 2 with collapsible edge tabs and unified authoring workflow
+polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
-2. Continue Quick Create round-trip stability and locked built-in/studio
-   read-only polish on top of the validated collapsed-handle, Normal Mode slot
-   payload lock/unlock plus Shift-drag same-rail and cross-rail editing, guide,
-   Edit Mode panel, and Save + Publish paths.
+2. Continue Quick Create round-trip stability, locked built-in/studio
+   read-only polish, and the template-to-Edit-Mode workflow on top of the
+   validated collapsed-handle, Normal Mode slot payload lock/unlock plus
+   Shift-drag same-rail and cross-rail editing, guide, Edit Mode panel, and
+   optional Save + Publish paths.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
-4. Do not start Bind Mode, flyouts, command rings, profile layers,
-   marking-menu export, or Viewport 2.0 until the Phase 2 authoring surface has
-   a stable first pass.
+4. Do not implement Bind Mode, Action Book UI, Macro Book UI, flyouts, command
+   rings, profile layers, marking-menu export, or Viewport 2.0 until the Phase 2
+   authoring surface has a stable first pass.
 
 ## Working Rules
 
 - Keep docs current as work changes.
 - Prefer small implementation slices with visible Maya verification.
 - Keep Quick Create, icon import, and Edit Mode work scoped to the current
-  Phase 2 authoring slice; do not jump ahead to Bind Mode, flyouts, command
-  rings, profile layers, marking-menu export, or Viewport 2.0.
+  Phase 2 authoring slice; do not implement Bind Mode, Action Book UI,
+  Macro Book UI, flyouts, command rings, profile layers, marking-menu export,
+  or Viewport 2.0 yet.
 - If Maya verification is blocked, record the exact blocker in `docs/04_status.md`.

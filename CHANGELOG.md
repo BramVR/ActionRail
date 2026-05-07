@@ -12,6 +12,10 @@
 
 ## 2026-05-07
 
+- Reframed the ActionRail architecture around WoW-style frames: current rails
+  are action bar frames, with future Action Book, Macro Book, Bind Mode,
+  info-frame, object-frame, and macro workflows documented as the product
+  direction.
 - Improved Edit Mode control-panel usability: the selected rail state is now a
   clickable Lock/Unlock action, and the compact panel can be dragged aside when
   it covers a rail in the viewport.

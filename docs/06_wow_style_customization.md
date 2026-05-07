@@ -1,5 +1,5 @@
 ---
-summary: Roadmap for WoW-style ActionRail customization: Edit Mode, action slots, collapsible rails, hover-to-bind hotkeys, flyouts, command rings, and profiles.
+summary: Roadmap for WoW-style ActionRail customization: frames, Action Book, Macro Book, Edit Mode, action slots, hover-to-bind hotkeys, flyouts, command rings, and profiles.
 read_when:
   - Planning ActionRail user authoring workflows.
   - Designing preset schema changes beyond the transform stack.
@@ -10,25 +10,37 @@ read_when:
 
 ## Goal
 
-ActionRail should eventually feel like a user-editable action bar system for Maya:
+ActionRail should eventually feel like a user-editable WoW-style frame and
+action-bar system for Maya:
 
-1. Enter Edit Mode.
-2. Move, scale, lock, and configure viewport rails.
-3. Collapse infrequent rails into side tabs and reveal them with a small arrow/handle.
-4. Add scripts, tools, runtime commands, or presets to slots.
-5. Bind keys by hovering a slot and pressing a shortcut.
-6. Use compact bars for frequent actions and flyouts/rings for larger tool families.
+1. Create or show a viewport frame, usually an action bar frame.
+2. Open the Action Book and place Maya tools, commands, shelf actions, or
+   macros onto slots.
+3. Enter Edit Mode to move, scale, lock, and configure frames.
+4. Collapse infrequent action bar frames into side tabs and reveal them with a
+   small arrow/handle.
+5. Enter Bind Mode, hover or click a slot, and press a shortcut.
+6. Use compact bars for frequent actions and flyouts/rings for larger tool
+   families.
 7. Save layouts as user, project, or studio profiles.
 
 The useful reference is the workflow model from World of Warcraft UI customization, not its fantasy visual style. ActionRail should still look like a polished Maya viewport tool.
 
-The current `M/T/R/S/K` transform stack is only a seed example for this system. It should stay easy to recreate, but the authoring model must support arbitrary user-defined rails, slots, hotkey badges, layouts, and command groups.
+The current `M/T/R/S/K` transform stack is only a seed example and regression
+target. It should stay easy to recreate, but the authoring model must support
+arbitrary user-defined frames, action bars, slots, hotkey badges, layouts,
+action-library entries, macros, and command groups.
 
 ## Research Signals
 
 WoW's Dragonflight Edit Mode made the base HUD movable, configurable, saveable, copyable, shareable, and specialization-aware. The ActionRail equivalent is named layouts that can change by Maya context: modeling, rigging, animation, shot, asset, or project.
 
 Bartender4 and Dominos validate the action-bar model: multiple configurable bars, rows/columns, scale, alpha, fade behavior, visibility rules, paging/state changes, profiles, and easy hotkey binding.
+
+WoW's own UI also validates non-bar frames. Edit Mode covers action bars, unit
+frames, cast bars, buffs/debuffs, minimap, tooltip placement, and extra/encounter
+bars. ActionRail should use **Frame** as the general top-level word and treat
+rails/action bars as one frame type, not the whole product.
 
 OPie validates radial command access: a key or mouse binding can show a ring of actions while held, reducing persistent screen clutter.
 
@@ -38,30 +50,80 @@ WeakAuras validates trigger-driven UI, but ActionRail should use safe declarativ
 
 ## Product Concepts
 
+### Frame System
+
+Frames are ActionRail-owned UI objects in or around the Maya viewport. The
+current rail is an action bar frame. Future frame types can include:
+
+- action bar frames with slots
+- collapsible edge-tab frames
+- pinned or hover-revealed info frames
+- HUD tooltip frames
+- selection or object-linked frames
+- deformer-stack frames for selected scene objects
+- macro palettes
+
+Every frame should have a stable id, type, layout/anchor, source layer, lock
+state, visibility rules, and saved settings. Frame type owns the content and
+interactions.
+
+### Action Book
+
+The Action Book is the Maya equivalent of WoW's Spellbook. It is a searchable
+catalog of placeable actions, not a bar by itself.
+
+Initial provider groups:
+
+- transform and selection tools
+- grid, snapping, display, and viewport toggles
+- camera, playback, timeline, and keying commands
+- Maya shelf buttons imported as actions
+- studio/project tool commands
+- user macros from the Macro Book
+
+Action entries should have stable ids, labels, categories, icons, tooltips,
+execution payloads, and optional predicates. Slots reference action ids and can
+override display fields without changing the underlying action.
+
+### Macro Book
+
+The Macro Book is the WoW-macro-like authoring surface for custom Maya actions.
+A macro should capture:
+
+- stable id and display name
+- icon id
+- tooltip/help text
+- Python or MEL body
+- optional safe predicates for visible/enabled/active state
+- optional shelf import/source metadata
+
+Macros should become Action Book entries so the slot assignment workflow stays
+the same for built-in Maya actions and user-authored script actions.
+
 ### Edit Mode
 
-Edit Mode is a global authoring state for rail layout. Normal Mode executes
-tools and owns slot payload editing when a rail is explicitly unlocked,
+Edit Mode is a global authoring state for frame layout. Normal Mode executes
+tools and owns slot payload editing when an action bar frame is explicitly unlocked,
 including context-menu assignment/clear and Shift-drag move/swap/clear-out.
-When the rail is unlocked, populated slot clicks are edit gestures; locking the
-rail returns those clicks to normal action execution.
+When the bar is unlocked, populated slot clicks are edit gestures; locking the
+bar returns those clicks to normal action execution.
 
 Edit Mode should show:
 
-- a layout-map view where each rail/frame is shown as a labeled dark rectangle
+- a layout-map view where each frame is shown as a labeled dark rectangle
   over the viewport
-- rail outlines and hit boxes
+- frame outlines and hit boxes
 - direct frame dragging
 - optional grid overlay for precise placement
-- optional snap-to-grid while dragging rails
-- optional sticky-frame snapping so dragged rails can align to nearby rails
+- optional snap-to-grid while dragging frames
+- optional sticky-frame snapping so dragged frames can align to nearby frames
 - snap guides
 - spacing guides
 - safe margins
-- scale and opacity controls
+- scale and opacity controls for compatible frame types
 - collapse side, handle, reveal trigger, and default expanded/collapsed state
 - lock/unlock state
-- broken action and missing icon badges
+- broken action and missing icon badges for action bar frames
 
 Required commands:
 
@@ -76,17 +138,16 @@ not show the grid or alter viewport interaction.
 
 Frame-level Edit Mode interaction should stay direct:
 
-- left-click a rail/frame to select it and open a compact position popover with
+- left-click a frame to select it and open a compact position popover with
   arrow nudge controls, numeric X/Y coordinates, and Reset
-- `Sticky Frames` makes dragged rails snap to other rails for quick alignment
+- `Sticky Frames` makes dragged frames snap to other frames for quick alignment
 - `Grid Size` controls the visible edit-only grid spacing used for precise
   placement
 
-The visual treatment should make placement obvious at a glance: rails/frames
+The visual treatment should make placement obvious at a glance: frames
 should render as dark blocks with thin high-contrast outlines and compact
 centered names, even when their normal buttons are not the focus. This is an
-edit-only overview of layout footprints and hit boxes, not the Normal Mode look
-of the final rail.
+edit-only overview of layout footprints and hit boxes, not the Normal Mode look.
 
 ### Collapsible Rails
 
@@ -156,7 +217,7 @@ Bind Mode mirrors action-bar addon workflows:
 2. User hovers or clicks an ActionRail slot.
 3. User presses a shortcut.
 4. ActionRail detects conflicts.
-5. ActionRail creates or updates a Maya runtime command and hotkey.
+5. ActionRail creates or updates the slot's Maya runtime command and hotkey.
 6. The key label appears on the slot.
 
 Required commands:
@@ -165,7 +226,9 @@ Required commands:
 - `actionrail.bind_mode.clear_hovered`
 - `actionrail.hotkeys.validate`
 
-Maya integration should prefer runtime commands so bindings remain visible in Maya's Hotkey Editor.
+Maya integration should prefer runtime commands so bindings remain visible in
+Maya's Hotkey Editor. This publishing is infrastructure; artists should see the
+WoW-like action of binding a visible slot, not a runtime-command management task.
 
 ### Flyouts
 
@@ -241,16 +304,17 @@ Example:
 
 ## Schema Direction
 
-Completed Phase 1 specs describe reusable rails with stable slots, layout
+Completed Phase 1 specs describe reusable action bar frames with stable slots, layout
 metadata, predicates, icons, hotkey labels, and diagnostics. The next schema
-work should move toward user-authored rails, slots, and interaction modes.
+work should move toward user-authored frames, slots, action-library references,
+macro references, and interaction modes.
 
 Draft shape:
 
 ```json
 {
   "id": "animator_main",
-  "type": "rail",
+  "type": "action_bar",
   "layout": {
     "orientation": "horizontal",
     "columns": 8,
@@ -298,6 +362,27 @@ Draft shape:
       ]
     }
   ]
+}
+```
+
+Future non-bar frame draft:
+
+```json
+{
+  "id": "selection_info",
+  "type": "info_frame",
+  "layout": {
+    "anchor": "viewport.top.right",
+    "offset": [-24, 24],
+    "locked": false
+  },
+  "content": {
+    "provider": "maya.selection.summary"
+  },
+  "interaction": {
+    "hover": "show_tooltip",
+    "click": "pin"
+  }
 }
 ```
 
@@ -359,9 +444,11 @@ Build the user-facing authoring workflow in medium slices:
    moved to Normal Mode rail lock/unlock helpers.
    Future button-style controls should let users independently show/hide,
    offset, and colorize the slot label and hotkey/key-label overlay.
-6. Collapsible edge tabs and publish polish: edge handles, reveal behavior,
-   collapsed-state persistence, validation for missing actions/icons/hotkeys,
-   and shelf/hotkey/runtime-command publishing where possible.
+6. Collapsible edge tabs and authoring-workflow polish: edge handles, reveal
+   behavior, collapsed-state persistence, validation for missing
+   actions/icons/hotkeys, optional shelf/runtime-command publishing where
+   useful, and clearer handoff between Quick Create, Edit Mode, Normal Mode
+   slot editing, and future Bind Mode.
 
 Research hints by slice:
 
@@ -381,17 +468,21 @@ Research hints by slice:
 
 Exit criteria: an artist can recreate the transform stack, create a distinct custom rail, and collapse that rail to an edge tab from Maya UI without editing JSON.
 
-### Phase 3 - Bind Mode, Flyouts, And Command Rings
+### Phase 3 - Action Book, Bind Mode, Macro Book, Flyouts, And Command Rings
 
 Add high-leverage interaction patterns:
 
+- searchable Action Book for Maya tools, commands, shelf actions, and macros
 - hover-to-bind hotkeys
 - slot conflict warnings
+- Macro Book for user-authored Python/MEL actions with icons
 - flyout button widget
 - command ring widget
 - press/release hotkey behavior for temporary UI
 
-Exit criteria: a user can bind a slot by hovering it, and can open a command ring from a hotkey.
+Exit criteria: a user can assign a Maya action from the Action Book to a slot,
+bind that slot by hovering it, create a simple macro action with an icon, and
+open a command ring from a hotkey.
 
 ### Phase 4 - Studio Profiles And Sharing
 
@@ -410,7 +501,8 @@ Exit criteria: a studio preset can be installed read-only, extended by a user pr
 - Keep the Qt overlay as the primary clickable UI backend.
 - Do not build command rings on Viewport 2.0 first; Qt hit testing is the right first path.
 - Do not make arbitrary Python snippets the default authoring path for artists.
-- Keep runtime commands and hotkeys optional until the user publishes a preset or binding.
+- Keep runtime-command publishing as implementation plumbing for saved bindings
+  and optional shelf integration; do not make it the primary authoring workflow.
 - Collapsed handles must stay small and must not create viewport-sized transparent hit areas.
 - Always offer safe mode: users must be able to disable all ActionRail overlays if a bad preset causes trouble.
 - Do not let Edit Mode changes silently modify studio-locked presets; write user overrides instead.

@@ -199,9 +199,14 @@ def about() -> dict[str, object]:
                 "publish follow-up locally verified with Quick Create Maya smoke; "
                 "Edit Mode options cleanup and Normal Mode slot-edit locking/dragging "
                 "locally verified; Edit Mode panel Lock/Unlock, drag polish, "
-                "and cross-rail unlocked slot transfers Maya-smoke verified"
+                "cross-rail unlocked slot transfers Maya-smoke verified; "
+                "architecture reframed around WoW-style frames, Action Book, "
+                "Macro Book, and Bind Mode"
             ),
-            "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
+            "next_slice": (
+                "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "
+                "and unified authoring workflow handoff"
+            ),
             "blockers_doc": "docs/04_status.md#blockers",
         },
         "public_api": tuple(

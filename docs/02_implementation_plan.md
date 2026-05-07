@@ -1,5 +1,5 @@
 ---
-summary: Phase-based implementation roadmap from the verified prototype through declarative rails, Edit Mode, hotkeys, flyouts, rings, profiles, and later viewport-native backends.
+summary: Phase-based implementation roadmap from the verified prototype through WoW-style frames, action bars, Action Book, Bind Mode, macros, profiles, and later viewport-native backends.
 read_when:
   - Choosing what to implement next.
   - Checking whether a slice is complete.
@@ -188,7 +188,10 @@ Current state: runtime command publishing, paired nameCommands, conflict-aware h
 
 ## Phase 2: Quick Create And Edit Mode
 
-Goal: let users create rails, palettes, action bars, and hotkey-labeled button layouts without code.
+Goal: let users create the first WoW-style action bar frames and
+hotkey-labeled button layouts without code, while keeping the architecture open
+for later non-bar frames such as info boxes, tooltip frames, and object-linked
+HUD frames.
 
 ### Medium Steps
 
@@ -352,7 +355,7 @@ Research hints:
 - Revisit the local `research/` reference images when tuning hit boxes and
   spacing for the transform-stack regression target.
 
-#### 2.6 Collapsible Edge Tabs And Publish Polish
+#### 2.6 Collapsible Edge Tabs And Authoring Workflow Polish
 
 Status: in progress. The first runtime/persistence slice is implemented and
 Maya-smoke verified for the optional `collapse` schema, Quick Create edge-tab
@@ -377,6 +380,12 @@ clickable Lock/Unlock action and lets the compact panel be dragged away from
 covered rails. The Quick Create Maya smoke verifies the Save + Publish shelf
 command carries that custom store path.
 
+Architecture note: publishing remains the runtime-command/shelf implementation
+path for saved bindings and optional Maya integration. It should not be the
+center of the artist workflow. The user-facing loop should read as: choose a
+frame/template, fill slots from an Action Book or Macro Book, place/configure in
+Edit Mode, bind slots in Bind Mode, then save.
+
 - Add collapsible rail settings: edge, handle icon, reveal trigger, and default
   collapsed state. First pass done through `RailCollapse` / JSON `collapse`.
 - Render a small edge handle when collapsed without creating a viewport-sized
@@ -390,7 +399,9 @@ command carries that custom store path.
   before save or publish. First publish-facing diagnostics pass is done through
   `diagnose_publish_spec()` and Quick Create save validation; Quick Create
   Validate Draft now surfaces the same publish diagnostics locally before save.
-- Publish saved user presets to shelf/hotkey/runtime command where possible.
+- Publish saved user presets to shelf/hotkey/runtime command where useful, but
+  keep this optional and secondary to the Action Book / Edit Mode / Bind Mode
+  workflow.
   First pass is done for slot runtime-command publishing and preset shelf-toggle
   publishing from Quick Create Save + Publish; custom user preset store paths
   are preserved in published shelf toggles, and stale slot-command cleanup is
@@ -405,8 +416,8 @@ command carries that custom store path.
   toggles whether that rail can move in the current Edit Mode session, while
   the compact panel itself can be dragged aside when it covers a rail.
 
-Done when an artist can collapse a custom rail to a side handle, expand it
-again, and keep layout, actions, and bindings intact.
+Done when an artist can collapse a custom action bar frame to a side handle,
+expand it again, and keep layout, actions, and bindings intact.
 
 Research hints:
 
@@ -425,21 +436,29 @@ Research hints:
 - Edit Mode changes save to a user preset or user override, not to a locked built-in/studio preset.
 - Validation reports missing actions, missing icons, and hotkey conflicts.
 
-## Phase 3: Bind Mode, Flyouts, And Command Rings
+## Phase 3: Action Book, Bind Mode, Macro Book, Flyouts, And Command Rings
 
-Goal: add high-leverage command access patterns inspired by action bar and radial menu addons.
+Goal: complete the WoW-style authoring loop: browse Maya actions like a
+spellbook, place them on action bar slots, bind keys by hovering a slot, create
+user macro actions with icons, and then add compact grouped access patterns.
 
 ### Tasks
 
+- Searchable Action Book for curated Maya tools, commands, shelf imports,
+  studio tools, and user macros.
 - Hover-to-bind Bind Mode.
 - Slot conflict warnings and clear-binding command.
+- Macro Book for user-authored Python/MEL actions with stable ids, icons,
+  tooltips, and optional safe predicates.
 - Flyout widget for grouped related actions.
 - Command ring widget for radial press/hold/release workflows.
 - Press/release hotkey behavior with Maya focus handling verification.
 
 ### Acceptance Criteria
 
+- A user can assign a Maya action from the Action Book to an empty slot.
 - A user can enter Bind Mode, hover a slot, press a shortcut, and see the key label update.
+- A user can create a simple macro action with an icon and place it on a slot.
 - A flyout can hold multiple related actions and execute them.
 - A command ring can open from a hotkey and execute one selected action.
 
@@ -481,27 +500,31 @@ layout-map shell, direct manipulation, snap/sticky guides, Normal Mode slot
 payload lock/unlock helpers, and user override persistence are in place.
 
 Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
-publish polish. The collapse schema/runtime first pass is implemented and
+authoring workflow polish. The collapse schema/runtime first pass is implemented and
 Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
 verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
 command path, and the first guide/slot-edit/control-panel affordance polish
 pass is Maya-smoke verified.
-Carry forward only polish that naturally supports 2.6, such as Quick Create
-round-trip stability and locked built-in/studio read-only behavior. Keep
-`docs/06_wow_style_customization.md` in mind, but do not start Bind Mode,
-flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
-yet.
+Carry forward only polish that naturally supports 2.6 and the unified
+WoW-style workflow, such as Quick Create round-trip stability, locked
+built-in/studio read-only behavior, clearer template-to-Edit-Mode handoff, and
+slot editing that can later connect to Action Book and Bind Mode. Keep
+`docs/06_wow_style_customization.md` in mind, but do not implement Bind Mode,
+Action Book UI, Macro Book UI, flyouts, command rings, profile layers,
+marking-menu export, or Viewport 2.0 yet.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Verify and continue Phase 2 step 2.6 Quick Create stability and
-   locked-preset read-only polish.
-2. Add Bind Mode, then flyouts, then command rings.
-3. Broaden the workflow action library beyond transform/keyframe.
-4. Add profile layers for built-in, studio, project, scene/asset, and user
+1. Verify and continue Phase 2 step 2.6 Quick Create stability, locked-preset
+   read-only polish, and unified authoring workflow handoff.
+2. Add the Action Book and Bind Mode.
+3. Add the Macro Book for user script actions with icons.
+4. Add flyouts, then command rings.
+5. Broaden the workflow action library beyond transform/keyframe.
+6. Add profile layers for built-in, studio, project, scene/asset, and user
    overrides.
-5. Add marking-menu/hotbox export and later Viewport 2.0 labels/guides.
+7. Add marking-menu/hotbox export and later Viewport 2.0 labels/guides.

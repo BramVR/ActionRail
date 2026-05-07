@@ -1,5 +1,5 @@
 ---
-summary: Compact architecture for the ActionRail MVP and the boundaries between Qt overlay, Maya actions, presets, and later Viewport 2.0.
+summary: Compact architecture for ActionRail's WoW-style Maya viewport frame system, action bars, Action Book, presets, and later Viewport 2.0.
 read_when:
   - Implementing or reviewing ActionRail code structure.
   - Deciding where a feature belongs.
@@ -7,6 +7,38 @@ read_when:
 ---
 
 # Architecture
+
+## Product Model
+
+ActionRail is a WoW-style viewport UI framework for Maya. The reference
+`M/T/R/S/K` stack is a regression preset, not the product center. The durable
+product model is:
+
+- **Frames**: movable/configurable viewport UI objects. Current rails/action
+  bars are the implemented frame type. Later frame types can include pinned
+  info boxes, HUD tooltip panels, selection frames, object-linked frames, and
+  deformer-stack frames.
+- **Action Bar Frames**: frames with slots arranged as rows, columns, strips,
+  stacks, or collapsible edge tabs.
+- **Slots**: stable containers on an action bar. A slot references an action,
+  macro, flyout, command ring, preset, or empty placeholder, and owns display
+  overrides such as icon, label, key label, tooltip, and tone.
+- **Action Book**: searchable catalog of Maya-native tools and commands that
+  can be placed onto slots. The current action registry and icon catalog are
+  the first backend pieces; the authoring UI should evolve toward a spellbook
+  style browser for Maya actions such as transform tools, grid/display toggles,
+  selection modes, playback, keying, viewport controls, and studio commands.
+- **Macro Book**: user-authored script actions. A macro should have a stable
+  id, name, icon, tooltip, Python or MEL body, and optional safe predicates, then
+  appear in the Action Book like any other placeable action.
+- **Bindings**: slot hotkeys backed by Maya runtime commands. Publishing those
+  runtime commands is the implementation mechanism; the user-facing workflow is
+  Bind Mode: hover/click a slot, press a shortcut, resolve conflicts, and see
+  the key label on the slot.
+
+This vocabulary keeps the current rail implementation useful while leaving the
+schema open for WoW-like non-bar frames and later Maya-specific HUD widgets.
+Avoid introducing new top-level concepts that only work for buttons.
 
 ## MVP Shape
 
@@ -63,17 +95,23 @@ Long-term ActionRail authoring should follow the WoW-style customization roadmap
 
 Conceptual states:
 
-- **Normal Mode**: rails execute actions; active rails can be explicitly
+- **Normal Mode**: frames execute their normal interactions. Action bar frames
+  execute slot actions; active rails can be explicitly
   unlocked for slot payload assignment/clear plus Shift-drag move/swap/clear-out
   and locked again for normal action execution. While unlocked, populated slot
   clicks are edit gestures rather than action execution. The overlay host avoids
   viewport-sized transparent hit areas so normal Maya viewport interaction
   remains available outside visible controls.
-- **Edit Mode**: rails switch into a layout-map view with labeled dark frame
+- **Edit Mode**: frames switch into a layout-map view with labeled dark frame
   rectangles, outlines, optional placement grid overlay,
-  optional snap-to-grid, snap guides, and safe margins. Edit Mode is for rail
-  layout, not slot payload editing.
-- **Bind Mode**: user hovers or selects a slot, presses a shortcut, and ActionRail publishes/updates a Maya runtime command and hotkey.
+  optional snap-to-grid, snap guides, and safe margins. Edit Mode is for frame
+  layout/configuration, not slot payload editing or macro authoring.
+- **Bind Mode**: user hovers or selects a slot, presses a shortcut, and
+  ActionRail publishes/updates the slot's Maya runtime command and hotkey.
+- **Action Book**: user browses available Maya actions and assigns them to
+  slots.
+- **Macro Book**: user creates custom script actions with icons, then places
+  them onto slots through the same Action Book workflow.
 
 The first Edit Mode shell is implemented in `actionrail.edit_mode`: it discovers
 active runtime rails, draws their edit footprints over a grid, supports
@@ -82,8 +120,9 @@ labels, and non-persistent X/Y nudging for unlocked rails. See
 `docs/08_edit_mode.md` for current user behavior and limits.
 
 The remaining customization layers build on the declarative MVP, but the spec
-and action registry should continue to preserve stable slot ids, key labels,
-flyouts, command rings, and preset layers without replacing the core model.
+and action registry should continue to preserve stable frame ids, slot ids, key
+labels, flyouts, command rings, action-library entries, macro entries, and
+preset layers without replacing the core model.
 
 ### Bootstrap
 
@@ -113,7 +152,7 @@ flyouts, command rings, and preset layers without replacing the core model.
 
 ### Widgets
 
-MVP widgets:
+Current widgets:
 
 - `ToolStack`
 - `ToolButton`
@@ -124,17 +163,23 @@ Widgets must have stable dimensions. Hover/active/disabled states must not shift
 
 State belongs to slots, not to a specific built-in button. A user-authored slot may be a persistent tool, a one-shot macro, a disabled-until-valid command, a locked studio control, a flyout, or a command ring. Presets declare state predicates such as `active_when`, `enabled_when`, and `visible_when`; themes decide how those states render. `actionrail.slot_state` resolves those predicates, icons, action availability, diagnostics, and tooltip fallbacks without importing Qt, while `widgets.py` applies the resolved state to Qt controls. For example, a scale slot can declare `active_when: "maya.tool == scale"`, while a Set Key macro has no `active_when` because clicking it performs one immediate action.
 
-Planned widgets after the reusable rail schema:
+Planned widgets after the reusable frame/action-bar schema:
 
-- `Rail`: configurable bar with rows, columns, orientation, scale, opacity, and lock state.
+- `Frame`: base movable/configurable viewport UI object with id, type, anchor,
+  lock state, source layer, and saved layout values.
+- `ActionBarFrame` / `Rail`: configurable bar with rows, columns, orientation,
+  scale, opacity, collapse settings, and lock state.
 - `Slot`: stable action container that can hold a button, tool button, flyout, command ring, or preset reference.
+- `InfoFrame`: pinned or hover-revealed contextual information panel.
+- `ObjectFrame`: selection/object-linked frame for future scene-aware UI such
+  as deformer stack summaries or rig controls.
 - `Flyout`: compact expandable menu for related actions.
 - `CommandRing`: radial menu for press/hold/release command access.
 - `KeyBadge`: hotkey text drawn on a slot after binding.
 
 ### Actions
 
-Actions are reusable named commands.
+Actions are reusable named commands that can be placed into slots.
 
 MVP action ids:
 
@@ -147,6 +192,20 @@ MVP action ids:
 Use `maya.cmds`. No PyMEL by default.
 
 ActionRail actions and action-bearing preset slots can be published as Maya runtime commands through `actionrail.hotkeys` so users can bind them through Maya's Hotkey Editor or through future ActionRail Bind Mode.
+
+The Action Book should not try to expose every Maya command at once. Start with
+curated provider-backed groups that behave like a WoW spellbook:
+
+- transform and selection tools
+- grid, snapping, viewport display, and camera controls
+- playback and timeline commands
+- keying and animation commands
+- imported Maya shelf buttons or studio tools
+- user macros from the Macro Book
+
+Each action entry should provide a stable id, label, category, icon id, tooltip,
+execution function or command payload, and optional safe predicates. Slots
+reference action ids and may override display fields locally.
 
 ### State
 
@@ -186,7 +245,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry rail-ready layout metadata, optional `collapse` settings, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Collapse settings use `RailCollapse` / JSON `collapse` for edge, handle icon, reveal trigger, and default collapsed state; disabled collapse remains the default for legacy presets. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry action-bar-frame layout metadata, optional `collapse` settings, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Collapse settings use `RailCollapse` / JSON `collapse` for edge, handle icon, reveal trigger, and default collapsed state; disabled collapse remains the default for legacy presets. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
 
 Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. `actionrail.preset_store` is the shared resolver for bundled, optional studio, and saved user presets; runtime overlay startup, no-overlay slot execution, hotkey publishing/sync, diagnostics, Maya menu toggles, and the project map should resolve preset ids through it instead of directly assuming `presets/` built-ins. This remains a compact preset-layer slice; broader project/profile layering is still reserved for a later phase.
 
@@ -238,12 +297,13 @@ adds the `:/` resource prefix only when constructing the `QIcon`, for example
 `:/move_M.png`. ActionRail slot buttons paint icons as full-size inner-button
 underlays and then draw the label, key label, or diagnostic badge over them.
 
-Later phases should evolve the public naming toward user-authored rail/slot data:
+Later phases should evolve the public naming toward user-authored frame data.
+Current rails map to `type: "action_bar"`:
 
 ```json
 {
   "id": "animator_main",
-  "type": "rail",
+  "type": "action_bar",
   "layout": {
     "orientation": "horizontal",
     "anchor": "viewport.bottom.center",
@@ -271,7 +331,42 @@ Later phases should evolve the public naming toward user-authored rail/slot data
 }
 ```
 
-Stable ids are required for hotkey bindings, preset migration, user overrides, and UI authoring tools that create rails instead of hand-editing JSON.
+Future non-bar frames should use the same id/layout/source-layer/persistence
+rules but different `content` and `interaction` payloads:
+
+```json
+{
+  "id": "selection_info",
+  "type": "info_frame",
+  "layout": {
+    "anchor": "viewport.top.right",
+    "offset": [-24, 24],
+    "locked": false
+  },
+  "content": {
+    "provider": "maya.selection.summary"
+  },
+  "interaction": {
+    "hover": "show_tooltip",
+    "click": "pin"
+  }
+}
+```
+
+Stable frame ids and slot ids are required for hotkey bindings, preset
+migration, user overrides, and UI authoring tools that create ActionRail UI
+without hand-editing JSON.
+
+The intended artist workflow is:
+
+1. Create or show an action bar frame from a template.
+2. Open the Action Book and place Maya actions or macros onto slots.
+3. Use Edit Mode to move/configure frames.
+4. Use Bind Mode to hover/click slots and assign hotkeys.
+5. Save the frame/layout as a user preset or user override.
+
+Optional shelf toggles and runtime-command publishing remain useful plumbing,
+but they should not be the primary concept shown to artists.
 
 ## Non-MVP
 
@@ -280,6 +375,7 @@ slice explicitly calls for them:
 
 - Full preset browser.
 - Bind Mode.
+- Action Book and Macro Book UI.
 - Flyouts and command rings.
 - Viewport 2.0 drawing backend.
 - QML/WebEngine runtime.

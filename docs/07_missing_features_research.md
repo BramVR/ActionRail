@@ -31,9 +31,12 @@ ActionRail has a solid MVP base:
   Create, preview/save/load workflow, and the first Edit Mode layout-map shell.
 - Pure Python tests and MayaSessiond smoke coverage.
 
-The main gap is now direct layout authoring and Normal Mode slot editing. Edit
-Mode should persist rail placement and use drag/anchor/snap controls; slot
-payload changes should stay outside Edit Mode behind rail lock/unlock controls.
+The main product gap is now a unified WoW-style authoring workflow. Current
+rails should be treated as action bar frames, not the whole product boundary.
+Edit Mode should remain frame layout/configuration; slot payload changes should
+stay outside Edit Mode behind Normal Mode rail lock/unlock controls; later
+Action Book, Macro Book, and Bind Mode should make placing actions and binding
+keys feel like one connected workflow.
 
 2026-04-29 status note: safe predicate evaluation, live predicate refresh,
 hotkey label sync, shelf/menu toggles, reusable smoke wrapper, safe-mode
@@ -60,7 +63,15 @@ report missing or stale fallback assets.
 recovery, Quick Create preview/save/load, curated Maya resource icons, and
 Phase 2 step 2.5 layout editing/direct manipulation are implemented and smoke
 verified. The active backlog starts with Phase 2 step 2.6 collapsible edge tabs
-and publish polish.
+and authoring workflow polish.
+
+2026-05-07 architecture note: WoW should remain the primary reference. ActionRail
+now uses frames as the broad product concept: action bars are one frame type,
+with future room for info frames, tooltip frames, selection/object frames, and
+deformer-stack frames. The next major authoring concepts are an Action Book for
+curated Maya commands/tools, a Macro Book for user script actions with icons,
+and Bind Mode for hover/click-to-bind slot hotkeys. Runtime-command publishing
+is implementation plumbing, not the main user-facing workflow.
 
 ## Highest Priority Gaps
 
@@ -145,7 +156,7 @@ The later designer should be a dockable workspace control with restore-safe
 
 Source: [Autodesk workspace controls](https://help.autodesk.com/cloudhelp/2024/CHS/Maya-SDK/files/Maya-Python-API/Maya_SDK_Maya_Python_API_Writing_Workspace_controls_html.html)
 
-### 5. Quick Create And Edit Mode
+### 5. Unified Frame Authoring Workflow
 
 Status: Quick Create and the Phase 2 step 2.5 Edit Mode layout editing surface
 are implemented and Maya-smoke verified. Quick Create can create draft rails
@@ -156,19 +167,22 @@ snap/sticky alignment, and persist layout edits to user presets or user
 override sidecars. The old right-click frame options popover has been removed
 from Edit Mode. The remaining authoring gap begins with Phase 2 step 2.6
 collapsible edge-tab runtime/persistence, Normal Mode slot lock/unlock polish,
-and publish polish.
+and unified authoring workflow polish.
 
-The first artist-facing authoring workflow should stay narrow:
+The first artist-facing authoring workflow should stay narrow and connected:
 
-1. Pick a template: vertical stack, horizontal strip, collapsible edge tab,
-   and later flyout, command ring, or status badge strip.
+1. Pick a frame/template: blank action bar, starter Maya tool bar,
+   collapsible edge tab, compact grid/palette, and later info/object frames.
 2. Pick workflow context: modeling, rigging, animation, layout, camera,
    display, project.
-3. Add actions from a searchable registry.
-4. Pick labels/icons.
-5. Place in the active viewport.
-6. Preview without saving.
-7. Save as a user preset.
+3. Add actions from the Action Book.
+4. Add user scripts from the Macro Book when built-in Maya actions are not
+   enough.
+5. Pick labels/icons.
+6. Place/configure the frame in the active viewport.
+7. Bind slot hotkeys in Bind Mode.
+8. Preview without saving.
+9. Save as a user preset or user override.
 
 Edit Mode has the first layout-map shell and should continue toward direct
 manipulation:
@@ -199,8 +213,9 @@ Source: [World of Warcraft HUD/UI revamp](https://worldofwarcraft.blizzard.com/e
 
 ### 6. Bind Mode
 
-Bind Mode should be built before broad designer work because it completes the
-runtime-command bridge and makes the current MVP useful.
+Bind Mode should be built together with the first Action Book workflow because
+it completes the Maya action-bar loop: put an action on a slot, hover/click the
+slot, press a shortcut, and see the key label update.
 
 Workflow:
 
@@ -304,7 +319,8 @@ Sources:
 ### 11. Broader Action Library
 
 The current action registry only covers move/translate/rotate/scale/set key.
-Add action groups by workflow:
+Evolve it into the Action Book: a searchable, curated, provider-backed catalog
+of Maya actions that can be placed onto slots. Add action groups by workflow:
 
 - selection and component mode
 - display and viewport toggles
@@ -321,7 +337,18 @@ and keyframe/tangent marking menus.
 
 Source: [Maya animation hotkeys](https://help.autodesk.com/cloudhelp/2025/ENU/Maya-KeyboardShortcuts/files/GUID-0639ADA0-EBE5-4703-A874-92C80E4A0516.htm)
 
-### 12. Picker-Grade Controls
+### 12. Macro Book
+
+ActionRail should eventually let users create WoW-macro-like Maya actions
+without editing framework code. A macro entry should have a stable id, display
+name, icon, tooltip, Python or MEL body, optional safe predicates, and source
+metadata if it was imported from a shelf button. Once saved, the macro should
+appear in the Action Book and be assignable to any slot like a built-in action.
+
+The Macro Book should come after the first Action Book and Bind Mode pass so
+custom scripts use the same placement and hotkey path as native Maya actions.
+
+### 13. Picker-Grade Controls
 
 Animation picker tools prove users need more than square buttons:
 
@@ -343,7 +370,7 @@ Sources:
 - [mGear Anim Picker](https://mgear4.readthedocs.io/en/stable/quickStart.html)
 - [anim_picker features](https://www.highend3d.com/maya/script/anim_picker)
 
-### 13. Diagnostics And Safe Mode
+### 14. Diagnostics And Safe Mode
 
 Status: first pass implemented through `actionrail.collect_diagnostics()`,
 `actionrail.diagnose_spec()`, `actionrail.safe_start()`,
@@ -382,7 +409,7 @@ Required features:
   visible selected-issue details, and copy actions for selected issues and the
   full report. First pass done.
 
-### 14. High DPI And Visual Regression
+### 15. High DPI And Visual Regression
 
 Maya 2025+ uses Qt6/PySide6, and Qt High DPI is always on. ActionRail should
 verify mixed display scaling, fractional Windows scaling, and screenshot
@@ -423,12 +450,14 @@ Source: [Maya UI draw manager](https://help.autodesk.com/cloudhelp/2022/ENU/Maya
 
 ## Recommended Next Roadmap
 
-1. Add Phase 2 step 2.6 collapsible edge tabs and publish polish, including
-   collapsible rail runtime and persistence.
-2. Add Bind Mode.
-3. Add flyouts.
-4. Add command rings.
-5. Add profile layers: built-in, studio locked, project, scene/asset, user
+1. Finish Phase 2 step 2.6 collapsible edge tabs and authoring workflow polish,
+   including Quick Create stability, locked-preset read-only behavior, and
+   clearer handoff between templates, Edit Mode, and Normal Mode slot editing.
+2. Add the Action Book and Bind Mode.
+3. Add the Macro Book for user script actions with icons.
+4. Add flyouts.
+5. Add command rings.
+6. Add profile layers: built-in, studio locked, project, scene/asset, user
    override.
-6. Add marking-menu/hotbox export.
-7. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
+7. Add marking-menu/hotbox export.
+8. Add Viewport 2.0 labels/guides only after the Qt overlay remains stable.
