@@ -427,10 +427,10 @@ Edit Mode, bind slots in Bind Mode, then save.
   lock/unlock helpers, not the Edit Mode layout map. Context-menu
   assignment/clear and Shift-drag move/swap/clear-out are implemented for
   unlocked Normal Mode rails; locking the rail returns populated slot clicks to
-  normal action execution. Quick Create now exposes this as an `Edit Slots`
-  handoff for the current draft, keeping bar creation, frame placement, and
-  slot editing connected to the first Action Book placement slice without
-  starting Bind Mode.
+  normal action execution. Quick Create previews now start unlocked for the
+  current draft and expose a simple Lock Bar/Unlock Bar toggle, keeping bar
+  creation, frame placement, and slot editing connected to the first Action
+  Book placement slice without starting Bind Mode.
 - Keep Quick Create minimal. Its current default is a blank action bar, and its
   Slots tab edits only slot id, label, and displayed key text. Do not add
   Action/Icon assignment browsing back into Quick Create; action placement
@@ -538,9 +538,9 @@ verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
 command path and the five-template starter set, and the first
 guide/slot-edit/control-panel affordance polish pass is Maya-smoke verified.
-Quick Create now also has a Maya-smoke verified `Edit Slots` handoff that
-previews the current draft, exits Edit Mode, and unlocks the visible bar for
-Normal Mode slot payload editing. Quick Create has been narrowed back to a
+Quick Create now also has a Maya-smoke verified slot-edit bridge: previews open
+unlocked for Normal Mode slot payload editing and can be switched back to
+normal click-to-run behavior with Lock Bar. Quick Create has been narrowed back to a
 minimal action-bar creator: it opens on a blank bar, supports adding/removing
 slots and layout settings, and no longer exposes action/icon assignment controls
 in the Slots tab. The first separate Action Book UI now owns action browsing and

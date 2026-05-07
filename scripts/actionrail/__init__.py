@@ -88,6 +88,7 @@ from .quick_create import (
     load_quick_create_preset,
     preview_quick_create_draft,
     save_quick_create_preset,
+    set_quick_create_slots_unlocked,
 )
 from .runtime import (
     active_overlay_ids,
@@ -189,6 +190,7 @@ __all__ = [
     "safe_start",
     "save_user_preset",
     "set_rail_slots_unlocked",
+    "set_quick_create_slots_unlocked",
     "save_edit_mode_layout",
     "save_quick_create_preset",
     "select_edit_mode_rail",

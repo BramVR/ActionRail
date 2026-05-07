@@ -64,11 +64,11 @@ Snapshot:
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
   enters Edit Mode, and selects that draft frame so create -> place/configure
   feels like one workflow.
-- Quick Create now has an Edit Slots handoff: it previews the current draft,
-  exits Edit Mode if needed, and unlocks the visible bar so Normal Mode
-  slot assignment/clear and Shift-drag rearrangement are one click away from
-  the builder. This is the bridge to the separate Action Book placement
-  workflow; Quick Create itself should stay a minimal action-bar creator.
+- Quick Create previews are unlocked by default so users can immediately drag
+  Action Book entries into slots. Its bar-state control is now a simple
+  Lock Bar/Unlock Bar toggle; locking returns populated slot clicks to normal
+  action execution. This is the bridge to the separate Action Book placement
+  workflow while Quick Create stays a minimal action-bar creator.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.

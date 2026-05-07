@@ -17,11 +17,10 @@ from .quick_create import (
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
-    edit_quick_create_slots,
     load_quick_create_preset,
     make_default_input,
-    preview_quick_create_draft,
     save_quick_create_preset,
+    set_quick_create_slots_unlocked,
     template_choices,
 )
 from .spec import (
@@ -43,6 +42,7 @@ LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
 OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
 EDIT_LAYOUT_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditLayoutButton"
 EDIT_SLOTS_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditSlotsButton"
+SLOT_LOCK_BUTTON_OBJECT_NAME = EDIT_SLOTS_BUTTON_OBJECT_NAME
 BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
 BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
 BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
@@ -65,6 +65,7 @@ __all__ = [
     "CLEAR_PREVIEW_BUTTON_OBJECT_NAME",
     "EDIT_LAYOUT_BUTTON_OBJECT_NAME",
     "EDIT_SLOTS_BUTTON_OBJECT_NAME",
+    "SLOT_LOCK_BUTTON_OBJECT_NAME",
     "LOAD_BUTTON_OBJECT_NAME",
     "OVERWRITE_BUTTON_OBJECT_NAME",
     "PREVIEW_BUTTON_OBJECT_NAME",
@@ -384,6 +385,7 @@ def _build_panel(
     state = {
         "applying": False,
         "preview_active": False,
+        "slots_unlocked": True,
     }
 
     def set_template_selection(template_id: str) -> None:
@@ -461,15 +463,32 @@ def _build_panel(
         refresh_bindings()
         _set_status(qt, status, "ok", text)
 
+    def _apply_slot_lock_button_text() -> None:
+        slot_lock_button.setText("Lock Bar" if state["slots_unlocked"] else "Unlock Bar")
+
+    def _preview_draft_with_slot_lock(draft: object) -> None:
+        set_quick_create_slots_unlocked(
+            draft,
+            bool(state["slots_unlocked"]),
+        )
+
+    def _slot_lock_status_prefix() -> str:
+        return "unlocked" if state["slots_unlocked"] else "locked"
+
     def preview_draft() -> None:
         try:
             draft = current_draft()
-            preview_quick_create_draft(draft)
+            _preview_draft_with_slot_lock(draft)
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
         state["preview_active"] = True
-        _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
+        _set_status(
+            qt,
+            status,
+            "ok",
+            f"Previewing {_slot_lock_status_prefix()} draft: {draft.id}",
+        )
 
     def edit_layout() -> None:
         try:
@@ -486,15 +505,17 @@ def _build_panel(
             f"Editing layout: {edit_state.selected_preset_id or draft.id}",
         )
 
-    def edit_slots() -> None:
+    def toggle_slot_lock() -> None:
+        state["slots_unlocked"] = not bool(state["slots_unlocked"])
+        _apply_slot_lock_button_text()
         try:
             draft = current_draft()
-            edit_quick_create_slots(draft)
+            _preview_draft_with_slot_lock(draft)
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
         state["preview_active"] = True
-        _set_status(qt, status, "ok", f"Editing slots: {draft.id}")
+        _set_status(qt, status, "ok", f"Bar {_slot_lock_status_prefix()}: {draft.id}")
 
     def clear_preview() -> None:
         cleared = clear_quick_create_previews()
@@ -506,11 +527,16 @@ def _build_panel(
             return
         try:
             draft = current_draft()
-            preview_quick_create_draft(draft)
+            _preview_draft_with_slot_lock(draft)
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
-        _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
+        _set_status(
+            qt,
+            status,
+            "ok",
+            f"Previewing {_slot_lock_status_prefix()} draft: {draft.id}",
+        )
 
     def load_existing() -> None:
         preset_text = preset_id.text().strip()
@@ -600,7 +626,7 @@ def _build_panel(
     validate = qt.QtWidgets.QPushButton("Validate Draft")
     preview = qt.QtWidgets.QPushButton("Preview")
     edit_layout_button = qt.QtWidgets.QPushButton("Edit Layout")
-    edit_slots_button = qt.QtWidgets.QPushButton("Edit Slots")
+    slot_lock_button = qt.QtWidgets.QPushButton()
     clear_preview_button = qt.QtWidgets.QPushButton("Clear Preview")
     save = qt.QtWidgets.QPushButton("Save Preset")
     overwrite = qt.QtWidgets.QPushButton("Overwrite Preset")
@@ -608,7 +634,7 @@ def _build_panel(
     load_existing_button = qt.QtWidgets.QPushButton("Load Existing")
     preview.setObjectName(PREVIEW_BUTTON_OBJECT_NAME)
     edit_layout_button.setObjectName(EDIT_LAYOUT_BUTTON_OBJECT_NAME)
-    edit_slots_button.setObjectName(EDIT_SLOTS_BUTTON_OBJECT_NAME)
+    slot_lock_button.setObjectName(SLOT_LOCK_BUTTON_OBJECT_NAME)
     clear_preview_button.setObjectName(CLEAR_PREVIEW_BUTTON_OBJECT_NAME)
     save.setObjectName(SAVE_BUTTON_OBJECT_NAME)
     publish.setObjectName(PUBLISH_BUTTON_OBJECT_NAME)
@@ -620,7 +646,7 @@ def _build_panel(
         (validate, edit_button_row),
         (preview, edit_button_row),
         (edit_layout_button, edit_button_row),
-        (edit_slots_button, edit_button_row),
+        (slot_lock_button, edit_button_row),
         (clear_preview_button, edit_button_row),
         (load_existing_button, save_button_row),
         (save, save_button_row),
@@ -637,7 +663,8 @@ def _build_panel(
     panel._actionrail_validate_draft = validate_draft
     panel._actionrail_preview_draft = preview_draft
     panel._actionrail_edit_layout = edit_layout
-    panel._actionrail_edit_slots = edit_slots
+    panel._actionrail_edit_slots = toggle_slot_lock
+    panel._actionrail_toggle_slot_lock = toggle_slot_lock
     panel._actionrail_clear_preview = clear_preview
     panel._actionrail_save_draft = save_draft
     panel._actionrail_save_publish_draft = save_and_publish_draft
@@ -682,7 +709,7 @@ def _build_panel(
     validate.clicked.connect(validate_draft)
     preview.clicked.connect(preview_draft)
     edit_layout_button.clicked.connect(edit_layout)
-    edit_slots_button.clicked.connect(edit_slots)
+    slot_lock_button.clicked.connect(toggle_slot_lock)
     clear_preview_button.clicked.connect(clear_preview)
     save.clicked.connect(lambda: save_draft(overwrite=False))
     overwrite.clicked.connect(lambda: save_draft(overwrite=True))
@@ -700,6 +727,7 @@ def _build_panel(
     template_list.setCurrentRow(0)
     tabs.setCurrentIndex(1)
     apply_values(make_default_input())
+    _apply_slot_lock_button_text()
     validate_draft()
 
 

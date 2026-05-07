@@ -222,9 +222,9 @@ def about() -> dict[str, object]:
                 "public "
                 "slot binding-target metadata "
                 "and Quick Create Bindings tab Maya-smoke verified; Quick Create "
-                "Edit Slots handoff to unlocked Normal Mode slot editing "
-                "Maya-smoke verified; Action Book UI connects searchable action "
-                "entries to unlocked action-bar slots"
+                "previews now open unlocked with a Lock Bar/Unlock Bar toggle "
+                "for Normal Mode slot editing; Action Book UI connects searchable "
+                "action entries to unlocked action-bar slots"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

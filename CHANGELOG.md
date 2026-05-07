@@ -42,10 +42,9 @@
 - Fixed the MayaSessiond cross-bar Shift-drag path after rail rebuilds by
   resolving slot-edit callbacks against the live target host unlock state, so
   rebuilt/stale Qt button snapshots no longer block valid transfers.
-- Added a Quick Create `Edit Slots` handoff that previews the current draft,
-  exits Edit Mode, and unlocks the visible bar for Normal Mode slot editing;
-  the bottom command area now uses separate edit/save rows so button labels do
-  not clip in Maya.
+- Added a Quick Create slot-edit bridge that previews the current draft and
+  unlocks the visible bar for Normal Mode slot editing; the bottom command area
+  now uses separate edit/save rows so button labels do not clip in Maya.
 - Refocused Quick Create on action-bar creation: it now opens on a blank
   six-slot action bar, and the Slots tab edits only slot id, label, and key
   text while preserving loaded action/icon payloads internally for the separate
@@ -65,6 +64,9 @@
   removed between smoke scripts.
 - Fixed live Action Book drag/drop into unlocked bars by making the rail root
   accept Qt drag-enter/drop events and route them to the slot under the cursor.
+- Simplified the Quick Create slot-edit workflow: previews now open unlocked
+  for Action Book placement, and the old Edit Slots control is presented as a
+  direct Lock Bar/Unlock Bar toggle.
 
 ## 2026-05-06
 

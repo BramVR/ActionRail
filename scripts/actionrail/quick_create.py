@@ -378,13 +378,31 @@ def edit_quick_create_slots(
 ) -> Any:
     """Preview a Quick Create draft and unlock its visible rail slots."""
 
+    return set_quick_create_slots_unlocked(
+        draft,
+        True,
+        panel=panel,
+        registry=registry,
+    )
+
+
+def set_quick_create_slots_unlocked(
+    draft: DraftRail,
+    unlocked: bool,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+) -> Any:
+    """Preview a Quick Create draft and set its Normal Mode slot-edit lock state."""
+
     host = preview_quick_create_draft(draft, panel=panel, registry=registry)
 
     from . import edit_mode, runtime
 
     edit_mode.exit_edit_mode()
-    if not runtime.unlock_rail_slots(draft.id):
-        msg = f"Quick Create could not unlock slots for preview rail: {draft.id}"
+    if not runtime.set_rail_slots_unlocked(draft.id, bool(unlocked)):
+        mode = "unlock" if unlocked else "lock"
+        msg = f"Quick Create could not {mode} slots for preview rail: {draft.id}"
         raise RuntimeError(msg)
     return host
 

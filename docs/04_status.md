@@ -30,15 +30,16 @@ Shift-drag transfer or swap payloads between different unlocked rails without
 clearing the source when the target rail is locked. The newest follow-up keeps
 that cross-rail drop path stable after rail rebuilds by resolving stale Qt
 slot-button callback snapshots against the live target host unlock state.
-The latest Quick Create workflow bridge adds `Edit Slots`, which previews the
-current draft, exits Edit Mode when needed, and unlocks the visible bar for
-Normal Mode slot assignment/clear and Shift-drag editing. The Quick Create
-command buttons are split into edit-flow and save-flow rows so labels remain
-readable in Maya. The newest Quick Create UX pass makes blank action bars the
-default and removes Action/Icon assignment controls from the Slots tab so Quick
-Create stays focused on creating bars and slots; the separate future
-Action Book owns action browsing and placement. The first Action Book UI slice
-is now implemented as a separate dockable Maya panel with search,
+The latest Quick Create workflow bridge makes previews unlocked by default for
+Action Book placement and replaces the old Edit Slots handoff wording with a
+simple Lock Bar/Unlock Bar toggle. Locking the bar returns populated slot
+clicks to normal action execution. The Quick Create command buttons are split
+into edit-flow and save-flow rows so labels remain readable in Maya. The newest
+Quick Create UX pass makes blank action bars the default and removes
+Action/Icon assignment controls from the Slots tab so Quick Create stays
+focused on creating bars and slots; the separate future Action Book owns action
+browsing and placement. The first Action Book UI slice is now implemented as a
+separate dockable Maya panel with search,
 icon-backed action entries, click-to-run behavior, and drag/drop placement onto
 unlocked action-bar slots.
 
@@ -99,8 +100,9 @@ Working surface:
   edge-tab rail, and a viewport display strip seeded with Toggle Grid, but
   Quick Create should not become the action browser. A read-only Bindings tab lists
   action-bearing slots, key labels, and Maya Hotkey Editor nameCommands for the
-  current draft. An Edit Slots handoff previews the draft and unlocks that
-  visible bar for Normal Mode slot editing.
+  current draft. Previews open unlocked for Normal Mode slot editing and the
+  Lock Bar/Unlock Bar toggle switches the current preview between placement and
+  normal action execution.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
@@ -263,13 +265,17 @@ $env:PYTHONPATH = "scripts"
   workflow without implementing full Bind Mode.
 - Quick Create Edit Layout now connects the builder to Edit Mode by previewing
   the current draft and selecting it in the layout-map overlay.
-- Quick Create Edit Slots now connects the builder to Normal Mode slot editing
-  by previewing the current draft, exiting Edit Mode, and unlocking that bar for
-  context-menu assignment/clear and Shift-drag rearrangement.
+- Quick Create previews now connect the builder to Normal Mode slot editing by
+  opening unlocked for context-menu assignment/clear, Shift-drag rearrangement,
+  and Action Book drops. Lock Bar switches the preview back to normal
+  click-to-run behavior.
 - Quick Create now opens on a blank action bar and the Slots tab no longer
   exposes Action/Icon assignment controls. It edits slot id, label, and key text
   only, preserving existing payload metadata internally until the separate
   Action Book placement surface is implemented.
+- Quick Create previews are now unlocked by default for Action Book drag/drop
+  placement, with a Lock Bar/Unlock Bar toggle replacing the old Edit Slots UI
+  label.
 - The first Action Book placement surface is implemented: it opens
   as its own dockable Maya panel, searches the current 13-entry Action Book
   starter catalog, runs clicked entries, and drops action payloads onto unlocked
@@ -348,20 +354,21 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified same-rail move/clear followed by cross-rail payload
   transfer between unlocked Normal Mode rails, plus the existing Edit Mode
   layout, collapse, persistence, and screenshot checks.
-- Latest focused Quick Create slot-edit handoff validation:
+- Latest focused Quick Create slot-lock workflow validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_package.py tests\\test_project_map.py`
-  -> 53 passed.
-- Latest focused Quick Create slot-edit handoff Ruff:
+  -> 54 passed.
+- Latest focused Quick Create slot-lock workflow Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py scripts\\actionrail\\quick_create_ui.py scripts\\actionrail\\__init__.py tests\\test_quick_create.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
   -> all checks passed.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
-  -> passed; verified Edit Slots unlocks the current preview rail for Normal
-  Mode slot editing, Save + Publish creates four slot runtime commands, creates
-  a preset shelf toggle, reports publish status, and preserves the custom user
-  preset store path in the shelf command. The latest run also verifies Quick
-  Create resizes with its Maya workspace-control parent and captures readable
-  two-row command buttons in the panel screenshot.
+  -> passed; verified Quick Create previews open unlocked for Normal Mode slot
+  editing, Lock Bar switches the preview to normal click-to-run mode, Unlock
+  Bar reopens slot editing, Save + Publish creates four slot runtime commands,
+  creates a preset shelf toggle, reports publish status, and preserves the
+  custom user preset store path in the shelf command. The latest run also
+  verifies Quick Create resizes with its Maya workspace-control parent and
+  captures readable two-row command buttons in the panel screenshot.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
