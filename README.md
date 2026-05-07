@@ -27,11 +27,12 @@ part of Maya instead of a large docked tool window.
 </p>
 
 Edit Mode switches ActionRail from action execution into a layout-map view. It
-shows active rails as labeled translucent frames over the viewport, with grid
-controls, Snap to Grid, Sticky Frames, rail lock state, left-click selection,
-and an X/Y position popover for unlocked rails. Slot payload editing happens in
-Normal Mode by unlocking a rail, assigning or clearing slot payloads from the
-rendered rail, then locking it again.
+shows active rails as labeled dark frames over the viewport, with grid controls,
+Snap to Grid, Sticky Frames, rail lock state, left-click selection, direct frame
+dragging, a draggable compact panel, and an X/Y position popover for unlocked
+rails. Slot payload editing happens in Normal Mode by unlocking a rail,
+assigning, clearing, moving, or swapping slot payloads from the rendered rail,
+then locking it again.
 
 ## Why
 
@@ -187,10 +188,12 @@ limits.
 - Edit Mode shell with global toggle, layout-map overlay, active rail frames,
   grid controls, Snap to Grid, Sticky Frames, left-click selection,
   selected-frame X/Y controls, safe movement clamps, save-position persistence,
-  built-in user override saves, drag handles, anchor pins, snap/spacing guides,
-  and edge-tab collapse runtime support.
+  built-in user override saves, direct frame dragging, a selected-rail
+  Lock/Unlock control, a draggable compact panel, snap/spacing guides, and
+  edge-tab collapse runtime support.
 - Normal Mode active-rail lock/unlock helpers for assigning or clearing slot
-  payloads without entering Edit Mode.
+  payloads without entering Edit Mode, plus Shift-drag payload move/swap and
+  cross-rail transfer between unlocked rails.
 - Built-in Maya actions for move, translate, rotate, scale, and set key.
 - Runtime-command and nameCommand publishing for Maya-native hotkey binding.
 - Conflict-aware hotkey assignment helpers.

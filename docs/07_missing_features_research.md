@@ -183,7 +183,10 @@ manipulation:
 - safe margins
 - scale and opacity controls
 - selected-frame position popover with arrow nudges, numeric X/Y, and Reset
-- right-click jump to frame-specific options
+- draggable compact Edit Mode control panel
+- selected-rail Lock/Unlock control
+- Normal Mode rail lock/unlock helpers for slot payload assignment, clear,
+  move, swap, and cross-rail transfer
 - collapsible side-tab controls
 - lock state
 - source layer badges
