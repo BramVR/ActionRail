@@ -19,6 +19,9 @@
 - Added the first Action Book backend slice: registered Maya actions now expose
   picker-facing category/icon/keyword metadata, and Quick Create consumes that
   catalog for action choices.
+- Added the first non-transform Action Book command, Toggle Grid, with real
+  Maya smoke coverage so the catalog is no longer limited to the original
+  transform/keyframe examples.
 - Connected Quick Create to Edit Mode with an Edit Layout action that previews
   the current draft and selects it in the layout-map overlay for placement.
 - Improved Edit Mode control-panel usability: the selected rail state is now a

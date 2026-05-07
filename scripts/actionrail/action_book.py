@@ -55,6 +55,11 @@ _ACTION_METADATA: dict[str, dict[str, object]] = {
         "icon": "maya.set_key",
         "keywords": ("key", "keyframe", "animation", "set key", "s"),
     },
+    "maya.display.toggle_grid": {
+        "category": "Viewport",
+        "icon": "maya.grid",
+        "keywords": ("grid", "viewport", "display", "toggle"),
+    },
 }
 
 

@@ -22,6 +22,7 @@ __all__ = [
     "create_default_registry",
     "set_keyframe",
     "set_tool_context",
+    "toggle_grid",
     "validate_action_ids",
 ]
 
@@ -97,6 +98,16 @@ def set_keyframe(cmds_module: Any | None = None) -> str:
     return "setKeyframe"
 
 
+def toggle_grid(cmds_module: Any | None = None) -> str:
+    """Toggle Maya viewport grid visibility and return the new state."""
+
+    cmds = _require_cmds(cmds_module)
+    is_visible = bool(cmds.grid(query=True, toggle=True))
+    next_state = not is_visible
+    cmds.grid(toggle=next_state)
+    return f"grid:{'on' if next_state else 'off'}"
+
+
 def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
     """Create the default Maya action registry.
 
@@ -143,6 +154,14 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
             label="Set Key",
             tooltip="Set keyframe",
             callback=lambda: set_keyframe(cmds_module),
+        )
+    )
+    registry.register(
+        Action(
+            id="maya.display.toggle_grid",
+            label="Toggle Grid",
+            tooltip="Toggle viewport grid",
+            callback=lambda: toggle_grid(cmds_module),
         )
     )
     return registry

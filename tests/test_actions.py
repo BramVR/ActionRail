@@ -13,6 +13,7 @@ from actionrail.actions import (
     ActionRegistry,
     create_default_registry,
     set_tool_context,
+    toggle_grid,
     validate_action_ids,
 )
 from actionrail.authoring import DraftRail, DraftSlot, save_user_preset
@@ -21,13 +22,22 @@ from actionrail.runtime import run_action, run_slot
 
 class FakeCmds:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str | None]] = []
+        self.calls: list[tuple[str, object]] = []
+        self.grid_visible = True
 
     def setToolTo(self, context: str) -> None:
         self.calls.append(("setToolTo", context))
 
     def setKeyframe(self) -> None:
         self.calls.append(("setKeyframe", None))
+
+    def grid(self, query: bool = False, toggle: bool | None = None) -> bool | None:
+        if query and toggle:
+            return self.grid_visible
+        if toggle is not None:
+            self.grid_visible = bool(toggle)
+            self.calls.append(("grid", self.grid_visible))
+        return None
 
 
 class FakeSelectionCmds(FakeCmds):
@@ -50,6 +60,7 @@ def test_default_registry_contains_phase_zero_actions() -> None:
         "maya.tool.rotate",
         "maya.tool.scale",
         "maya.anim.set_key",
+        "maya.display.toggle_grid",
     )
 
 
@@ -61,11 +72,12 @@ def test_default_registry_contains_phase_zero_actions() -> None:
         ("maya.tool.rotate", ("setToolTo", ROTATE_CONTEXT)),
         ("maya.tool.scale", ("setToolTo", SCALE_CONTEXT)),
         ("maya.anim.set_key", ("setKeyframe", None)),
+        ("maya.display.toggle_grid", ("grid", False)),
     ],
 )
 def test_default_actions_call_maya_cmds(
     action_id: str,
-    expected_call: tuple[str, str | None],
+    expected_call: tuple[str, object],
 ) -> None:
     cmds = FakeCmds()
     registry = create_default_registry(cmds)
@@ -73,6 +85,15 @@ def test_default_actions_call_maya_cmds(
     registry.run(action_id)
 
     assert cmds.calls == [expected_call]
+
+
+def test_toggle_grid_toggles_maya_grid_state() -> None:
+    cmds = FakeCmds()
+
+    assert toggle_grid(cmds) == "grid:off"
+    assert toggle_grid(cmds) == "grid:on"
+
+    assert cmds.calls == [("grid", False), ("grid", True)]
 
 
 def test_registry_rejects_duplicate_action_ids() -> None:

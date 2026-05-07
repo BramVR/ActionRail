@@ -93,7 +93,11 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     {
         "path": "scripts/actionrail/action_book.py",
         "owns": "Action Book catalog metadata for placeable Maya actions",
-        "tests": ("tests/test_action_book.py", "tests/test_quick_create.py"),
+        "tests": (
+            "tests/test_action_book.py",
+            "tests/test_quick_create.py",
+            "tests/maya_smoke/actionrail_action_book_smoke.py",
+        ),
     },
     {
         "path": "scripts/actionrail/hotkeys.py",
@@ -206,7 +210,8 @@ def about() -> dict[str, object]:
                 "locally verified; Edit Mode panel Lock/Unlock, drag polish, "
                 "cross-rail unlocked slot transfers Maya-smoke verified; "
                 "architecture reframed around WoW-style frames, Action Book, "
-                "Macro Book, and Bind Mode"
+                "Macro Book, and Bind Mode; Action Book Toggle Grid viewport "
+                "action Maya-smoke verified"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

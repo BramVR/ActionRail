@@ -56,6 +56,14 @@ def test_default_action_book_entries_have_spellbook_metadata() -> None:
             icon="maya.move",
             keywords=("translate", "move", "tool", "transform", "w"),
         ),
+        ActionBookEntry(
+            id="maya.display.toggle_grid",
+            label="Toggle Grid",
+            tooltip="Toggle viewport grid",
+            category="Viewport",
+            icon="maya.grid",
+            keywords=("grid", "viewport", "display", "toggle"),
+        ),
     )
 
 
@@ -92,4 +100,4 @@ def test_action_book_entry_by_id_reports_unknown_actions() -> None:
 def test_public_api_exposes_action_book_entries() -> None:
     assert actionrail.ActionBookEntry is ActionBookEntry
     assert actionrail.action_book_entry_by_id("maya.tool.move").icon == "maya.move"
-    assert any(entry.id == "maya.anim.set_key" for entry in actionrail.action_book_entries())
+    assert actionrail.action_book_entry_by_id("maya.display.toggle_grid").icon == "maya.grid"
