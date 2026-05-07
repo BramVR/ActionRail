@@ -54,9 +54,11 @@ Snapshot:
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.
-- Quick Create template choices now cover the original vertical stack,
-  horizontal strip, edge-tab rail, a blank action bar, and a viewport display
-  strip seeded with the Toggle Grid Action Book entry.
+- Quick Create now defaults to a blank action bar and keeps its Slots tab
+  focused on slot id, label, and displayed key text. It still has starter
+  templates for vertical, horizontal, edge-tab, and viewport display bars, but
+  action/icon browsing belongs to the separate future Spell Book/Action Book
+  workflow rather than Quick Create.
 - Quick Create now has a read-only Bindings tab that lists action-bearing slots,
   their current key labels, and the Maya nameCommands used by the Hotkey Editor.
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
@@ -65,7 +67,8 @@ Snapshot:
 - Quick Create now has an Edit Slots handoff: it previews the current draft,
   exits Edit Mode if needed, and unlocks the visible bar so Normal Mode
   slot assignment/clear and Shift-drag rearrangement are one click away from
-  the builder.
+  the builder. This is the bridge to the later separate Spell Book placement
+  workflow; Quick Create itself should stay a minimal action-bar creator.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.

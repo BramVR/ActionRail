@@ -34,7 +34,10 @@ The latest Quick Create workflow bridge adds `Edit Slots`, which previews the
 current draft, exits Edit Mode when needed, and unlocks the visible bar for
 Normal Mode slot assignment/clear and Shift-drag editing. The Quick Create
 command buttons are split into edit-flow and save-flow rows so labels remain
-readable in Maya.
+readable in Maya. The newest Quick Create UX pass makes blank action bars the
+default and removes Action/Icon assignment controls from the Slots tab so Quick
+Create stays focused on creating bars and slots; the separate future
+Spell Book/Action Book owns action browsing and placement.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -82,9 +85,11 @@ Working surface:
   layout sliders, and generated blank slots when the button-count control is
   raised beyond the template's icon-backed slots. Quick Create now also has an
   Edit Layout handoff that previews the current draft, enters Edit Mode, and
-  selects the draft frame. Starter templates now include the original vertical
-  stack, horizontal strip, edge-tab rail, a blank action bar, and a viewport
-  display strip seeded with Toggle Grid. A read-only Bindings tab lists
+  selects the draft frame. Quick Create defaults to a blank action bar and its
+  Slots tab edits only slot id, label, and displayed key text. Starter
+  templates still include the original vertical stack, horizontal strip,
+  edge-tab rail, and a viewport display strip seeded with Toggle Grid, but
+  Quick Create should not become the action browser. A read-only Bindings tab lists
   action-bearing slots, key labels, and Maya Hotkey Editor nameCommands for the
   current draft. An Edit Slots handoff previews the draft and unlocks that
   visible bar for Normal Mode slot editing.
@@ -250,6 +255,10 @@ $env:PYTHONPATH = "scripts"
 - Quick Create Edit Slots now connects the builder to Normal Mode slot editing
   by previewing the current draft, exiting Edit Mode, and unlocking that bar for
   context-menu assignment/clear and Shift-drag rearrangement.
+- Quick Create now opens on a blank action bar and the Slots tab no longer
+  exposes Action/Icon assignment controls. It edits slot id, label, and key text
+  only, preserving existing payload metadata internally until the separate
+  Spell Book/Action Book placement surface is implemented.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -411,11 +420,12 @@ $env:PYTHONPATH = "scripts"
   -> passed and includes `scripts/actionrail/action_book.py`.
 - Latest Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
-  -> passed; verified the Quick Create picker/preview/save/publish flow after
-  routing action choices through Action Book metadata, verified the five
-  template starters including Blank Bar and Viewport Display Strip, verified
-  the read-only Bindings tab lists four slot nameCommands for the saved
-  horizontal strip, verified Edit Layout enters Edit Mode with
+  -> passed; verified Quick Create opens on a blank six-slot action bar with no
+  default binding targets, verified the simplified Slots tab screenshots show
+  only Id/Label/Key columns, verified the five template starters including
+  Blank Bar and Viewport Display Strip, verified the read-only Bindings tab
+  lists four slot nameCommands for the saved horizontal strip, verified Edit
+  Layout enters Edit Mode with
   `quick-horizontal-strip` selected, and captured
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_edit_layout.png`,

@@ -46,6 +46,10 @@
   exits Edit Mode, and unlocks the visible bar for Normal Mode slot editing;
   the bottom command area now uses separate edit/save rows so button labels do
   not clip in Maya.
+- Refocused Quick Create on action-bar creation: it now opens on a blank
+  six-slot action bar, and the Slots tab edits only slot id, label, and key
+  text while preserving loaded action/icon payloads internally for the future
+  separate Spell Book workflow.
 - Expanded the Action Book backend beyond transform/key/grid entries with
   Select, Clear Selection, and Frame Selection actions, including Maya smoke
   verification and a saved catalog JSON artifact for review.

@@ -428,6 +428,11 @@ Edit Mode, bind slots in Bind Mode, then save.
   normal action execution. Quick Create now exposes this as an `Edit Slots`
   handoff for the current draft, keeping bar creation, frame placement, and
   slot editing connected without starting full Action Book UI or Bind Mode.
+- Keep Quick Create minimal. Its current default is a blank action bar, and its
+  Slots tab edits only slot id, label, and displayed key text. Do not add
+  Action/Icon assignment browsing back into Quick Create; action placement
+  belongs to a separate Spell Book/Action Book surface that can feed unlocked
+  slots through the same slot-edit workflow.
 - Make Edit Mode controls practical in dense viewports. First panel polish is
   Maya-smoke verified: the selected rail button now says Lock or Unlock and
   toggles whether that rail can move in the current Edit Mode session, while
@@ -526,7 +531,10 @@ command path and the five-template starter set, and the first
 guide/slot-edit/control-panel affordance polish pass is Maya-smoke verified.
 Quick Create now also has a Maya-smoke verified `Edit Slots` handoff that
 previews the current draft, exits Edit Mode, and unlocks the visible bar for
-Normal Mode slot payload editing.
+Normal Mode slot payload editing. Quick Create has been narrowed back to a
+minimal action-bar creator: it opens on a blank bar, supports adding/removing
+slots and layout settings, and no longer exposes action/icon assignment controls
+in the Slots tab.
 The Action Book backend has also expanded beyond the original transform/key/grid
 seed set with Maya-smoke verified selection, viewport, and modeling entries:
 Select, Clear Selection, Frame Selection, Toggle Isolate Selected, Center
