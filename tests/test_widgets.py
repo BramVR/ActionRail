@@ -524,6 +524,77 @@ def test_unlocked_slot_accepts_action_book_drop_payload() -> None:
     assert events == [("drop.slot", "maya.tool.scale")]
 
 
+def test_action_book_drop_event_filter_accepts_drag_enter_and_drop() -> None:
+    events: list[tuple[str, str]] = []
+
+    class QObject:
+        def __init__(self, _parent: object | None = None) -> None:
+            pass
+
+    class QEvent:
+        DragEnter = 1
+        DragMove = 2
+        Drop = 3
+
+    qt_core = type("QtCore", (), {"QObject": QObject, "QEvent": QEvent})
+    qt = type("Qt", (), {"QtCore": qt_core})
+
+    class Button:
+        def __init__(self) -> None:
+            self.event_filter = None
+
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            self.event_filter = event_filter
+
+    class MimeData:
+        def hasFormat(self, mime_type: str) -> bool:  # noqa: N802
+            return mime_type == "application/x-actionrail-action-id"
+
+        def data(self, _mime_type: str) -> bytes:
+            return b"maya.tool.scale"
+
+    class DropEvent:
+        def __init__(self, event_type: int) -> None:
+            self._event_type = event_type
+            self.accepted = False
+
+        def type(self) -> int:
+            return self._event_type
+
+        def mimeData(self) -> MimeData:  # noqa: N802
+            return MimeData()
+
+        def acceptProposedAction(self) -> None:  # noqa: N802
+            self.accepted = True
+
+    button = Button()
+    callbacks = widgets.SlotEditCallbacks(
+        unlocked=True,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda slot_id, action_id: events.append((slot_id, action_id)) or True,
+        clear_slot=lambda _slot_id: True,
+    )
+    button._actionrail_slot_edit_callbacks = callbacks
+
+    installed = widgets._install_action_book_drop_event_filter(
+        qt,
+        button,
+        StackItem(type="button", id="drop.slot", label="New"),
+        callbacks,
+    )
+
+    drag_event = DropEvent(QEvent.DragEnter)
+    drop_event = DropEvent(QEvent.Drop)
+
+    assert installed is True
+    assert button.event_filter.eventFilter(button, drag_event) is True
+    assert drag_event.accepted is True
+    assert button.event_filter.eventFilter(button, drop_event) is True
+    assert drop_event.accepted is True
+    assert events == [("drop.slot", "maya.tool.scale")]
+
+
 def test_locked_slot_ignores_action_book_drop_payload() -> None:
     events: list[tuple[str, str]] = []
 

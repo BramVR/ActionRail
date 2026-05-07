@@ -244,6 +244,8 @@ def build_rail(
 
     root.adjustSize()
     root.setFixedSize(root.sizeHint())
+    if slot_edit_callbacks is not None:
+        _install_action_book_root_drop(qt, root, slot_edit_callbacks)
     return root
 
 
@@ -532,15 +534,14 @@ def _install_action_book_drop(
     with suppress(Exception):
         set_accept_drops(True)
 
+    if callable(getattr(button, "installEventFilter", None)):
+        _install_action_book_drop_event_filter(load(), button, item, callbacks)
+
     base_drag_enter = getattr(button, "dragEnterEvent", None)
     base_drop = getattr(button, "dropEvent", None)
 
     def drag_enter_event(event: object) -> object | None:
-        live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
-        if (
-            getattr(live_callbacks, "unlocked", False)
-            and _action_book_action_id_from_event(event)
-        ):
+        if _action_book_drop_can_accept(button, callbacks, event):
             _accept_proposed_event(event)
             return None
         if callable(base_drag_enter):
@@ -548,18 +549,169 @@ def _install_action_book_drop(
         return None
 
     def drop_event(event: object) -> object | None:
-        live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
-        action_id = _action_book_action_id_from_event(event)
-        if not getattr(live_callbacks, "unlocked", False) or not action_id:
+        if not _assign_action_book_drop(button, item.id, callbacks, event):
             if callable(base_drop):
                 return base_drop(event)
             return None
-        if live_callbacks.assign_action(item.id, action_id):
-            _accept_proposed_event(event)
+        _accept_proposed_event(event)
         return None
 
     button.dragEnterEvent = drag_enter_event  # type: ignore[method-assign]
     button.dropEvent = drop_event  # type: ignore[method-assign]
+
+
+def _install_action_book_drop_event_filter(
+    qt: object,
+    button: object,
+    item: StackItem,
+    callbacks: SlotEditCallbacks,
+) -> bool:
+    object_class = getattr(getattr(qt, "QtCore", None), "QObject", None)
+    event_class = getattr(getattr(qt, "QtCore", None), "QEvent", None)
+    install_event_filter = getattr(button, "installEventFilter", None)
+    if object_class is None or event_class is None or not callable(install_event_filter):
+        return False
+
+    drag_enter_type = getattr(event_class, "DragEnter", None)
+    drag_move_type = getattr(event_class, "DragMove", None)
+    drop_type = getattr(event_class, "Drop", None)
+    if drag_enter_type is None or drag_move_type is None or drop_type is None:
+        return False
+
+    class _ActionBookDropFilter(object_class):  # type: ignore[misc, valid-type]
+        def eventFilter(self, watched: object, event: object) -> bool:  # noqa: N802
+            event_type = event.type()
+            if event_type in (drag_enter_type, drag_move_type):
+                if _action_book_drop_can_accept(watched, callbacks, event):
+                    _accept_proposed_event(event)
+                    return True
+                return False
+
+            if event_type != drop_type:
+                return False
+
+            if _assign_action_book_drop(watched, item.id, callbacks, event):
+                _accept_proposed_event(event)
+                return True
+            return False
+
+    try:
+        event_filter = _ActionBookDropFilter(button)
+        install_event_filter(event_filter)
+        button._actionrail_action_book_drop_event_filter = event_filter
+    except Exception:
+        return False
+    return True
+
+
+def _install_action_book_root_drop(
+    qt: object,
+    root: object,
+    callbacks: SlotEditCallbacks,
+) -> bool:
+    set_accept_drops = getattr(root, "setAcceptDrops", None)
+    install_event_filter = getattr(root, "installEventFilter", None)
+    object_class = getattr(getattr(qt, "QtCore", None), "QObject", None)
+    event_class = getattr(getattr(qt, "QtCore", None), "QEvent", None)
+    if (
+        not callable(set_accept_drops)
+        or not callable(install_event_filter)
+        or object_class is None
+        or event_class is None
+    ):
+        return False
+
+    drag_enter_type = getattr(event_class, "DragEnter", None)
+    drag_move_type = getattr(event_class, "DragMove", None)
+    drop_type = getattr(event_class, "Drop", None)
+    if drag_enter_type is None or drag_move_type is None or drop_type is None:
+        return False
+
+    with suppress(Exception):
+        set_accept_drops(True)
+
+    class _ActionBookRootDropFilter(object_class):  # type: ignore[misc, valid-type]
+        def eventFilter(self, watched: object, event: object) -> bool:  # noqa: N802
+            event_type = event.type()
+            if event_type not in (drag_enter_type, drag_move_type, drop_type):
+                return False
+
+            target_button = _action_book_drop_button_from_root_event(qt, watched, event)
+            if target_button is None:
+                return False
+
+            target_callbacks = _slot_edit_callbacks_from_button(target_button) or callbacks
+            if event_type in (drag_enter_type, drag_move_type):
+                if _action_book_drop_can_accept(target_button, target_callbacks, event):
+                    _accept_proposed_event(event)
+                    return True
+                return False
+
+            slot_id = _slot_id_from_button(target_button)
+            if slot_id and _assign_action_book_drop(
+                target_button,
+                slot_id,
+                target_callbacks,
+                event,
+            ):
+                _accept_proposed_event(event)
+                return True
+            return False
+
+    try:
+        event_filter = _ActionBookRootDropFilter(root)
+        install_event_filter(event_filter)
+        root._actionrail_action_book_drop_event_filter = event_filter
+    except Exception:
+        return False
+    return True
+
+
+def _action_book_drop_button_from_root_event(
+    qt: object,
+    root: object,
+    event: object,
+) -> object | None:
+    local_point = _event_local_point(event)
+    map_to_global = getattr(root, "mapToGlobal", None)
+    if local_point is None or not callable(map_to_global):
+        return None
+    with suppress(Exception):
+        return _slot_button_at_global_point(qt, root, map_to_global(local_point))
+    return None
+
+
+def _slot_id_from_button(button: object) -> str:
+    with suppress(Exception):
+        slot_id = button.property("actionRailSlotId")
+        if isinstance(slot_id, str):
+            return slot_id
+    return ""
+
+
+def _action_book_drop_can_accept(
+    button: object,
+    callbacks: SlotEditCallbacks,
+    event: object,
+) -> bool:
+    live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
+    return bool(
+        getattr(live_callbacks, "unlocked", False)
+        and _action_book_action_id_from_event(event)
+    )
+
+
+def _assign_action_book_drop(
+    button: object,
+    slot_id: str,
+    callbacks: SlotEditCallbacks,
+    event: object,
+) -> bool:
+    live_callbacks = _slot_edit_callbacks_from_button(button) or callbacks
+    action_id = _action_book_action_id_from_event(event)
+    if not getattr(live_callbacks, "unlocked", False) or not action_id:
+        return False
+    return bool(live_callbacks.assign_action(slot_id, action_id))
 
 
 def _action_book_action_id_from_event(event: object) -> str:

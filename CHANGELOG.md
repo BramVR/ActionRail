@@ -63,6 +63,8 @@
 - Fixed Action Book smoke cleanup so tests close the Maya workspace control
   shell, not only the child widget, and stale ActionRail workspace controls are
   removed between smoke scripts.
+- Fixed live Action Book drag/drop into unlocked bars by making the rail root
+  accept Qt drag-enter/drop events and route them to the slot under the cursor.
 
 ## 2026-05-06
 

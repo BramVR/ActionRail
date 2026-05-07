@@ -294,7 +294,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 498 passed.
+  -> 499 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -470,8 +470,8 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified 13 rendered Action Book entries, search narrowing to
   `maya.tool.scale`, click-to-run Select changing Maya to `selectSuperContext`,
   drag/drop assignment of `maya.tool.scale` onto an unlocked blank Quick Create
-  slot with `maya.scale`, Action Book workspace-control cleanup on close, and
-  screenshots at
+  slot with `maya.scale` through the real Qt drag-enter/drop path, Action Book
+  workspace-control cleanup on close, and screenshots at
   `.gg-maya-sessiond/screenshots/actionrail_action_book_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_action_book_search_scale.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_action_book_drop_bar.png`.

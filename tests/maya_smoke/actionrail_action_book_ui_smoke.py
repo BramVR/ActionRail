@@ -161,24 +161,25 @@ payload = action_book_mime_text("maya.tool.scale")
 mime.setData(ACTION_BOOK_MIME_TYPE, payload.encode("utf-8"))
 mime.setText(payload)
 point = slot_button.rect().center()
+root_point = host.widget.mapFromGlobal(slot_button.mapToGlobal(point))
 drag_event = QtGui.QDragEnterEvent(
-    point,
+    root_point,
     QtCore.Qt.CopyAction,
     mime,
     QtCore.Qt.LeftButton,
     QtCore.Qt.NoModifier,
 )
-QtWidgets.QApplication.sendEvent(slot_button, drag_event)
-slot_button.dragEnterEvent(drag_event)
+QtWidgets.QApplication.sendEvent(host.widget, drag_event)
+if not drag_event.isAccepted():
+    raise AssertionError("Action Book drag was not accepted by the unlocked bar slot.")
 drop_event = QtGui.QDropEvent(
-    QtCore.QPointF(point),
+    QtCore.QPointF(root_point),
     QtCore.Qt.CopyAction,
     mime,
     QtCore.Qt.LeftButton,
     QtCore.Qt.NoModifier,
 )
-QtWidgets.QApplication.sendEvent(slot_button, drop_event)
-slot_button.dropEvent(drop_event)
+QtWidgets.QApplication.sendEvent(host.widget, drop_event)
 app.processEvents()
 cmds.refresh(force=True)
 app.processEvents()
