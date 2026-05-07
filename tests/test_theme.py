@@ -28,11 +28,14 @@ def test_default_qss_preserves_reference_tones() -> None:
     qss = generate_style_sheet()
 
     assert "min-width: 32px;" in qss
-    assert "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045" in qss
-    assert "stop:0 rgba(37, 45, 52, 102)" in qss
-    assert "stop:0.34 rgba(37, 45, 52, 102)" in qss
-    assert "stop:0.5 rgba(59, 70, 80, 102)" in qss
-    assert "stop:0.66 rgba(37, 45, 52, 102)" in qss
+    assert 'QFrame[actionRailRole="cluster"]' in qss
+    assert "background: transparent;" in qss
+    assert "border: none;" in qss
+    assert DEFAULT_THEME.cluster_base_rgb == (29, 32, 42)
+    assert DEFAULT_THEME.cluster_stripe_rgb == (45, 47, 60)
+    assert "stop:0 rgb(29, 32, 42)" in DEFAULT_THEME.cluster_background
+    assert "stop:0.35 rgb(45, 47, 60)" in DEFAULT_THEME.cluster_background
+    assert "stop:0.65 rgb(45, 47, 60)" in DEFAULT_THEME.cluster_background
     assert (
         "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.009, y2:0.009"
         in DEFAULT_THEME.panel_profile_background

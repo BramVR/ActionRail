@@ -48,9 +48,14 @@ unlocked action-bar slots. The latest placement fix keeps those dropped live
 payloads when Quick Create Lock Bar rebuilds the preview, so assigned icons
 stay visible after returning a bar to normal click-to-run mode. The latest
 theme pass doubles the central diagonal stripe width on action bars and Action
-Book pages and renders both stripe treatments at 40% opacity. Spell icons now
-share a dark button backplate in both the Action Book and dropped action-bar
-slots, so icons no longer float on a transparent background.
+Book pages; action bars now keep an opaque `rgb(29, 32, 42)` base and opaque
+`rgb(45, 47, 60)` hard-stop diagonal stripes so the rail background does not
+become transparent. Action-bar clusters now paint that striped bar in widget
+pixels instead of relying on a stretched Qt stylesheet gradient, so the stripe
+angle continues consistently behind centered buttons; the painted stripes are
+now thinner and denser. Spell icons now share a dark button backplate in both
+the Action Book and dropped action-bar slots, so icons no longer float on a
+transparent background.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -337,6 +342,12 @@ $env:PYTHONPATH = "scripts"
 - Latest focused theme/widget Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\action_book_ui.py scripts\\actionrail\\widgets.py scripts\\actionrail\\theme.py tests\\test_widgets.py tests\\test_theme.py tests\\maya_smoke\\actionrail_action_book_ui_smoke.py`
   -> all checks passed.
+- Latest README screenshot generation:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_readme_screenshots.py -Timeout 300`
+  -> passed; refreshed
+  `docs/assets/actionrail_readme_maya_icons_showcase.png` and
+  `docs/assets/actionrail_readme_edit_mode.png` from the same Maya example
+  scene.
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
   -> 501 passed.

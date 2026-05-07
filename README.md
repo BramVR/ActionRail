@@ -3,7 +3,7 @@
 ![Maya](https://img.shields.io/badge/Maya-2025%2F2026-37a5cc)
 ![Python](https://img.shields.io/badge/Python-3.11-3776ab)
 ![PySide](https://img.shields.io/badge/UI-PySide6%20%2F%20Qt-41cd52)
-![Status](https://img.shields.io/badge/status-Phase%202.5%20direct%20manipulation-37a5cc)
+![Status](https://img.shields.io/badge/status-Phase%202.6%20authoring%20polish-37a5cc)
 
 ActionRail is a Maya module for compact, polished, user-created viewport UI:
 tool rails, action bars, action buttons, hotkey badges, diagnostics, and
@@ -19,6 +19,10 @@ part of Maya instead of a large docked tool window.
 <p align="center">
   <img src="docs/assets/actionrail_readme_maya_icons_showcase.png" alt="ActionRail action bars with Maya icons shown over a minimal Maya viewport scene">
 </p>
+
+Normal Mode keeps action bars compact in the viewport. Icon-backed slots use a
+dark button backplate, visible hotkey badges, active-state accents, and the
+same slot rendering used when actions are placed from the Action Book.
 
 ## Edit Mode Overview
 
@@ -154,7 +158,9 @@ actionrail.show_quick_create_panel()
 
 Quick Create can create a vertical stack, horizontal strip, or edge-tab starter
 draft; preview without saving; clear previews; save or explicitly overwrite a
-user preset; and load an existing user preset back into editable values.
+user preset; and load an existing user preset back into editable values. It
+stays focused on bar shape, slot ids, optional labels, and displayed key text;
+action placement belongs to the separate Action Book workflow.
 
 Use Edit Mode after showing rails:
 
@@ -182,9 +188,12 @@ limits.
 - Draft authoring model with `DraftRail`, `DraftSlot`,
   `build_draft_spec()`, `spec_to_payload()`, `save_user_preset()`,
   `load_user_preset()`, `user_preset_dir()`, and `user_preset_ids()`.
-- Dockable Quick Create panel with template selection, action/icon choices,
-  draft validation, preview, clear preview, save, overwrite, and load-existing
-  workflow.
+- Dockable Quick Create panel with template selection, blank action-bar
+  starters, draft validation, preview, clear preview, save, overwrite,
+  load-existing workflow, and a read-only binding-target view.
+- Dockable Action Book panel with search, icon-backed action entries,
+  click-to-run previews, and drag/drop placement onto unlocked action-bar
+  slots.
 - Edit Mode shell with global toggle, layout-map overlay, active rail frames,
   grid controls, Snap to Grid, Sticky Frames, left-click selection,
   selected-frame X/Y controls, safe movement clamps, save-position persistence,

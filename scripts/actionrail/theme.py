@@ -23,13 +23,16 @@ class ActionRailTheme:
     frame_padding: int = 4
     frame_spacing: int = 2
     root_background: str = "transparent"
+    cluster_base_rgb: tuple[int, int, int] = (29, 32, 42)
+    cluster_stripe_rgb: tuple[int, int, int] = (45, 47, 60)
     cluster_background: str = (
         "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045, "
-        "stop:0 rgba(37, 45, 52, 102), "
-        "stop:0.34 rgba(37, 45, 52, 102), "
-        "stop:0.5 rgba(59, 70, 80, 102), "
-        "stop:0.66 rgba(37, 45, 52, 102), "
-        "stop:1 rgba(37, 45, 52, 102))"
+        "stop:0 rgb(29, 32, 42), "
+        "stop:0.35 rgb(29, 32, 42), "
+        "stop:0.35 rgb(45, 47, 60), "
+        "stop:0.65 rgb(45, 47, 60), "
+        "stop:0.65 rgb(29, 32, 42), "
+        "stop:1 rgb(29, 32, 42))"
     )
     cluster_border: str = "#030404"
     cluster_border_width: int = 2
@@ -124,9 +127,8 @@ QWidget#ActionRailRoot {{
     background: {theme.root_background};
 }}
 QFrame[actionRailRole="cluster"] {{
-    background: {theme.cluster_background};
-    border: {theme.cluster_border_width}px solid {theme.cluster_border};
-    border-radius: {theme.cluster_border_radius}px;
+    background: transparent;
+    border: none;
 }}
 QPushButton[actionRailRole="button"] {{
     min-width: {theme.button_size}px;

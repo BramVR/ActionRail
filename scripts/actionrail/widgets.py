@@ -355,7 +355,7 @@ def _build_cluster(
     slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     qt = load()
-    frame = qt.QtWidgets.QFrame()
+    frame = _cluster_frame_class(qt, theme)()
     frame.setProperty("actionRailRole", "cluster")
     layout_class = (
         qt.QtWidgets.QHBoxLayout
@@ -363,11 +363,12 @@ def _build_cluster(
         else qt.QtWidgets.QVBoxLayout
     )
     layout = layout_class(frame)
+    content_margin = theme.frame_padding + theme.cluster_border_width
     layout.setContentsMargins(
-        theme.frame_padding,
-        theme.frame_padding,
-        theme.frame_padding,
-        theme.frame_padding,
+        content_margin,
+        content_margin,
+        content_margin,
+        content_margin,
     )
     layout.setSpacing(theme.frame_spacing)
 
@@ -391,20 +392,76 @@ def _build_single_button(
     slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
     qt = load()
-    frame = qt.QtWidgets.QFrame()
+    frame = _cluster_frame_class(qt, theme)()
     frame.setProperty("actionRailRole", "cluster")
     layout = qt.QtWidgets.QVBoxLayout(frame)
+    content_margin = theme.frame_padding + theme.cluster_border_width
     layout.setContentsMargins(
-        theme.frame_padding,
-        theme.frame_padding,
-        theme.frame_padding,
-        theme.frame_padding,
+        content_margin,
+        content_margin,
+        content_margin,
+        content_margin,
     )
     layout.setSpacing(0)
     layout.addWidget(_build_button(item, registry, theme, context, slot_edit_callbacks))
 
     frame.setFixedSize(theme.rail_width, theme.rail_width)
     return frame
+
+
+def _cluster_frame_class(qt: object, theme: ActionRailTheme) -> type:
+    base = qt.QtWidgets.QFrame
+    if not hasattr(qt.QtGui, "QPainter") or not hasattr(qt.QtGui, "QPen"):
+        return base
+
+    class ActionRailClusterFrame(base):  # type: ignore[misc, valid-type]
+        def paintEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            painter = qt.QtGui.QPainter(self)
+            try:
+                border_width = max(0, int(theme.cluster_border_width))
+                rect = self.rect()
+                inner = rect.adjusted(
+                    border_width,
+                    border_width,
+                    -border_width,
+                    -border_width,
+                )
+                painter.fillRect(inner, _qt_rgb_color(qt, *theme.cluster_base_rgb))
+
+                painter.save()
+                try:
+                    painter.setClipRect(inner)
+                    pen = qt.QtGui.QPen(_qt_rgb_color(qt, *theme.cluster_stripe_rgb))
+                    pen.setWidth(max(1, int(round(border_width * 0.5))))
+                    pen.setCapStyle(qt.QtCore.Qt.FlatCap)
+                    painter.setPen(pen)
+                    spacing = max(4, int(round(theme.button_size * 0.18)))
+                    span = inner.height() + spacing
+                    start = inner.left() - inner.height() - spacing
+                    stop = inner.right() + inner.height() + spacing
+                    for x_pos in range(start, stop, spacing):
+                        painter.drawLine(
+                            x_pos,
+                            inner.bottom() + 1,
+                            x_pos + span,
+                            inner.top() - 1,
+                        )
+                finally:
+                    painter.restore()
+
+                if border_width:
+                    pen = qt.QtGui.QPen(_qt_color(qt, theme.cluster_border))
+                    pen.setWidth(border_width)
+                    painter.setPen(pen)
+                    painter.setBrush(qt.QtCore.Qt.NoBrush)
+                    inset = max(0, int(border_width / 2))
+                    border_rect = rect.adjusted(inset, inset, -inset - 1, -inset - 1)
+                    painter.drawRect(border_rect)
+            finally:
+                painter.end()
+                _ = event
+
+    return ActionRailClusterFrame
 
 
 def _build_spacer(qt: object, size: int, orientation: str) -> object:
@@ -1915,6 +1972,15 @@ def _qt_color(qt: object, color: str) -> object:
     with suppress(Exception):
         return color_class(color)
     return color
+
+
+def _qt_rgb_color(qt: object, red: int, green: int, blue: int) -> object:
+    color_class = getattr(getattr(qt, "QtGui", None), "QColor", None)
+    if color_class is None:
+        return f"rgb({red}, {green}, {blue})"
+    with suppress(Exception):
+        return color_class(red, green, blue)
+    return f"rgb({red}, {green}, {blue})"
 
 
 def _adjusted_rect(rect: object, left: int, top: int, right: int, bottom: int) -> object:

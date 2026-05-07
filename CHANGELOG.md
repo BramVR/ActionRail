@@ -75,9 +75,19 @@
   key labels.
 - Increased the ActionRail diagonal stripe weight on action bars and Action
   Book pages, with both stripe treatments rendered at 40% opacity.
+- Kept the action-bar stripe base fully opaque at `rgb(29, 32, 42)` and
+  changed the diagonal highlight to an opaque `rgb(45, 47, 60)` line with hard
+  stops so the stripe does not make the rail background transparent.
+- Moved action-bar stripe rendering from a stretched Qt stylesheet gradient to
+  pixel-based cluster-frame painting so the striped bar continues behind the
+  buttons with a consistent diagonal angle.
+- Centered buttons inside the custom-painted action-bar frame and changed the
+  painted stripes to thinner, denser lines.
 - Added a shared dark spell-icon backplate so Action Book entries and dropped
   action-bar icons render as framed buttons instead of floating transparent
   icons.
+- Refreshed the README normal-view and Edit Mode screenshots from the same
+  Maya example scene so the public docs show the current interface style.
 - Retuned the shared ActionRail theme toward an ElvUI-style look: transparent
   near-black frames, square recessed slots, white default text, green
   active accents and panel frame lines, black-bordered opaque striped

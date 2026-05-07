@@ -1205,6 +1205,7 @@ def test_build_transform_stack_flushes_pending_vertical_tool_cluster(monkeypatch
     root = widgets.build_transform_stack(spec, create_default_registry(BuildCmds()))
 
     assert root.children[0].fixed_size[0] == widgets.DEFAULT_THEME.rail_width
+    assert root.children[0].layout.margins == (6, 6, 6, 6)
 
 
 def test_set_slot_key_label_updates_matching_buttons(monkeypatch) -> None:

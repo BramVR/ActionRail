@@ -26,6 +26,8 @@ else:
     REPO_ROOT = Path("C:/PROJECTS/GG/ScreenUI")
 ASSET_DIR = REPO_ROOT / "docs" / "assets"
 SCRATCH_DIR = REPO_ROOT / ".gg-maya-sessiond" / "readme_screenshots"
+README_VIEWPORT_SIZE = (1600, 900)
+README_CAPTURE_SCALE = 2
 
 
 def _material(name: str, color: tuple[float, float, float]) -> str:
@@ -407,6 +409,36 @@ def _playblast(path: Path, size: tuple[int, int]) -> Path:
     raise RuntimeError(f"Playblast did not produce an image: {path}")
 
 
+def _scaled_size(size: tuple[int, int], scale: int) -> tuple[int, int]:
+    return (max(1, size[0] * scale), max(1, size[1] * scale))
+
+
+def _scaled_offset(offset: tuple[int, int], scale: int) -> tuple[int, int]:
+    return (offset[0] * scale, offset[1] * scale)
+
+
+def _render_widget_pixmap(widget: object, scale: int) -> QtGui.QPixmap:
+    width = max(1, widget.width())
+    height = max(1, widget.height())
+    if scale <= 1:
+        return widget.grab()
+
+    pixmap = QtGui.QPixmap(width * scale, height * scale)
+    pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+    painter = QtGui.QPainter(pixmap)
+    try:
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
+        painter.scale(scale, scale)
+        try:
+            widget.render(painter)
+        except TypeError:
+            widget.render(painter, QtCore.QPoint(0, 0))
+    finally:
+        painter.end()
+    return pixmap
+
+
 def _anchor_position(
     anchor: str,
     image_size: tuple[int, int],
@@ -444,24 +476,27 @@ def _save_composite(
     viewport_size: tuple[int, int],
     blast_name: str,
     rail_margin: int = 18,
+    capture_scale: int = README_CAPTURE_SCALE,
 ) -> dict[str, object]:
-    blast_path = _playblast(SCRATCH_DIR / blast_name, viewport_size)
+    capture_size = _scaled_size(viewport_size, capture_scale)
+    blast_path = _playblast(SCRATCH_DIR / blast_name, capture_size)
     base = QtGui.QPixmap(str(blast_path))
     if base.isNull():
         raise RuntimeError(f"Unable to read viewport playblast: {blast_path}")
 
     painter = QtGui.QPainter(base)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
     placements = []
     for host in hosts:
         widget = host.widget
-        rail = widget.grab()
+        rail = _render_widget_pixmap(widget, capture_scale)
         spec = host.spec
         x_pos, y_pos = _anchor_position(
             spec.anchor,
             (base.width(), base.height()),
             (rail.width(), rail.height()),
-            spec.layout.offset,
-            margin=rail_margin,
+            _scaled_offset(spec.layout.offset, capture_scale),
+            margin=rail_margin * capture_scale,
         )
         painter.drawPixmap(x_pos, y_pos, rail)
         placements.append(
@@ -473,15 +508,25 @@ def _save_composite(
         )
     painter.end()
 
+    final = base
+    if capture_scale > 1:
+        final = base.scaled(
+            viewport_size[0],
+            viewport_size[1],
+            QtCore.Qt.AspectRatioMode.IgnoreAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation,
+        )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if not base.save(str(output_path), "PNG"):
+    if not final.save(str(output_path), "PNG"):
         raise RuntimeError(f"Unable to save composite screenshot: {output_path}")
 
     return {
         "output_path": str(output_path),
         "playblast_path": str(blast_path),
         "placements": placements,
-        "size": [base.width(), base.height()],
+        "capture_scale": capture_scale,
+        "size": [final.width(), final.height()],
     }
 
 
@@ -509,6 +554,7 @@ def _save_edit_mode_composite(
     panel: str,
     selected_preset_id: str,
     blast_name: str,
+    capture_scale: int = README_CAPTURE_SCALE,
 ) -> dict[str, object]:
     state = actionrail.enter_edit_mode(
         panel=panel,
@@ -533,12 +579,13 @@ def _save_edit_mode_composite(
 
     widget = _edit_mode_widget()
     widget_size = (max(1, widget.width()), max(1, widget.height()))
-    blast_path = _playblast(SCRATCH_DIR / blast_name, widget_size)
+    capture_size = _scaled_size(widget_size, capture_scale)
+    blast_path = _playblast(SCRATCH_DIR / blast_name, capture_size)
     base = QtGui.QPixmap(str(blast_path))
     if base.isNull():
         raise RuntimeError(f"Unable to read Edit Mode viewport playblast: {blast_path}")
 
-    overlay = widget.grab()
+    overlay = _render_widget_pixmap(widget, capture_scale)
     if overlay.isNull() or overlay.width() <= 0 or overlay.height() <= 0:
         raise RuntimeError("Unable to grab the ActionRail Edit Mode overlay.")
 
@@ -550,18 +597,29 @@ def _save_edit_mode_composite(
         )
 
     painter = QtGui.QPainter(base)
+    painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
     painter.drawPixmap(0, 0, overlay)
     painter.end()
 
+    final = base
+    if capture_scale > 1:
+        final = base.scaled(
+            widget_size[0],
+            widget_size[1],
+            QtCore.Qt.AspectRatioMode.IgnoreAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation,
+        )
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if not base.save(str(output_path), "PNG"):
+    if not final.save(str(output_path), "PNG"):
         raise RuntimeError(f"Unable to save Edit Mode composite screenshot: {output_path}")
 
     return {
         "output_path": str(output_path),
         "playblast_path": str(blast_path),
         "selected_preset_id": selected_preset_id,
-        "size": [base.width(), base.height()],
+        "capture_scale": capture_scale,
+        "size": [final.width(), final.height()],
         "overlay_size": [overlay.width(), overlay.height()],
         "rail_count": state.rail_count,
     }
@@ -584,7 +642,7 @@ def main() -> None:
             _save_composite(
                 hosts,
                 ASSET_DIR / "actionrail_readme_maya_icons_showcase.png",
-                viewport_size=(1600, 900),
+                viewport_size=README_VIEWPORT_SIZE,
                 blast_name="actionrail_readme_maya_scene_base.png",
             )
         ]
