@@ -84,11 +84,13 @@ actionrail.lock_rail_slots("my_user_rail")
 
 In Normal Mode, the rendered slot context menu can unlock the active rail. Once
 unlocked, that same menu can assign an action payload or clear the slot.
-Shift-drag a populated slot to another slot to move its payload; dropping on a
-populated target swaps the two payloads, and releasing anywhere that is not a
-different slot clears the source slot. While a rail is unlocked, populated slot
-clicks are treated as edit gestures instead of running actions. Lock the rail
-again when the bar should return to normal action execution.
+Shift-drag a populated slot to another slot on the same unlocked rail, or onto
+another unlocked rail, to move its payload; dropping on a populated unlocked
+target swaps the two payloads. Releasing outside ActionRail clears the source
+slot, while releasing over a locked different rail cancels the drag so the
+source payload is preserved. While a rail is unlocked, populated slot clicks
+are treated as edit gestures instead of running actions. Lock the rail again
+when the bar should return to normal action execution.
 
 Movement updates active rail overlay positions immediately. Saved persistence is
 implemented for unlocked runtime/user rails by writing the current runtime spec
@@ -133,7 +135,7 @@ Implementation ownership:
 - `scripts/actionrail/overlay.py`: Normal Mode rail slot-edit lock state and
   runtime payload assignment/clear/move hooks
 - `scripts/actionrail/slot_payloads.py`: stable slot payload assignment,
-  clear, move, and swap helpers
+  clear, move, swap, and cross-rail transfer helpers
 - `scripts/actionrail/widgets.py`: rendered rail buttons, Normal Mode slot edit
   context menus, and Shift-drag slot payload gestures
 - `scripts/actionrail/maya_ui.py`: Maya menu entry point
@@ -164,7 +166,8 @@ Implemented now:
 - public layout-save helper that persists adjusted offsets to user presets
 - Normal Mode active-rail lock/unlock helpers for slot payload assignment and
   clearing
-- Normal Mode Shift-drag slot payload move/swap/clear-out gestures
+- Normal Mode Shift-drag slot payload move/swap/clear-out gestures, including
+  cross-rail transfer between unlocked rails
 - Maya menu toggle
 - Maya screenshot verification
 

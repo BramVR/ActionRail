@@ -88,6 +88,16 @@ class SlotEditCallbacks:
     assign_action: Callable[[str, str], bool]
     clear_slot: Callable[[str], bool]
     move_slot: Callable[[str, str], bool] | None = None
+    owner: object | None = None
+    transfer_slot: Callable[[str, SlotEditCallbacks, str], bool] | None = None
+
+
+@dataclass(frozen=True)
+class _SlotDragDropTarget:
+    slot_id: str | None = None
+    callbacks: SlotEditCallbacks | None = None
+    inside_action_rail: bool = False
+    same_rail: bool = False
 
 
 class ActionRailRoot:
@@ -428,6 +438,7 @@ def _build_button(
     )
     _apply_slot_render_state(button, state)
     if slot_edit_callbacks is not None:
+        button._actionrail_slot_edit_callbacks = slot_edit_callbacks
         _install_slot_edit_menu(button, item, registry, slot_edit_callbacks)
         _install_slot_drag_edit(button, item, slot_edit_callbacks)
     if item.action and not (
@@ -630,7 +641,7 @@ def _install_slot_drag_event_filter(
             if not state.get("dragging"):
                 return False
 
-            target_slot_id, _inside_source_rail = _slot_drag_release_target_from_points(
+            target = _slot_drag_release_target_info_from_points(
                 qt,
                 watched,
                 release_points,
@@ -638,7 +649,7 @@ def _install_slot_drag_event_filter(
             changed = _commit_slot_drag_drop(
                 callbacks,
                 source_slot_id,
-                target_slot_id,
+                target,
             )
             _finish_slot_drag(state, restore_source=not changed)
             _accept_event(event)
@@ -719,7 +730,7 @@ def _handle_slot_drag_release(button: object, event: object) -> bool:
         return False
 
     callbacks = getattr(button, "_actionrail_slot_drag_callbacks", None)
-    target_slot_id, _inside_source_rail = _slot_drag_release_target_from_points(
+    target = _slot_drag_release_target_info_from_points(
         qt,
         button,
         release_points,
@@ -730,7 +741,7 @@ def _handle_slot_drag_release(button: object, event: object) -> bool:
         changed = _commit_slot_drag_drop(
             callbacks,
             source_slot_id,
-            target_slot_id,
+            target,
         )
     _finish_slot_drag(state, restore_source=not changed)
     _accept_event(event)
@@ -740,10 +751,27 @@ def _handle_slot_drag_release(button: object, event: object) -> bool:
 def _commit_slot_drag_drop(
     callbacks: SlotEditCallbacks,
     source_slot_id: str,
-    target_slot_id: str | None,
+    target: _SlotDragDropTarget,
 ) -> bool:
+    target_slot_id = target.slot_id
     if target_slot_id and target_slot_id != source_slot_id:
-        return bool(callbacks.move_slot(source_slot_id, target_slot_id))
+        if target.same_rail:
+            return bool(callbacks.move_slot(source_slot_id, target_slot_id))
+        if (
+            target.callbacks is not None
+            and target.callbacks.unlocked
+            and callbacks.transfer_slot is not None
+        ):
+            return bool(
+                callbacks.transfer_slot(
+                    source_slot_id,
+                    target.callbacks,
+                    target_slot_id,
+                )
+            )
+        return False
+    if target.inside_action_rail and not target.same_rail:
+        return False
     return bool(callbacks.clear_slot(source_slot_id))
 
 
@@ -1203,7 +1231,8 @@ def _slot_drag_release_target(
     source_button: object,
     global_point: object | None,
 ) -> tuple[str | None, bool]:
-    return _slot_drag_release_target_from_points(qt, source_button, (global_point,))
+    target = _slot_drag_release_target_info_from_points(qt, source_button, (global_point,))
+    return target.slot_id, target.inside_action_rail
 
 
 def _slot_drag_release_target_from_points(
@@ -1211,9 +1240,18 @@ def _slot_drag_release_target_from_points(
     source_button: object,
     global_points: tuple[object | None, ...],
 ) -> tuple[str | None, bool]:
+    target = _slot_drag_release_target_info_from_points(qt, source_button, global_points)
+    return target.slot_id, target.inside_action_rail
+
+
+def _slot_drag_release_target_info_from_points(
+    qt: object,
+    source_button: object,
+    global_points: tuple[object | None, ...],
+) -> _SlotDragDropTarget:
     points = tuple(point for point in global_points if point is not None)
     if not points:
-        return None, False
+        return _SlotDragDropTarget()
     source_root = _rail_root_widget(source_button)
     source_slot_id = _slot_id_from_button(source_button)
     over_source_slot = False
@@ -1223,23 +1261,91 @@ def _slot_drag_release_target_from_points(
                 target_slot_id = _slot_id_at_global_point(qt, source_root, point)
                 if target_slot_id is not None:
                     if target_slot_id != source_slot_id:
-                        return target_slot_id, True
+                        return _SlotDragDropTarget(
+                            slot_id=target_slot_id,
+                            callbacks=_slot_edit_callbacks_from_button(
+                                _slot_button_at_global_point(qt, source_root, point)
+                            ),
+                            inside_action_rail=True,
+                            same_rail=True,
+                        )
                     over_source_slot = True
         if _widget_has_global_geometry(source_root):
             if any(not _global_point_inside_widget(source_root, point) for point in points):
-                return None, False
-            return source_slot_id if over_source_slot else None, True
+                cross_target = _slot_drag_cross_rail_target(qt, source_root, points)
+                if cross_target.inside_action_rail:
+                    return cross_target
+                return _SlotDragDropTarget()
+            return _SlotDragDropTarget(
+                slot_id=source_slot_id if over_source_slot else None,
+                callbacks=_slot_edit_callbacks_from_button(source_button),
+                inside_action_rail=True,
+                same_rail=True,
+            )
 
     hit_widget = _first_widget_at_global_points(qt, points)
     if hit_widget is None:
-        return None, source_root is not None and _widget_has_global_geometry(source_root)
+        return _SlotDragDropTarget(
+            inside_action_rail=source_root is not None
+            and _widget_has_global_geometry(source_root),
+            same_rail=source_root is not None,
+        )
 
     target_button = _slot_button_ancestor(qt, hit_widget)
-    if target_button is not None and _rail_root_widget(target_button) is source_root:
+    target_root = _rail_root_widget(target_button) if target_button is not None else None
+    if target_button is not None and target_root is source_root:
         slot_id = target_button.property("actionRailSlotId")
-        return (slot_id if isinstance(slot_id, str) else None), True
+        return _SlotDragDropTarget(
+            slot_id=slot_id if isinstance(slot_id, str) else None,
+            callbacks=_slot_edit_callbacks_from_button(target_button),
+            inside_action_rail=True,
+            same_rail=True,
+        )
+    if target_button is not None and target_root is not None:
+        slot_id = target_button.property("actionRailSlotId")
+        return _SlotDragDropTarget(
+            slot_id=slot_id if isinstance(slot_id, str) else None,
+            callbacks=_slot_edit_callbacks_from_button(target_button),
+            inside_action_rail=True,
+            same_rail=False,
+        )
 
-    return None, _rail_root_widget(hit_widget) is source_root
+    hit_root = _rail_root_widget(hit_widget)
+    if hit_root is not None:
+        return _SlotDragDropTarget(
+            inside_action_rail=True,
+            same_rail=hit_root is source_root,
+        )
+
+    return _SlotDragDropTarget()
+
+
+def _slot_drag_cross_rail_target(
+    qt: object,
+    source_root: object,
+    points: tuple[object, ...],
+) -> _SlotDragDropTarget:
+    for point in points:
+        hit_widget = _widget_at_global_point(qt, point)
+        target_button = _slot_button_ancestor(qt, hit_widget)
+        target_root = _rail_root_widget(target_button) if target_button is not None else None
+        if target_button is not None and target_root is not None and target_root is not source_root:
+            slot_id = target_button.property("actionRailSlotId")
+            return _SlotDragDropTarget(
+                slot_id=slot_id if isinstance(slot_id, str) else None,
+                callbacks=_slot_edit_callbacks_from_button(target_button),
+                inside_action_rail=True,
+                same_rail=False,
+            )
+        hit_root = _rail_root_widget(hit_widget)
+        if hit_root is not None and hit_root is not source_root:
+            return _SlotDragDropTarget(inside_action_rail=True)
+    return _SlotDragDropTarget()
+
+
+def _slot_edit_callbacks_from_button(button: object | None) -> SlotEditCallbacks | None:
+    callbacks = getattr(button, "_actionrail_slot_edit_callbacks", None)
+    return callbacks if isinstance(callbacks, SlotEditCallbacks) else None
 
 
 def _slot_id_from_button(button: object) -> str | None:
@@ -1263,6 +1369,21 @@ def _slot_id_at_global_point(
     source_root: object,
     global_point: object | None,
 ) -> str | None:
+    button = _slot_button_at_global_point(qt, source_root, global_point)
+    if button is None:
+        return None
+    try:
+        slot_id = button.property("actionRailSlotId")
+    except Exception:
+        return None
+    return slot_id if isinstance(slot_id, str) else None
+
+
+def _slot_button_at_global_point(
+    qt: object,
+    source_root: object,
+    global_point: object | None,
+) -> object | None:
     button_class = getattr(getattr(qt, "QtWidgets", None), "QPushButton", None)
     find_children = getattr(source_root, "findChildren", None)
     if button_class is None or not callable(find_children):
@@ -1277,7 +1398,7 @@ def _slot_id_at_global_point(
         except Exception:
             continue
         if isinstance(slot_id, str) and _global_point_inside_widget(button, global_point):
-            return slot_id
+            return button
     return None
 
 

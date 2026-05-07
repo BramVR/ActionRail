@@ -66,9 +66,10 @@ Snapshot:
   axis-aligned alignment guides. The old Edit Mode frame options popover and
   slot payload editor have been removed; slot payload assignment/clear now
   belongs to Normal Mode rail lock/unlock helpers, including Shift-drag
-  move/swap/clear-out for populated unlocked slots. Edit Mode panel polish now
-  provides a clickable Lock/Unlock action for the selected rail and lets the
-  compact panel be dragged away from rails it covers.
+  move/swap/clear-out for populated unlocked slots and cross-rail transfers
+  between unlocked rails. Edit Mode panel polish now provides a clickable
+  Lock/Unlock action for the selected rail and lets the compact panel be
+  dragged away from rails it covers.
   Phase 2 step 2.5 layout editing and direct
   manipulation is complete; Edit Mode can save unlocked runtime/user rail
   offsets plus unlocked built-in and studio user override presets. Do not start
@@ -123,8 +124,8 @@ Continue Phase 2 with collapsible edge tabs and publish polish:
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
 2. Continue Quick Create round-trip stability and locked built-in/studio
    read-only polish on top of the validated collapsed-handle, Normal Mode slot
-   payload lock/unlock plus Shift-drag editing, guide, Edit Mode panel, and
-   Save + Publish paths.
+   payload lock/unlock plus Shift-drag same-rail and cross-rail editing, guide,
+   Edit Mode panel, and Save + Publish paths.
 3. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 4. Do not start Bind Mode, flyouts, command rings, profile layers,

@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Current Snapshot
 
@@ -25,7 +25,9 @@ popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
 The latest Edit Mode panel polish turns the selected rail state into a
 clickable Lock/Unlock action and makes the compact panel draggable so it can be
-moved away from rails underneath it.
+moved away from rails underneath it. The latest Normal Mode slot-edit fix lets
+Shift-drag transfer or swap payloads between different unlocked rails without
+clearing the source when the target rail is locked.
 
 Working surface:
 
@@ -55,9 +57,9 @@ Working surface:
 - Normal Mode active rails can be unlocked and locked for slot payload editing;
   while unlocked, rendered slot context menus can assign or clear payloads, and
   Shift-drag moves a populated slot payload to another slot, swaps with a
-  populated target, or clears it when released anywhere that is not a different
-  slot. Locking the rail returns populated slot clicks to normal action
-  execution.
+  populated target, transfers between unlocked rails, or clears when released
+  outside ActionRail. Locking the rail returns populated slot clicks to normal
+  action execution.
 - Optional collapsible rail schema/runtime: JSON `collapse` settings for edge,
   handle icon, reveal trigger, and default collapsed state; Quick Create
   edge-tab defaults/settings; collapsed handle-only Qt overlays; click/hover
@@ -91,8 +93,8 @@ Focus the next slice on:
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
 - keeping locked built-in/studio presets read-only
 - keeping the Normal Mode unlocked-slot drag/drop workflow stable: Shift-drag
-  moves/swaps populated slot payloads or clears them when released anywhere
-  that is not a different slot
+  moves/swaps populated slot payloads within a rail, transfers/swaps between
+  unlocked rails, and preserves the source when dropped onto a locked rail
 
 Do not start Bind Mode, flyouts, command rings, profile layers,
 marking-menu export, or Viewport 2.0 in this slice.
@@ -160,7 +162,8 @@ $env:PYTHONPATH = "scripts"
   Normal Mode rail lock/unlock helpers, while Edit Mode keeps the
   axis-aligned Sticky Frames layout guides.
 - Normal Mode unlocked-slot editing supports context-menu assignment/clear plus
-  Shift-drag payload move/swap/clear-out gestures.
+  Shift-drag payload move/swap/clear-out gestures, including cross-rail
+  transfers between unlocked rails.
 - The May 7 Edit Mode panel polish changes the selected rail button from a
   passive Locked/Unlocked label to a clickable Lock/Unlock action and lets the
   compact panel be dragged aside when it covers a rail.
@@ -268,15 +271,15 @@ $env:PYTHONPATH = "scripts"
   Publish runtime commands, shelf toggle, and screenshot capture.
 - Latest focused Edit/Normal Mode validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py tests\\test_overlay.py tests\\test_widgets.py`
-  -> 112 passed.
+  -> 117 passed.
 - Latest focused Edit/Normal Mode Ruff:
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py scripts\\actionrail\\overlay.py scripts\\actionrail\\widgets.py scripts\\actionrail\\runtime.py scripts\\actionrail\\slot_payloads.py tests\\test_edit_mode.py tests\\test_overlay.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py`
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\widgets.py scripts\\actionrail\\overlay.py scripts\\actionrail\\slot_payloads.py scripts\\actionrail\\project.py tests\\test_widgets.py tests\\test_overlay.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py`
   -> all checks passed.
 - Latest focused Normal Mode drag/drop validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_overlay.py tests\\test_widgets.py tests\\test_edit_mode.py`
-  -> 112 passed.
+  -> 117 passed.
 - Latest focused Normal Mode drag/drop Ruff:
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\slot_payloads.py scripts\\actionrail\\overlay.py scripts\\actionrail\\widgets.py tests\\test_overlay.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py`
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\widgets.py scripts\\actionrail\\overlay.py scripts\\actionrail\\slot_payloads.py scripts\\actionrail\\project.py tests\\test_widgets.py tests\\test_overlay.py tests\\maya_smoke\\actionrail_edit_mode_smoke.py`
   -> all checks passed.
 - Latest Edit Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 240`
@@ -285,8 +288,15 @@ $env:PYTHONPATH = "scripts"
   placement, clickable selected-rail Lock/Unlock toggling, locked-frame nudge
   blocking, layout save, collapse-state save persistence, `run_slot()` while
   collapsed, handle-click expansion, Normal Mode unlocked Shift-drag payload
-  move-to-empty-slot, Normal Mode host payload clear, screenshot capture, and
-  absence of the removed frame options payload path.
+  move-to-empty-slot, cross-rail payload transfer between unlocked rails,
+  Normal Mode host payload clear, screenshot capture, and absence of the
+  removed frame options payload path.
+- Latest manual cross-bar drag setup:
+  `script.execute tests\\maya_smoke\\actionrail_cross_bar_drag_scene.py` with
+  `args.repo_root` set to this checkout
+  -> passed; created two unlocked Normal Mode bars (`drag_source_bar` and
+  `drag_target_bar`) with no scene geometry, and saved the transient Maya scene
+  to `.gg-maya-sessiond/actionrail_cross_bar_drag_scene.ma`.
 
 ## Decisions
 

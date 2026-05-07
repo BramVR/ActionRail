@@ -15,6 +15,9 @@
 - Improved Edit Mode control-panel usability: the selected rail state is now a
   clickable Lock/Unlock action, and the compact panel can be dragged aside when
   it covers a rail in the viewport.
+- Fixed Normal Mode unlocked slot dragging across bars: Shift-drag now moves or
+  swaps payloads between different unlocked rails, and dropping onto a locked
+  different rail preserves the source instead of clearing it.
 
 ## 2026-05-06
 

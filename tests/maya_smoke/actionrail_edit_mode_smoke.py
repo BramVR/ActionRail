@@ -127,10 +127,39 @@ normal_drag_spec = actionrail.StackSpec(
         ),
     ),
 )
+normal_drag_target_spec = actionrail.StackSpec(
+    id="normal_drag_target_slots",
+    layout=actionrail.RailLayout(
+        anchor="viewport.top.center",
+        orientation="horizontal",
+        rows=1,
+        columns=2,
+        offset=(0, 148),
+        locked=False,
+    ),
+    items=(
+        actionrail.StackItem(
+            type="button",
+            id="normal_drag_target_slots.empty",
+            label="New",
+            key_label="8",
+        ),
+        actionrail.StackItem(
+            type="button",
+            id="normal_drag_target_slots.scale",
+            label="Scale",
+            action="maya.tool.scale",
+            key_label="9",
+        ),
+    ),
+)
 
 normal_drag_host = actionrail.show_spec(normal_drag_spec)
+normal_drag_target_host = actionrail.show_spec(normal_drag_target_spec)
 if not actionrail.unlock_rail_slots("normal_drag_slots"):
     raise AssertionError("Normal Mode slot drag rail did not unlock.")
+if not actionrail.unlock_rail_slots("normal_drag_target_slots"):
+    raise AssertionError("Normal Mode target slot drag rail did not unlock.")
 app.processEvents()
 cmds.refresh(force=True)
 app.processEvents()
@@ -178,6 +207,52 @@ if normal_drag_host.spec.items[1].action:
     raise AssertionError(
         "Normal Mode host clear did not clear the source slot: "
         f"{normal_drag_host.spec.items}"
+    )
+
+normal_drag_buttons = {
+    button.property("actionRailSlotId"): button
+    for button in normal_drag_host.widget.findChildren(QtWidgets.QPushButton)
+}
+target_drag_buttons = {
+    button.property("actionRailSlotId"): button
+    for button in normal_drag_target_host.widget.findChildren(QtWidgets.QPushButton)
+}
+cross_source_button = normal_drag_buttons.get("normal_drag_slots.rotate")
+cross_target_button = target_drag_buttons.get("normal_drag_target_slots.empty")
+if cross_source_button is None or cross_target_button is None:
+    raise AssertionError(
+        "Normal Mode cross-rail drag buttons were not rendered: "
+        f"{normal_drag_buttons} -> {target_drag_buttons}"
+    )
+
+cross_source_center = cross_source_button.rect().center()
+cross_target_center_global = cross_target_button.mapToGlobal(
+    cross_target_button.rect().center()
+)
+cross_target_from_source = cross_source_button.mapFromGlobal(cross_target_center_global)
+QtTest.QTest.mousePress(
+    cross_source_button,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.ShiftModifier,
+    cross_source_center,
+)
+QtTest.QTest.mouseMove(cross_source_button, cross_target_from_source)
+QtTest.QTest.mouseRelease(
+    cross_source_button,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.ShiftModifier,
+    cross_target_from_source,
+)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if (
+    normal_drag_host.spec.items[2].action
+    or normal_drag_target_host.spec.items[0].action != "maya.tool.rotate"
+):
+    raise AssertionError(
+        "Shift-drag did not transfer payload to another unlocked rail: "
+        f"{normal_drag_host.spec.items} -> {normal_drag_target_host.spec.items}"
     )
 
 actionrail.hide_all()

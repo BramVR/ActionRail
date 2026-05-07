@@ -80,8 +80,8 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     {
         "path": "scripts/actionrail/slot_payloads.py",
         "owns": (
-            "stable slot payload assignment, clear, move, and swap helpers for "
-            "Normal Mode editing"
+            "stable slot payload assignment, clear, move, swap, and transfer "
+            "helpers for Normal Mode editing"
         ),
         "tests": ("tests/test_overlay.py",),
     },
@@ -198,8 +198,8 @@ def about() -> dict[str, object]:
                 "publish polish first pass Maya-smoke verified; validation UX "
                 "publish follow-up locally verified with Quick Create Maya smoke; "
                 "Edit Mode options cleanup and Normal Mode slot-edit locking/dragging "
-                "locally verified; Edit Mode panel Lock/Unlock and drag polish "
-                "Maya-smoke verified"
+                "locally verified; Edit Mode panel Lock/Unlock, drag polish, "
+                "and cross-rail unlocked slot transfers Maya-smoke verified"
             ),
             "next_slice": "Phase 2 step 2.6 Quick Create stability and locked-preset polish",
             "blockers_doc": "docs/04_status.md#blockers",

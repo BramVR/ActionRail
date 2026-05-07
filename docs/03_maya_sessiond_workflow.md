@@ -125,6 +125,9 @@ results in `docs/history/verification_log.md`:
 - exact blocker, if any step fails.
 
 Checked-in smoke scripts live under `tests/maya_smoke/` and are allowlisted by the `--mcp-script-dirs` start flag above.
+Manual Maya setup helpers may also live there when they need the same
+allowlisted `script.execute` path, but helpers that do not end in `_smoke.py`
+are not included by `.\scripts\maya-smoke.ps1 -Script all`.
 
 The repo-local wrapper below uses the stable `script.execute` command shape,
 resolves the smoke-script directory to an absolute path, starts Sessiond only
@@ -175,6 +178,12 @@ Useful variants:
   switching, draft validation, preview, save, overwrite, load, and screenshots.
 - `actionrail_stackitem_abi_smoke.py`: public `StackItem(...)` positional
   constructor compatibility inside Maya.
+- `actionrail_cross_bar_drag_scene.py`: manual setup helper, not part of
+  `-Script all`; creates two unlocked Normal Mode bars for trying Shift-drag
+  payload transfer between bars. It creates no scene geometry because the
+  slot-drag path only depends on active Qt rails. When running it directly
+  through `script.execute`, pass `args={"repo_root":"<repo path>"}` or set
+  `ACTIONRAIL_REPO_ROOT` in the Sessiond/Maya environment.
 
 After adding a new smoke script, update this list, summarize the latest result
 in `docs/04_status.md`, and archive detailed history in

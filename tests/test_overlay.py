@@ -1509,6 +1509,92 @@ def test_normal_mode_slot_edit_clear_then_swap_keeps_cleared_slots_empty(
     assert rebuilds == ["state", "state"]
 
 
+def test_normal_mode_slot_edit_transfers_between_unlocked_hosts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = object.__new__(overlay.ViewportOverlayHost)
+    source.panel = "modelPanel1"
+    source.cmds = object()
+    source._slot_edit_unlocked = True
+    source.spec = StackSpec(
+        id="source_slots",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(
+            StackItem(
+                type="button",
+                id="source_slots.move",
+                label="Move",
+                action="maya.tool.move",
+                key_label="1",
+                icon="maya.move",
+                active_when="maya.tool == move",
+            ),
+            StackItem(
+                type="button",
+                id="source_slots.rotate",
+                label="Rotate",
+                action="maya.tool.rotate",
+                key_label="2",
+                icon="maya.rotate",
+                active_when="maya.tool == rotate",
+            ),
+        ),
+    )
+    target = object.__new__(overlay.ViewportOverlayHost)
+    target.panel = "modelPanel1"
+    target.cmds = object()
+    target._slot_edit_unlocked = True
+    target.spec = StackSpec(
+        id="target_slots",
+        layout=RailLayout(anchor="viewport.right.center"),
+        items=(
+            StackItem(type="button", id="target_slots.empty", label="New", key_label="9"),
+            StackItem(
+                type="button",
+                id="target_slots.scale",
+                label="Scale",
+                action="maya.tool.scale",
+                key_label="0",
+                icon="maya.scale",
+                active_when="maya.tool == scale",
+            ),
+        ),
+    )
+    rebuilds: list[str] = []
+    source._rebuild_widget = lambda state: rebuilds.append(f"source:{state}")
+    target._rebuild_widget = lambda state: rebuilds.append(f"target:{state}")
+    monkeypatch.setattr(overlay, "snapshot", lambda *_args, **_kwargs: "state")
+
+    assert source.transfer_slot_payload(
+        "source_slots.move",
+        target._slot_edit_callbacks(),
+        "target_slots.empty",
+    )
+    assert [(item.id, item.label, item.action, item.key_label) for item in source.spec.items] == [
+        ("source_slots.move", "New", "", "1"),
+        ("source_slots.rotate", "Rotate", "maya.tool.rotate", "2"),
+    ]
+    assert [(item.id, item.label, item.action, item.key_label) for item in target.spec.items] == [
+        ("target_slots.empty", "Move", "maya.tool.move", "9"),
+        ("target_slots.scale", "Scale", "maya.tool.scale", "0"),
+    ]
+
+    assert source.transfer_slot_payload(
+        "source_slots.rotate",
+        target._slot_edit_callbacks(),
+        "target_slots.scale",
+    )
+    assert [(item.id, item.label, item.action, item.key_label) for item in source.spec.items] == [
+        ("source_slots.move", "New", "", "1"),
+        ("source_slots.rotate", "Scale", "maya.tool.scale", "2"),
+    ]
+    assert [(item.id, item.label, item.action, item.key_label) for item in target.spec.items] == [
+        ("target_slots.empty", "Move", "maya.tool.move", "9"),
+        ("target_slots.scale", "Rotate", "maya.tool.rotate", "0"),
+    ]
+    assert rebuilds == ["source:state", "target:state", "source:state", "target:state"]
+
+
 def test_runtime_normal_mode_slot_lock_toggles_active_host(monkeypatch: pytest.MonkeyPatch) -> None:
     class Host:
         def __init__(self) -> None:

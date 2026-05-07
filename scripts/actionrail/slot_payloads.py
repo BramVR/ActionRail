@@ -25,8 +25,11 @@ __all__ = [
     "EMPTY_SLOT_LABEL",
     "item_has_payload",
     "payload_from_action",
+    "slot_has_payload",
+    "slot_payload_from_spec",
     "spec_with_empty_slot_payload",
     "spec_with_moved_slot_payload",
+    "spec_with_slot_payload",
     "spec_with_slot_action_payload",
 ]
 
@@ -61,11 +64,17 @@ def spec_with_slot_action_payload(spec: Any, slot_id: str, action_id: str) -> An
 def spec_with_empty_slot_payload(spec: Any, slot_id: str) -> Any:
     """Return a spec copy with one slot payload cleared."""
 
+    return spec_with_slot_payload(spec, slot_id, SlotPayload())
+
+
+def spec_with_slot_payload(spec: Any, slot_id: str, payload: SlotPayload) -> Any:
+    """Return a spec copy with one slot set to an explicit payload."""
+
     index = _slot_item_index(spec.items, slot_id)
     if index is None:
         msg = f"Unknown ActionRail slot: {slot_id}"
         raise KeyError(msg)
-    return _spec_with_item(spec, index, _item_with_payload(spec.items[index], SlotPayload()))
+    return _spec_with_item(spec, index, _item_with_payload(spec.items[index], payload))
 
 
 def spec_with_moved_slot_payload(spec: Any, source_slot_id: str, target_slot_id: str) -> Any:
@@ -109,6 +118,26 @@ def payload_from_action(action_id: str) -> SlotPayload:
         icon=ACTION_ICON_DEFAULTS.get(action.id, ""),
         active_when=PERSISTENT_ACTION_PREDICATES.get(action.id, ""),
     )
+
+
+def slot_payload_from_spec(spec: Any, slot_id: str) -> SlotPayload:
+    """Return the editable payload fields for one stable slot container."""
+
+    index = _slot_item_index(spec.items, slot_id)
+    if index is None:
+        msg = f"Unknown ActionRail slot: {slot_id}"
+        raise KeyError(msg)
+    return _payload_from_item(spec.items[index])
+
+
+def slot_has_payload(spec: Any, slot_id: str) -> bool:
+    """Return whether a stable slot currently carries editable payload data."""
+
+    index = _slot_item_index(spec.items, slot_id)
+    if index is None:
+        msg = f"Unknown ActionRail slot: {slot_id}"
+        raise KeyError(msg)
+    return item_has_payload(spec.items[index])
 
 
 def item_has_payload(item: Any) -> bool:

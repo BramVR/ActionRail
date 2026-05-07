@@ -611,6 +611,65 @@ class ViewportOverlayHost:
         self._rebuild_widget(snapshot(self.cmds, active_panel=self.panel))
         return True
 
+    def transfer_slot_payload(
+        self,
+        source_slot_id: str,
+        target_callbacks: SlotEditCallbacks,
+        target_slot_id: str,
+    ) -> bool:
+        """Move or swap a slot payload onto another unlocked active rail."""
+
+        target_host = getattr(target_callbacks, "owner", None)
+        if target_host is self:
+            return self.move_slot_payload(source_slot_id, target_slot_id)
+        if (
+            target_host is None
+            or not self.slot_edit_unlocked()
+            or not getattr(target_callbacks, "unlocked", False)
+        ):
+            return False
+        target_unlocked = getattr(target_host, "slot_edit_unlocked", None)
+        if not callable(target_unlocked) or not target_unlocked():
+            return False
+        try:
+            from .slot_payloads import (
+                SlotPayload,
+                slot_has_payload,
+                slot_payload_from_spec,
+                spec_with_slot_payload,
+            )
+
+            if not slot_has_payload(self.spec, source_slot_id):
+                return False
+            source_payload = slot_payload_from_spec(self.spec, source_slot_id)
+            target_has_payload = slot_has_payload(target_host.spec, target_slot_id)
+            target_payload = (
+                slot_payload_from_spec(target_host.spec, target_slot_id)
+                if target_has_payload
+                else SlotPayload()
+            )
+            source_spec = spec_with_slot_payload(
+                self.spec,
+                source_slot_id,
+                target_payload,
+            )
+            target_spec = spec_with_slot_payload(
+                target_host.spec,
+                target_slot_id,
+                source_payload,
+            )
+        except Exception:
+            return False
+
+        self.spec = source_spec
+        target_host.spec = target_spec
+        state_snapshot = snapshot(self.cmds, active_panel=self.panel)
+        self._rebuild_widget(state_snapshot)
+        target_cmds = getattr(target_host, "cmds", self.cmds)
+        target_panel = getattr(target_host, "panel", self.panel)
+        target_host._rebuild_widget(snapshot(target_cmds, active_panel=target_panel))
+        return True
+
     def _slot_edit_callbacks(self) -> SlotEditCallbacks:
         return SlotEditCallbacks(
             unlocked=bool(getattr(self, "_slot_edit_unlocked", False)),
@@ -619,6 +678,8 @@ class ViewportOverlayHost:
             assign_action=self.assign_slot_action_payload,
             clear_slot=self.clear_slot_payload,
             move_slot=self.move_slot_payload,
+            owner=self,
+            transfer_slot=self.transfer_slot_payload,
         )
 
     def expand(self) -> bool:

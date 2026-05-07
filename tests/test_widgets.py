@@ -471,7 +471,7 @@ def test_build_transform_stack_locked_slot_edit_menu_keeps_actions_enabled(
 
 
 def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
-    events: list[tuple[str, str]] = []
+    events: list[tuple[str, ...]] = []
 
     class Point:
         def __init__(self, x_pos: int, y_pos: int) -> None:
@@ -561,6 +561,10 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
         assign_action=lambda _slot_id, _action_id: True,
         clear_slot=lambda slot_id: events.append(("clear", slot_id)) is None,
         move_slot=lambda source_id, target_id: events.append((source_id, target_id)) is None,
+        transfer_slot=lambda source_id, _target_callbacks, target_id: events.append(
+            ("transfer", source_id, target_id)
+        )
+        is None,
     )
 
     widgets._install_slot_drag_edit(
@@ -582,11 +586,41 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
 
     other_root = Root()
     other_target = DragButton("drag.other", other_root)
+    other_target._actionrail_slot_edit_callbacks = widgets.SlotEditCallbacks(
+        unlocked=True,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda _slot_id: True,
+        move_slot=lambda _source_id, _target_id: True,
+    )
     DragQt.QtWidgets.target = other_target
     source.mousePressEvent(Event(0, 0))
     source.mouseMoveEvent(Event(10, 0))
     source.mouseReleaseEvent(Event(10, 0))
-    assert events == [("drag.source", "drag.target"), ("clear", "drag.source")]
+    assert events == [
+        ("drag.source", "drag.target"),
+        ("transfer", "drag.source", "drag.other"),
+    ]
+
+    locked_root = Root()
+    locked_target = DragButton("drag.locked", locked_root)
+    locked_target._actionrail_slot_edit_callbacks = widgets.SlotEditCallbacks(
+        unlocked=False,
+        unlock_rail=lambda: True,
+        lock_rail=lambda: True,
+        assign_action=lambda _slot_id, _action_id: True,
+        clear_slot=lambda _slot_id: True,
+        move_slot=lambda _source_id, _target_id: True,
+    )
+    DragQt.QtWidgets.target = locked_target
+    source.mousePressEvent(Event(0, 0))
+    source.mouseMoveEvent(Event(10, 0))
+    source.mouseReleaseEvent(Event(10, 0))
+    assert events == [
+        ("drag.source", "drag.target"),
+        ("transfer", "drag.source", "drag.other"),
+    ]
 
     DragQt.QtWidgets.target = None
     source.mousePressEvent(Event(0, 0))
@@ -594,7 +628,7 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
     source.mouseReleaseEvent(Event(0, 10))
     assert events == [
         ("drag.source", "drag.target"),
-        ("clear", "drag.source"),
+        ("transfer", "drag.source", "drag.other"),
         ("clear", "drag.source"),
     ]
 
@@ -604,7 +638,7 @@ def test_unlocked_shift_drag_moves_or_clears_slot_payload(monkeypatch) -> None:
     source.mouseReleaseEvent(Event(10, 0))
     assert events == [
         ("drag.source", "drag.target"),
-        ("clear", "drag.source"),
+        ("transfer", "drag.source", "drag.other"),
         ("clear", "drag.source"),
         ("clear", "drag.source"),
     ]
