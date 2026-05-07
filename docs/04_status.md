@@ -274,8 +274,9 @@ $env:PYTHONPATH = "scripts"
   as its own dockable Maya panel, searches the current 13-entry Action Book
   starter catalog, runs clicked entries, and drops action payloads onto unlocked
   slots using the same icons as the bar.
-- Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
-  scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
+- Maya smoke cleanup now removes all `ActionRail*` Qt widgets and known
+  ActionRail workspace controls between smoke scripts so diagnostics/panel
+  windows do not steal later Edit Mode clicks or leave blank workspace shells.
 - No ActionRail implementation blocker is known.
 
 ## Blockers
@@ -469,7 +470,8 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified 13 rendered Action Book entries, search narrowing to
   `maya.tool.scale`, click-to-run Select changing Maya to `selectSuperContext`,
   drag/drop assignment of `maya.tool.scale` onto an unlocked blank Quick Create
-  slot with `maya.scale`, and screenshots at
+  slot with `maya.scale`, Action Book workspace-control cleanup on close, and
+  screenshots at
   `.gg-maya-sessiond/screenshots/actionrail_action_book_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_action_book_search_scale.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_action_book_drop_bar.png`.

@@ -72,6 +72,7 @@ class FakeCmds:
             self.menus.pop(name, None)
         elif kwargs.get("control"):
             self.shelf_buttons.pop(name, None)
+            self.workspace_controls.pop(name, None)
         elif kwargs.get("layout"):
             self.shelves.pop(name, None)
 

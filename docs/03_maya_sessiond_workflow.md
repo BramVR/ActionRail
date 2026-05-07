@@ -132,9 +132,9 @@ are not included by `.\scripts\maya-smoke.ps1 -Script all`.
 The repo-local wrapper below uses the stable `script.execute` command shape,
 resolves the smoke-script directory to an absolute path, starts Sessiond only
 when needed, discovers tools before running scripts, cleans Maya smoke state
-before and after each selected script, validates that `script.execute` returned
-the requested script payload, and fails if either the MCP call or script payload
-reports failure.
+before and after each selected script, removes stale ActionRail workspace
+controls, validates that `script.execute` returned the requested script
+payload, and fails if either the MCP call or script payload reports failure.
 
 ```powershell
 .\scripts\maya-smoke.ps1 -Script actionrail_phase0_smoke.py

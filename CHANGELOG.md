@@ -60,6 +60,9 @@
 - Added the first separate Action Book UI: a dockable, searchable, two-page
   Maya panel with category tabs, icon-backed action rows, click-to-run action
   previews, and drag/drop placement onto unlocked action-bar slots.
+- Fixed Action Book smoke cleanup so tests close the Maya workspace control
+  shell, not only the child widget, and stale ActionRail workspace controls are
+  removed between smoke scripts.
 
 ## 2026-05-06
 

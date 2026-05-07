@@ -89,12 +89,30 @@ def _delete_actionrail_runtime_commands() -> int:
     return deleted
 
 
+def _delete_actionrail_workspace_controls() -> int:
+    names = (
+        "ActionRailQuickCreateWorkspaceControl",
+        "ActionRailActionBookWorkspaceControl",
+        "ActionRailSpellBookWorkspaceControl",
+    )
+    deleted = 0
+    for name in names:
+        try:
+            if cmds.workspaceControl(name, exists=True):
+                cmds.deleteUI(name, control=True)
+                deleted += 1
+        except Exception:
+            pass
+    return deleted
+
+
 app = QtWidgets.QApplication.instance()
 if app is None:
     raise RuntimeError("Maya QApplication is not available.")
 
 actionrail.hide_all()
 closed_hosts = _close_smoke_hosts()
+deleted_workspace_controls = _delete_actionrail_workspace_controls()
 deleted_widgets = _delete_actionrail_widgets(app)
 deleted_runtime_commands = _delete_actionrail_runtime_commands()
 cmds.file(new=True, force=True)
@@ -106,6 +124,7 @@ print(
     json.dumps(
         {
             "closed_smoke_hosts": closed_hosts,
+            "deleted_workspace_controls": deleted_workspace_controls,
             "deleted_widgets": deleted_widgets,
             "deleted_runtime_commands": deleted_runtime_commands,
             "purged_modules": purged_modules,

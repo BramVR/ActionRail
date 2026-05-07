@@ -229,10 +229,15 @@ result = {
     "status_text": status_label.text(),
 }
 
-visible_panel.close()
 actionrail.hide_all()
 app.processEvents()
 if cmds.workspaceControl(maya_ui.ACTION_BOOK_WORKSPACE_CONTROL, exists=True):
     cmds.deleteUI(maya_ui.ACTION_BOOK_WORKSPACE_CONTROL, control=True)
+app.processEvents()
+workspace_exists_after_close = bool(
+    cmds.workspaceControl(maya_ui.ACTION_BOOK_WORKSPACE_CONTROL, exists=True)
+)
+if workspace_exists_after_close:
+    raise AssertionError("Closing the Action Book left its workspace control behind.")
 
 print(json.dumps(result, sort_keys=True))
