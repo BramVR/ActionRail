@@ -16,6 +16,7 @@ from actionrail.quick_create import (
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
+    edit_quick_create_slots,
     icon_choices,
     load_quick_create_preset,
     make_default_input,
@@ -566,6 +567,56 @@ def test_quick_create_edit_layout_previews_and_selects_edit_mode(monkeypatch) ->
     assert events == [
         ("show", "quick-horizontal-strip:modelPanel4"),
         ("enter_edit", "modelPanel4"),
+    ]
+
+
+def test_quick_create_edit_slots_previews_exits_edit_mode_and_unlocks(monkeypatch) -> None:
+    events: list[tuple[str, str]] = []
+
+    class FakeHost:
+        def __init__(self, spec, *, panel=None, registry=None) -> None:
+            self.spec = spec
+            self.panel = panel
+            self.registry = registry
+            self.widget = None
+            self._filter_targets = ()
+            self._predicate_refresh_timer = None
+            self.unlocked = False
+
+        def show(self) -> None:
+            events.append(("show", f"{self.spec.id}:{self.panel}"))
+
+        def close(self) -> None:
+            events.append(("close", self.spec.id))
+
+        def set_slot_edit_unlocked(self, unlocked: bool) -> bool:
+            self.unlocked = unlocked
+            events.append(("unlock", f"{self.spec.id}:{unlocked}"))
+            return True
+
+    fake_overlay = ModuleType("actionrail.overlay")
+    fake_overlay.ViewportOverlayHost = FakeHost
+    fake_overlay._qt_widget_is_valid = lambda widget: True
+    monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
+
+    import actionrail.edit_mode as edit_mode
+
+    monkeypatch.setattr(
+        edit_mode,
+        "exit_edit_mode",
+        lambda: events.append(("exit_edit", "")),
+    )
+
+    draft = build_quick_create_draft(make_default_input("horizontal_strip"))
+    host = edit_quick_create_slots(draft, panel="modelPanel4")
+
+    assert host.spec.id == "quick-horizontal-strip"
+    assert host.unlocked is True
+    assert runtime.active_overlay_ids() == ("quick-horizontal-strip",)
+    assert events == [
+        ("show", "quick-horizontal-strip:modelPanel4"),
+        ("exit_edit", ""),
+        ("unlock", "quick-horizontal-strip:True"),
     ]
 
 

@@ -38,6 +38,7 @@ from actionrail.quick_create_ui import (  # noqa: E402
     BUTTON_SIZE_OBJECT_NAME,
     BUTTONS_PER_ROW_OBJECT_NAME,
     EDIT_LAYOUT_BUTTON_OBJECT_NAME,
+    EDIT_SLOTS_BUTTON_OBJECT_NAME,
     PANEL_OBJECT_NAME,
     PUBLISH_BUTTON_OBJECT_NAME,
     STATUS_OBJECT_NAME,
@@ -78,6 +79,7 @@ edit_layout_button = visible_panel.findChild(
     QtWidgets.QPushButton,
     EDIT_LAYOUT_BUTTON_OBJECT_NAME,
 )
+edit_slots_button = visible_panel.findChild(QtWidgets.QPushButton, EDIT_SLOTS_BUTTON_OBJECT_NAME)
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
 bindings_table = visible_panel.findChild(QtWidgets.QTableWidget, BINDINGS_TABLE_OBJECT_NAME)
 preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
@@ -89,6 +91,7 @@ if (
     or template_combo is None
     or publish_button is None
     or edit_layout_button is None
+    or edit_slots_button is None
     or tabs is None
     or bindings_table is None
     or preset_id_edit is None
@@ -209,6 +212,28 @@ if icons[:4] != ["maya.move", "maya.rotate", "maya.scale", "maya.set_key"] or an
         f"Generated Quick Create slots did not preserve icons then blanks: {icons}"
     )
 
+visible_panel._actionrail_edit_slots()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if actionrail.edit_mode_state().enabled:
+    raise AssertionError("Quick Create Edit Slots left Edit Mode enabled.")
+host = actionrail_runtime._OVERLAYS.get("quick-horizontal-strip")
+if host is None or not host.slot_edit_unlocked():
+    raise AssertionError("Quick Create Edit Slots did not unlock the preview rail.")
+edit_slots_unlocked = bool(host.slot_edit_unlocked())
+unlocked_buttons = [
+    button
+    for button in host.widget.findChildren(QtWidgets.QPushButton)
+    if button.property("actionRailSlotId")
+]
+if not unlocked_buttons or any(
+    button.property("actionRailSlotEditUnlocked") != "true" for button in unlocked_buttons
+):
+    raise AssertionError("Quick Create Edit Slots did not render unlocked slot buttons.")
+if "Editing slots: quick-horizontal-strip" not in status_label.text():
+    raise AssertionError(f"Quick Create Edit Slots did not report status: {status_label.text()}")
+
 visible_panel._actionrail_save_draft()
 app.processEvents()
 cmds.refresh(force=True)
@@ -312,6 +337,7 @@ result = {
     "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,
+    "edit_slots_unlocked": edit_slots_unlocked,
     "binding_target_count": len(binding_targets),
     "binding_name_commands": binding_name_commands,
     "edit_layout_selected": edit_state.selected_preset_id,

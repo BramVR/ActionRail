@@ -425,7 +425,9 @@ Edit Mode, bind slots in Bind Mode, then save.
   lock/unlock helpers, not the Edit Mode layout map. Context-menu
   assignment/clear and Shift-drag move/swap/clear-out are implemented for
   unlocked Normal Mode rails; locking the rail returns populated slot clicks to
-  normal action execution.
+  normal action execution. Quick Create now exposes this as an `Edit Slots`
+  handoff for the current draft, keeping bar creation, frame placement, and
+  slot editing connected without starting full Action Book UI or Bind Mode.
 - Make Edit Mode controls practical in dense viewports. First panel polish is
   Maya-smoke verified: the selected rail button now says Lock or Unlock and
   toggles whether that rail can move in the current Edit Mode session, while
@@ -512,7 +514,8 @@ Phase 2 steps 2.1-2.5 are complete and verified locally. The draft authoring
 model, safe user-preset storage, shared preset resolver, dockable Quick Create
 panel, preview cleanup, load-existing support, save/reload workflow, Edit Mode
 layout-map shell, direct manipulation, snap/sticky guides, Normal Mode slot
-payload lock/unlock helpers, and user override persistence are in place.
+payload lock/unlock helpers, Quick Create handoffs into both Edit Mode layout
+and Normal Mode slot editing, and user override persistence are in place.
 
 Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
 authoring workflow polish. The collapse schema/runtime first pass is implemented and
@@ -521,10 +524,14 @@ verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
 command path and the five-template starter set, and the first
 guide/slot-edit/control-panel affordance polish pass is Maya-smoke verified.
+Quick Create now also has a Maya-smoke verified `Edit Slots` handoff that
+previews the current draft, exits Edit Mode, and unlocks the visible bar for
+Normal Mode slot payload editing.
 Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
-built-in/studio read-only behavior, clearer template-to-Edit-Mode handoff, and
-slot editing that can later connect to Action Book and Bind Mode. Keep
+built-in/studio read-only behavior, clearer template-to-Edit-Mode and
+template-to-slot-edit handoffs, and slot editing that can later connect to
+Action Book and Bind Mode. Keep
 `docs/06_wow_style_customization.md` in mind, but do not implement Bind Mode,
 Action Book UI, Macro Book UI, flyouts, command rings, profile layers,
 marking-menu export, or Viewport 2.0 yet.

@@ -42,6 +42,10 @@
 - Fixed the MayaSessiond cross-bar Shift-drag path after rail rebuilds by
   resolving slot-edit callbacks against the live target host unlock state, so
   rebuilt/stale Qt button snapshots no longer block valid transfers.
+- Added a Quick Create `Edit Slots` handoff that previews the current draft,
+  exits Edit Mode, and unlocks the visible bar for Normal Mode slot editing;
+  the bottom command area now uses separate edit/save rows so button labels do
+  not clip in Maya.
 
 ## 2026-05-06
 

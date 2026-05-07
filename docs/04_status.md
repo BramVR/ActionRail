@@ -30,6 +30,11 @@ Shift-drag transfer or swap payloads between different unlocked rails without
 clearing the source when the target rail is locked. The newest follow-up keeps
 that cross-rail drop path stable after rail rebuilds by resolving stale Qt
 slot-button callback snapshots against the live target host unlock state.
+The latest Quick Create workflow bridge adds `Edit Slots`, which previews the
+current draft, exits Edit Mode when needed, and unlocks the visible bar for
+Normal Mode slot assignment/clear and Shift-drag editing. The Quick Create
+command buttons are split into edit-flow and save-flow rows so labels remain
+readable in Maya.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -70,7 +75,8 @@ Working surface:
   stack, horizontal strip, edge-tab rail, a blank action bar, and a viewport
   display strip seeded with Toggle Grid. A read-only Bindings tab lists
   action-bearing slots, key labels, and Maya Hotkey Editor nameCommands for the
-  current draft.
+  current draft. An Edit Slots handoff previews the draft and unlocks that
+  visible bar for Normal Mode slot editing.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
@@ -222,6 +228,9 @@ $env:PYTHONPATH = "scripts"
   workflow without implementing full Bind Mode.
 - Quick Create Edit Layout now connects the builder to Edit Mode by previewing
   the current draft and selecting it in the layout-map overlay.
+- Quick Create Edit Slots now connects the builder to Normal Mode slot editing
+  by previewing the current draft, exiting Edit Mode, and unlocking that bar for
+  context-menu assignment/clear and Shift-drag rearrangement.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -295,12 +304,20 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified same-rail move/clear followed by cross-rail payload
   transfer between unlocked Normal Mode rails, plus the existing Edit Mode
   layout, collapse, persistence, and screenshot checks.
+- Latest focused Quick Create slot-edit handoff validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_package.py tests\\test_project_map.py`
+  -> 53 passed.
+- Latest focused Quick Create slot-edit handoff Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py scripts\\actionrail\\quick_create_ui.py scripts\\actionrail\\__init__.py tests\\test_quick_create.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
+  -> all checks passed.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
-  -> passed; verified Save + Publish creates four slot runtime commands, creates
+  -> passed; verified Edit Slots unlocks the current preview rail for Normal
+  Mode slot editing, Save + Publish creates four slot runtime commands, creates
   a preset shelf toggle, reports publish status, and preserves the custom user
   preset store path in the shelf command. The latest run also verifies Quick
-  Create resizes with its Maya workspace-control parent.
+  Create resizes with its Maya workspace-control parent and captures readable
+  two-row command buttons in the panel screenshot.
 - Screenshot inspection confirmed these rendered correctly:
   `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,

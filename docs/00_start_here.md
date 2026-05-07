@@ -62,6 +62,10 @@ Snapshot:
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
   enters Edit Mode, and selects that draft frame so create -> place/configure
   feels like one workflow.
+- Quick Create now has an Edit Slots handoff: it previews the current draft,
+  exits Edit Mode if needed, and unlocks the visible bar so Normal Mode
+  slot assignment/clear and Shift-drag rearrangement are one click away from
+  the builder.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.
@@ -100,7 +104,8 @@ Snapshot:
   slot payload editor have been removed; slot payload assignment/clear now
   belongs to Normal Mode rail lock/unlock helpers, including Shift-drag
   move/swap/clear-out for populated unlocked slots and cross-rail transfers
-  between unlocked rails. Edit Mode panel polish now provides a clickable
+  between unlocked rails. Quick Create can now hand the current draft directly
+  to that unlocked slot-edit state. Edit Mode panel polish now provides a clickable
   Lock/Unlock action for the selected rail and lets the compact panel be
   dragged away from rails it covers.
   Phase 2 step 2.5 layout editing and direct
@@ -160,7 +165,7 @@ polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
 2. Continue Quick Create round-trip stability, locked built-in/studio
-   read-only polish, and the template-to-Edit-Mode workflow on top of the
+   read-only polish, and the template-to-Edit-Mode/slot-edit workflow on top of the
    validated collapsed-handle, Normal Mode slot payload lock/unlock plus
    Shift-drag same-rail and cross-rail editing, guide, Edit Mode panel, and
    optional Save + Publish paths.

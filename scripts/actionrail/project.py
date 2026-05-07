@@ -213,7 +213,9 @@ def about() -> dict[str, object]:
                 "Macro Book, and Bind Mode; Action Book Toggle Grid viewport "
                 "action Maya-smoke verified; Quick Create five-template starter "
                 "set Maya-smoke verified; public slot binding-target metadata "
-                "and Quick Create Bindings tab Maya-smoke verified"
+                "and Quick Create Bindings tab Maya-smoke verified; Quick Create "
+                "Edit Slots handoff to unlocked Normal Mode slot editing "
+                "Maya-smoke verified"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

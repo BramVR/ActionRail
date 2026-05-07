@@ -18,6 +18,7 @@ from .quick_create import (
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
+    edit_quick_create_slots,
     icon_choices,
     load_quick_create_preset,
     make_default_input,
@@ -43,6 +44,7 @@ PUBLISH_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePublishButton"
 LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
 OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
 EDIT_LAYOUT_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditLayoutButton"
+EDIT_SLOTS_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditSlotsButton"
 BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
 BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
 BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
@@ -66,6 +68,7 @@ __all__ = [
     "PANEL_OBJECT_NAME",
     "CLEAR_PREVIEW_BUTTON_OBJECT_NAME",
     "EDIT_LAYOUT_BUTTON_OBJECT_NAME",
+    "EDIT_SLOTS_BUTTON_OBJECT_NAME",
     "LOAD_BUTTON_OBJECT_NAME",
     "OVERWRITE_BUTTON_OBJECT_NAME",
     "PREVIEW_BUTTON_OBJECT_NAME",
@@ -489,6 +492,16 @@ def _build_panel(
             f"Editing layout: {edit_state.selected_preset_id or draft.id}",
         )
 
+    def edit_slots() -> None:
+        try:
+            draft = current_draft()
+            edit_quick_create_slots(draft)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        state["preview_active"] = True
+        _set_status(qt, status, "ok", f"Editing slots: {draft.id}")
+
     def clear_preview() -> None:
         cleared = clear_quick_create_previews()
         state["preview_active"] = False
@@ -580,15 +593,20 @@ def _build_panel(
         validate_draft()
         refresh_live_preview()
 
-    button_row = qt.QtWidgets.QHBoxLayout()
-    button_row.setContentsMargins(0, 0, 0, 0)
-    button_row.setSpacing(8)
-    root.addLayout(button_row)
+    edit_button_row = qt.QtWidgets.QHBoxLayout()
+    edit_button_row.setContentsMargins(0, 0, 0, 0)
+    edit_button_row.setSpacing(8)
+    root.addLayout(edit_button_row)
+    save_button_row = qt.QtWidgets.QHBoxLayout()
+    save_button_row.setContentsMargins(0, 0, 0, 0)
+    save_button_row.setSpacing(8)
+    root.addLayout(save_button_row)
     add_slot = qt.QtWidgets.QPushButton("Add Slot")
     remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
     validate = qt.QtWidgets.QPushButton("Validate Draft")
     preview = qt.QtWidgets.QPushButton("Preview")
     edit_layout_button = qt.QtWidgets.QPushButton("Edit Layout")
+    edit_slots_button = qt.QtWidgets.QPushButton("Edit Slots")
     clear_preview_button = qt.QtWidgets.QPushButton("Clear Preview")
     save = qt.QtWidgets.QPushButton("Save Preset")
     overwrite = qt.QtWidgets.QPushButton("Overwrite Preset")
@@ -596,32 +614,36 @@ def _build_panel(
     load_existing_button = qt.QtWidgets.QPushButton("Load Existing")
     preview.setObjectName(PREVIEW_BUTTON_OBJECT_NAME)
     edit_layout_button.setObjectName(EDIT_LAYOUT_BUTTON_OBJECT_NAME)
+    edit_slots_button.setObjectName(EDIT_SLOTS_BUTTON_OBJECT_NAME)
     clear_preview_button.setObjectName(CLEAR_PREVIEW_BUTTON_OBJECT_NAME)
     save.setObjectName(SAVE_BUTTON_OBJECT_NAME)
     publish.setObjectName(PUBLISH_BUTTON_OBJECT_NAME)
     overwrite.setObjectName(OVERWRITE_BUTTON_OBJECT_NAME)
     load_existing_button.setObjectName(LOAD_BUTTON_OBJECT_NAME)
-    for button in (
-        add_slot,
-        remove_slot,
-        validate,
-        preview,
-        edit_layout_button,
-        clear_preview_button,
-        save,
-        overwrite,
-        publish,
-        load_existing_button,
+    for button, row in (
+        (add_slot, edit_button_row),
+        (remove_slot, edit_button_row),
+        (validate, edit_button_row),
+        (preview, edit_button_row),
+        (edit_layout_button, edit_button_row),
+        (edit_slots_button, edit_button_row),
+        (clear_preview_button, edit_button_row),
+        (load_existing_button, save_button_row),
+        (save, save_button_row),
+        (overwrite, save_button_row),
+        (publish, save_button_row),
     ):
         button.setProperty("actionRailRole", "dialogButton")
-        button_row.addWidget(button)
-    button_row.addStretch(1)
+        row.addWidget(button)
+    edit_button_row.addStretch(1)
+    save_button_row.addStretch(1)
     root.addWidget(status)
 
     panel._actionrail_current_draft = current_draft
     panel._actionrail_validate_draft = validate_draft
     panel._actionrail_preview_draft = preview_draft
     panel._actionrail_edit_layout = edit_layout
+    panel._actionrail_edit_slots = edit_slots
     panel._actionrail_clear_preview = clear_preview
     panel._actionrail_save_draft = save_draft
     panel._actionrail_save_publish_draft = save_and_publish_draft
@@ -668,6 +690,7 @@ def _build_panel(
     validate.clicked.connect(validate_draft)
     preview.clicked.connect(preview_draft)
     edit_layout_button.clicked.connect(edit_layout)
+    edit_slots_button.clicked.connect(edit_slots)
     clear_preview_button.clicked.connect(clear_preview)
     save.clicked.connect(lambda: save_draft(overwrite=False))
     overwrite.clicked.connect(lambda: save_draft(overwrite=True))
