@@ -36,6 +36,7 @@ from actionrail.quick_create_ui import (  # noqa: E402
     BUTTON_COUNT_OBJECT_NAME,
     BUTTON_SIZE_OBJECT_NAME,
     BUTTONS_PER_ROW_OBJECT_NAME,
+    EDIT_LAYOUT_BUTTON_OBJECT_NAME,
     PANEL_OBJECT_NAME,
     PUBLISH_BUTTON_OBJECT_NAME,
     STATUS_OBJECT_NAME,
@@ -72,6 +73,10 @@ if visible_panel is None:
 status_label = visible_panel.findChild(QtWidgets.QLabel, STATUS_OBJECT_NAME)
 template_combo = visible_panel.findChild(QtWidgets.QComboBox, TEMPLATE_COMBO_OBJECT_NAME)
 publish_button = visible_panel.findChild(QtWidgets.QPushButton, PUBLISH_BUTTON_OBJECT_NAME)
+edit_layout_button = visible_panel.findChild(
+    QtWidgets.QPushButton,
+    EDIT_LAYOUT_BUTTON_OBJECT_NAME,
+)
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
 preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
 button_count = visible_panel.findChild(QtWidgets.QSpinBox, BUTTON_COUNT_OBJECT_NAME)
@@ -81,6 +86,7 @@ if (
     status_label is None
     or template_combo is None
     or publish_button is None
+    or edit_layout_button is None
     or tabs is None
     or preset_id_edit is None
     or button_count is None
@@ -129,6 +135,37 @@ if "quick-horizontal-strip" not in actionrail.active_overlay_ids():
     raise AssertionError(
         f"Quick Create preview did not show overlay: {actionrail.active_overlay_ids()}"
     )
+
+visible_panel._actionrail_edit_layout()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+edit_state = actionrail.edit_mode_state()
+if not edit_state.enabled or edit_state.selected_preset_id != "quick-horizontal-strip":
+    raise AssertionError(f"Quick Create Edit Layout did not select preview: {edit_state}")
+edit_overlay = next(
+    (
+        widget
+        for widget in app.allWidgets()
+        if widget.objectName() == "ActionRailEditModeOverlay" and widget.isVisible()
+    ),
+    None,
+)
+if edit_overlay is None:
+    raise AssertionError("Quick Create Edit Layout did not show Edit Mode overlay.")
+edit_screenshot_path = output_path.with_name("actionrail_quick_create_edit_layout.png")
+edit_pixmap = edit_overlay.grab()
+edit_screenshot_saved = edit_pixmap.save(str(edit_screenshot_path), "PNG")
+if not edit_screenshot_saved or edit_pixmap.width() <= 0 or edit_pixmap.height() <= 0:
+    raise AssertionError(
+        f"Failed to save Quick Create Edit Layout screenshot: {edit_screenshot_path}"
+    )
+actionrail.exit_edit_mode()
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if "Editing layout: quick-horizontal-strip" not in status_label.text():
+    raise AssertionError(f"Quick Create Edit Layout did not report status: {status_label.text()}")
 
 button_count.setValue(10)
 buttons_per_row.setValue(5)
@@ -255,6 +292,9 @@ result = {
     "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,
+    "edit_layout_selected": edit_state.selected_preset_id,
+    "edit_layout_screenshot": str(edit_screenshot_path),
+    "edit_layout_screenshot_saved": bool(edit_screenshot_saved),
     "quick_create_menu_command": maya_ui.show_quick_create_panel_command(),
     "published_runtime_exists": cmds.runTimeCommand(published_runtime, exists=True),
     "published_shelf_command": shelf_command,

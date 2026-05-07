@@ -64,6 +64,7 @@ from .project import about
 from .quick_create import (
     QuickCreateSaveResult,
     clear_quick_create_previews,
+    edit_quick_create_layout,
     load_quick_create_preset,
     preview_quick_create_draft,
     save_quick_create_preset,
@@ -130,6 +131,7 @@ __all__ = [
     "diagnose_publish_spec",
     "diagnose_spec",
     "edit_mode_state",
+    "edit_quick_create_layout",
     "enter_edit_mode",
     "exit_edit_mode",
     "format_report",

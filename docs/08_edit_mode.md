@@ -56,6 +56,10 @@ actionrail.toggle_edit_mode()
 
 The Maya menu exposes `Toggle Edit Mode` after `install_menu_toggle()` is run.
 
+Quick Create can hand off directly into placement. Use its `Edit Layout` button,
+or call `actionrail.edit_quick_create_layout(draft)`, to preview the current
+draft, enter Edit Mode, and select that draft frame.
+
 Inside Edit Mode:
 
 - left-click and drag an unlocked rail frame to move it directly

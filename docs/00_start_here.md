@@ -50,6 +50,9 @@ Snapshot:
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.
+- Quick Create now has an Edit Layout handoff: it previews the current draft,
+  enters Edit Mode, and selects that draft frame so create -> place/configure
+  feels like one workflow.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.

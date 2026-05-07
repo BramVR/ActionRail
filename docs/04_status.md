@@ -57,7 +57,9 @@ Working surface:
   save, overwrite, custom user preset store support, custom action/icon id
   preservation, load-existing user preset workflow, live preview refresh for
   layout sliders, and generated blank slots when the button-count control is
-  raised beyond the template's icon-backed slots.
+  raised beyond the template's icon-backed slots. Quick Create now also has an
+  Edit Layout handoff that previews the current draft, enters Edit Mode, and
+  selects the draft frame.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
@@ -191,6 +193,8 @@ $env:PYTHONPATH = "scripts"
   only top-level product primitive.
 - The first Action Book implementation slice adds `actionrail.action_book` and
   routes Quick Create action choices through picker-facing action metadata.
+- Quick Create Edit Layout now connects the builder to Edit Mode by previewing
+  the current draft and selecting it in the layout-map overlay.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -333,8 +337,10 @@ $env:PYTHONPATH = "scripts"
 - Latest Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified the Quick Create picker/preview/save/publish flow after
-  routing action choices through Action Book metadata and captured
+  routing action choices through Action Book metadata, verified Edit Layout
+  enters Edit Mode with `quick-horizontal-strip` selected, and captured
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_edit_layout.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_general.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_layout.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.

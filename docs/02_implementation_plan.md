@@ -265,6 +265,9 @@ Status: complete for the first Quick Create workflow slice.
 - Convert the Quick Create draft into a real spec and show it through the
   existing Qt overlay runtime. Done through
   `preview_quick_create_draft()`.
+- Handoff from Quick Create into viewport placement/configuration. Done through
+  `edit_quick_create_layout()`, which previews the current draft, enters Edit
+  Mode, and selects the draft frame.
 - Support preview without saving and cleanup of preview overlays. Done through
   session-tracked Quick Create preview ids and
   `clear_quick_create_previews()`.

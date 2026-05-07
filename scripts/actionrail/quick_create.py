@@ -31,6 +31,7 @@ __all__ = [
     "action_choices",
     "build_quick_create_draft",
     "clear_quick_create_previews",
+    "edit_quick_create_layout",
     "icon_choices",
     "load_quick_create_preset",
     "make_default_input",
@@ -305,6 +306,22 @@ def clear_quick_create_previews(preset_id: str = "") -> int:
         runtime.hide_example(preview_id)
         _PREVIEW_IDS.discard(preview_id)
     return cleared
+
+
+def edit_quick_create_layout(
+    draft: DraftRail,
+    *,
+    panel: str | None = None,
+    registry: ActionRegistry | None = None,
+) -> Any:
+    """Preview a Quick Create draft, enter Edit Mode, and select its frame."""
+
+    preview_quick_create_draft(draft, panel=panel, registry=registry)
+
+    from . import edit_mode
+
+    edit_mode.enter_edit_mode(panel=panel)
+    return edit_mode.select_edit_mode_rail(draft.id)
 
 
 def save_quick_create_preset(

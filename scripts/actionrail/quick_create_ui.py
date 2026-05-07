@@ -16,6 +16,7 @@ from .quick_create import (
     action_choices,
     build_quick_create_draft,
     clear_quick_create_previews,
+    edit_quick_create_layout,
     icon_choices,
     load_quick_create_preset,
     make_default_input,
@@ -40,6 +41,7 @@ SAVE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateSaveButton"
 PUBLISH_BUTTON_OBJECT_NAME = "ActionRailQuickCreatePublishButton"
 LOAD_BUTTON_OBJECT_NAME = "ActionRailQuickCreateLoadButton"
 OVERWRITE_BUTTON_OBJECT_NAME = "ActionRailQuickCreateOverwriteButton"
+EDIT_LAYOUT_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditLayoutButton"
 BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
 BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
 BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
@@ -56,6 +58,7 @@ _SLOT_COLUMNS = (
 __all__ = [
     "PANEL_OBJECT_NAME",
     "CLEAR_PREVIEW_BUTTON_OBJECT_NAME",
+    "EDIT_LAYOUT_BUTTON_OBJECT_NAME",
     "LOAD_BUTTON_OBJECT_NAME",
     "OVERWRITE_BUTTON_OBJECT_NAME",
     "PREVIEW_BUTTON_OBJECT_NAME",
@@ -436,6 +439,21 @@ def _build_panel(
         state["preview_active"] = True
         _set_status(qt, status, "ok", f"Previewing draft: {draft.id}")
 
+    def edit_layout() -> None:
+        try:
+            draft = current_draft()
+            edit_state = edit_quick_create_layout(draft)
+        except Exception as exc:
+            _set_status(qt, status, "error", str(exc))
+            return
+        state["preview_active"] = True
+        _set_status(
+            qt,
+            status,
+            "ok",
+            f"Editing layout: {edit_state.selected_preset_id or draft.id}",
+        )
+
     def clear_preview() -> None:
         cleared = clear_quick_create_previews()
         state["preview_active"] = False
@@ -518,12 +536,14 @@ def _build_panel(
     remove_slot = qt.QtWidgets.QPushButton("Remove Slot")
     validate = qt.QtWidgets.QPushButton("Validate Draft")
     preview = qt.QtWidgets.QPushButton("Preview")
+    edit_layout_button = qt.QtWidgets.QPushButton("Edit Layout")
     clear_preview_button = qt.QtWidgets.QPushButton("Clear Preview")
     save = qt.QtWidgets.QPushButton("Save Preset")
     overwrite = qt.QtWidgets.QPushButton("Overwrite Preset")
     publish = qt.QtWidgets.QPushButton("Save + Publish")
     load_existing_button = qt.QtWidgets.QPushButton("Load Existing")
     preview.setObjectName(PREVIEW_BUTTON_OBJECT_NAME)
+    edit_layout_button.setObjectName(EDIT_LAYOUT_BUTTON_OBJECT_NAME)
     clear_preview_button.setObjectName(CLEAR_PREVIEW_BUTTON_OBJECT_NAME)
     save.setObjectName(SAVE_BUTTON_OBJECT_NAME)
     publish.setObjectName(PUBLISH_BUTTON_OBJECT_NAME)
@@ -534,6 +554,7 @@ def _build_panel(
         remove_slot,
         validate,
         preview,
+        edit_layout_button,
         clear_preview_button,
         save,
         overwrite,
@@ -548,6 +569,7 @@ def _build_panel(
     panel._actionrail_current_draft = current_draft
     panel._actionrail_validate_draft = validate_draft
     panel._actionrail_preview_draft = preview_draft
+    panel._actionrail_edit_layout = edit_layout
     panel._actionrail_clear_preview = clear_preview
     panel._actionrail_save_draft = save_draft
     panel._actionrail_save_publish_draft = save_and_publish_draft
@@ -592,6 +614,7 @@ def _build_panel(
     validate_top.clicked.connect(validate_draft)
     validate.clicked.connect(validate_draft)
     preview.clicked.connect(preview_draft)
+    edit_layout_button.clicked.connect(edit_layout)
     clear_preview_button.clicked.connect(clear_preview)
     save.clicked.connect(lambda: save_draft(overwrite=False))
     overwrite.clicked.connect(lambda: save_draft(overwrite=True))

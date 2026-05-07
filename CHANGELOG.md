@@ -19,6 +19,8 @@
 - Added the first Action Book backend slice: registered Maya actions now expose
   picker-facing category/icon/keyword metadata, and Quick Create consumes that
   catalog for action choices.
+- Connected Quick Create to Edit Mode with an Edit Layout action that previews
+  the current draft and selects it in the layout-map overlay for placement.
 - Improved Edit Mode control-panel usability: the selected rail state is now a
   clickable Lock/Unlock action, and the compact panel can be dragged aside when
   it covers a rail in the viewport.
