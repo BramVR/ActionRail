@@ -120,7 +120,8 @@ def test_blank_bar_template_starts_with_unassigned_slots() -> None:
     assert values.anchor == "viewport.bottom.center"
     assert values.orientation == "horizontal"
     assert values.columns == 6
-    assert [slot.label for slot in values.slots] == ["1", "2", "3", "4", "5", "6"]
+    assert [slot.label for slot in values.slots] == ["", "", "", "", "", ""]
+    assert [slot.key_label for slot in values.slots] == ["1", "2", "3", "4", "5", "6"]
     assert all(not slot.action and not slot.icon for slot in values.slots)
     assert all(not item.action and not item.icon for item in spec.items)
 
@@ -346,7 +347,8 @@ def test_quick_create_button_count_helpers_generate_blank_extra_slots() -> None:
     generated = _generated_slot_input(10)
 
     assert generated.id == "slot_10"
-    assert generated.label == "10"
+    assert generated.label == ""
+    assert generated.key_label == "10"
     assert generated.action == ""
     assert generated.icon == ""
     assert _layout_rows_for_button_count(10, 4) == 3
@@ -439,12 +441,12 @@ def test_quick_create_valid_status_uses_runtime_schema() -> None:
         QuickCreateDraftInput(
             preset_id="bad",
             template_id="vertical_stack",
-            slots=(QuickCreateSlotInput(id="slot", label=""),),
+            slots=(QuickCreateSlotInput(id="slot", label=123),),  # type: ignore[arg-type]
             anchor="viewport.left.center",
             orientation="vertical",
         )
     )
-    with pytest.raises(ValueError, match="requires non-empty string 'label'"):
+    with pytest.raises(ValueError, match="field 'label' must be a string"):
         _valid_draft_status_text(invalid_draft)
 
 
@@ -715,6 +717,8 @@ def test_quick_create_slot_lock_preserves_live_action_book_payload(monkeypatch) 
 
     assert item_by_id["quick-blank-bar.slot_5"].action == "maya.tool.select"
     assert item_by_id["quick-blank-bar.slot_5"].icon == "maya.objects"
+    assert item_by_id["quick-blank-bar.slot_5"].label == ""
+    assert item_by_id["quick-blank-bar.slot_5"].key_label == "5"
     assert events == [
         ("show", "quick-blank-bar:modelPanel4"),
         ("exit_edit", ""),

@@ -38,12 +38,17 @@ into edit-flow and save-flow rows so labels remain readable in Maya. The newest
 Quick Create UX pass makes blank action bars the default and removes
 Action/Icon assignment controls from the Slots tab so Quick Create stays
 focused on creating bars and slots; the separate future Action Book owns action
-browsing and placement. The first Action Book UI slice is now implemented as a
+browsing and placement. Blank action-bar sockets now use key labels for their
+visible slot numbers, Action Book drops leave the primary slot label empty by
+default, and labels remain an explicit optional slot field. The first Action
+Book UI slice is now implemented as a
 separate dockable Maya panel with search,
 icon-backed action entries, click-to-run behavior, and drag/drop placement onto
 unlocked action-bar slots. The latest placement fix keeps those dropped live
 payloads when Quick Create Lock Bar rebuilds the preview, so assigned icons
-stay visible after returning a bar to normal click-to-run mode.
+stay visible after returning a bar to normal click-to-run mode. The latest
+theme pass doubles the central diagonal stripe width on action bars and Action
+Book pages and renders both stripe treatments at 40% opacity.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -259,6 +264,9 @@ $env:PYTHONPATH = "scripts"
 - Quick Create now offers two broader starter templates: Blank Bar for empty
   action sockets and Viewport Display Strip seeded with the Toggle Grid Action
   Book entry.
+- Blank action-bar sockets use their key labels for the visible slot numbers,
+  and placing an Action Book entry onto a slot no longer turns the action name
+  into a primary slot label by default.
 - Public hotkey workflow metadata now exposes saved-bar binding targets through
   `actionrail.slot_binding_targets()`, so current Maya Hotkey Editor use and
   future Bind Mode can work from visible slots instead of raw command naming.
@@ -303,9 +311,32 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest focused Action Book placement label/key validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_overlay.py tests\\test_widgets.py tests\\test_spec.py tests\\test_authoring.py`
+  -> 168 passed.
+- Latest focused Action Book placement Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create.py scripts\\actionrail\\quick_create_ui.py scripts\\actionrail\\slot_payloads.py scripts\\actionrail\\slot_state.py scripts\\actionrail\\spec.py scripts\\actionrail\\widgets.py tests\\test_authoring.py tests\\test_overlay.py tests\\test_quick_create.py tests\\test_spec.py tests\\test_widgets.py tests\\maya_smoke\\actionrail_action_book_ui_smoke.py`
+  -> all checks passed.
+- Latest Action Book UI Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_ui_smoke.py -Timeout 240`
+  -> passed; verified drag/drop assignment of `maya.tool.scale` onto an
+  unlocked blank Quick Create slot keeps the primary slot label empty, preserves
+  the slot key label, keeps the catalog icon visible, and survives Lock Bar
+  rebuild. The latest run also refreshed the Action Book and drop-bar
+  screenshots after the thicker 40%-opacity diagonal stripe theme pass.
+- Latest project/docs checks:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
+  `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and local Markdown link
+  scan -> passed.
+- Latest focused theme validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_theme.py`
+  -> 3 passed.
+- Latest focused theme Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\theme.py tests\\test_theme.py`
+  -> all checks passed.
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 499 passed.
+  -> 501 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.

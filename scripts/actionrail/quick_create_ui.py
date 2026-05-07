@@ -876,8 +876,9 @@ def _populate_bindings_table(
 def _generated_slot_input(index: int) -> QuickCreateSlotInput:
     return QuickCreateSlotInput(
         id=f"slot_{index}",
-        label=str(index),
+        label="",
         action="",
+        key_label=str(index),
         icon="",
     )
 

@@ -1211,13 +1211,20 @@ def test_set_slot_key_label_updates_matching_buttons(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     button = BuildButton("M")
     button.setProperty("actionRailSlotId", "slot.move")
-    button.setProperty("actionRailLabel", "")
+    button.setProperty("actionRailLabel", None)
     button.setProperty("actionRailDiagnosticBadge", "?")
     button.setText("Move")
-    root = FakeRoot([button])
+    empty_label_button = BuildButton("")
+    empty_label_button.setProperty("actionRailSlotId", "slot.empty")
+    empty_label_button.setProperty("actionRailLabel", "")
+    empty_label_button.setProperty("actionRailDiagnosticBadge", "")
+    empty_label_button.setText("Old")
+    root = FakeRoot([button, empty_label_button])
 
     assert set_slot_key_label(root, "slot.move", "Ctrl+M") == 1
     assert button.text() == "Move\nCtrl+M?"
+    assert set_slot_key_label(root, "slot.empty", "1") == 1
+    assert empty_label_button.text() == "1"
     assert set_slot_key_label(root, "slot.other", "X") == 0
 
 
@@ -1368,6 +1375,7 @@ def test_button_text_adds_key_label_on_second_line() -> None:
     assert widgets._button_text("K", "") == "K"
     assert widgets._button_text("K", "Ctrl+S") == "K\nCtrl+S"
     assert widgets._button_text("K", "Ctrl+S", "?") == "K\nCtrl+S?"
+    assert widgets._button_text("", "1") == "1"
 
 
 def test_button_paint_text_helpers_use_properties_and_text_fallback() -> None:

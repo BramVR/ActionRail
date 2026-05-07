@@ -295,7 +295,7 @@ def _parse_item(payload: Any, index: int, source: str, spec_id: str) -> StackIte
         msg = f"Unsupported ActionRail item type '{item_type}' at item {index}: {source}"
         raise ValueError(msg)
 
-    label = _required_string(payload, "label", source, index=index)
+    label = _optional_string(payload, "label", "", source, index=index)
     action = _optional_string(payload, "action", "", source, index=index)
     icon = _optional_string(payload, "icon", "", source, index=index)
     tone = _optional_string(payload, "tone", "neutral", source, index=index)

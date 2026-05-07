@@ -1895,7 +1895,7 @@ def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
             continue
 
         label = button.property("actionRailLabel")
-        if not isinstance(label, str) or not label:
+        if not isinstance(label, str):
             label = button.text().split("\n", 1)[0]
         diagnostic_badge = button.property("actionRailDiagnosticBadge")
         button.setProperty("actionRailKeyLabel", key_label)

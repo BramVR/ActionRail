@@ -29,8 +29,17 @@ def test_default_qss_preserves_reference_tones() -> None:
 
     assert "min-width: 32px;" in qss
     assert "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045" in qss
-    assert "stop:0 #252d34" in qss
-    assert "stop:0.5 #3b4650" in qss
+    assert "stop:0 rgba(37, 45, 52, 102)" in qss
+    assert "stop:0.34 rgba(37, 45, 52, 102)" in qss
+    assert "stop:0.5 rgba(59, 70, 80, 102)" in qss
+    assert "stop:0.66 rgba(37, 45, 52, 102)" in qss
+    assert (
+        "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.009, y2:0.009"
+        in DEFAULT_THEME.panel_profile_background
+    )
+    assert "stop:0.26 rgba(18, 23, 25, 102)" in DEFAULT_THEME.panel_profile_background
+    assert "stop:0.5 rgba(46, 55, 58, 102)" in DEFAULT_THEME.panel_profile_background
+    assert "stop:0.74 rgba(18, 23, 25, 102)" in DEFAULT_THEME.panel_profile_background
     assert "border-top-color: #8ccf3f;" not in qss
     assert "background: #101315;" in qss
     assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss

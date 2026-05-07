@@ -438,12 +438,21 @@ def test_parse_stack_spec_rejects_non_object_item_and_bad_item_strings() -> None
             }
         )
 
+    spec = parse_stack_spec(
+        {
+            "id": "label_optional",
+            "anchor": "viewport.left.center",
+            "items": [{"type": "button"}],
+        }
+    )
+    assert spec.items[0].label == ""
+
     with pytest.raises(ValueError, match="label"):
         parse_stack_spec(
             {
                 "id": "broken",
                 "anchor": "viewport.left.center",
-                "items": [{"type": "button"}],
+                "items": [{"type": "button", "label": 123}],
             }
         )
 

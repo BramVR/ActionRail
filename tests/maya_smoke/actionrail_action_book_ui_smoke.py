@@ -189,10 +189,17 @@ updated_host = actionrail_runtime._OVERLAYS.get("quick-blank-bar")
 if updated_host is None:
     raise AssertionError("Action Book drop removed the Quick Create bar.")
 assigned_item = updated_host.spec.items[0]
-if assigned_item.action != "maya.tool.scale" or assigned_item.icon != "maya.scale":
+if (
+    assigned_item.action != "maya.tool.scale"
+    or assigned_item.icon != "maya.scale"
+    or assigned_item.label != ""
+    or assigned_item.key_label != "1"
+):
     raise AssertionError(
-        "Action Book drop did not assign the scale payload with the catalog icon: "
-        f"action={assigned_item.action} icon={assigned_item.icon}"
+        "Action Book drop did not assign the scale payload with the catalog icon "
+        "while preserving the slot key label and empty primary label: "
+        f"action={assigned_item.action} icon={assigned_item.icon} "
+        f"label={assigned_item.label!r} key={assigned_item.key_label!r}"
     )
 updated_slot = next(
     (
@@ -212,10 +219,17 @@ app.processEvents()
 if locked_host is None or locked_host.slot_edit_unlocked():
     raise AssertionError("Quick Create Lock Bar did not lock after Action Book drop.")
 locked_item = locked_host.spec.items[0]
-if locked_item.action != "maya.tool.scale" or locked_item.icon != "maya.scale":
+if (
+    locked_item.action != "maya.tool.scale"
+    or locked_item.icon != "maya.scale"
+    or locked_item.label != ""
+    or locked_item.key_label != "1"
+):
     raise AssertionError(
-        "Quick Create Lock Bar lost the Action Book payload after rebuilding: "
-        f"action={locked_item.action} icon={locked_item.icon}"
+        "Quick Create Lock Bar lost the Action Book payload or slot text state "
+        "after rebuilding: "
+        f"action={locked_item.action} icon={locked_item.icon} "
+        f"label={locked_item.label!r} key={locked_item.key_label!r}"
     )
 locked_slot = next(
     (

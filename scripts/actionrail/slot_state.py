@@ -74,7 +74,11 @@ _NO_SLOT_DIAGNOSTIC = _SlotDiagnostic()
 
 def button_text(label: str, key_label: str, diagnostic_badge: str = "") -> str:
     secondary = button_secondary_text(key_label, diagnostic_badge)
-    return label if not secondary else f"{label}\n{secondary}"
+    if not secondary:
+        return label
+    if not label:
+        return secondary
+    return f"{label}\n{secondary}"
 
 
 def button_secondary_text(key_label: str, diagnostic_badge: str = "") -> str:

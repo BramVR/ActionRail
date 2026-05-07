@@ -59,6 +59,9 @@ Snapshot:
   templates for vertical, horizontal, edge-tab, and viewport display bars, but
   action/icon browsing belongs to the separate Action Book workflow rather than
   Quick Create.
+- Blank action-bar sockets now show their default numbers through key labels,
+  and Action Book placement leaves the primary slot label empty unless the user
+  explicitly authors one.
 - Quick Create now has a read-only Bindings tab that lists action-bearing slots,
   their current key labels, and the Maya nameCommands used by the Hotkey Editor.
 - Quick Create now has an Edit Layout handoff: it previews the current draft,

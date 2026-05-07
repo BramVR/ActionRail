@@ -70,6 +70,11 @@
 - Fixed the Quick Create Lock Bar round-trip after Action Book placement so
   dropped action payloads and icons survive the preview rebuild when the bar is
   locked, saved, or otherwise refreshed.
+- Changed Action Book placement defaults so dropped actions keep the primary
+  slot label empty, while blank action-bar sockets show their default numbers as
+  key labels.
+- Increased the ActionRail diagonal stripe weight on action bars and Action
+  Book pages, with both stripe treatments rendered at 40% opacity.
 - Retuned the shared ActionRail theme toward an ElvUI-style look: transparent
   near-black frames, square recessed slots, white default text, green
   active accents and panel frame lines, black-bordered opaque striped

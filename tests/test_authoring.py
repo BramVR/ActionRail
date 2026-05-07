@@ -194,8 +194,14 @@ def test_user_preset_storage_reports_missing_and_bad_inputs(tmp_path) -> None:
     with pytest.raises(ValueError, match="label"):
         save_user_preset(
             DraftRail(
-                id="missing_label",
-                slots=(DraftSlot(id="move", label="", action="maya.tool.move"),),
+                id="bad_label",
+                slots=(
+                    DraftSlot(
+                        id="move",
+                        label=123,  # type: ignore[arg-type]
+                        action="maya.tool.move",
+                    ),
+                ),
             ),
             preset_dir=tmp_path,
         )

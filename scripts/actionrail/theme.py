@@ -25,11 +25,11 @@ class ActionRailTheme:
     root_background: str = "transparent"
     cluster_background: str = (
         "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045, "
-        "stop:0 #252d34, "
-        "stop:0.42 #252d34, "
-        "stop:0.5 #3b4650, "
-        "stop:0.58 #252d34, "
-        "stop:1 #252d34)"
+        "stop:0 rgba(37, 45, 52, 102), "
+        "stop:0.34 rgba(37, 45, 52, 102), "
+        "stop:0.5 rgba(59, 70, 80, 102), "
+        "stop:0.66 rgba(37, 45, 52, 102), "
+        "stop:1 rgba(37, 45, 52, 102))"
     )
     cluster_border: str = "#030404"
     cluster_border_width: int = 2
@@ -56,11 +56,11 @@ class ActionRailTheme:
     panel_raised_background: str = "rgba(27, 33, 35, 195)"
     panel_profile_background: str = (
         "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.009, y2:0.009, "
-        "stop:0 rgba(18, 23, 25, 195), "
-        "stop:0.38 rgba(18, 23, 25, 195), "
-        "stop:0.5 rgba(46, 55, 58, 128), "
-        "stop:0.62 rgba(18, 23, 25, 195), "
-        "stop:1 rgba(18, 23, 25, 195))"
+        "stop:0 rgba(18, 23, 25, 102), "
+        "stop:0.26 rgba(18, 23, 25, 102), "
+        "stop:0.5 rgba(46, 55, 58, 102), "
+        "stop:0.74 rgba(18, 23, 25, 102), "
+        "stop:1 rgba(18, 23, 25, 102))"
     )
     text_muted: str = "#8c9aa1"
     accent: str = "#8ccf3f"

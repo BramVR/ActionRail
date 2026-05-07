@@ -112,9 +112,9 @@ def payload_from_action(action_id: str) -> SlotPayload:
 
     entry = action_book_entry_by_id(action_id)
     return SlotPayload(
-        label=entry.label,
+        label="",
         action=entry.id,
-        tooltip=entry.tooltip or entry.id,
+        tooltip=entry.tooltip or entry.label or entry.id,
         icon=entry.icon or ACTION_ICON_DEFAULTS.get(entry.id, ""),
         active_when=PERSISTENT_ACTION_PREDICATES.get(entry.id, ""),
     )
