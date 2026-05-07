@@ -224,7 +224,7 @@ $env:PYTHONPATH = "scripts"
 
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 457 passed.
+  -> 471 passed.
 - Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
@@ -257,15 +257,16 @@ $env:PYTHONPATH = "scripts"
   still start an overlay after the built-in override diagnostics fix.
 - Full Maya smoke baseline:
   `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
-  -> passed against the running MayaSessiond state on port `7217`; covered capture,
-  custom user-preset store layout saves, diagnostic badges, diagnostics window,
-  hidden visibility, Edit Mode, horizontal and Maya icon rails, hotkey bridge,
-  hotkey label sync, import/recovery diagnostics, menu/shelf UI, missing Maya
-  icon resources, overlay cleanup, predicates, Quick Create, StackItem ABI, and
-  transform-stack state. Edit Mode smoke covered the axis-aligned Sticky Frames
-  position path, collapsed-state persistence, handle expansion, and screenshot
-  capture; Quick Create smoke verifies Save +
-  Publish creates four slot runtime commands plus a preset shelf toggle.
+  -> passed against the running MayaSessiond state on port `7217`; covered
+  Action Book Toggle Grid metadata/execution, capture, custom user-preset store
+  layout saves, diagnostic badges, diagnostics window, hidden visibility,
+  Edit Mode, horizontal and Maya icon rails, hotkey bridge, hotkey label sync,
+  import/recovery diagnostics, menu/shelf UI, missing Maya icon resources,
+  overlay cleanup, predicates, Quick Create, StackItem ABI, and transform-stack
+  state. Edit Mode smoke covered the axis-aligned Sticky Frames position path,
+  collapsed-state persistence, handle expansion, and screenshot capture; Quick
+  Create smoke verifies five templates, Save + Publish creates four slot
+  runtime commands plus a preset shelf toggle, and the screenshot capture path.
 - Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified Save + Publish creates four slot runtime commands, creates
