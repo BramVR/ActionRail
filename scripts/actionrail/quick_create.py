@@ -7,6 +7,7 @@ from math import ceil
 from pathlib import Path
 from typing import Any
 
+from .action_book import action_book_choices
 from .actions import ActionRegistry, create_default_registry
 from .authoring import (
     DraftRail,
@@ -419,13 +420,9 @@ def load_quick_create_preset(
 def action_choices(
     registry: ActionRegistry | None = None,
 ) -> tuple[tuple[str, str, str], ...]:
-    """Return registered action ids with picker labels and tooltips."""
+    """Return Action Book action ids with picker labels and tooltips."""
 
-    action_registry = registry or create_default_registry()
-    return tuple(
-        (action.id, action.label, action.tooltip)
-        for action in sorted(action_registry.actions(), key=lambda item: item.label)
-    )
+    return action_book_choices(registry or create_default_registry())
 
 
 def icon_choices(*, provider: str = "") -> tuple[IconDescriptor, ...]:

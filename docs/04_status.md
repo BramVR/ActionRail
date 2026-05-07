@@ -35,7 +35,10 @@ authoring loop is: choose a frame/template, place Maya actions or macros from
 an Action Book/Macro Book onto slots, use Edit Mode for frame layout, use Bind
 Mode for hover/click-to-bind hotkeys, then save. Runtime-command and shelf
 publishing remain implementation plumbing for bindings and optional Maya
-integration rather than the primary artist-facing workflow.
+integration rather than the primary artist-facing workflow. The first Action
+Book backend slice is now implemented: `actionrail.action_book` exposes
+category/icon/keyword metadata for registered Maya actions, and Quick Create
+uses that catalog for action picker choices.
 
 Working surface:
 
@@ -43,6 +46,8 @@ Working surface:
 - Built-in presets: `transform_stack`, `horizontal_tools`, and `maya_tools`.
 - Qt overlay lifecycle, model-panel anchoring, predicate refresh, reusable Maya
   actions, and runtime-command hotkey publishing.
+- Action Book backend metadata for registered Maya actions, currently consumed
+  by Quick Create picker choices.
 - Safe diagnostics, diagnostic badges, diagnostics Qt window, icon import
   preflight, generated SVG PNG fallbacks, and fallback preset recovery.
 - User preset storage and shared bundled/user preset resolver.
@@ -184,6 +189,8 @@ $env:PYTHONPATH = "scripts"
   frames, action bar frames, Action Book, Macro Book, and Bind Mode so future
   info frames, object frames, and macro workflows fit without making rails the
   only top-level product primitive.
+- The first Action Book implementation slice adds `actionrail.action_book` and
+  routes Quick Create action choices through picker-facing action metadata.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
   scripts so diagnostics/panel windows do not steal later Edit Mode clicks.
 - No ActionRail implementation blocker is known.
@@ -314,6 +321,23 @@ $env:PYTHONPATH = "scripts"
   -> passed; created two unlocked Normal Mode bars (`drag_source_bar` and
   `drag_target_bar`) with no scene geometry, and saved the transient Maya scene
   to `.gg-maya-sessiond/actionrail_cross_bar_drag_scene.ma`.
+- Latest Action Book backend validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_action_book.py tests\\test_quick_create.py tests\\test_project_map.py`
+  -> 45 passed.
+- Latest Action Book backend Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\action_book.py scripts\\actionrail\\quick_create.py scripts\\actionrail\\__init__.py scripts\\actionrail\\project.py tests\\test_action_book.py tests\\test_quick_create.py tests\\test_project_map.py`
+  -> all checks passed.
+- Latest Action Book project map:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`
+  -> passed and includes `scripts/actionrail/action_book.py`.
+- Latest Quick Create Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
+  -> passed; verified the Quick Create picker/preview/save/publish flow after
+  routing action choices through Action Book metadata and captured
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_general.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_layout.png`, and
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.
 
 ## Decisions
 

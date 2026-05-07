@@ -91,6 +91,11 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "tests": ("tests/test_actions.py",),
     },
     {
+        "path": "scripts/actionrail/action_book.py",
+        "owns": "Action Book catalog metadata for placeable Maya actions",
+        "tests": ("tests/test_action_book.py", "tests/test_quick_create.py"),
+    },
+    {
         "path": "scripts/actionrail/hotkeys.py",
         "owns": "Maya runtime-command publishing, nameCommands, hotkey labels",
         "tests": ("tests/test_hotkeys.py", "tests/maya_smoke/actionrail_hotkey_bridge_smoke.py"),

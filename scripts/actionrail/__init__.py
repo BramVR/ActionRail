@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .action_book import ActionBookEntry, action_book_entries, action_book_entry_by_id
 from .authoring import (
     DraftRail,
     DraftSlot,
@@ -96,6 +97,7 @@ from .spec import (
 
 __all__ = [
     "DiagnosticIssue",
+    "ActionBookEntry",
     "IconDescriptor",
     "PresetEntry",
     "PresetStore",
@@ -114,6 +116,8 @@ __all__ = [
     "__version__",
     "active_overlay_ids",
     "active_overlay_states",
+    "action_book_entries",
+    "action_book_entry_by_id",
     "about",
     "action_ids",
     "build_draft_spec",

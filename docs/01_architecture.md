@@ -25,9 +25,10 @@ product model is:
   overrides such as icon, label, key label, tooltip, and tone.
 - **Action Book**: searchable catalog of Maya-native tools and commands that
   can be placed onto slots. The current action registry and icon catalog are
-  the first backend pieces; the authoring UI should evolve toward a spellbook
-  style browser for Maya actions such as transform tools, grid/display toggles,
-  selection modes, playback, keying, viewport controls, and studio commands.
+  now connected through the first `actionrail.action_book` backend slice; the
+  authoring UI should evolve toward a spellbook style browser for Maya actions
+  such as transform tools, grid/display toggles, selection modes, playback,
+  keying, viewport controls, and studio commands.
 - **Macro Book**: user-authored script actions. A macro should have a stable
   id, name, icon, tooltip, Python or MEL body, and optional safe predicates, then
   appear in the Action Book like any other placeable action.
@@ -206,6 +207,10 @@ curated provider-backed groups that behave like a WoW spellbook:
 Each action entry should provide a stable id, label, category, icon id, tooltip,
 execution function or command payload, and optional safe predicates. Slots
 reference action ids and may override display fields locally.
+
+The first implementation is intentionally backend-only: `actionrail.action_book`
+wraps registered actions with picker-facing metadata, and Quick Create consumes
+that catalog while preserving its existing slot/action combo behavior.
 
 ### State
 
