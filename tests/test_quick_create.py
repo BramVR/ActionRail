@@ -385,19 +385,12 @@ def test_quick_create_combo_preserves_unknown_editable_text() -> None:
     assert combo.index == -1
 
 
-def test_quick_create_row_preserves_hidden_slot_metadata() -> None:
+def test_quick_create_row_preserves_hidden_payload_metadata() -> None:
     class FakeText:
         def __init__(self, text: str) -> None:
             self._text = text
 
         def text(self) -> str:
-            return self._text
-
-    class FakeCombo:
-        def __init__(self, text: str) -> None:
-            self._text = text
-
-        def currentText(self) -> str:
             return self._text
 
     source = QuickCreateSlotInput(
@@ -419,16 +412,14 @@ def test_quick_create_row_preserves_hidden_slot_metadata() -> None:
         {
             "id": FakeText("meta"),
             "label": FakeText("Edited"),
-            "action": FakeCombo("custom.action"),
             "key_label": FakeText("E"),
-            "icon": FakeCombo("custom.icon"),
             "source": source,
         }
     )
 
     assert slot.label == "Edited"
-    assert slot.action == "custom.action"
-    assert slot.icon == "custom.icon"
+    assert slot.action == "old.action"
+    assert slot.icon == "old.icon"
     assert slot.tone == "teal"
     assert slot.tooltip == "Custom tip"
     assert slot.visible_when == "selection.count > 0"

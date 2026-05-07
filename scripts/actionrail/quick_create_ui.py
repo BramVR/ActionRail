@@ -14,12 +14,10 @@ from .quick_create import (
     ANCHOR_CHOICES,
     QuickCreateDraftInput,
     QuickCreateSlotInput,
-    action_choices,
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
     edit_quick_create_slots,
-    icon_choices,
     load_quick_create_preset,
     make_default_input,
     preview_quick_create_draft,
@@ -53,10 +51,8 @@ BINDINGS_TABLE_OBJECT_NAME = "ActionRailQuickCreateBindingsTable"
 _PANEL: Any | None = None
 _SLOT_COLUMNS = (
     ("Id", 96),
-    ("Label", 108),
-    ("Action", 176),
+    ("Label", 160),
     ("Key", 64),
-    ("Icon", 174),
 )
 _BINDING_COLUMNS = (
     "Slot",
@@ -161,8 +157,6 @@ def _build_panel(
 ) -> None:  # pragma: no cover
     panel.setStyleSheet(_style_sheet())
     templates = template_choices()
-    actions = action_choices()
-    icons = icon_choices()
 
     root = qt.QtWidgets.QVBoxLayout(panel)
     root.setContentsMargins(12, 10, 12, 12)
@@ -427,7 +421,7 @@ def _build_panel(
             collapse_default.setChecked(values.collapse_default_collapsed)
             _clear_slot_rows(slot_rows, slots_layout)
             for slot in values.slots:
-                _add_slot_row(qt, slots_layout, slot_rows, slot, actions, icons)
+                _add_slot_row(qt, slots_layout, slot_rows, slot)
         finally:
             state["applying"] = False
 
@@ -655,7 +649,7 @@ def _build_panel(
     def sync_slot_count(value: int) -> None:
         if state["applying"]:
             return
-        _sync_slot_rows_to_count(qt, slots_layout, slot_rows, value, actions, icons)
+        _sync_slot_rows_to_count(qt, slots_layout, slot_rows, value)
         validate_draft()
         refresh_live_preview()
 
@@ -664,9 +658,7 @@ def _build_panel(
             qt,
             slots_layout,
             slot_rows,
-            QuickCreateSlotInput(f"slot_{len(slot_rows) + 1}", "New", actions[0][0]),
-            actions,
-            icons,
+            _generated_slot_input(len(slot_rows) + 1),
         )
         button_count.setValue(len(slot_rows))
         validate_draft()
@@ -716,8 +708,6 @@ def _add_slot_row(  # pragma: no cover
     parent_layout: Any,
     rows: list[dict[str, Any]],
     slot: QuickCreateSlotInput,
-    actions: tuple[tuple[str, str, str], ...],
-    icons: tuple[Any, ...],
 ) -> None:
     row_widget = qt.QtWidgets.QWidget()
     row_layout = qt.QtWidgets.QHBoxLayout(row_widget)
@@ -727,17 +717,9 @@ def _add_slot_row(  # pragma: no cover
     slot_id = qt.QtWidgets.QLineEdit(slot.id)
     label = qt.QtWidgets.QLineEdit(slot.label)
     key_label = qt.QtWidgets.QLineEdit(slot.key_label)
-    action = qt.QtWidgets.QComboBox()
-    action.addItems(("", *(choice[0] for choice in actions)))
-    action.setEditable(True)
-    _set_combo_text(action, slot.action)
-    icon = qt.QtWidgets.QComboBox()
-    icon.addItems(("", *(descriptor.id for descriptor in icons)))
-    icon.setEditable(True)
-    _set_combo_text(icon, slot.icon)
 
     for widget, (_label, width) in zip(
-        (slot_id, label, action, key_label, icon),
+        (slot_id, label, key_label),
         _SLOT_COLUMNS,
         strict=True,
     ):
@@ -749,9 +731,7 @@ def _add_slot_row(  # pragma: no cover
             "widget": row_widget,
             "id": slot_id,
             "label": label,
-            "action": action,
             "key_label": key_label,
-            "icon": icon,
             "source": slot,
         }
     )
@@ -780,8 +760,6 @@ def _sync_slot_rows_to_count(  # pragma: no cover
     parent_layout: Any,
     rows: list[dict[str, Any]],
     count: int,
-    actions: tuple[tuple[str, str, str], ...],
-    icons: tuple[Any, ...],
 ) -> None:
     target = max(1, count)
     while len(rows) > target:
@@ -793,8 +771,6 @@ def _sync_slot_rows_to_count(  # pragma: no cover
             parent_layout,
             rows,
             _generated_slot_input(index),
-            actions,
-            icons,
         )
 
 
@@ -803,9 +779,9 @@ def _slot_input_from_row(row: dict[str, Any]) -> QuickCreateSlotInput:  # pragma
     return QuickCreateSlotInput(
         id=row["id"].text().strip(),
         label=row["label"].text().strip(),
-        action=row["action"].currentText().strip(),
+        action=getattr(source, "action", ""),
         key_label=row["key_label"].text().strip(),
-        icon=row["icon"].currentText().strip(),
+        icon=getattr(source, "icon", ""),
         type=getattr(source, "type", "button"),
         tone=getattr(source, "tone", "neutral"),
         tooltip=getattr(source, "tooltip", ""),

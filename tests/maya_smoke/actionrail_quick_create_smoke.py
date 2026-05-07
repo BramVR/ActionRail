@@ -104,14 +104,20 @@ if (
 if template_combo.count() != 5:
     raise AssertionError(f"Unexpected template count: {template_combo.count()}")
 template_labels = [template_combo.itemText(index) for index in range(template_combo.count())]
-if template_labels[-2:] != ["Blank Bar", "Viewport Display Strip"]:
-    raise AssertionError(f"Quick Create templates did not include new starters: {template_labels}")
+if template_labels != [
+    "Blank Bar",
+    "Vertical Stack",
+    "Horizontal Strip",
+    "Edge-Tab Rail",
+    "Viewport Display Strip",
+]:
+    raise AssertionError(f"Quick Create templates are not bar-first: {template_labels}")
 if "Valid draft:" not in status_label.text():
     raise AssertionError(f"Quick Create status did not validate the draft: {status_label.text()}")
 binding_targets = visible_panel._actionrail_refresh_bindings()
-if bindings_table.rowCount() != 4 or len(binding_targets) != 4:
+if bindings_table.rowCount() != 0 or binding_targets:
     raise AssertionError(
-        "Quick Create Bindings tab did not list default action-bearing slots: "
+        "Quick Create default blank bar should not list action-bearing bindings: "
         f"rows={bindings_table.rowCount()} targets={binding_targets}"
     )
 
@@ -131,12 +137,14 @@ if workspace_parent is not None:
         )
 
 current_draft = visible_panel._actionrail_current_draft()
-if current_draft.id != "quick-vertical-stack":
+if current_draft.id != "quick-blank-bar":
     raise AssertionError(f"Unexpected default draft id: {current_draft.id}")
-if len(current_draft.slots) != 4:
+if len(current_draft.slots) != 6:
     raise AssertionError(f"Unexpected default slot count: {len(current_draft.slots)}")
+if any(slot.action or slot.icon for slot in current_draft.slots):
+    raise AssertionError(f"Default Quick Create bar is not blank: {current_draft.slots}")
 
-template_combo.setCurrentIndex(1)
+template_combo.setCurrentIndex(2)
 app.processEvents()
 horizontal_draft = visible_panel._actionrail_current_draft()
 if horizontal_draft.layout.orientation != "horizontal":
