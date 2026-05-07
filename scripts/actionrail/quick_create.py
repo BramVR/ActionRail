@@ -128,6 +128,26 @@ _PREVIEW_IDS: set[str] = set()
 
 _TEMPLATES = (
     QuickCreateTemplate(
+        id="blank_bar",
+        label="Blank Bar",
+        description="Empty action bar with unassigned slots.",
+        layout=RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            rows=1,
+            columns=6,
+            offset=(0, -36),
+        ),
+        slots=(
+            QuickCreateSlotInput("slot_1", "1"),
+            QuickCreateSlotInput("slot_2", "2"),
+            QuickCreateSlotInput("slot_3", "3"),
+            QuickCreateSlotInput("slot_4", "4"),
+            QuickCreateSlotInput("slot_5", "5"),
+            QuickCreateSlotInput("slot_6", "6"),
+        ),
+    ),
+    QuickCreateTemplate(
         id="vertical_stack",
         label="Vertical Stack",
         description="Compact vertical action rail.",
@@ -181,26 +201,6 @@ _TEMPLATES = (
         collapse=RailCollapse(enabled=True, edge="left", handle_icon="chevron-right"),
     ),
     QuickCreateTemplate(
-        id="blank_bar",
-        label="Blank Bar",
-        description="Empty action bar with unassigned slots.",
-        layout=RailLayout(
-            anchor="viewport.bottom.center",
-            orientation="horizontal",
-            rows=1,
-            columns=6,
-            offset=(0, -36),
-        ),
-        slots=(
-            QuickCreateSlotInput("slot_1", "1"),
-            QuickCreateSlotInput("slot_2", "2"),
-            QuickCreateSlotInput("slot_3", "3"),
-            QuickCreateSlotInput("slot_4", "4"),
-            QuickCreateSlotInput("slot_5", "5"),
-            QuickCreateSlotInput("slot_6", "6"),
-        ),
-    ),
-    QuickCreateTemplate(
         id="viewport_display_strip",
         label="Viewport Display Strip",
         description="Viewport utility bar seeded from the Action Book.",
@@ -245,7 +245,7 @@ def template_by_id(template_id: str) -> QuickCreateTemplate:
     raise KeyError(msg)
 
 
-def make_default_input(template_id: str = "vertical_stack") -> QuickCreateDraftInput:
+def make_default_input(template_id: str = "blank_bar") -> QuickCreateDraftInput:
     """Return editable defaults for one template."""
 
     template = template_by_id(template_id)

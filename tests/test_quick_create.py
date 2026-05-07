@@ -102,10 +102,10 @@ def test_horizontal_template_uses_bottom_strip_layout() -> None:
 
 def test_template_choices_include_blank_and_viewport_starters() -> None:
     assert [template.id for template in template_choices()] == [
+        "blank_bar",
         "vertical_stack",
         "horizontal_strip",
         "edge_tab_rail",
-        "blank_bar",
         "viewport_display_strip",
     ]
 
@@ -440,7 +440,7 @@ def test_quick_create_row_preserves_hidden_slot_metadata() -> None:
 def test_quick_create_valid_status_uses_runtime_schema() -> None:
     valid_draft = build_quick_create_draft(make_default_input())
 
-    assert _valid_draft_status_text(valid_draft) == "Valid draft: quick-vertical-stack (4 slots)"
+    assert _valid_draft_status_text(valid_draft) == "Valid draft: quick-blank-bar (6 slots)"
 
     invalid_draft = build_quick_create_draft(
         QuickCreateDraftInput(
@@ -654,8 +654,8 @@ def test_save_quick_create_preset_can_save_without_showing(tmp_path) -> None:
 
     result = save_quick_create_preset(draft, preset_dir=tmp_path, show=False)
 
-    assert result.preset_id == "quick-vertical-stack"
-    assert result.path == tmp_path / "quick-vertical-stack.json"
+    assert result.preset_id == "quick-blank-bar"
+    assert result.path == tmp_path / "quick-blank-bar.json"
     assert result.host is None
     assert result.diagnostics is not None
     assert result.path.is_file()
@@ -680,7 +680,7 @@ def test_save_quick_create_preset_rejects_diagnostic_errors(tmp_path) -> None:
 
 def test_save_quick_create_preset_can_publish_slot_runtime_commands(tmp_path) -> None:
     cmds = PublishCmds()
-    draft = build_quick_create_draft(make_default_input())
+    draft = build_quick_create_draft(make_default_input("vertical_stack"))
 
     result = save_quick_create_preset(
         draft,
@@ -711,7 +711,7 @@ def test_save_quick_create_preset_reports_removed_stale_slot_commands(tmp_path) 
             "actionrail.run_slot('quick-vertical-stack', 'quick-vertical-stack.old')"
         )
     }
-    draft = build_quick_create_draft(make_default_input())
+    draft = build_quick_create_draft(make_default_input("vertical_stack"))
 
     result = save_quick_create_preset(
         draft,
@@ -741,7 +741,7 @@ def test_save_quick_create_preset_requires_explicit_overwrite(tmp_path) -> None:
         show=False,
     )
 
-    assert result.path == tmp_path / "quick-vertical-stack.json"
+    assert result.path == tmp_path / "quick-blank-bar.json"
 
 
 def test_load_quick_create_preset_returns_editable_values(tmp_path) -> None:
