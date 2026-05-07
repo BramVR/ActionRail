@@ -28,18 +28,24 @@ def test_default_qss_preserves_reference_tones() -> None:
     qss = generate_style_sheet()
 
     assert "min-width: 32px;" in qss
-    assert "background: #666670;" in qss
+    assert "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045" in qss
+    assert "stop:0 #252d34" in qss
+    assert "stop:0.5 #3b4650" in qss
+    assert "border-top-color: #8ccf3f;" not in qss
+    assert "background: #101315;" in qss
     assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss
     assert 'QPushButton[actionRailRole="button"]:disabled' in qss
     assert 'QPushButton[actionRailRole="button"][actionRailLocked="true"]' in qss
-    assert "background: #3f3f46;" in qss
+    assert "background: #0d1011;" in qss
     assert qss.index('[actionRailTone="pink"]') < qss.index('[actionRailActive="true"]')
     assert 'QPushButton[actionRailTone="pink"]' in qss
-    assert "background: #8b667f;" in qss
-    assert "background: #9c7390;" in qss
-    assert "color: #8e8e98;" in qss
+    assert "background: #5a2439;" in qss
+    assert "background: #71304a;" in qss
+    assert "color: #8c9aa1;" in qss
     assert 'QPushButton[actionRailTone="teal"]' in qss
-    assert "color: #e9fffb;" in qss
+    assert "color: #d7dde0;" in qss
+    assert 'QPushButton[actionRailTone="gold"]' in qss
+    assert "border-color: #ffb200;" in qss
     assert qss == STYLE_SHEET
 
 

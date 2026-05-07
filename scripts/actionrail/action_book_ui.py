@@ -398,7 +398,7 @@ def _style_sheet() -> str:
     theme = DEFAULT_THEME
     return f"""
 QWidget#{PANEL_OBJECT_NAME} {{
-    background: {theme.cluster_background};
+    background: {theme.panel_background};
     color: {theme.button_color};
 }}
 QLabel#ActionRailActionBookTitle {{
@@ -428,31 +428,33 @@ QTabBar#{FILTER_TABS_OBJECT_NAME}::tab {{
     border-bottom: none;
     border-top-left-radius: {theme.button_border_radius}px;
     border-top-right-radius: {theme.button_border_radius}px;
-    background: rgba(51, 51, 57, 220);
-    color: #c9c9d2;
+    background: {theme.panel_inset_background};
+    color: {theme.text_muted};
     font-size: 11px;
     letter-spacing: 0px;
 }}
 QTabBar#{FILTER_TABS_OBJECT_NAME}::tab:selected {{
-    background: rgba(85, 85, 96, 230);
+    background: {theme.button_active_background};
     color: {theme.button_color};
-    border-color: {theme.button_hover_border};
+    border-color: {theme.button_active_border};
 }}
 QScrollArea#ActionRailActionBookScroll {{
-    background: rgba(35, 35, 38, 220);
+    background: {theme.panel_inset_background};
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
 }}
 QWidget#ActionRailActionBookPages {{
-    background: rgba(35, 35, 38, 220);
+    background: {theme.panel_inset_background};
 }}
 QWidget#ActionRailActionBookPage {{
-    background: rgba(55, 55, 59, 180);
-    border: {theme.cluster_border_width}px solid rgba(95, 95, 105, 190);
+    background: {theme.panel_profile_background};
+    border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
 }}
 QFrame#ActionRailActionBookDivider {{
-    color: rgba(120, 120, 130, 150);
+    color: {theme.button_border};
 }}
 QLabel#ActionRailActionBookCategory {{
     color: {theme.button_color};
@@ -461,12 +463,12 @@ QLabel#ActionRailActionBookCategory {{
     letter-spacing: 0px;
 }}
 QLabel#ActionRailActionBookEmpty {{
-    color: #b9b9c4;
+    color: {theme.text_muted};
     font-size: 12px;
     letter-spacing: 0px;
 }}
 QLabel#{STATUS_OBJECT_NAME} {{
-    color: #9bd8c8;
+    color: {theme.success};
     font-size: 12px;
     letter-spacing: 0px;
 }}

@@ -230,9 +230,9 @@ def _populate_issue_list(
         item.setToolTip(issue.message)
         if issue.severity == "error":
             item.setForeground(qt.QtGui.QColor("#fff1f2"))
-            item.setBackground(qt.QtGui.QColor("#724c52"))
+            item.setBackground(qt.QtGui.QColor("#4b171c"))
         elif issue.severity == "warning":
-            item.setForeground(qt.QtGui.QColor("#fff4d6"))
+            item.setForeground(qt.QtGui.QColor(DEFAULT_THEME.warning))
         issue_list.addItem(item)
 
 
@@ -365,7 +365,7 @@ def _style_sheet() -> str:
     theme = DEFAULT_THEME
     return f"""
 QDialog#{WINDOW_OBJECT_NAME} {{
-    background: {theme.cluster_background};
+    background: {theme.panel_background};
     color: {theme.button_color};
 }}
 QLabel#ActionRailDiagnosticsTitle {{
@@ -397,9 +397,10 @@ QComboBox#{ISSUE_FILTER_OBJECT_NAME} {{
 QListWidget#{ISSUE_LIST_OBJECT_NAME},
 QTextEdit#{ISSUE_DETAIL_OBJECT_NAME},
 QTextEdit#{REPORT_TEXT_OBJECT_NAME} {{
-    background: #333338;
+    background: {theme.panel_profile_background};
     color: {theme.button_color};
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
     selection-background-color: {theme.button_active_background};
     selection-color: {theme.button_color};
@@ -410,7 +411,7 @@ QListWidget#{ISSUE_LIST_OBJECT_NAME}::item {{
     padding: 6px;
 }}
 QListWidget#{ISSUE_LIST_OBJECT_NAME}::item:alternate {{
-    background: #3b3b40;
+    background: {theme.panel_raised_background};
 }}
 QPushButton[actionRailRole="dialogButton"] {{
     min-height: 26px;

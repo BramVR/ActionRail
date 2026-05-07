@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .qt import load
+from .theme import DEFAULT_THEME
 
 DEFAULT_GRID_SIZE = 32
 STICKY_SNAP_THRESHOLD = 8
@@ -1373,28 +1374,30 @@ def _frame_label(preset_id: str) -> str:
 
 
 def _panel_style_sheet() -> str:
-    return """
-    QFrame {
-        background: rgba(4, 8, 11, 205);
-        border: 1px solid #00a8f5;
-        color: #dff7ff;
-    }
-    QLabel {
-        color: #dff7ff;
+    theme = DEFAULT_THEME
+    return f"""
+    QFrame {{
+        background: {theme.panel_surface_background};
+        border: 1px solid {theme.cluster_border};
+        border-top-color: {theme.accent_line};
+        color: {theme.button_color};
+    }}
+    QLabel {{
+        color: {theme.button_color};
         border: 0;
         background: transparent;
-    }
-    QCheckBox {
-        color: #ffd400;
+    }}
+    QCheckBox {{
+        color: {theme.warning};
         border: 0;
         background: transparent;
-    }
-    QSpinBox, QPushButton, QToolButton {
-        background: #111820;
-        border: 1px solid #00a8f5;
-        color: #ffffff;
+    }}
+    QSpinBox, QPushButton, QToolButton {{
+        background: {theme.button_background};
+        border: 1px solid {theme.button_active_border};
+        color: {theme.button_color};
         min-height: 18px;
-    }
+    }}
     """
 
 

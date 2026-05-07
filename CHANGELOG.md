@@ -70,6 +70,12 @@
 - Fixed the Quick Create Lock Bar round-trip after Action Book placement so
   dropped action payloads and icons survive the preview rebuild when the bar is
   locked, saved, or otherwise refreshed.
+- Retuned the shared ActionRail theme toward an ElvUI-style look: transparent
+  near-black frames, square recessed slots, white default text, green
+  active accents and panel frame lines, black-bordered opaque striped
+  action-bar frames, gold warnings, denser 50% opacity inset profile lines,
+  and matching Quick Create, Action Book, diagnostics, and Edit Mode panel
+  surfaces.
 
 ## 2026-05-06
 

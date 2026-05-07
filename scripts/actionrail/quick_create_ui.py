@@ -1063,13 +1063,14 @@ def _style_sheet() -> str:  # pragma: no cover
     theme = DEFAULT_THEME
     return f"""
 QWidget#{PANEL_OBJECT_NAME} {{
-    background: {theme.cluster_background};
+    background: {theme.panel_background};
     color: {theme.button_color};
 }}
 QFrame#ActionRailQuickCreateSidebar,
 QFrame#ActionRailQuickCreateContent {{
-    background: rgba(42, 42, 46, 210);
+    background: {theme.panel_surface_background};
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
 }}
 QLabel#ActionRailQuickCreateTitle {{
@@ -1085,10 +1086,10 @@ QLabel#{STATUS_OBJECT_NAME} {{
     letter-spacing: 0px;
 }}
 QLabel#{STATUS_OBJECT_NAME}[actionRailStatus="ok"] {{
-    color: #9bd8c8;
+    color: {theme.success};
 }}
 QLabel#{STATUS_OBJECT_NAME}[actionRailStatus="error"] {{
-    color: #ff9a9a;
+    color: {theme.error};
 }}
 QLabel#ActionRailQuickCreateNavTitle {{
     color: {theme.button_color};
@@ -1113,6 +1114,7 @@ QListWidget#ActionRailQuickCreateTemplateList::item:selected {{
 }}
 QTabWidget#ActionRailQuickCreateTabs::pane {{
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
     background: transparent;
 }}
@@ -1133,6 +1135,7 @@ QTabBar::tab:selected {{
 }}
 QGroupBox#ActionRailQuickCreateGroup {{
     border: {theme.cluster_border_width}px solid {theme.cluster_border};
+    border-top-color: {theme.accent_line};
     border-radius: {theme.cluster_border_radius}px;
     margin-top: 12px;
     padding-top: 6px;
@@ -1157,7 +1160,7 @@ QScrollArea#ActionRailQuickCreateSlotScroll {{
     border: 0px;
 }}
 QTableWidget#ActionRailQuickCreateBindingsTable {{
-    background: {theme.button_background};
+    background: {theme.panel_profile_background};
     color: {theme.button_color};
     gridline-color: {theme.cluster_border};
     border: {theme.button_border_width}px solid {theme.button_border};
@@ -1167,7 +1170,7 @@ QTableWidget#ActionRailQuickCreateBindingsTable {{
     letter-spacing: 0px;
 }}
 QHeaderView::section {{
-    background: {theme.button_background};
+    background: {theme.panel_inset_background};
     color: {theme.button_color};
     border: {theme.button_border_width}px solid {theme.button_border};
     padding: 4px 7px;
@@ -1183,14 +1186,14 @@ QLabel#ActionRailQuickCreateSliderLimit {{
 }}
 QSlider::groove:horizontal {{
     height: 8px;
-    background: #26262a;
+    background: {theme.panel_inset_background};
     border: 1px solid {theme.cluster_border};
 }}
 QSlider::handle:horizontal {{
     width: 12px;
     margin: -4px 0;
     background: {theme.button_active_background};
-    border: 1px solid {theme.button_hover_border};
+    border: 1px solid {theme.button_active_border};
 }}
 QLineEdit,
 QComboBox,
