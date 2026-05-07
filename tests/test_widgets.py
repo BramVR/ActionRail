@@ -1473,6 +1473,12 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
         def setPen(self, pen: str) -> None:  # noqa: N802
             events.append(("pen", pen))
 
+        def fillRect(self, rect: Rect, color: str) -> None:  # noqa: N802
+            events.append(("fill", rect.adjusted_args, color))
+
+        def drawRect(self, rect: Rect) -> None:  # noqa: N802
+            events.append(("rect", rect.adjusted_args))
+
         def drawPixmap(self, rect: Rect, _pixmap: Pixmap) -> None:  # noqa: N802
             events.append(("pixmap_drawn", rect.adjusted_args))
 
@@ -1560,6 +1566,9 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
     button.paintEvent(object())
 
     assert ("control", 11, "", True) in events
+    assert ("fill", (2, 2, -2, -2), "#444341") in events
+    assert ("pen", "#171716") in events
+    assert ("rect", (0, 0, -1, -1)) in events
     assert ("pixmap", (32, 32)) in events
     assert ("pixmap_drawn", (2, 2, -2, -2)) in events
     assert ("text", "M", 3, None, None, 13) in events

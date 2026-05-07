@@ -40,6 +40,9 @@ def test_default_qss_preserves_reference_tones() -> None:
     assert "stop:0.26 rgba(18, 23, 25, 102)" in DEFAULT_THEME.panel_profile_background
     assert "stop:0.5 rgba(46, 55, 58, 102)" in DEFAULT_THEME.panel_profile_background
     assert "stop:0.74 rgba(18, 23, 25, 102)" in DEFAULT_THEME.panel_profile_background
+    assert DEFAULT_THEME.spell_icon_background == "#444341"
+    assert DEFAULT_THEME.spell_icon_border == "#171716"
+    assert DEFAULT_THEME.spell_icon_inset == 3
     assert "border-top-color: #8ccf3f;" not in qss
     assert "background: #101315;" in qss
     assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss

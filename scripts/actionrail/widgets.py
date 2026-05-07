@@ -434,6 +434,7 @@ def _build_button(
     )
     button.setProperty("actionRailButtonIconSize", theme.button_size)
     button.setProperty("actionRailButtonIconInset", theme.button_border_width)
+    button.setProperty("actionRailIconBackplate", theme.spell_icon_background)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(
@@ -1847,6 +1848,7 @@ def _button_class(qt: object) -> type:
                     inset = _button_icon_inset(self)
                     if inset:
                         target = target.adjusted(inset, inset, -inset, -inset)
+                    _draw_icon_backplate(qt, painter, target)
                     pixmap = icon.pixmap(target.size())
                     if not pixmap.isNull():
                         painter.drawPixmap(target, pixmap)
@@ -1883,6 +1885,44 @@ def _button_class(qt: object) -> type:
                 _ = event
 
     return ActionRailButton
+
+
+def _draw_icon_backplate(qt: object, painter: object, rect: object) -> bool:
+    fill_rect = getattr(painter, "fillRect", None)
+    if not callable(fill_rect):
+        return False
+    try:
+        fill_rect(rect, _qt_color(qt, DEFAULT_THEME.spell_icon_background))
+    except Exception:
+        return False
+
+    draw_rect = getattr(painter, "drawRect", None)
+    if callable(draw_rect):
+        try:
+            set_pen = getattr(painter, "setPen", None)
+            if callable(set_pen):
+                set_pen(_qt_color(qt, DEFAULT_THEME.spell_icon_border))
+            draw_rect(_adjusted_rect(rect, 0, 0, -1, -1))
+        except Exception:
+            pass
+    return True
+
+
+def _qt_color(qt: object, color: str) -> object:
+    color_class = getattr(getattr(qt, "QtGui", None), "QColor", None)
+    if color_class is None:
+        return color
+    with suppress(Exception):
+        return color_class(color)
+    return color
+
+
+def _adjusted_rect(rect: object, left: int, top: int, right: int, bottom: int) -> object:
+    adjusted = getattr(rect, "adjusted", None)
+    if callable(adjusted):
+        with suppress(Exception):
+            return adjusted(left, top, right, bottom)
+    return rect
 
 
 def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:

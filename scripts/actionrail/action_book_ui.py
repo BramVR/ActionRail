@@ -257,6 +257,7 @@ def _entry_button(qt: QtBinding, entry: ActionBookEntry, registry: ActionRegistr
     button.setObjectName(f"{ENTRY_BUTTON_OBJECT_NAME_PREFIX}_{_safe_object_suffix(entry.id)}")
     button.setProperty("actionRailActionBookActionId", entry.id)
     button.setProperty("actionRailIcon", entry.icon)
+    button.setProperty("actionRailIconBackplate", DEFAULT_THEME.spell_icon_background)
     button.setText(_entry_button_text(entry))
     button.setToolTip(f"{entry.label}\n{entry.tooltip or entry.id}")
     button.setToolButtonStyle(qt.QtCore.Qt.ToolButtonTextBesideIcon)
@@ -341,7 +342,41 @@ def _apply_entry_icon(qt: QtBinding, button: Any, icon_id: str) -> None:
     status = icon_status(icon_id)
     icon_source = _qt_icon_source(str(status.path or ""), status.qt_name)
     if icon_source:
-        button.setIcon(qt.QtGui.QIcon(icon_source))
+        button.setIcon(_entry_icon_with_backplate(qt, icon_source))
+
+
+def _entry_icon_with_backplate(qt: QtBinding, icon_source: str, size: int = 30) -> Any:
+    pixmap_class = getattr(qt.QtGui, "QPixmap", None)
+    painter_class = getattr(qt.QtGui, "QPainter", None)
+    icon_class = getattr(qt.QtGui, "QIcon", None)
+    color_class = getattr(qt.QtGui, "QColor", None)
+    if (
+        pixmap_class is None
+        or painter_class is None
+        or icon_class is None
+        or color_class is None
+    ):
+        return qt.QtGui.QIcon(icon_source)
+
+    try:
+        canvas = pixmap_class(qt.QtCore.QSize(size, size))
+        canvas.fill(color_class("#00000000"))
+        painter = painter_class(canvas)
+        try:
+            rect = canvas.rect()
+            painter.fillRect(rect, color_class(DEFAULT_THEME.spell_icon_background))
+            painter.setPen(color_class(DEFAULT_THEME.spell_icon_border))
+            painter.drawRect(rect.adjusted(0, 0, -1, -1))
+            inset = DEFAULT_THEME.spell_icon_inset
+            icon_rect = rect.adjusted(inset, inset, -inset, -inset)
+            pixmap = icon_class(icon_source).pixmap(icon_rect.size())
+            if not pixmap.isNull():
+                painter.drawPixmap(icon_rect, pixmap)
+        finally:
+            painter.end()
+        return icon_class(canvas)
+    except Exception:
+        return qt.QtGui.QIcon(icon_source)
 
 
 def _qt_icon_source(icon_path: str, icon_name: str = "") -> str:

@@ -98,6 +98,8 @@ scale_button = entry_button("maya.tool.scale")
 scale_entry_icon = scale_button.property("actionRailIcon")
 if scale_entry_icon != "maya.scale":
     raise AssertionError(f"Scale entry does not use the Action Book icon: {scale_button.icon()}")
+if scale_button.property("actionRailIconBackplate") != "#444341":
+    raise AssertionError("Scale entry is missing the spell icon backplate.")
 if "Scale" not in scale_button.text() or "scale" not in scale_button.toolTip().lower():
     raise AssertionError(f"Scale entry is missing label/description: {scale_button.text()!r}")
 if scale_button.icon().isNull():

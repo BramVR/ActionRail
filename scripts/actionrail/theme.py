@@ -62,6 +62,9 @@ class ActionRailTheme:
         "stop:0.74 rgba(18, 23, 25, 102), "
         "stop:1 rgba(18, 23, 25, 102))"
     )
+    spell_icon_background: str = "#444341"
+    spell_icon_border: str = "#171716"
+    spell_icon_inset: int = 3
     text_muted: str = "#8c9aa1"
     accent: str = "#8ccf3f"
     accent_hover: str = "#a6e45b"

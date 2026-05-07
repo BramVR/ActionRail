@@ -48,7 +48,9 @@ unlocked action-bar slots. The latest placement fix keeps those dropped live
 payloads when Quick Create Lock Bar rebuilds the preview, so assigned icons
 stay visible after returning a bar to normal click-to-run mode. The latest
 theme pass doubles the central diagonal stripe width on action bars and Action
-Book pages and renders both stripe treatments at 40% opacity.
+Book pages and renders both stripe treatments at 40% opacity. Spell icons now
+share a dark button backplate in both the Action Book and dropped action-bar
+slots, so icons no longer float on a transparent background.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -323,16 +325,17 @@ $env:PYTHONPATH = "scripts"
   unlocked blank Quick Create slot keeps the primary slot label empty, preserves
   the slot key label, keeps the catalog icon visible, and survives Lock Bar
   rebuild. The latest run also refreshed the Action Book and drop-bar
-  screenshots after the thicker 40%-opacity diagonal stripe theme pass.
+  screenshots after the thicker 40%-opacity diagonal stripe theme pass and the
+  shared spell-icon backplate pass.
 - Latest project/docs checks:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
   `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and local Markdown link
   scan -> passed.
 - Latest focused theme validation:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_theme.py`
-  -> 3 passed.
-- Latest focused theme Ruff:
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\theme.py tests\\test_theme.py`
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_theme.py`
+  -> 53 passed.
+- Latest focused theme/widget Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\action_book_ui.py scripts\\actionrail\\widgets.py scripts\\actionrail\\theme.py tests\\test_widgets.py tests\\test_theme.py tests\\maya_smoke\\actionrail_action_book_ui_smoke.py`
   -> all checks passed.
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`

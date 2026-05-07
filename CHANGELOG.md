@@ -75,6 +75,9 @@
   key labels.
 - Increased the ActionRail diagonal stripe weight on action bars and Action
   Book pages, with both stripe treatments rendered at 40% opacity.
+- Added a shared dark spell-icon backplate so Action Book entries and dropped
+  action-bar icons render as framed buttons instead of floating transparent
+  icons.
 - Retuned the shared ActionRail theme toward an ElvUI-style look: transparent
   near-black frames, square recessed slots, white default text, green
   active accents and panel frame lines, black-bordered opaque striped
