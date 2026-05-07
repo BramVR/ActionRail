@@ -41,7 +41,9 @@ focused on creating bars and slots; the separate future Action Book owns action
 browsing and placement. The first Action Book UI slice is now implemented as a
 separate dockable Maya panel with search,
 icon-backed action entries, click-to-run behavior, and drag/drop placement onto
-unlocked action-bar slots.
+unlocked action-bar slots. The latest placement fix keeps those dropped live
+payloads when Quick Create Lock Bar rebuilds the preview, so assigned icons
+stay visible after returning a bar to normal click-to-run mode.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -280,6 +282,9 @@ $env:PYTHONPATH = "scripts"
   as its own dockable Maya panel, searches the current 13-entry Action Book
   starter catalog, runs clicked entries, and drops action payloads onto unlocked
   slots using the same icons as the bar.
+- The latest Quick Create/Action Book round-trip fix preserves dropped live
+  payloads when Lock Bar rebuilds the Quick Create preview, so the assigned
+  action and icon survive the transition back to normal click-to-run mode.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets and known
   ActionRail workspace controls between smoke scripts so diagnostics/panel
   windows do not steal later Edit Mode clicks or leave blank workspace shells.
@@ -477,8 +482,9 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified 13 rendered Action Book entries, search narrowing to
   `maya.tool.scale`, click-to-run Select changing Maya to `selectSuperContext`,
   drag/drop assignment of `maya.tool.scale` onto an unlocked blank Quick Create
-  slot with `maya.scale` through the real Qt drag-enter/drop path, Action Book
-  workspace-control cleanup on close, and screenshots at
+  slot with `maya.scale` through the real Qt drag-enter/drop path, Lock Bar
+  preserving that assigned action/icon after the Quick Create preview rebuild,
+  Action Book workspace-control cleanup on close, and screenshots at
   `.gg-maya-sessiond/screenshots/actionrail_action_book_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_action_book_search_scale.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_action_book_drop_bar.png`.

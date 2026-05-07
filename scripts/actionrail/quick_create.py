@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
 from math import ceil
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,7 @@ __all__ = [
     "make_default_input",
     "preview_quick_create_draft",
     "save_quick_create_preset",
+    "active_quick_create_preview_spec",
     "template_by_id",
     "template_choices",
 ]
@@ -321,6 +323,7 @@ def preview_quick_create_draft(
 
     spec = build_draft_spec(draft)
     _validate_quick_create_id(spec.id)
+    spec = _spec_with_active_preview_payloads(spec)
 
     from . import diagnostics, runtime
 
@@ -336,6 +339,49 @@ def preview_quick_create_draft(
     host = runtime.show_spec(spec, panel=panel, registry=registry)
     _PREVIEW_IDS.add(spec.id)
     return host
+
+
+def active_quick_create_preview_spec(preset_id: str) -> Any | None:
+    """Return the live spec for an active Quick Create preview, if any."""
+
+    if preset_id not in _PREVIEW_IDS:
+        return None
+    from . import runtime
+
+    host = getattr(runtime, "_OVERLAYS", {}).get(preset_id)
+    spec = getattr(host, "spec", None)
+    if getattr(spec, "id", "") != preset_id:
+        return None
+    return spec
+
+
+def _spec_with_active_preview_payloads(spec: Any) -> Any:
+    live_spec = active_quick_create_preview_spec(spec.id)
+    if live_spec is None:
+        return spec
+
+    live_items = {
+        getattr(item, "id", ""): item
+        for item in getattr(live_spec, "items", ())
+        if getattr(item, "type", "") != "spacer"
+    }
+    items = []
+    changed = False
+    for item in spec.items:
+        live_item = live_items.get(getattr(item, "id", ""))
+        if live_item is None or getattr(item, "type", "") == "spacer":
+            items.append(item)
+            continue
+        updated = item
+        for field in ("action", "icon", "tone", "tooltip", "enabled_when", "active_when"):
+            live_value = getattr(live_item, field, "")
+            if getattr(updated, field, "") != live_value:
+                updated = dataclass_replace(updated, **{field: live_value})
+        changed = changed or updated is not item
+        items.append(updated)
+    if not changed:
+        return spec
+    return dataclass_replace(spec, items=tuple(items))
 
 
 def clear_quick_create_previews(preset_id: str = "") -> int:

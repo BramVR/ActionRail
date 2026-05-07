@@ -67,6 +67,9 @@
 - Simplified the Quick Create slot-edit workflow: previews now open unlocked
   for Action Book placement, and the old Edit Slots control is presented as a
   direct Lock Bar/Unlock Bar toggle.
+- Fixed the Quick Create Lock Bar round-trip after Action Book placement so
+  dropped action payloads and icons survive the preview rebuild when the bar is
+  locked, saved, or otherwise refreshed.
 
 ## 2026-05-06
 

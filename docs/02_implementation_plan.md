@@ -430,7 +430,9 @@ Edit Mode, bind slots in Bind Mode, then save.
   normal action execution. Quick Create previews now start unlocked for the
   current draft and expose a simple Lock Bar/Unlock Bar toggle, keeping bar
   creation, frame placement, and slot editing connected to the first Action
-  Book placement slice without starting Bind Mode.
+  Book placement slice without starting Bind Mode. Dropped Action Book payloads
+  are now preserved when Lock Bar rebuilds the Quick Create preview, so the
+  assigned action/icon remains visible after returning the bar to normal mode.
 - Keep Quick Create minimal. Its current default is a blank action bar, and its
   Slots tab edits only slot id, label, and displayed key text. Do not add
   Action/Icon assignment browsing back into Quick Create; action placement
@@ -546,7 +548,9 @@ slots and layout settings, and no longer exposes action/icon assignment controls
 in the Slots tab. The first separate Action Book UI now owns action browsing and
 placement: it opens from the ActionRail Maya menu, searches the Action Book
 catalog, renders icon-backed entries, runs clicked entries, and drops actions
-onto those unlocked Quick Create/Normal Mode slots.
+onto those unlocked Quick Create/Normal Mode slots. The latest round-trip fix
+keeps dropped Action Book payloads and icons intact when Quick Create Lock Bar
+rebuilds that preview.
 The Action Book backend has also expanded beyond the original transform/key/grid
 seed set with Maya-smoke verified selection, viewport, and modeling entries:
 Select, Clear Selection, Frame Selection, Toggle Isolate Selected, Center

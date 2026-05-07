@@ -224,7 +224,9 @@ def about() -> dict[str, object]:
                 "and Quick Create Bindings tab Maya-smoke verified; Quick Create "
                 "previews now open unlocked with a Lock Bar/Unlock Bar toggle "
                 "for Normal Mode slot editing; Action Book UI connects searchable "
-                "action entries to unlocked action-bar slots"
+                "action entries to unlocked action-bar slots; Quick Create "
+                "Lock Bar preserves dropped Action Book payloads/icons after "
+                "the preview rebuild"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "

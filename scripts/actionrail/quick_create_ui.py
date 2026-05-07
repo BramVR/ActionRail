@@ -14,6 +14,8 @@ from .quick_create import (
     ANCHOR_CHOICES,
     QuickCreateDraftInput,
     QuickCreateSlotInput,
+    _slot_input_from_item,
+    active_quick_create_preview_spec,
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
@@ -453,8 +455,33 @@ def _build_panel(
     def current_draft() -> object:
         return build_quick_create_draft(current_input())
 
+    def sync_slot_rows_from_preview() -> None:
+        if not state["preview_active"]:
+            return
+        spec = active_quick_create_preview_spec(preset_id.text().strip())
+        if spec is None:
+            return
+        slot_inputs = {
+            slot.id: slot
+            for slot in (_slot_input_from_item(spec.id, item) for item in spec.items)
+        }
+        for row in slot_rows:
+            slot_id = row["id"].text().strip()
+            slot = slot_inputs.get(slot_id)
+            if slot is None:
+                continue
+            source = row.get("source")
+            label_text = row["label"].text().strip()
+            key_label_text = row["key_label"].text().strip()
+            if label_text == getattr(source, "label", ""):
+                row["label"].setText(slot.label)
+            if key_label_text == getattr(source, "key_label", ""):
+                row["key_label"].setText(slot.key_label)
+            row["source"] = slot
+
     def validate_draft() -> None:
         try:
+            sync_slot_rows_from_preview()
             draft = current_draft()
             text = _valid_draft_status_text(draft)
         except Exception as exc:
@@ -477,6 +504,7 @@ def _build_panel(
 
     def preview_draft() -> None:
         try:
+            sync_slot_rows_from_preview()
             draft = current_draft()
             _preview_draft_with_slot_lock(draft)
         except Exception as exc:
@@ -509,6 +537,7 @@ def _build_panel(
         state["slots_unlocked"] = not bool(state["slots_unlocked"])
         _apply_slot_lock_button_text()
         try:
+            sync_slot_rows_from_preview()
             draft = current_draft()
             _preview_draft_with_slot_lock(draft)
         except Exception as exc:
@@ -526,6 +555,7 @@ def _build_panel(
         if state["applying"] or not state["preview_active"]:
             return
         try:
+            sync_slot_rows_from_preview()
             draft = current_draft()
             _preview_draft_with_slot_lock(draft)
         except Exception as exc:
@@ -552,6 +582,7 @@ def _build_panel(
 
     def save_draft(*, overwrite: bool = False) -> None:
         try:
+            sync_slot_rows_from_preview()
             result = save_quick_create_preset(
                 current_draft(),
                 overwrite=overwrite,
@@ -570,6 +601,7 @@ def _build_panel(
 
     def save_and_publish_draft() -> None:
         try:
+            sync_slot_rows_from_preview()
             result = save_quick_create_preset(
                 current_draft(),
                 overwrite=True,
@@ -594,6 +626,7 @@ def _build_panel(
 
     def refresh_bindings() -> tuple[Any, ...]:
         try:
+            sync_slot_rows_from_preview()
             draft = current_draft()
             spec = build_draft_spec(draft)
             targets = slot_binding_targets(

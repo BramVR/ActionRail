@@ -36,6 +36,7 @@ from actionrail.quick_create_ui import (
     _valid_draft_status_text,
     _widget_value_from_slider,
 )
+from actionrail.slot_payloads import spec_with_slot_action_payload
 from actionrail.spec import RailLayout, StackItem, StackSpec
 
 
@@ -661,6 +662,67 @@ def test_quick_create_slot_lock_toggle_previews_and_locks(monkeypatch) -> None:
         ("show", "quick-horizontal-strip:modelPanel4"),
         ("exit_edit", ""),
         ("unlock", "quick-horizontal-strip:False"),
+    ]
+
+
+def test_quick_create_slot_lock_preserves_live_action_book_payload(monkeypatch) -> None:
+    events: list[tuple[str, str]] = []
+
+    class FakeHost:
+        def __init__(self, spec, *, panel=None, registry=None) -> None:
+            self.spec = spec
+            self.panel = panel
+            self.registry = registry
+            self.widget = None
+            self._filter_targets = ()
+            self._predicate_refresh_timer = None
+            self.unlocked = True
+
+        def show(self) -> None:
+            events.append(("show", f"{self.spec.id}:{self.panel}"))
+
+        def close(self) -> None:
+            events.append(("close", self.spec.id))
+
+        def set_slot_edit_unlocked(self, unlocked: bool) -> bool:
+            self.unlocked = unlocked
+            events.append(("unlock", f"{self.spec.id}:{unlocked}"))
+            return True
+
+    fake_overlay = ModuleType("actionrail.overlay")
+    fake_overlay.ViewportOverlayHost = FakeHost
+    fake_overlay._qt_widget_is_valid = lambda widget: True
+    monkeypatch.setitem(sys.modules, "actionrail.overlay", fake_overlay)
+
+    import actionrail.edit_mode as edit_mode
+
+    monkeypatch.setattr(
+        edit_mode,
+        "exit_edit_mode",
+        lambda: events.append(("exit_edit", "")),
+    )
+
+    draft = build_quick_create_draft(make_default_input("blank_bar"))
+    host = set_quick_create_slots_unlocked(draft, True, panel="modelPanel4")
+    host.spec = spec_with_slot_action_payload(
+        host.spec,
+        "quick-blank-bar.slot_5",
+        "maya.tool.select",
+    )
+
+    locked_host = set_quick_create_slots_unlocked(draft, False, panel="modelPanel4")
+    item_by_id = {item.id: item for item in locked_host.spec.items}
+
+    assert item_by_id["quick-blank-bar.slot_5"].action == "maya.tool.select"
+    assert item_by_id["quick-blank-bar.slot_5"].icon == "maya.objects"
+    assert events == [
+        ("show", "quick-blank-bar:modelPanel4"),
+        ("exit_edit", ""),
+        ("unlock", "quick-blank-bar:True"),
+        ("close", "quick-blank-bar"),
+        ("show", "quick-blank-bar:modelPanel4"),
+        ("exit_edit", ""),
+        ("unlock", "quick-blank-bar:False"),
     ]
 
 

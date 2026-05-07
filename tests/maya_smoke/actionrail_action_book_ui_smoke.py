@@ -95,7 +95,8 @@ if len(initial_entries) < 13 or len(initial_buttons) != len(initial_entries):
     )
 
 scale_button = entry_button("maya.tool.scale")
-if scale_button.property("actionRailIcon") != "maya.scale":
+scale_entry_icon = scale_button.property("actionRailIcon")
+if scale_entry_icon != "maya.scale":
     raise AssertionError(f"Scale entry does not use the Action Book icon: {scale_button.icon()}")
 if "Scale" not in scale_button.text() or "scale" not in scale_button.toolTip().lower():
     raise AssertionError(f"Scale entry is missing label/description: {scale_button.text()!r}")
@@ -204,8 +205,37 @@ updated_slot = next(
 if updated_slot is None or updated_slot.property("actionRailIcon") != "maya.scale":
     raise AssertionError("Assigned bar slot did not render the same scale icon.")
 
+locked_host = actionrail.set_quick_create_slots_unlocked(draft, False)
+app.processEvents()
+cmds.refresh(force=True)
+app.processEvents()
+if locked_host is None or locked_host.slot_edit_unlocked():
+    raise AssertionError("Quick Create Lock Bar did not lock after Action Book drop.")
+locked_item = locked_host.spec.items[0]
+if locked_item.action != "maya.tool.scale" or locked_item.icon != "maya.scale":
+    raise AssertionError(
+        "Quick Create Lock Bar lost the Action Book payload after rebuilding: "
+        f"action={locked_item.action} icon={locked_item.icon}"
+    )
+locked_slot = next(
+    (
+        button
+        for button in locked_host.widget.findChildren(QtWidgets.QPushButton)
+        if button.property("actionRailSlotId") == "quick-blank-bar.slot_1"
+    ),
+    None,
+)
+if (
+    locked_slot is None
+    or locked_slot.property("actionRailSlotEditUnlocked") != "false"
+    or locked_slot.property("actionRailIcon") != "maya.scale"
+):
+    raise AssertionError(
+        "Locked Quick Create bar did not keep the assigned scale icon visible."
+    )
+
 drop_path = output_path.with_name("actionrail_action_book_drop_bar.png")
-drop_pixmap = updated_host.widget.grab()
+drop_pixmap = locked_host.widget.grab()
 drop_screenshot_saved = drop_pixmap.save(str(drop_path), "PNG")
 if not drop_screenshot_saved or drop_pixmap.width() <= 0 or drop_pixmap.height() <= 0:
     raise AssertionError(f"Failed to save Action Book drop screenshot: {drop_path}")
@@ -215,12 +245,14 @@ result = {
     "context_after_click": context_after_click,
     "drop_assigned_action": assigned_item.action,
     "drop_assigned_icon": assigned_item.icon,
+    "drop_locked_action": locked_item.action,
+    "drop_locked_icon": locked_item.icon,
     "drop_screenshot": str(drop_path),
     "drop_screenshot_saved": bool(drop_screenshot_saved),
     "initial_button_count": len(initial_buttons),
     "menu_command": maya_ui.show_action_book_panel_command(),
     "panel_visible": bool(visible_panel.isVisible()),
-    "scale_entry_icon": scale_button.property("actionRailIcon"),
+    "scale_entry_icon": scale_entry_icon,
     "screenshot": str(output_path),
     "screenshot_saved": bool(screenshot_saved),
     "screenshot_size": [pixmap.width(), pixmap.height()],

@@ -68,7 +68,9 @@ Snapshot:
   Action Book entries into slots. Its bar-state control is now a simple
   Lock Bar/Unlock Bar toggle; locking returns populated slot clicks to normal
   action execution. This is the bridge to the separate Action Book placement
-  workflow while Quick Create stays a minimal action-bar creator.
+  workflow while Quick Create stays a minimal action-bar creator. Dropped
+  Action Book payloads are preserved when Lock Bar rebuilds the preview, so
+  the assigned icon remains visible after returning to normal mode.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.
