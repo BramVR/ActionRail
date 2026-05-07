@@ -33,6 +33,7 @@ import actionrail  # noqa: E402
 import actionrail.runtime as actionrail_runtime  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
 from actionrail.quick_create_ui import (  # noqa: E402
+    BINDINGS_TABLE_OBJECT_NAME,
     BUTTON_COUNT_OBJECT_NAME,
     BUTTON_SIZE_OBJECT_NAME,
     BUTTONS_PER_ROW_OBJECT_NAME,
@@ -78,6 +79,7 @@ edit_layout_button = visible_panel.findChild(
     EDIT_LAYOUT_BUTTON_OBJECT_NAME,
 )
 tabs = visible_panel.findChild(QtWidgets.QTabWidget, TABS_OBJECT_NAME)
+bindings_table = visible_panel.findChild(QtWidgets.QTableWidget, BINDINGS_TABLE_OBJECT_NAME)
 preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCreatePresetId")
 button_count = visible_panel.findChild(QtWidgets.QSpinBox, BUTTON_COUNT_OBJECT_NAME)
 buttons_per_row = visible_panel.findChild(QtWidgets.QSpinBox, BUTTONS_PER_ROW_OBJECT_NAME)
@@ -88,6 +90,7 @@ if (
     or publish_button is None
     or edit_layout_button is None
     or tabs is None
+    or bindings_table is None
     or preset_id_edit is None
     or button_count is None
     or buttons_per_row is None
@@ -102,6 +105,12 @@ if template_labels[-2:] != ["Blank Bar", "Viewport Display Strip"]:
     raise AssertionError(f"Quick Create templates did not include new starters: {template_labels}")
 if "Valid draft:" not in status_label.text():
     raise AssertionError(f"Quick Create status did not validate the draft: {status_label.text()}")
+binding_targets = visible_panel._actionrail_refresh_bindings()
+if bindings_table.rowCount() != 4 or len(binding_targets) != 4:
+    raise AssertionError(
+        "Quick Create Bindings tab did not list default action-bearing slots: "
+        f"rows={bindings_table.rowCount()} targets={binding_targets}"
+    )
 
 workspace_parent = visible_panel.parentWidget()
 if workspace_parent is not None:
@@ -252,6 +261,14 @@ if escaped_user_preset_dir not in shelf_command:
     )
 if "Published" not in status_label.text():
     raise AssertionError(f"Save + Publish did not report publish status: {status_label.text()}")
+binding_targets = visible_panel._actionrail_refresh_bindings()
+binding_name_commands = [
+    bindings_table.item(row, 2).text() for row in range(bindings_table.rowCount())
+]
+if "ActionRail_slot_quick_horizontal_strip_key_NameCommand" not in binding_name_commands:
+    raise AssertionError(
+        f"Bindings tab did not show published slot nameCommands: {binding_name_commands}"
+    )
 
 actionrail.reload("quick-horizontal-strip")
 app.processEvents()
@@ -295,6 +312,8 @@ result = {
     "loaded_orientation": loaded_draft.layout.orientation,
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,
+    "binding_target_count": len(binding_targets),
+    "binding_name_commands": binding_name_commands,
     "edit_layout_selected": edit_state.selected_preset_id,
     "edit_layout_screenshot": str(edit_screenshot_path),
     "edit_layout_screenshot_saved": bool(edit_screenshot_saved),

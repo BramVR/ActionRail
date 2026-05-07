@@ -57,6 +57,8 @@ Snapshot:
 - Quick Create template choices now cover the original vertical stack,
   horizontal strip, edge-tab rail, a blank action bar, and a viewport display
   strip seeded with the Toggle Grid Action Book entry.
+- Quick Create now has a read-only Bindings tab that lists action-bearing slots,
+  their current key labels, and the Maya nameCommands used by the Hotkey Editor.
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
   enters Edit Mode, and selects that draft frame so create -> place/configure
   feels like one workflow.

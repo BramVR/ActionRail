@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .authoring import DraftRail, build_draft_spec
+from .hotkeys import slot_binding_targets
 from .overlay import maya_main_window
 from .qt import QtBinding, load
 from .quick_create import (
@@ -45,6 +46,7 @@ EDIT_LAYOUT_BUTTON_OBJECT_NAME = "ActionRailQuickCreateEditLayoutButton"
 BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
 BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
 BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
+BINDINGS_TABLE_OBJECT_NAME = "ActionRailQuickCreateBindingsTable"
 
 _PANEL: Any | None = None
 _SLOT_COLUMNS = (
@@ -53,6 +55,11 @@ _SLOT_COLUMNS = (
     ("Action", 176),
     ("Key", 64),
     ("Icon", 174),
+)
+_BINDING_COLUMNS = (
+    "Slot",
+    "Key",
+    "Maya Hotkey Name",
 )
 
 __all__ = [
@@ -68,6 +75,7 @@ __all__ = [
     "TABS_OBJECT_NAME",
     "TEMPLATE_COMBO_OBJECT_NAME",
     "BUTTON_COUNT_OBJECT_NAME",
+    "BINDINGS_TABLE_OBJECT_NAME",
     "BUTTON_SIZE_OBJECT_NAME",
     "BUTTONS_PER_ROW_OBJECT_NAME",
     "show_quick_create_panel",
@@ -347,6 +355,32 @@ def _build_panel(
     slots_scroll.setWidget(slots_container)
     slot_rows: list[dict[str, Any]] = []
 
+    bindings_tab = qt.QtWidgets.QWidget()
+    bindings_layout = qt.QtWidgets.QVBoxLayout(bindings_tab)
+    bindings_layout.setContentsMargins(10, 10, 10, 10)
+    bindings_layout.setSpacing(6)
+    tabs.addTab(bindings_tab, "Bindings")
+    bindings_table = qt.QtWidgets.QTableWidget()
+    bindings_table.setObjectName(BINDINGS_TABLE_OBJECT_NAME)
+    bindings_table.setColumnCount(len(_BINDING_COLUMNS))
+    bindings_table.setHorizontalHeaderLabels(_BINDING_COLUMNS)
+    bindings_table.setEditTriggers(qt.QtWidgets.QAbstractItemView.NoEditTriggers)
+    bindings_table.setSelectionMode(qt.QtWidgets.QAbstractItemView.NoSelection)
+    bindings_table.setAlternatingRowColors(True)
+    bindings_table.verticalHeader().setVisible(False)
+    bindings_table.horizontalHeader().setStretchLastSection(False)
+    bindings_table.horizontalHeader().setSectionResizeMode(
+        qt.QtWidgets.QHeaderView.Interactive
+    )
+    bindings_table.setHorizontalScrollBarPolicy(qt.QtCore.Qt.ScrollBarAlwaysOff)
+    bindings_table.setColumnWidth(0, 140)
+    bindings_table.setColumnWidth(1, 64)
+    bindings_table.horizontalHeader().setSectionResizeMode(
+        2,
+        qt.QtWidgets.QHeaderView.Stretch,
+    )
+    bindings_layout.addWidget(bindings_table, 1)
+
     status = qt.QtWidgets.QLabel("")
     status.setObjectName(STATUS_OBJECT_NAME)
     status.setWordWrap(True)
@@ -427,6 +461,7 @@ def _build_panel(
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
+        refresh_bindings()
         _set_status(qt, status, "ok", text)
 
     def preview_draft() -> None:
@@ -475,6 +510,7 @@ def _build_panel(
         try:
             values = load_quick_create_preset(preset_text, preset_dir=user_preset_dir)
             apply_values(values)
+            refresh_bindings()
         except Exception as exc:
             _set_status(qt, status, "error", str(exc))
             return
@@ -497,6 +533,7 @@ def _build_panel(
             "ok",
             f"Saved and showing user preset: {result.preset_id} ({result.path})",
         )
+        refresh_bindings()
 
     def save_and_publish_draft() -> None:
         try:
@@ -520,6 +557,21 @@ def _build_panel(
         if warnings:
             detail = f"{detail}; {warnings} warnings in diagnostics"
         _set_status(qt, status, "ok", f"Saved user preset: {result.preset_id}. {detail}")
+        refresh_bindings()
+
+    def refresh_bindings() -> tuple[Any, ...]:
+        try:
+            draft = current_draft()
+            spec = build_draft_spec(draft)
+            targets = slot_binding_targets(
+                spec.id,
+                spec=spec,
+                user_preset_dir=user_preset_dir,
+            )
+        except Exception:
+            targets = ()
+        _populate_bindings_table(qt, bindings_table, targets)
+        return targets
 
     def refresh_template(index: int) -> None:
         if template_list.currentRow() != index:
@@ -574,6 +626,7 @@ def _build_panel(
     panel._actionrail_save_draft = save_draft
     panel._actionrail_save_publish_draft = save_and_publish_draft
     panel._actionrail_load_existing = load_existing
+    panel._actionrail_refresh_bindings = refresh_bindings
 
     template_combo.currentIndexChanged.connect(refresh_template)
     template_list.currentRowChanged.connect(template_combo.setCurrentIndex)
@@ -738,6 +791,26 @@ def _slot_input_from_row(row: dict[str, Any]) -> QuickCreateSlotInput:  # pragma
         active_when=getattr(source, "active_when", ""),
         size=getattr(source, "size", 0),
     )
+
+
+def _populate_bindings_table(
+    qt: QtBinding,
+    table: Any,
+    targets: tuple[Any, ...],
+) -> None:  # pragma: no cover
+    table.setRowCount(len(targets))
+    for row, target in enumerate(targets):
+        values = (
+            f"{target.label} ({target.slot_id})",
+            target.key_label,
+            target.name_command,
+        )
+        for column, value in enumerate(values):
+            item = qt.QtWidgets.QTableWidgetItem(str(value))
+            item.setFlags(qt.QtCore.Qt.ItemIsSelectable | qt.QtCore.Qt.ItemIsEnabled)
+            item.setToolTip(str(value))
+            table.setItem(row, column, item)
+    table.clearSelection()
 
 
 def _generated_slot_input(index: int) -> QuickCreateSlotInput:
@@ -1022,6 +1095,25 @@ QLabel#ActionRailQuickCreateHeader {{
 QScrollArea#ActionRailQuickCreateSlotScroll {{
     background: transparent;
     border: 0px;
+}}
+QTableWidget#ActionRailQuickCreateBindingsTable {{
+    background: {theme.button_background};
+    color: {theme.button_color};
+    gridline-color: {theme.cluster_border};
+    border: {theme.button_border_width}px solid {theme.button_border};
+    selection-background-color: {theme.button_active_background};
+    selection-color: {theme.button_color};
+    font-size: 12px;
+    letter-spacing: 0px;
+}}
+QHeaderView::section {{
+    background: {theme.button_background};
+    color: {theme.button_color};
+    border: {theme.button_border_width}px solid {theme.button_border};
+    padding: 4px 7px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0px;
 }}
 QLabel#ActionRailQuickCreateSliderLimit {{
     color: {theme.button_color};

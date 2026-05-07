@@ -66,7 +66,9 @@ Working surface:
   Edit Layout handoff that previews the current draft, enters Edit Mode, and
   selects the draft frame. Starter templates now include the original vertical
   stack, horizontal strip, edge-tab rail, a blank action bar, and a viewport
-  display strip seeded with Toggle Grid.
+  display strip seeded with Toggle Grid. A read-only Bindings tab lists
+  action-bearing slots, key labels, and Maya Hotkey Editor nameCommands for the
+  current draft.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
@@ -209,6 +211,9 @@ $env:PYTHONPATH = "scripts"
 - Public hotkey workflow metadata now exposes saved-bar binding targets through
   `actionrail.slot_binding_targets()`, so current Maya Hotkey Editor use and
   future Bind Mode can work from visible slots instead of raw command naming.
+- Quick Create now surfaces those binding targets in a read-only Bindings tab,
+  keeping hotkey prep attached to the create -> edit layout -> save/publish
+  workflow without implementing full Bind Mode.
 - Quick Create Edit Layout now connects the builder to Edit Mode by previewing
   the current draft and selecting it in the layout-map overlay.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
@@ -356,10 +361,12 @@ $env:PYTHONPATH = "scripts"
   -> passed; verified the Quick Create picker/preview/save/publish flow after
   routing action choices through Action Book metadata, verified the five
   template starters including Blank Bar and Viewport Display Strip, verified
-  Edit Layout enters Edit Mode with `quick-horizontal-strip` selected, and
-  captured
+  the read-only Bindings tab lists four slot nameCommands for the saved
+  horizontal strip, verified Edit Layout enters Edit Mode with
+  `quick-horizontal-strip` selected, and captured
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_edit_layout.png`,
+  `.gg-maya-sessiond/screenshots/actionrail_quick_create_bindings.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_general.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_layout.png`, and
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.

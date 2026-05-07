@@ -28,6 +28,9 @@
 - Added public slot binding-target metadata so saved bars can expose the exact
   slot ids, key labels, runtime commands, and Maya nameCommands that current
   Hotkey Editor workflows and future Bind Mode need.
+- Added a read-only Quick Create Bindings tab that lists action-bearing slots
+  and their Maya hotkey nameCommands, keeping hotkey prep connected to the bar
+  creation flow without starting full Bind Mode.
 - Connected Quick Create to Edit Mode with an Edit Layout action that previews
   the current draft and selects it in the layout-map overlay for placement.
 - Improved Edit Mode control-panel usability: the selected rail state is now a

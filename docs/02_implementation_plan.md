@@ -247,6 +247,9 @@ Status: complete for the first Maya-facing authoring slice.
 - Provide an action picker from the registered ActionRail action ids. Done.
 - Let users choose slot labels, key-label text, icons where available, and basic
   layout values. Done for the draft validation panel.
+- Show hotkey-ready slot binding targets without entering Bind Mode. Done
+  through the read-only Quick Create Bindings tab, which lists action-bearing
+  slots, key labels, and Maya nameCommands for the current draft.
 - Route action choices through the first Action Book backend metadata instead
   of raw action registry labels. Done through `actionrail.action_book` while the
   full Action Book UI remains a later Phase 3 slice.
