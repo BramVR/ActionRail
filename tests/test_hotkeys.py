@@ -228,6 +228,7 @@ def test_publish_default_actions_creates_one_command_per_registered_action() -> 
         "ActionRail_action_maya_tool_rotate",
         "ActionRail_action_maya_tool_scale",
         "ActionRail_action_maya_anim_set_key",
+        "ActionRail_action_maya_display_toggle_grid",
     ]
 
 
