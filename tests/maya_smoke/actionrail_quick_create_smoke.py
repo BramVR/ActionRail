@@ -95,8 +95,11 @@ if (
 ):
     raise AssertionError("Quick Create panel is missing expected child widgets.")
 
-if template_combo.count() != 3:
+if template_combo.count() != 5:
     raise AssertionError(f"Unexpected template count: {template_combo.count()}")
+template_labels = [template_combo.itemText(index) for index in range(template_combo.count())]
+if template_labels[-2:] != ["Blank Bar", "Viewport Display Strip"]:
+    raise AssertionError(f"Quick Create templates did not include new starters: {template_labels}")
 if "Valid draft:" not in status_label.text():
     raise AssertionError(f"Quick Create status did not validate the draft: {status_label.text()}")
 
@@ -307,6 +310,7 @@ result = {
     "status_text": status_label.text(),
     "tab_screenshots": tab_screenshots,
     "template_count": template_combo.count(),
+    "template_labels": template_labels,
 }
 
 visible_panel.close()

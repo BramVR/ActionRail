@@ -22,6 +22,9 @@
 - Added the first non-transform Action Book command, Toggle Grid, with real
   Maya smoke coverage so the catalog is no longer limited to the original
   transform/keyframe examples.
+- Added Quick Create starter templates for a blank action bar and a viewport
+  display strip seeded with Toggle Grid, giving the authoring workflow both
+  empty sockets and pre-populated Action Book examples.
 - Connected Quick Create to Edit Mode with an Edit Layout action that previews
   the current draft and selects it in the layout-map overlay for placement.
 - Improved Edit Mode control-panel usability: the selected rail state is now a

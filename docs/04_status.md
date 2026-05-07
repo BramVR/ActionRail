@@ -61,7 +61,9 @@ Working surface:
   layout sliders, and generated blank slots when the button-count control is
   raised beyond the template's icon-backed slots. Quick Create now also has an
   Edit Layout handoff that previews the current draft, enters Edit Mode, and
-  selects the draft frame.
+  selects the draft frame. Starter templates now include the original vertical
+  stack, horizontal strip, edge-tab rail, a blank action bar, and a viewport
+  display strip seeded with Toggle Grid.
 - Edit Mode shell with layout-map overlay, grid controls, Snap to Grid, Sticky
   Frames, active rail frames, selection, direct frame dragging,
   snap/spacing guides, axis-aligned sticky alignment guides, X/Y movement for
@@ -198,6 +200,9 @@ $env:PYTHONPATH = "scripts"
 - The latest Action Book follow-up adds `maya.display.toggle_grid` with
   `maya.grid` metadata and a Maya smoke that verifies it toggles the real Maya
   viewport grid off and back on.
+- Quick Create now offers two broader starter templates: Blank Bar for empty
+  action sockets and Viewport Display Strip seeded with the Toggle Grid Action
+  Book entry.
 - Quick Create Edit Layout now connects the builder to Edit Mode by previewing
   the current draft and selecting it in the layout-map overlay.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets between smoke
@@ -342,8 +347,10 @@ $env:PYTHONPATH = "scripts"
 - Latest Quick Create Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 240`
   -> passed; verified the Quick Create picker/preview/save/publish flow after
-  routing action choices through Action Book metadata, verified Edit Layout
-  enters Edit Mode with `quick-horizontal-strip` selected, and captured
+  routing action choices through Action Book metadata, verified the five
+  template starters including Blank Bar and Viewport Display Strip, verified
+  Edit Layout enters Edit Mode with `quick-horizontal-strip` selected, and
+  captured
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_panel.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_edit_layout.png`,
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_general.png`,

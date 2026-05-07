@@ -178,6 +178,50 @@ _TEMPLATES = (
         ),
         collapse=RailCollapse(enabled=True, edge="left", handle_icon="chevron-right"),
     ),
+    QuickCreateTemplate(
+        id="blank_bar",
+        label="Blank Bar",
+        description="Empty action bar with unassigned slots.",
+        layout=RailLayout(
+            anchor="viewport.bottom.center",
+            orientation="horizontal",
+            rows=1,
+            columns=6,
+            offset=(0, -36),
+        ),
+        slots=(
+            QuickCreateSlotInput("slot_1", "1"),
+            QuickCreateSlotInput("slot_2", "2"),
+            QuickCreateSlotInput("slot_3", "3"),
+            QuickCreateSlotInput("slot_4", "4"),
+            QuickCreateSlotInput("slot_5", "5"),
+            QuickCreateSlotInput("slot_6", "6"),
+        ),
+    ),
+    QuickCreateTemplate(
+        id="viewport_display_strip",
+        label="Viewport Display Strip",
+        description="Viewport utility bar seeded from the Action Book.",
+        layout=RailLayout(
+            anchor="viewport.top.center",
+            orientation="horizontal",
+            rows=1,
+            columns=4,
+            offset=(0, 36),
+        ),
+        slots=(
+            QuickCreateSlotInput(
+                "toggle_grid",
+                "Grid",
+                "maya.display.toggle_grid",
+                "G",
+                "maya.grid",
+            ),
+            QuickCreateSlotInput("slot_2", "2"),
+            QuickCreateSlotInput("slot_3", "3"),
+            QuickCreateSlotInput("slot_4", "4"),
+        ),
+    ),
 )
 
 TEMPLATE_IDS = tuple(template.id for template in _TEMPLATES)
@@ -506,6 +550,20 @@ def _unqualified_slot_id(preset_id: str, slot_id: str) -> str:
 def _template_id_for_spec(spec: Any) -> str:
     if getattr(spec.collapse, "enabled", False):
         return "edge_tab_rail"
+    if any(
+        getattr(item, "action", "") == "maya.display.toggle_grid"
+        for item in getattr(spec, "items", ())
+    ):
+        return "viewport_display_strip"
+    if (
+        spec.layout.orientation == "horizontal"
+        and len(spec.items) > 1
+        and not any(
+            getattr(item, "action", "") or getattr(item, "icon", "")
+            for item in spec.items
+        )
+    ):
+        return "blank_bar"
     if spec.layout.orientation == "horizontal":
         return "horizontal_strip"
     if len(spec.items) == 1 and spec.layout.opacity < 1.0:

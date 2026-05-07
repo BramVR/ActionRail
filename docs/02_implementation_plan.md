@@ -236,10 +236,10 @@ Research hints:
 Status: complete for the first Maya-facing authoring slice.
 
 - Add a Maya workspace-control panel entry point from the ActionRail menu.
-- Provide template choices for vertical stack, horizontal strip, and
-  collapsible edge-tab rail; keep flyout and command-ring templates disabled or
-  absent until Phase 3. Done through `scripts/actionrail/quick_create.py` and
-  the dockable Qt panel.
+- Provide template choices for vertical stack, horizontal strip, collapsible
+  edge-tab rail, blank action bar, and viewport display strip; keep flyout and
+  command-ring templates disabled or absent until Phase 3. Done through
+  `scripts/actionrail/quick_create.py` and the dockable Qt panel.
 - Provide an action picker from the registered ActionRail action ids. Done.
 - Let users choose slot labels, key-label text, icons where available, and basic
   layout values. Done for the draft validation panel.
@@ -510,8 +510,8 @@ authoring workflow polish. The collapse schema/runtime first pass is implemented
 Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
 verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
-command path, and the first guide/slot-edit/control-panel affordance polish
-pass is Maya-smoke verified.
+command path and the five-template starter set, and the first
+guide/slot-edit/control-panel affordance polish pass is Maya-smoke verified.
 Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode handoff, and

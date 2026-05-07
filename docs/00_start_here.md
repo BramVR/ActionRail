@@ -50,6 +50,9 @@ Snapshot:
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.
+- Quick Create template choices now cover the original vertical stack,
+  horizontal strip, edge-tab rail, a blank action bar, and a viewport display
+  strip seeded with the Toggle Grid Action Book entry.
 - Quick Create now has an Edit Layout handoff: it previews the current draft,
   enters Edit Mode, and selects that draft frame so create -> place/configure
   feels like one workflow.

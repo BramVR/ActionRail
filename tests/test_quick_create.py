@@ -99,6 +99,43 @@ def test_horizontal_template_uses_bottom_strip_layout() -> None:
     assert values.collapse_edge == "bottom"
 
 
+def test_template_choices_include_blank_and_viewport_starters() -> None:
+    assert [template.id for template in template_choices()] == [
+        "vertical_stack",
+        "horizontal_strip",
+        "edge_tab_rail",
+        "blank_bar",
+        "viewport_display_strip",
+    ]
+
+
+def test_blank_bar_template_starts_with_unassigned_slots() -> None:
+    values = make_default_input("blank_bar")
+    spec = build_draft_spec(build_quick_create_draft(values))
+
+    assert values.preset_id == "quick-blank-bar"
+    assert values.anchor == "viewport.bottom.center"
+    assert values.orientation == "horizontal"
+    assert values.columns == 6
+    assert [slot.label for slot in values.slots] == ["1", "2", "3", "4", "5", "6"]
+    assert all(not slot.action and not slot.icon for slot in values.slots)
+    assert all(not item.action and not item.icon for item in spec.items)
+
+
+def test_viewport_display_template_uses_grid_action_book_entry() -> None:
+    values = make_default_input("viewport_display_strip")
+    spec = build_draft_spec(build_quick_create_draft(values))
+
+    assert values.preset_id == "quick-viewport-display-strip"
+    assert values.anchor == "viewport.top.center"
+    assert values.orientation == "horizontal"
+    assert values.columns == 4
+    assert values.slots[0].action == "maya.display.toggle_grid"
+    assert values.slots[0].icon == "maya.grid"
+    assert spec.items[0].id == "quick-viewport-display-strip.toggle_grid"
+    assert spec.items[0].tooltip == "maya.display.toggle_grid"
+
+
 def test_vertical_template_uses_anchor_edge_for_disabled_collapse_defaults() -> None:
     values = make_default_input("vertical_stack")
 
@@ -776,6 +813,30 @@ def test_load_quick_create_preset_infers_vertical_and_edge_templates(tmp_path) -
     assert edge_loaded.template_id == "edge_tab_rail"
     assert edge_loaded.collapse_enabled is True
     assert edge_loaded.collapse_handle_icon == "chevron-right"
+
+
+def test_load_quick_create_preset_infers_blank_and_viewport_templates(tmp_path) -> None:
+    save_quick_create_preset(
+        build_quick_create_draft(make_default_input("blank_bar")),
+        preset_dir=tmp_path,
+        show=False,
+    )
+    save_quick_create_preset(
+        build_quick_create_draft(make_default_input("viewport_display_strip")),
+        preset_dir=tmp_path,
+        show=False,
+    )
+
+    blank_loaded = load_quick_create_preset("quick-blank-bar", preset_dir=tmp_path)
+    viewport_loaded = load_quick_create_preset(
+        "quick-viewport-display-strip",
+        preset_dir=tmp_path,
+    )
+
+    assert blank_loaded.template_id == "blank_bar"
+    assert all(not slot.action for slot in blank_loaded.slots)
+    assert viewport_loaded.template_id == "viewport_display_strip"
+    assert viewport_loaded.slots[0].action == "maya.display.toggle_grid"
 
 
 def test_load_quick_create_preset_rejects_builtins() -> None:
