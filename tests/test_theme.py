@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from actionrail.theme import DEFAULT_THEME, ActionRailTheme, ToneStyle, generate_style_sheet
+from actionrail.spec import RailAppearance, RailBackground, RailBorder, RailSlotAppearance
+from actionrail.theme import (
+    DEFAULT_THEME,
+    ActionRailTheme,
+    ToneStyle,
+    apply_appearance_overrides,
+    generate_style_sheet,
+)
 from actionrail.widgets import (
     BUTTON_OUTER_SIZE,
     BUTTON_SIZE,
@@ -92,3 +99,62 @@ def test_custom_theme_generates_metrics_and_tones() -> None:
     assert 'QPushButton[actionRailTone="gold"]' in qss
     assert "border-color: #ccb066;" in qss
     assert "color: #fff6cc;" in qss
+
+
+def test_appearance_overrides_resolve_to_theme_tokens() -> None:
+    theme = apply_appearance_overrides(
+        DEFAULT_THEME,
+        RailAppearance(
+            accent="#33dd88",
+            text="#eeeeee",
+            muted_text="#888888",
+            background=RailBackground(
+                color="#111722",
+                pattern="none",
+                pattern_color="#263044",
+                pattern_opacity=0.5,
+                pattern_scale=1.5,
+            ),
+            border=RailBorder(color="#020304", width=3),
+            slots=RailSlotAppearance(
+                empty_background="#101315",
+                empty_border="#020303",
+                icon_backplate="#444341",
+                icon_border="#171716",
+                active="#44ffaa",
+                text="#f8f8f8",
+            ),
+        ),
+    )
+
+    assert theme.accent == "#33dd88"
+    assert theme.button_color == "#f8f8f8"
+    assert theme.text_muted == "#888888"
+    assert theme.cluster_base_rgb == (17, 23, 34)
+    assert theme.cluster_pattern == "none"
+    assert theme.cluster_stripe_rgb == (38, 48, 68)
+    assert theme.cluster_stripe_opacity == 0.5
+    assert theme.cluster_pattern_scale == 1.5
+    assert theme.cluster_background == "rgb(17, 23, 34)"
+    assert theme.cluster_border == "#020304"
+    assert theme.cluster_border_width == 3
+    assert theme.button_background == "#101315"
+    assert theme.button_border == "#020303"
+    assert theme.spell_icon_background == "#444341"
+    assert theme.spell_icon_border == "#171716"
+    assert theme.button_active_border == "#44ffaa"
+    assert theme.button_active_background == "#134730"
+
+
+def test_appearance_can_disable_background_and_border() -> None:
+    theme = apply_appearance_overrides(
+        DEFAULT_THEME,
+        RailAppearance(
+            background=RailBackground(enabled=False),
+            border=RailBorder(enabled=False),
+        ),
+    )
+
+    assert theme.cluster_background_enabled is False
+    assert theme.cluster_background == "transparent"
+    assert theme.cluster_border_width == 0

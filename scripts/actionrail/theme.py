@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -23,8 +24,13 @@ class ActionRailTheme:
     frame_padding: int = 4
     frame_spacing: int = 2
     root_background: str = "transparent"
+    cluster_background_enabled: bool = True
     cluster_base_rgb: tuple[int, int, int] = (29, 32, 42)
+    cluster_base_opacity: float = 1.0
+    cluster_pattern: str = "diagonal_stripes"
     cluster_stripe_rgb: tuple[int, int, int] = (45, 47, 60)
+    cluster_stripe_opacity: float = 1.0
+    cluster_pattern_scale: float = 1.0
     cluster_background: str = (
         "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045, "
         "stop:0 rgb(29, 32, 42), "
@@ -117,6 +123,89 @@ class ActionRailTheme:
 
 
 DEFAULT_THEME = ActionRailTheme()
+
+
+def apply_appearance_overrides(
+    theme: ActionRailTheme,
+    appearance: Any | None,
+) -> ActionRailTheme:
+    """Resolve persisted bar appearance overrides onto theme tokens."""
+
+    if appearance is None:
+        return theme
+
+    updates: dict[str, object] = {}
+    accent = _string_attr(appearance, "accent")
+    text = _string_attr(appearance, "text")
+    muted_text = _string_attr(appearance, "muted_text")
+    background = getattr(appearance, "background", None)
+    border = getattr(appearance, "border", None)
+    slots = getattr(appearance, "slots", None)
+
+    if accent:
+        updates.update(
+            {
+                "accent": accent,
+                "accent_line": accent,
+                "button_active_border": accent,
+                "button_active_background": _mix_hex(accent, "#000000", 0.28),
+                "button_active_hover_background": _mix_hex(accent, "#000000", 0.40),
+            }
+        )
+    if text:
+        updates["button_color"] = text
+    if muted_text:
+        updates["text_muted"] = muted_text
+
+    if background is not None:
+        updates["cluster_background_enabled"] = bool(
+            getattr(background, "enabled", theme.cluster_background_enabled)
+        )
+        base_rgb = _rgb_from_color(_string_attr(background, "color"))
+        if base_rgb is not None:
+            updates["cluster_base_rgb"] = base_rgb
+        updates["cluster_pattern"] = getattr(background, "pattern", theme.cluster_pattern)
+        stripe_rgb = _rgb_from_color(_string_attr(background, "pattern_color"))
+        if stripe_rgb is not None:
+            updates["cluster_stripe_rgb"] = stripe_rgb
+        updates["cluster_stripe_opacity"] = float(
+            getattr(background, "pattern_opacity", theme.cluster_stripe_opacity)
+        )
+        updates["cluster_pattern_scale"] = float(
+            getattr(background, "pattern_scale", theme.cluster_pattern_scale)
+        )
+
+    if border is not None:
+        if not bool(getattr(border, "enabled", True)):
+            updates["cluster_border_width"] = 0
+        elif border.width is not None:
+            updates["cluster_border_width"] = int(border.width)
+        border_color = _string_attr(border, "color")
+        if border_color:
+            updates["cluster_border"] = border_color
+
+    if slots is not None:
+        slot_text = _string_attr(slots, "text")
+        if slot_text:
+            updates["button_color"] = slot_text
+        slot_active = _string_attr(slots, "active")
+        if slot_active:
+            updates.update(
+                {
+                    "button_active_border": slot_active,
+                    "button_active_background": _mix_hex(slot_active, "#000000", 0.28),
+                    "button_active_hover_background": _mix_hex(slot_active, "#000000", 0.40),
+                }
+            )
+        _copy_string_attr(updates, slots, "empty_background", "button_background")
+        _copy_string_attr(updates, slots, "empty_border", "button_border")
+        _copy_string_attr(updates, slots, "icon_backplate", "spell_icon_background")
+        _copy_string_attr(updates, slots, "icon_border", "spell_icon_border")
+
+    if not updates:
+        return theme
+    resolved = replace(theme, **updates)
+    return replace(resolved, cluster_background=_cluster_background_qss(resolved))
 
 
 def generate_style_sheet(theme: ActionRailTheme = DEFAULT_THEME) -> str:
@@ -215,3 +304,82 @@ QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="error"] {{
 """
 
     return qss
+
+
+def _copy_string_attr(
+    updates: dict[str, object],
+    source: object,
+    source_name: str,
+    target_name: str,
+) -> None:
+    value = _string_attr(source, source_name)
+    if value:
+        updates[target_name] = value
+
+
+def _string_attr(source: object, name: str) -> str:
+    value = getattr(source, name, "")
+    return value if isinstance(value, str) else ""
+
+
+def _cluster_background_qss(theme: ActionRailTheme) -> str:
+    base = _rgb_qss(theme.cluster_base_rgb, theme.cluster_base_opacity)
+    if not theme.cluster_background_enabled:
+        return "transparent"
+    if theme.cluster_pattern != "diagonal_stripes":
+        return base
+    stripe = _rgb_qss(theme.cluster_stripe_rgb, theme.cluster_stripe_opacity)
+    return (
+        "qlineargradient(spread:repeat, x1:0, y1:0, x2:0.045, y2:0.045, "
+        f"stop:0 {base}, "
+        f"stop:0.35 {base}, "
+        f"stop:0.35 {stripe}, "
+        f"stop:0.65 {stripe}, "
+        f"stop:0.65 {base}, "
+        f"stop:1 {base})"
+    )
+
+
+def _rgb_qss(rgb: tuple[int, int, int], opacity: float = 1.0) -> str:
+    red, green, blue = rgb
+    if opacity >= 1.0:
+        return f"rgb({red}, {green}, {blue})"
+    alpha = max(0, min(255, round(opacity * 255)))
+    return f"rgba({red}, {green}, {blue}, {alpha})"
+
+
+def _rgb_from_color(color: str) -> tuple[int, int, int] | None:
+    color = color.strip()
+    if len(color) == 7 and color.startswith("#"):
+        try:
+            return (
+                int(color[1:3], 16),
+                int(color[3:5], 16),
+                int(color[5:7], 16),
+            )
+        except ValueError:
+            return None
+    if color.startswith("rgb(") and color.endswith(")"):
+        parts = [part.strip() for part in color[4:-1].split(",")]
+        if len(parts) != 3:
+            return None
+        try:
+            values = tuple(int(part) for part in parts)
+        except ValueError:
+            return None
+        if all(0 <= value <= 255 for value in values):
+            return values
+    return None
+
+
+def _mix_hex(color: str, other: str, weight: float) -> str:
+    first = _rgb_from_color(color)
+    second = _rgb_from_color(other)
+    if first is None or second is None:
+        return color
+    weight = max(0.0, min(1.0, weight))
+    mixed = tuple(
+        round((component * weight) + (other_component * (1.0 - weight)))
+        for component, other_component in zip(first, second, strict=True)
+    )
+    return "#{:02x}{:02x}{:02x}".format(*mixed)

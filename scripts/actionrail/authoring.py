@@ -11,8 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from .spec import (
+    RailAppearance,
+    RailBackground,
+    RailBorder,
     RailCollapse,
     RailLayout,
+    RailSlotAppearance,
     StackItem,
     StackSpec,
     builtin_preset_ids,
@@ -65,6 +69,7 @@ class DraftRail:
         default_factory=lambda: RailLayout(anchor="viewport.left.center")
     )
     collapse: RailCollapse = field(default_factory=RailCollapse)
+    appearance: RailAppearance = field(default_factory=RailAppearance)
 
 
 def build_draft_spec(draft: DraftRail) -> StackSpec:
@@ -175,6 +180,7 @@ def spec_to_payload(spec: StackSpec) -> dict[str, Any]:
         "id": spec.id,
         "layout": _layout_to_payload(spec.layout),
         **_collapse_payload_entry(spec.collapse),
+        **_appearance_payload_entry(spec.appearance),
         "items": [_item_to_payload(item) for item in spec.items],
     }
 
@@ -187,6 +193,7 @@ def draft_to_payload(draft: DraftRail) -> dict[str, Any]:
         "id": draft.id,
         "layout": _layout_to_payload(draft.layout),
         **_collapse_payload_entry(draft.collapse),
+        **_appearance_payload_entry(draft.appearance),
         "items": [_draft_slot_to_payload(draft.id, slot) for slot in draft.slots],
     }
 
@@ -236,6 +243,86 @@ def _should_write_collapse(collapse: RailCollapse) -> bool:
         or collapse.reveal_trigger != "click"
         or collapse.default_collapsed
     )
+
+
+def _appearance_payload_entry(appearance: RailAppearance) -> dict[str, object]:
+    if not _should_write_appearance(appearance):
+        return {}
+
+    payload: dict[str, object] = {}
+    if appearance.theme != "default":
+        payload["theme"] = appearance.theme
+    if not appearance.inherit_global:
+        payload["inherit_global"] = appearance.inherit_global
+    _add_optional_fields(
+        payload,
+        (
+            ("accent", appearance.accent),
+            ("secondary", appearance.secondary),
+            ("text", appearance.text),
+            ("muted_text", appearance.muted_text),
+        ),
+    )
+    background = _background_to_payload(appearance.background)
+    if background:
+        payload["background"] = background
+    border = _border_to_payload(appearance.border)
+    if border:
+        payload["border"] = border
+    slots = _slots_to_payload(appearance.slots)
+    if slots:
+        payload["slots"] = slots
+    return {"appearance": payload}
+
+
+def _should_write_appearance(appearance: RailAppearance) -> bool:
+    return appearance != RailAppearance()
+
+
+def _background_to_payload(background: RailBackground) -> dict[str, object]:
+    defaults = RailBackground()
+    payload: dict[str, object] = {}
+    if background.enabled != defaults.enabled:
+        payload["enabled"] = background.enabled
+    if background.color:
+        payload["color"] = background.color
+    if background.pattern != defaults.pattern:
+        payload["pattern"] = background.pattern
+    if background.pattern_color:
+        payload["pattern_color"] = background.pattern_color
+    if background.pattern_opacity != defaults.pattern_opacity:
+        payload["pattern_opacity"] = background.pattern_opacity
+    if background.pattern_scale != defaults.pattern_scale:
+        payload["pattern_scale"] = background.pattern_scale
+    return payload
+
+
+def _border_to_payload(border: RailBorder) -> dict[str, object]:
+    defaults = RailBorder()
+    payload: dict[str, object] = {}
+    if border.enabled != defaults.enabled:
+        payload["enabled"] = border.enabled
+    if border.color:
+        payload["color"] = border.color
+    if border.width is not None:
+        payload["width"] = border.width
+    return payload
+
+
+def _slots_to_payload(slots: RailSlotAppearance) -> dict[str, object]:
+    payload: dict[str, object] = {}
+    _add_optional_fields(
+        payload,
+        (
+            ("empty_background", slots.empty_background),
+            ("empty_border", slots.empty_border),
+            ("icon_backplate", slots.icon_backplate),
+            ("icon_border", slots.icon_border),
+            ("active", slots.active),
+            ("text", slots.text),
+        ),
+    )
+    return payload
 
 
 def _draft_slot_to_payload(preset_id: str, slot: DraftSlot) -> dict[str, object]:

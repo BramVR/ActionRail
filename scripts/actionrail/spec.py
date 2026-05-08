@@ -22,7 +22,11 @@ __all__ = [
     "MAX_LAYOUT_SCALE",
     "TRANSFORM_STACK_ID",
     "RailCollapse",
+    "RailAppearance",
+    "RailBackground",
+    "RailBorder",
     "RailLayout",
+    "RailSlotAppearance",
     "StackItem",
     "StackSpec",
     "action_ids",
@@ -72,11 +76,52 @@ class RailLayout:
 
 
 @dataclass(frozen=True)
+class RailBackground:
+    enabled: bool = True
+    color: str = ""
+    pattern: str = "diagonal_stripes"
+    pattern_color: str = ""
+    pattern_opacity: float = 1.0
+    pattern_scale: float = 1.0
+
+
+@dataclass(frozen=True)
+class RailBorder:
+    enabled: bool = True
+    color: str = ""
+    width: int | None = None
+
+
+@dataclass(frozen=True)
+class RailSlotAppearance:
+    empty_background: str = ""
+    empty_border: str = ""
+    icon_backplate: str = ""
+    icon_border: str = ""
+    active: str = ""
+    text: str = ""
+
+
+@dataclass(frozen=True)
+class RailAppearance:
+    theme: str = "default"
+    inherit_global: bool = True
+    accent: str = ""
+    secondary: str = ""
+    text: str = ""
+    muted_text: str = ""
+    background: RailBackground = field(default_factory=RailBackground)
+    border: RailBorder = field(default_factory=RailBorder)
+    slots: RailSlotAppearance = field(default_factory=RailSlotAppearance)
+
+
+@dataclass(frozen=True)
 class StackSpec:
     id: str
     layout: RailLayout
     items: tuple[StackItem, ...]
     collapse: RailCollapse = field(default_factory=RailCollapse)
+    appearance: RailAppearance = field(default_factory=RailAppearance)
 
     @property
     def anchor(self) -> str:
@@ -131,6 +176,7 @@ def parse_stack_spec(payload: Any, *, source: str = "<memory>") -> StackSpec:
     spec_id = _required_string(payload, "id", source)
     layout = _parse_layout(payload, source)
     collapse = _parse_collapse(payload, layout, source)
+    appearance = _parse_appearance(payload, source)
     raw_items = payload.get("items")
     if not isinstance(raw_items, list) or not raw_items:
         msg = f"ActionRail preset items must be a non-empty list: {source}"
@@ -138,7 +184,13 @@ def parse_stack_spec(payload: Any, *, source: str = "<memory>") -> StackSpec:
 
     items = tuple(_parse_item(item, index, source, spec_id) for index, item in enumerate(raw_items))
     _validate_unique_item_ids(items, source)
-    return StackSpec(id=spec_id, layout=layout, items=items, collapse=collapse)
+    return StackSpec(
+        id=spec_id,
+        layout=layout,
+        items=items,
+        collapse=collapse,
+        appearance=appearance,
+    )
 
 
 def action_ids(spec: StackSpec) -> tuple[str, ...]:
@@ -268,6 +320,197 @@ def _parse_collapse(payload: dict[str, Any], layout: RailLayout, source: str) ->
         handle_icon=handle_icon,
         reveal_trigger=reveal_trigger,
         default_collapsed=default_collapsed,
+    )
+
+
+def _parse_appearance(payload: dict[str, Any], source: str) -> RailAppearance:
+    raw_appearance = payload.get("appearance", {})
+    if raw_appearance is None:
+        raw_appearance = {}
+    if not isinstance(raw_appearance, dict):
+        msg = f"ActionRail preset appearance must be an object: {source}"
+        raise ValueError(msg)
+
+    theme = _optional_string(raw_appearance, "theme", "default", source, location=" appearance")
+    inherit_global = raw_appearance.get("inherit_global", True)
+    if not isinstance(inherit_global, bool):
+        msg = f"ActionRail preset appearance field 'inherit_global' must be a boolean: {source}"
+        raise ValueError(msg)
+
+    background = _parse_background_appearance(raw_appearance, source)
+    border = _parse_border_appearance(raw_appearance, source)
+    slots = _parse_slot_appearance(raw_appearance, source)
+    return RailAppearance(
+        theme=theme,
+        inherit_global=inherit_global,
+        accent=_optional_string(raw_appearance, "accent", "", source, location=" appearance"),
+        secondary=_optional_string(
+            raw_appearance,
+            "secondary",
+            "",
+            source,
+            location=" appearance",
+        ),
+        text=_optional_string(raw_appearance, "text", "", source, location=" appearance"),
+        muted_text=_optional_string(
+            raw_appearance,
+            "muted_text",
+            "",
+            source,
+            location=" appearance",
+        ),
+        background=background,
+        border=border,
+        slots=slots,
+    )
+
+
+def _parse_background_appearance(
+    raw_appearance: dict[str, Any],
+    source: str,
+) -> RailBackground:
+    raw_background = raw_appearance.get("background", {})
+    if raw_background is None:
+        raw_background = {}
+    if not isinstance(raw_background, dict):
+        msg = f"ActionRail preset appearance background must be an object: {source}"
+        raise ValueError(msg)
+
+    enabled = raw_background.get("enabled", True)
+    if not isinstance(enabled, bool):
+        msg = (
+            "ActionRail preset appearance background field 'enabled' "
+            f"must be a boolean: {source}"
+        )
+        raise ValueError(msg)
+
+    pattern = _optional_string(
+        raw_background,
+        "pattern",
+        "diagonal_stripes",
+        source,
+        location=" appearance background",
+    )
+    if pattern not in {"diagonal_stripes", "none"}:
+        msg = (
+            "ActionRail preset appearance background field 'pattern' must be "
+            f"'diagonal_stripes' or 'none': {source}"
+        )
+        raise ValueError(msg)
+
+    return RailBackground(
+        enabled=enabled,
+        color=_optional_string(
+            raw_background,
+            "color",
+            "",
+            source,
+            location=" appearance background",
+        ),
+        pattern=pattern,
+        pattern_color=_optional_string(
+            raw_background,
+            "pattern_color",
+            "",
+            source,
+            location=" appearance background",
+        ),
+        pattern_opacity=_optional_number(
+            raw_background,
+            "pattern_opacity",
+            1.0,
+            source,
+            minimum=0.0,
+            maximum=1.0,
+            location=" appearance background",
+        ),
+        pattern_scale=_optional_number(
+            raw_background,
+            "pattern_scale",
+            1.0,
+            source,
+            minimum=0.25,
+            maximum=4.0,
+            location=" appearance background",
+        ),
+    )
+
+
+def _parse_border_appearance(raw_appearance: dict[str, Any], source: str) -> RailBorder:
+    raw_border = raw_appearance.get("border", {})
+    if raw_border is None:
+        raw_border = {}
+    if not isinstance(raw_border, dict):
+        msg = f"ActionRail preset appearance border must be an object: {source}"
+        raise ValueError(msg)
+
+    enabled = raw_border.get("enabled", True)
+    if not isinstance(enabled, bool):
+        msg = (
+            "ActionRail preset appearance border field 'enabled' "
+            f"must be a boolean: {source}"
+        )
+        raise ValueError(msg)
+
+    width = raw_border.get("width")
+    if width is not None and (
+        not isinstance(width, int) or isinstance(width, bool) or width < 0 or width > 12
+    ):
+        msg = (
+            "ActionRail preset appearance border field 'width' must be "
+            f"an integer between 0 and 12: {source}"
+        )
+        raise ValueError(msg)
+
+    return RailBorder(
+        enabled=enabled,
+        color=_optional_string(raw_border, "color", "", source, location=" appearance border"),
+        width=width,
+    )
+
+
+def _parse_slot_appearance(
+    raw_appearance: dict[str, Any],
+    source: str,
+) -> RailSlotAppearance:
+    raw_slots = raw_appearance.get("slots", {})
+    if raw_slots is None:
+        raw_slots = {}
+    if not isinstance(raw_slots, dict):
+        msg = f"ActionRail preset appearance slots must be an object: {source}"
+        raise ValueError(msg)
+
+    return RailSlotAppearance(
+        empty_background=_optional_string(
+            raw_slots,
+            "empty_background",
+            "",
+            source,
+            location=" appearance slots",
+        ),
+        empty_border=_optional_string(
+            raw_slots,
+            "empty_border",
+            "",
+            source,
+            location=" appearance slots",
+        ),
+        icon_backplate=_optional_string(
+            raw_slots,
+            "icon_backplate",
+            "",
+            source,
+            location=" appearance slots",
+        ),
+        icon_border=_optional_string(
+            raw_slots,
+            "icon_border",
+            "",
+            source,
+            location=" appearance slots",
+        ),
+        active=_optional_string(raw_slots, "active", "", source, location=" appearance slots"),
+        text=_optional_string(raw_slots, "text", "", source, location=" appearance slots"),
     )
 
 
@@ -426,6 +669,7 @@ def _optional_number(
     *,
     minimum: float,
     maximum: float | None = None,
+    location: str = " layout",
 ) -> float:
     value = payload.get(key, default)
     if isinstance(value, int | float) and not isinstance(value, bool):
@@ -434,7 +678,7 @@ def _optional_number(
             return number
 
     range_text = f" between {minimum} and {maximum}" if maximum is not None else f" >= {minimum}"
-    msg = f"ActionRail preset layout field '{key}' must be a number{range_text}: {source}"
+    msg = f"ActionRail preset{location} field '{key}' must be a number{range_text}: {source}"
     raise ValueError(msg)
 
 

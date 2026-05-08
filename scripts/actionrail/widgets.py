@@ -20,7 +20,12 @@ from .qt import load
 from .slot_payloads import item_has_payload
 from .spec import RailLayout, StackItem, StackSpec
 from .state import MayaStateSnapshot
-from .theme import DEFAULT_THEME, ActionRailTheme, generate_style_sheet
+from .theme import (
+    DEFAULT_THEME,
+    ActionRailTheme,
+    apply_appearance_overrides,
+    generate_style_sheet,
+)
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
 BUTTON_OUTER_SIZE = DEFAULT_THEME.button_outer_size
@@ -147,6 +152,7 @@ def build_rail(
     """Build an ActionRail widget from a stack spec."""
 
     qt = load()
+    theme = apply_appearance_overrides(theme, getattr(spec, "appearance", None))
     theme = _scaled_theme(theme, spec.layout.scale)
     context = PredicateContext(state=state_snapshot, registry=registry, cmds_module=cmds_module)
     root = ActionRailRoot.create()
@@ -221,12 +227,12 @@ def build_rail(
                 _build_cluster(
                     tuple(pending_tools),
                     registry,
-                theme,
-                spec.layout.orientation,
-                context,
-                slot_edit_callbacks,
-            ),
-        )
+                    theme,
+                    spec.layout.orientation,
+                    context,
+                    slot_edit_callbacks,
+                ),
+            )
         )
 
     widget_index = 0
@@ -257,6 +263,7 @@ def build_collapsed_handle(
     """Build the small edge-tab handle shown while a rail is collapsed."""
 
     qt = load()
+    theme = apply_appearance_overrides(theme, getattr(spec, "appearance", None))
     theme = _scaled_theme(theme, spec.layout.scale)
     root = ActionRailRoot.create()
     root.setStyleSheet(generate_style_sheet(theme))
@@ -426,26 +433,53 @@ def _cluster_frame_class(qt: object, theme: ActionRailTheme) -> type:
                     -border_width,
                     -border_width,
                 )
-                painter.fillRect(inner, _qt_rgb_color(qt, *theme.cluster_base_rgb))
+                if theme.cluster_background_enabled:
+                    painter.fillRect(
+                        inner,
+                        _qt_rgb_color(
+                            qt,
+                            *theme.cluster_base_rgb,
+                            alpha=theme.cluster_base_opacity,
+                        ),
+                    )
 
                 painter.save()
                 try:
                     painter.setClipRect(inner)
-                    pen = qt.QtGui.QPen(_qt_rgb_color(qt, *theme.cluster_stripe_rgb))
+                    pen = qt.QtGui.QPen(
+                        _qt_rgb_color(
+                            qt,
+                            *theme.cluster_stripe_rgb,
+                            alpha=theme.cluster_stripe_opacity,
+                        )
+                    )
                     pen.setWidth(max(1, int(round(border_width * 0.5))))
                     pen.setCapStyle(qt.QtCore.Qt.FlatCap)
                     painter.setPen(pen)
-                    spacing = max(4, int(round(theme.button_size * 0.18)))
-                    span = inner.height() + spacing
-                    start = inner.left() - inner.height() - spacing
-                    stop = inner.right() + inner.height() + spacing
-                    for x_pos in range(start, stop, spacing):
-                        painter.drawLine(
-                            x_pos,
-                            inner.bottom() + 1,
-                            x_pos + span,
-                            inner.top() - 1,
+                    if (
+                        theme.cluster_background_enabled
+                        and theme.cluster_pattern == "diagonal_stripes"
+                    ):
+                        spacing = max(
+                            4,
+                            int(
+                                round(
+                                    theme.button_size
+                                    * 0.18
+                                    * theme.cluster_pattern_scale
+                                )
+                            ),
                         )
+                        span = inner.height() + spacing
+                        start = inner.left() - inner.height() - spacing
+                        stop = inner.right() + inner.height() + spacing
+                        for x_pos in range(start, stop, spacing):
+                            painter.drawLine(
+                                x_pos,
+                                inner.bottom() + 1,
+                                x_pos + span,
+                                inner.top() - 1,
+                            )
                 finally:
                     painter.restore()
 
@@ -2085,13 +2119,27 @@ def _qt_color(qt: object, color: str) -> object:
     return color
 
 
-def _qt_rgb_color(qt: object, red: int, green: int, blue: int) -> object:
+def _qt_rgb_color(
+    qt: object,
+    red: int,
+    green: int,
+    blue: int,
+    *,
+    alpha: float = 1.0,
+) -> object:
     color_class = getattr(getattr(qt, "QtGui", None), "QColor", None)
+    alpha = max(0.0, min(1.0, float(alpha)))
     if color_class is None:
-        return f"rgb({red}, {green}, {blue})"
+        if alpha >= 1.0:
+            return f"rgb({red}, {green}, {blue})"
+        return f"rgba({red}, {green}, {blue}, {round(alpha * 255)})"
     with suppress(Exception):
-        return color_class(red, green, blue)
-    return f"rgb({red}, {green}, {blue})"
+        if alpha >= 1.0:
+            return color_class(red, green, blue)
+        return color_class(red, green, blue, round(alpha * 255))
+    if alpha >= 1.0:
+        return f"rgb({red}, {green}, {blue})"
+    return f"rgba({red}, {green}, {blue}, {round(alpha * 255)})"
 
 
 def _adjusted_rect(rect: object, left: int, top: int, right: int, bottom: int) -> object:

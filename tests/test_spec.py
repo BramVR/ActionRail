@@ -9,7 +9,11 @@ from actionrail.spec import (
     MAX_LAYOUT_ROWS,
     MAX_LAYOUT_SCALE,
     TRANSFORM_STACK_ID,
+    RailAppearance,
+    RailBackground,
+    RailBorder,
     RailCollapse,
+    RailSlotAppearance,
     StackItem,
     _default_item_id,
     action_ids,
@@ -219,6 +223,91 @@ def test_parse_stack_spec_supports_collapsible_edge_tab_settings() -> None:
         reveal_trigger="click",
         default_collapsed=True,
     )
+
+
+def test_parse_stack_spec_supports_bar_appearance_settings() -> None:
+    spec = parse_stack_spec(
+        {
+            "id": "styled_tools",
+            "layout": {"anchor": "viewport.bottom.center"},
+            "appearance": {
+                "theme": "dark",
+                "inherit_global": False,
+                "accent": "#33dd88",
+                "secondary": "#4488ff",
+                "text": "#eeeeee",
+                "muted_text": "#888888",
+                "background": {
+                    "enabled": True,
+                    "color": "#111722",
+                    "pattern": "diagonal_stripes",
+                    "pattern_color": "#263044",
+                    "pattern_opacity": 0.65,
+                    "pattern_scale": 1.5,
+                },
+                "border": {"enabled": True, "color": "#020304", "width": 3},
+                "slots": {
+                    "empty_background": "#101315",
+                    "empty_border": "#020303",
+                    "icon_backplate": "#444341",
+                    "icon_border": "#171716",
+                    "active": "#33dd88",
+                    "text": "#f8f8f8",
+                },
+            },
+            "items": [{"type": "button", "id": "styled_tools.move", "label": "M"}],
+        }
+    )
+
+    assert spec.appearance == RailAppearance(
+        theme="dark",
+        inherit_global=False,
+        accent="#33dd88",
+        secondary="#4488ff",
+        text="#eeeeee",
+        muted_text="#888888",
+        background=RailBackground(
+            color="#111722",
+            pattern_color="#263044",
+            pattern_opacity=0.65,
+            pattern_scale=1.5,
+        ),
+        border=RailBorder(color="#020304", width=3),
+        slots=RailSlotAppearance(
+            empty_background="#101315",
+            empty_border="#020303",
+            icon_backplate="#444341",
+            icon_border="#171716",
+            active="#33dd88",
+            text="#f8f8f8",
+        ),
+    )
+
+
+def test_parse_stack_spec_rejects_bad_appearance_settings() -> None:
+    bad_payloads = (
+        ({"appearance": "bad"}, "appearance"),
+        ({"appearance": {"inherit_global": "yes"}}, "inherit_global"),
+        ({"appearance": {"background": "bad"}}, "background"),
+        ({"appearance": {"background": {"enabled": "yes"}}}, "enabled"),
+        ({"appearance": {"background": {"pattern": "checker"}}}, "pattern"),
+        ({"appearance": {"background": {"pattern_opacity": 2}}}, "pattern_opacity"),
+        ({"appearance": {"background": {"pattern_scale": 8}}}, "pattern_scale"),
+        ({"appearance": {"border": "bad"}}, "border"),
+        ({"appearance": {"border": {"enabled": "yes"}}}, "enabled"),
+        ({"appearance": {"border": {"width": 99}}}, "width"),
+        ({"appearance": {"slots": "bad"}}, "slots"),
+        ({"appearance": {"slots": {"active": 42}}}, "active"),
+    )
+    for extra, match in bad_payloads:
+        payload = {
+            "id": f"bad_{match}",
+            "layout": {"anchor": "viewport.left.center"},
+            "items": [{"type": "button", "label": "K"}],
+            **extra,
+        }
+        with pytest.raises(ValueError, match=match):
+            parse_stack_spec(payload)
 
 
 def test_parse_stack_spec_rejects_bad_collapse_settings() -> None:

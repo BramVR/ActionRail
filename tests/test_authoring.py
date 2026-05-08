@@ -18,7 +18,16 @@ from actionrail.authoring import (
     user_preset_ids,
     validate_preset_id,
 )
-from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
+from actionrail.spec import (
+    RailAppearance,
+    RailBackground,
+    RailBorder,
+    RailCollapse,
+    RailLayout,
+    RailSlotAppearance,
+    StackItem,
+    StackSpec,
+)
 
 
 def test_build_draft_save_reload_user_preset_without_touching_builtins(tmp_path) -> None:
@@ -113,6 +122,57 @@ def test_user_preset_round_trips_collapse_settings(tmp_path) -> None:
         "handle_icon": "chevron-right",
     }
     assert reloaded.collapse == spec.collapse
+
+
+def test_user_preset_round_trips_bar_appearance_settings(tmp_path) -> None:
+    appearance = RailAppearance(
+        accent="#33dd88",
+        text="#eeeeee",
+        background=RailBackground(
+            color="#111722",
+            pattern_color="#263044",
+            pattern_opacity=0.6,
+            pattern_scale=1.5,
+        ),
+        border=RailBorder(color="#020304", width=3),
+        slots=RailSlotAppearance(
+            empty_background="#101315",
+            empty_border="#020303",
+            icon_backplate="#444341",
+            icon_border="#171716",
+            active="#33dd88",
+        ),
+    )
+    spec = StackSpec(
+        id="styled_spec",
+        layout=RailLayout(anchor="viewport.bottom.center"),
+        items=(StackItem(type="button", id="styled_spec.move", label="M"),),
+        appearance=appearance,
+    )
+
+    saved_path = save_user_preset(spec, preset_dir=tmp_path)
+    payload = json.loads(saved_path.read_text(encoding="utf-8"))
+    reloaded = load_user_preset("styled_spec", preset_dir=tmp_path)
+
+    assert payload["appearance"] == {
+        "accent": "#33dd88",
+        "background": {
+            "color": "#111722",
+            "pattern_color": "#263044",
+            "pattern_opacity": 0.6,
+            "pattern_scale": 1.5,
+        },
+        "border": {"color": "#020304", "width": 3},
+        "slots": {
+            "active": "#33dd88",
+            "empty_background": "#101315",
+            "empty_border": "#020303",
+            "icon_backplate": "#444341",
+            "icon_border": "#171716",
+        },
+        "text": "#eeeeee",
+    }
+    assert reloaded.appearance == appearance
 
 
 def test_save_user_preset_rejects_existing_file_without_overwrite(tmp_path) -> None:

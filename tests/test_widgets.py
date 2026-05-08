@@ -5,7 +5,15 @@ import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
 from actionrail.predicates import PredicateContext
 from actionrail.qt import QtBinding
-from actionrail.spec import RailCollapse, RailLayout, StackItem, StackSpec
+from actionrail.spec import (
+    RailAppearance,
+    RailBackground,
+    RailBorder,
+    RailCollapse,
+    RailLayout,
+    StackItem,
+    StackSpec,
+)
 from actionrail.state import MayaStateSnapshot
 from actionrail.widgets import (
     SlotRenderState,
@@ -1206,6 +1214,24 @@ def test_build_transform_stack_flushes_pending_vertical_tool_cluster(monkeypatch
 
     assert root.children[0].fixed_size[0] == widgets.DEFAULT_THEME.rail_width
     assert root.children[0].layout.margins == (6, 6, 6, 6)
+
+
+def test_build_transform_stack_applies_spec_appearance(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    spec = StackSpec(
+        id="styled",
+        layout=RailLayout(anchor="viewport.left.center"),
+        items=(StackItem(type="button", id="styled.move", label="M"),),
+        appearance=RailAppearance(
+            background=RailBackground(color="#111722", pattern="none"),
+            border=RailBorder(width=3),
+        ),
+    )
+
+    root = widgets.build_transform_stack(spec, create_default_registry(BuildCmds()))
+
+    assert "min-width: 32px;" in root.style_sheet
+    assert root.children[0].layout.margins == (7, 7, 7, 7)
 
 
 def test_set_slot_key_label_updates_matching_buttons(monkeypatch) -> None:

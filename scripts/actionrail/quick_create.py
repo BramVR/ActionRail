@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dataclasses import replace as dataclass_replace
 from math import ceil
 from pathlib import Path
@@ -20,7 +20,15 @@ from .authoring import (
 from .icon_catalog import list_icon_descriptors
 from .icon_types import IconDescriptor
 from .preset_store import resolve_preset
-from .spec import RailCollapse, RailLayout, builtin_preset_ids
+from .spec import (
+    RailAppearance,
+    RailBackground,
+    RailBorder,
+    RailCollapse,
+    RailLayout,
+    RailSlotAppearance,
+    builtin_preset_ids,
+)
 
 __all__ = [
     "ANCHOR_CHOICES",
@@ -111,6 +119,7 @@ class QuickCreateDraftInput:
     collapse_handle_icon: str = ""
     collapse_reveal_trigger: str = "click"
     collapse_default_collapsed: bool = False
+    appearance: RailAppearance = field(default_factory=RailAppearance)
 
 
 @dataclass(frozen=True)
@@ -268,6 +277,7 @@ def make_default_input(template_id: str = "blank_bar") -> QuickCreateDraftInput:
         collapse_handle_icon=template.collapse.handle_icon,
         collapse_reveal_trigger=template.collapse.reveal_trigger,
         collapse_default_collapsed=template.collapse.default_collapsed,
+        appearance=template_appearance(template),
     )
 
 
@@ -308,6 +318,7 @@ def build_quick_create_draft(values: QuickCreateDraftInput) -> DraftRail:
             reveal_trigger=values.collapse_reveal_trigger,
             default_collapsed=values.collapse_default_collapsed,
         ),
+        appearance=values.appearance,
         slots=tuple(_draft_slot_from_input(slot) for slot in values.slots),
     )
     return draft
@@ -373,10 +384,10 @@ def _spec_with_active_preview_payloads(spec: Any) -> Any:
             items.append(item)
             continue
         updated = item
-        for field in ("action", "icon", "tone", "tooltip", "enabled_when", "active_when"):
-            live_value = getattr(live_item, field, "")
-            if getattr(updated, field, "") != live_value:
-                updated = dataclass_replace(updated, **{field: live_value})
+        for field_name in ("action", "icon", "tone", "tooltip", "enabled_when", "active_when"):
+            live_value = getattr(live_item, field_name, "")
+            if getattr(updated, field_name, "") != live_value:
+                updated = dataclass_replace(updated, **{field_name: live_value})
         changed = changed or updated is not item
         items.append(updated)
     if not changed:
@@ -560,7 +571,28 @@ def load_quick_create_preset(
         collapse_handle_icon=spec.collapse.handle_icon,
         collapse_reveal_trigger=spec.collapse.reveal_trigger,
         collapse_default_collapsed=spec.collapse.default_collapsed,
+        appearance=spec.appearance,
     )
+
+
+def template_appearance(template: QuickCreateTemplate) -> RailAppearance:
+    """Return the first-pass appearance defaults for a Quick Create template."""
+
+    if template.id == "edge_tab_rail":
+        return RailAppearance(
+            background=RailBackground(pattern_scale=0.85),
+            border=RailBorder(width=2),
+        )
+    if template.id == "viewport_display_strip":
+        return RailAppearance(
+            background=RailBackground(
+                color="#1b2029",
+                pattern_color="#2d3442",
+                pattern_scale=0.85,
+            ),
+            slots=RailSlotAppearance(active="#8ccf3f"),
+        )
+    return RailAppearance()
 
 
 def action_choices(

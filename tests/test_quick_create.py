@@ -37,7 +37,15 @@ from actionrail.quick_create_ui import (
     _widget_value_from_slider,
 )
 from actionrail.slot_payloads import spec_with_slot_action_payload
-from actionrail.spec import RailLayout, StackItem, StackSpec
+from actionrail.spec import (
+    RailAppearance,
+    RailBackground,
+    RailBorder,
+    RailLayout,
+    RailSlotAppearance,
+    StackItem,
+    StackSpec,
+)
 
 
 class PublishCmds:
@@ -138,6 +146,8 @@ def test_viewport_display_template_uses_grid_action_book_entry() -> None:
     assert values.slots[0].icon == "maya.grid"
     assert spec.items[0].id == "quick-viewport-display-strip.toggle_grid"
     assert spec.items[0].tooltip == "maya.display.toggle_grid"
+    assert spec.appearance.background.color == "#1b2029"
+    assert spec.appearance.background.pattern_color == "#2d3442"
 
 
 def test_vertical_template_uses_anchor_edge_for_disabled_collapse_defaults() -> None:
@@ -894,6 +904,40 @@ def test_load_quick_create_preset_returns_editable_values(tmp_path) -> None:
             active_when="maya.tool == move",
         ),
     )
+
+
+def test_load_quick_create_preset_preserves_appearance(tmp_path) -> None:
+    appearance = RailAppearance(
+        accent="#33dd88",
+        background=RailBackground(color="#111722", pattern_color="#263044"),
+        border=RailBorder(color="#020304", width=3),
+        slots=RailSlotAppearance(
+            empty_background="#101315",
+            empty_border="#020303",
+            icon_backplate="#444341",
+            icon_border="#171716",
+            active="#33dd88",
+        ),
+    )
+    values = QuickCreateDraftInput(
+        preset_id="styled_tools",
+        template_id="horizontal_strip",
+        slots=(QuickCreateSlotInput(id="move", label="Move"),),
+        anchor="viewport.bottom.center",
+        orientation="horizontal",
+        appearance=appearance,
+    )
+
+    save_quick_create_preset(
+        build_quick_create_draft(values),
+        preset_dir=tmp_path,
+        show=False,
+    )
+    loaded = load_quick_create_preset("styled_tools", preset_dir=tmp_path)
+    rebuilt = build_draft_spec(build_quick_create_draft(loaded))
+
+    assert loaded.appearance == appearance
+    assert rebuilt.appearance == appearance
 
 
 def test_load_quick_create_preset_preserves_rich_items(tmp_path) -> None:
