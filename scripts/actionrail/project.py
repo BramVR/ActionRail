@@ -27,7 +27,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/spec.py",
-        "owns": "JSON preset loading, schema validation, built-in preset discovery",
+        "owns": (
+            "JSON preset loading, schema validation, built-in preset discovery, "
+            "collapse, and per-bar appearance schema"
+        ),
         "tests": ("tests/test_spec.py",),
     },
     {
@@ -39,7 +42,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/quick_create.py",
         "owns": (
             "Quick Create templates, picker data, draft conversion, preview, "
-            "save, and load workflow"
+            "appearance defaults, save, and load workflow"
         ),
         "tests": ("tests/test_quick_create.py",),
     },
@@ -62,12 +65,18 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/widgets.py",
         "owns": (
             "Qt rail/widget construction, custom button painting, diagnostic badge "
-            "display, Normal Mode slot-edit context menus, and Shift-drag gestures"
+            "display, per-bar appearance rendering, Normal Mode slot-edit context "
+            "menus, and Shift-drag gestures"
         ),
         "tests": (
             "tests/test_widgets.py",
             "tests/maya_smoke/actionrail_diagnostic_badges_smoke.py",
         ),
+    },
+    {
+        "path": "scripts/actionrail/theme.py",
+        "owns": "global theme tokens, QSS generation, and sparse per-bar appearance overrides",
+        "tests": ("tests/test_theme.py",),
     },
     {
         "path": "scripts/actionrail/overlay.py",
@@ -226,11 +235,12 @@ def about() -> dict[str, object]:
                 "for Normal Mode slot editing; Action Book UI connects searchable "
                 "action entries to unlocked action-bar slots; Quick Create "
                 "Lock Bar preserves dropped Action Book payloads/icons after "
-                "the preview rebuild"
+                "the preview rebuild; ElvUI-reference per-bar appearance schema "
+                "and Quick Create Appearance tab Maya-smoke verified"
             ),
             "next_slice": (
                 "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "
-                "and unified authoring workflow handoff"
+                "Appearance-tab round-trip polish, and unified authoring workflow handoff"
             ),
             "blockers_doc": "docs/04_status.md#blockers",
         },

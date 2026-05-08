@@ -81,7 +81,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
     ) in output
     assert (
         "Next: Phase 2 step 2.6 Quick Create stability, locked-preset polish, "
-        "and unified authoring workflow handoff"
+        "Appearance-tab round-trip polish, and unified authoring workflow handoff"
     ) in output
     assert "Use --json" in output
 

@@ -10,6 +10,24 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-08
+
+- Added sparse per-bar appearance data to presets and drafts, including theme
+  inheritance, accent/text overrides, backdrop color and stripe pattern
+  controls, border color/thickness, and slot color overrides.
+- Added theme resolution and widget painting support so bar-local appearance
+  overrides layer on top of ActionRail's global theme without mixing layout,
+  slot payloads, and visual settings.
+- Added a Quick Create Appearance tab grouped like compact ElvUI-style action
+  bar options: Theme, Backdrop Settings, Border Settings, and Slot Colors.
+  These settings preview live and persist through save/load/edit workflows.
+- Updated Quick Create smoke coverage to verify appearance values flow through
+  the draft, live preview host, saved user preset, and Load Existing path, and
+  inspected the captured Appearance screenshot for readable grouped controls.
+- Documented the ElvUI-informed architecture direction: global theme defaults
+  first, sparse per-bar overrides second, with profile/media systems deferred
+  until the current Phase 2 authoring loop is stable.
+
 ## 2026-05-07
 
 - Reframed the ActionRail architecture around WoW-style frames: current rails

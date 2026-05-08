@@ -23,6 +23,9 @@ product model is:
 - **Slots**: stable containers on an action bar. A slot references an action,
   macro, flyout, command ring, preset, or empty placeholder, and owns display
   overrides such as icon, label, key label, tooltip, and tone.
+- **Appearance**: global theme tokens provide the default ActionRail look, while
+  each action bar frame can carry sparse appearance overrides for its main
+  accent, text, backdrop, border, and slot colors.
 - **Action Book**: searchable catalog of Maya-native tools and commands that
   can be placed onto slots. The current action registry and icon catalog are
   now connected through the first `actionrail.action_book` backend slice; the
@@ -181,6 +184,25 @@ Planned widgets after the reusable frame/action-bar schema:
 - `CommandRing`: radial menu for press/hold/release command access.
 - `KeyBadge`: hotkey text drawn on a slot after binding.
 
+### Theme And Appearance
+
+ActionRail follows the useful part of the ElvUI structure in `research/`: global
+media/theme defaults define the product look, while each action bar stores only
+the overrides it needs. Keep these concerns separate:
+
+- layout and movement live on `RailLayout` / Edit Mode save paths
+- slot payloads live on slots and Normal Mode unlock/lock editing
+- render defaults live in `actionrail.theme`
+- per-bar visual overrides live in `RailAppearance` / JSON `appearance`
+
+The current appearance schema intentionally stays smaller than ElvUI's full
+option surface. It covers the controls artists need first: theme id, inherit
+global defaults, main accent, text/muted text, backdrop on/off, backdrop color,
+pattern/color/opacity/scale, border on/off/color/width, and slot colors for
+empty sockets, icon tiles, and active state. Add broader profile/media systems
+later; do not put profile layers, Bind Mode, or Action Book browsing into this
+appearance object.
+
 ### Actions
 
 Actions are reusable named commands that can be placed into slots.
@@ -258,7 +280,7 @@ Phase 0 started with a hard-coded reference stack. Phase 1 now loads built-in ex
 }
 ```
 
-The schema is still named `StackSpec` in code for compatibility, but current presets already carry action-bar-frame layout metadata, optional `collapse` settings, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Collapse settings use `RailCollapse` / JSON `collapse` for edge, handle icon, reveal trigger, and default collapsed state; disabled collapse remains the default for legacy presets. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
+The schema is still named `StackSpec` in code for compatibility, but current presets already carry action-bar-frame layout metadata, optional `collapse` settings, optional `appearance` overrides, stable slot ids, key labels, and predicate fields. The Python `StackItem(...)` API keeps the original positional constructor order through `tone`; newer optional fields such as `icon` should be passed by keyword or appended after the legacy fields. Collapse settings use `RailCollapse` / JSON `collapse` for edge, handle icon, reveal trigger, and default collapsed state; disabled collapse remains the default for legacy presets. Appearance settings use `RailAppearance` / JSON `appearance` and resolve through `apply_appearance_overrides()` before widgets paint the rail. `tone` is optional visual decoration, not the active-state system. Active rendering comes from the generic `actionRailActive="true"` property after a slot's `active_when` predicate evaluates true. Slots with no `action` are intentional placeholders: they render disabled/locked, do not publish as action-bearing slots, and are not clickable. Python callers can build `StackSpec` objects directly or parse JSON-like dictionaries with `actionrail.parse_stack_spec()`, then render them with `actionrail.show_spec()`.
 
 Phase 2 step 2.1 adds `actionrail.authoring` as the first authoring layer. It defines `DraftRail` and `DraftSlot` for Quick Create drafts, converts them into validated `StackSpec` payloads, and saves user presets outside locked bundled presets through `save_user_preset()` / `load_user_preset()`. `actionrail.preset_store` is the shared resolver for bundled, optional studio, and saved user presets; runtime overlay startup, no-overlay slot execution, hotkey publishing/sync, diagnostics, Maya menu toggles, and the project map should resolve preset ids through it instead of directly assuming `presets/` built-ins. This remains a compact preset-layer slice; broader project/profile layering is still reserved for a later phase.
 

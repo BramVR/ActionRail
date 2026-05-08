@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 ## Current Snapshot
 
@@ -60,7 +60,12 @@ still top out at 32 px in Maya's own resource catalog. Spell icons now share a
 dark tile backplate in both the Action Book and dropped action-bar slots, and
 icon-bearing action-bar slots no longer paint the underlying push-button skin,
 so active borders align to the tile while the striped rail stays visible around
-populated slots.
+populated slots. The latest ElvUI-reference pass adds sparse per-bar
+`appearance` overrides for theme/accent/text, backdrop pattern/color, border,
+and slot colors. Quick Create now exposes those settings in a compact
+Appearance tab grouped as Theme, Backdrop Settings, Border Settings, and Slot
+Colors; the settings preview live and round-trip through saved/loaded user
+presets.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -141,6 +146,11 @@ Working surface:
   handle icon, reveal trigger, and default collapsed state; Quick Create
   edge-tab defaults/settings; collapsed handle-only Qt overlays; click/hover
   reveal hooks; and user-preset persistence.
+- Optional per-bar appearance schema/runtime: JSON `appearance` settings for
+  theme id, global inheritance, accent/text overrides, backdrop enable/color/
+  pattern/opacity/scale, border enable/color/width, and slot color overrides.
+  Widgets resolve these sparse settings through `actionrail.theme` before
+  painting, so global defaults and bar-local overrides stay separate.
 - Collapsed edge handles now use larger hit targets, hug the configured
   viewport edge, preserve only tangent layout offset while collapsed, and clamp
   inside the viewport.
@@ -169,6 +179,8 @@ Local `.spec/` reports are ignored and not part of the Git-tracked handoff.
 Focus the next slice on:
 
 - keeping the fixed Quick Create round-trip and preset discovery paths stable
+- keeping the Quick Create Appearance tab stable across preview, save, load,
+  and existing-preset editing
 - keeping locked built-in/studio presets read-only
 - making the template-to-Edit-Mode and Normal Mode slot-edit handoff feel like
   one workflow that now connects to the first Action Book action-placement slice
@@ -305,6 +317,11 @@ $env:PYTHONPATH = "scripts"
 - The latest Quick Create/Action Book round-trip fix preserves dropped live
   payloads when Lock Bar rebuilds the Quick Create preview, so the assigned
   action and icon survive the transition back to normal click-to-run mode.
+- The May 8 ElvUI-reference appearance pass adds per-bar appearance schema,
+  theme override resolution, widget painting support, and a Quick Create
+  Appearance tab. The follow-up comparison keeps the next direction explicit:
+  global theme defaults first, sparse per-bar overrides second, and layout,
+  slot payloads, and appearance edited through separate surfaces.
 - Maya smoke cleanup now removes all `ActionRail*` Qt widgets and known
   ActionRail workspace controls between smoke scripts so diagnostics/panel
   windows do not steal later Edit Mode clicks or leave blank workspace shells.
@@ -323,6 +340,36 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest focused appearance schema validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_spec.py tests\\test_authoring.py tests\\test_theme.py tests\\test_quick_create.py tests\\test_widgets.py`
+  -> 142 passed.
+- Latest focused appearance schema Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\spec.py scripts\\actionrail\\authoring.py scripts\\actionrail\\theme.py scripts\\actionrail\\widgets.py scripts\\actionrail\\quick_create.py tests\\test_spec.py tests\\test_authoring.py tests\\test_theme.py tests\\test_quick_create.py tests\\test_widgets.py`
+  -> all checks passed.
+- Latest focused Quick Create Appearance tab validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_theme.py tests\\test_widgets.py`
+  -> 100 passed.
+- Latest Quick Create Appearance tab Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create_ui.py tests\\test_quick_create.py tests\\maya_smoke\\actionrail_quick_create_smoke.py`
+  -> all checks passed.
+- Latest Quick Create Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 300`
+  -> passed; verified appearance values update the draft, preview host,
+  saved preset, and Load Existing path, while preserving Save + Publish
+  runtime commands and the custom user-preset shelf-toggle path. Screenshot
+  inspection confirmed the Quick Create Appearance tab renders as compact
+  grouped controls without overlap at the captured 900x680 panel size.
+- Latest docs/project-map checks:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
+  `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and PowerShell local
+  Markdown link scan over `docs/**/*.md`
+  -> passed.
+- Latest project-map validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py`
+  -> 6 passed.
+- Latest project-map Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\project.py tests\\test_project_map.py`
+  -> all checks passed.
 - Latest focused Action Book placement label/key validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py tests\\test_overlay.py tests\\test_widgets.py tests\\test_spec.py tests\\test_authoring.py`
   -> 168 passed.

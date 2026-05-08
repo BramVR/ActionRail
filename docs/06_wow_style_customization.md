@@ -209,6 +209,26 @@ This is a persistent stateful tool slot. It receives the generic active visual w
 
 This is a one-shot macro slot. It stays clickable but has no persistent active state unless the user deliberately adds one.
 
+### Theme And Bar Appearance
+
+ElvUI is useful here as a structure reference, not as a feature-count target.
+Its action bars separate global media/color defaults from per-bar settings such
+as backdrop, mouseover/fade behavior, button count, buttons per row, spacing,
+button size, and backdrop spacing. ActionRail should keep that separation:
+
+- global theme tokens own the default text, accent, panel, slot, border, and
+  stripe treatment
+- each action bar frame may override only the appearance values it needs
+- Edit Mode owns frame placement and movement
+- Normal Mode unlock/lock owns slot payload editing
+- Quick Create should expose appearance as grouped options, not as hundreds of
+  independent controls
+
+The current first-pass control set is intentionally compact: Theme,
+Backdrop Settings, Border Settings, and Slot Colors. Add secondary color,
+font/media choices, profile-level themes, or copied/shared theme presets only
+when the Phase 2 authoring loop proves that users need them.
+
 ### Bind Mode
 
 Bind Mode mirrors action-bar addon workflows:

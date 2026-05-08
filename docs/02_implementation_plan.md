@@ -392,8 +392,13 @@ lock/unlock helpers, and unlocked populated slots can now be Shift-dragged to
 move/swap payloads or clear them when released anywhere that is not a
 different slot. Edit Mode panel polish now exposes selected rail state as a
 clickable Lock/Unlock action and lets the compact panel be dragged away from
-covered rails. The Quick Create Maya smoke verifies the Save + Publish shelf
-command carries that custom store path.
+covered rails. The ElvUI-reference appearance pass adds sparse per-bar
+`appearance` overrides for theme/accent/text, backdrop pattern/color, border,
+and slot colors, plus a Quick Create Appearance tab for live preview,
+save/load/edit round-trips. The Quick Create Maya smoke verifies the Save +
+Publish shelf command carries the custom store path and now verifies
+appearance settings persist through draft, preview host, saved preset, and
+load-existing flows.
 
 Architecture note: publishing remains the runtime-command/shelf implementation
 path for saved bindings and optional Maya integration. It should not be the
@@ -438,6 +443,10 @@ Edit Mode, bind slots in Bind Mode, then save.
   Action/Icon assignment browsing back into Quick Create; action placement
   belongs to a separate Action Book surface that can feed unlocked
   slots through the same slot-edit workflow.
+- Keep appearance editing compact and ElvUI-like in structure: global theme
+  defaults first, sparse per-bar overrides second, and option groups organized
+  by Theme, Backdrop Settings, Border Settings, and Slot Colors. Do not expand
+  this into profile layers or a full media manager during Phase 2.6.
 - Add the first separate Action Book placement surface. Done as a
   dockable Maya panel that searches Action Book entries, displays their action
   bar icons and brief tooltips, lets users click entries to run the Maya action,
@@ -545,7 +554,10 @@ unlocked for Normal Mode slot payload editing and can be switched back to
 normal click-to-run behavior with Lock Bar. Quick Create has been narrowed back to a
 minimal action-bar creator: it opens on a blank bar, supports adding/removing
 slots and layout settings, and no longer exposes action/icon assignment controls
-in the Slots tab. The first separate Action Book UI now owns action browsing and
+in the Slots tab. It now also has a compact Appearance tab backed by sparse
+per-bar `appearance` overrides, so a saved/loaded bar can adjust main accent,
+text, backdrop pattern/color, border, and slot colors without turning Quick
+Create into a full profile/theme manager. The first separate Action Book UI now owns action browsing and
 placement: it opens from the ActionRail Maya menu, searches the Action Book
 catalog, renders icon-backed entries, runs clicked entries, and drops actions
 onto those unlocked Quick Create/Normal Mode slots. The latest round-trip fix

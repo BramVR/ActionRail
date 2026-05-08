@@ -74,6 +74,11 @@ Snapshot:
   workflow while Quick Create stays a minimal action-bar creator. Dropped
   Action Book payloads are preserved when Lock Bar rebuilds the preview, so
   the assigned icon remains visible after returning to normal mode.
+- Quick Create now has a compact Appearance tab backed by sparse per-bar
+  `appearance` overrides. The structure follows the useful ElvUI split:
+  global theme defaults stay in `actionrail.theme`, while each saved bar can
+  override its main accent, text, backdrop pattern/color, border, and slot
+  colors without becoming a full profile/media manager.
 - Quick Create saved rails infer active-state predicates for persistent Maya
   tool actions such as Move/Rotate/Scale; one-shot actions remain inactive
   unless the slot explicitly defines `active_when`.
@@ -180,7 +185,8 @@ polish:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
 2. Continue Quick Create round-trip stability, locked built-in/studio
-   read-only polish, and the template-to-Edit-Mode/slot-edit workflow on top of the
+   read-only polish, Appearance-tab save/load stability, and the
+   template-to-Edit-Mode/slot-edit workflow on top of the
    validated collapsed-handle, Normal Mode slot payload lock/unlock plus
    Shift-drag same-rail and cross-rail editing, guide, Edit Mode panel, and
    optional Save + Publish paths.
