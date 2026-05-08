@@ -83,9 +83,15 @@
   buttons with a consistent diagonal angle.
 - Centered buttons inside the custom-painted action-bar frame and changed the
   painted stripes to thinner, denser lines.
+- Improved README icon capture quality by using SVG-backed Maya resources where
+  Maya exposes true vector equivalents, and by requesting scaled pixmaps during
+  high-resolution widget rendering.
 - Added a shared dark spell-icon backplate so Action Book entries and dropped
-  action-bar icons render as framed buttons instead of floating transparent
+  action-bar icons render as framed icon tiles instead of floating transparent
   icons.
+- Removed the underlying push-button skin from icon-bearing action-bar slots so
+  selected borders align to the icon tile and the striped rail background stays
+  visible around populated slots.
 - Refreshed the README normal-view and Edit Mode screenshots from the same
   Maya example scene so the public docs show the current interface style.
 - Retuned the shared ActionRail theme toward an ElvUI-style look: transparent

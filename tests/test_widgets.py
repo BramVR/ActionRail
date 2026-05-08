@@ -1514,7 +1514,10 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
                 "actionRailLabel": "M",
                 "actionRailKeyLabel": "7",
                 "actionRailDiagnosticBadge": "",
-                "actionRailButtonIconInset": 2,
+                "actionRailActive": "true",
+                "actionRailButtonActiveBorder": "#8ccf3f",
+                "actionRailButtonBackplateInset": 2,
+                "actionRailButtonIconInset": 3,
             }
 
         def initStyleOption(self, _option: StyleOptionButton) -> None:  # noqa: N802
@@ -1566,12 +1569,13 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
     button = widgets._button_class(PaintQt)("M\n7")
     button.paintEvent(object())
 
-    assert ("control", 11, "", True) in events
+    assert ("control", 11, "", True) not in events
     assert ("fill", (2, 2, -2, -2), "#444341") in events
     assert ("pen", "#171716") in events
+    assert ("pen", "#8ccf3f") in events
     assert ("rect", (0, 0, -1, -1)) in events
     assert ("pixmap", (32, 32)) in events
-    assert ("pixmap_drawn", (2, 2, -2, -2)) in events
+    assert ("pixmap_drawn", (3, 3, -3, -3)) in events
     assert ("text", "M", 3, None, None, 13) in events
     assert ("text", "7", 12, None, (21, 21, 8, 9), 7) in events
     assert events[-1] == ("end",)

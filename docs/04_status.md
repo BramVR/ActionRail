@@ -53,9 +53,14 @@ Book pages; action bars now keep an opaque `rgb(29, 32, 42)` base and opaque
 become transparent. Action-bar clusters now paint that striped bar in widget
 pixels instead of relying on a stretched Qt stylesheet gradient, so the stripe
 angle continues consistently behind centered buttons; the painted stripes are
-now thinner and denser. Spell icons now share a dark button backplate in both
-the Action Book and dropped action-bar slots, so icons no longer float on a
-transparent background.
+now thinner and denser. README icon rendering now uses SVG-backed Maya
+resources where Maya exposes true vector equivalents and requests scaled
+pixmaps during high-resolution widget captures; transform-tool Maya resources
+still top out at 32 px in Maya's own resource catalog. Spell icons now share a
+dark tile backplate in both the Action Book and dropped action-bar slots, and
+icon-bearing action-bar slots no longer paint the underlying push-button skin,
+so active borders align to the tile while the striped rail stays visible around
+populated slots.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -330,8 +335,7 @@ $env:PYTHONPATH = "scripts"
   unlocked blank Quick Create slot keeps the primary slot label empty, preserves
   the slot key label, keeps the catalog icon visible, and survives Lock Bar
   rebuild. The latest run also refreshed the Action Book and drop-bar
-  screenshots after the thicker 40%-opacity diagonal stripe theme pass and the
-  shared spell-icon backplate pass.
+  screenshots after the icon-tile action-bar paint pass.
 - Latest project/docs checks:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
   `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and local Markdown link
@@ -347,7 +351,7 @@ $env:PYTHONPATH = "scripts"
   -> passed; refreshed
   `docs/assets/actionrail_readme_maya_icons_showcase.png` and
   `docs/assets/actionrail_readme_edit_mode.png` from the same Maya example
-  scene.
+  scene using 2x widget capture and SVG-backed Maya resources where available.
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
   -> 501 passed.

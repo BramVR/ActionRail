@@ -148,6 +148,14 @@ def test_icon_descriptors_include_manifest_and_maya_picker_metadata() -> None:
     assert maya_move.category == "Transform"
     assert maya_move.qt_name == "move_M.png"
     assert "translate" in maya_move.keywords
+    maya_camera = next(descriptor for descriptor in descriptors if descriptor.id == "maya.camera")
+    maya_grid = next(descriptor for descriptor in descriptors if descriptor.id == "maya.grid")
+    maya_image_plane = next(
+        descriptor for descriptor in descriptors if descriptor.id == "maya.image_plane"
+    )
+    assert maya_camera.qt_name == "camera.svg"
+    assert maya_grid.qt_name == "grid.svg"
+    assert maya_image_plane.qt_name == "imagePlane.svg"
     assert actionrail_move.provider == "manifest"
     assert actionrail_move.path == REPO_ROOT / "icons" / "actionrail" / "move.svg"
     maya_descriptors = list_icon_descriptors(provider="maya")

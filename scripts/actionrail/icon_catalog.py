@@ -48,7 +48,7 @@ MAYA_ICON_DESCRIPTORS: tuple[IconDescriptor, ...] = (
         "animation",
         "set key",
     ),
-    _maya_icon_descriptor("maya.camera", "Camera", "Camera", "Camera.png", "camera"),
+    _maya_icon_descriptor("maya.camera", "Camera", "Camera", "camera.svg", "camera"),
     _maya_icon_descriptor(
         "maya.camera_lock",
         "Camera Lock",
@@ -77,7 +77,7 @@ MAYA_ICON_DESCRIPTORS: tuple[IconDescriptor, ...] = (
         "maya.image_plane",
         "Image Plane",
         "Camera",
-        "ImagePlane.png",
+        "imagePlane.svg",
         "camera",
         "image",
     ),
@@ -203,7 +203,7 @@ MAYA_ICON_DESCRIPTORS: tuple[IconDescriptor, ...] = (
         "transform",
         "tool",
     ),
-    _maya_icon_descriptor("maya.grid", "Grid", "Viewport", "Grid.png", "grid", "viewport"),
+    _maya_icon_descriptor("maya.grid", "Grid", "Viewport", "grid.svg", "grid", "viewport"),
     _maya_icon_descriptor(
         "maya.high_quality",
         "High Quality",

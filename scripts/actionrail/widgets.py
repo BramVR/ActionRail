@@ -490,8 +490,10 @@ def _build_button(
         "true" if slot_edit_callbacks is not None and slot_edit_callbacks.unlocked else "false",
     )
     button.setProperty("actionRailButtonIconSize", theme.button_size)
-    button.setProperty("actionRailButtonIconInset", theme.button_border_width)
+    button.setProperty("actionRailButtonBackplateInset", theme.button_border_width * 2)
+    button.setProperty("actionRailButtonIconInset", theme.spell_icon_inset)
     button.setProperty("actionRailIconBackplate", theme.spell_icon_background)
+    button.setProperty("actionRailButtonActiveBorder", theme.button_active_border)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(
@@ -1897,16 +1899,43 @@ def _button_class(qt: object) -> type:
                 self.initStyleOption(option)
                 option.text = ""
                 option.icon = qt.QtGui.QIcon()
-                self.style().drawControl(qt.QtWidgets.QStyle.CE_PushButton, option, painter, self)
-
                 icon = self.icon()
-                if not icon.isNull():
-                    target = self.rect()
-                    inset = _button_icon_inset(self)
-                    if inset:
-                        target = target.adjusted(inset, inset, -inset, -inset)
-                    _draw_icon_backplate(qt, painter, target)
-                    pixmap = icon.pixmap(target.size())
+
+                if icon.isNull():
+                    self.style().drawControl(
+                        qt.QtWidgets.QStyle.CE_PushButton,
+                        option,
+                        painter,
+                        self,
+                    )
+                else:
+                    backplate = self.rect()
+                    backplate_inset = _button_backplate_inset(self)
+                    if backplate_inset:
+                        backplate = backplate.adjusted(
+                            backplate_inset,
+                            backplate_inset,
+                            -backplate_inset,
+                            -backplate_inset,
+                        )
+                    _draw_icon_backplate(qt, painter, backplate)
+                    if _button_is_active(self):
+                        _draw_icon_backplate_border(
+                            qt,
+                            painter,
+                            backplate,
+                            _button_active_border(self),
+                        )
+                    target = backplate
+                    icon_inset = _button_icon_inset(self)
+                    if icon_inset:
+                        target = target.adjusted(
+                            icon_inset,
+                            icon_inset,
+                            -icon_inset,
+                            -icon_inset,
+                        )
+                    pixmap = _icon_pixmap_for_painter(qt, painter, icon, target)
                     if not pixmap.isNull():
                         painter.drawPixmap(target, pixmap)
 
@@ -1952,17 +1981,99 @@ def _draw_icon_backplate(qt: object, painter: object, rect: object) -> bool:
         fill_rect(rect, _qt_color(qt, DEFAULT_THEME.spell_icon_background))
     except Exception:
         return False
-
-    draw_rect = getattr(painter, "drawRect", None)
-    if callable(draw_rect):
-        try:
-            set_pen = getattr(painter, "setPen", None)
-            if callable(set_pen):
-                set_pen(_qt_color(qt, DEFAULT_THEME.spell_icon_border))
-            draw_rect(_adjusted_rect(rect, 0, 0, -1, -1))
-        except Exception:
-            pass
+    _draw_icon_backplate_border(qt, painter, rect, DEFAULT_THEME.spell_icon_border)
     return True
+
+
+def _draw_icon_backplate_border(
+    qt: object,
+    painter: object,
+    rect: object,
+    color: str,
+) -> bool:
+    draw_rect = getattr(painter, "drawRect", None)
+    if not callable(draw_rect):
+        return False
+    try:
+        set_pen = getattr(painter, "setPen", None)
+        if callable(set_pen):
+            set_pen(_qt_color(qt, color))
+        draw_rect(_adjusted_rect(rect, 0, 0, -1, -1))
+    except Exception:
+        return False
+    return True
+
+
+def _button_is_active(button: object) -> bool:
+    try:
+        return button.property("actionRailActive") == "true"
+    except Exception:
+        return False
+
+
+def _button_active_border(button: object) -> str:
+    try:
+        color = button.property("actionRailButtonActiveBorder")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.button_active_border
+
+
+def _button_backplate_inset(button: object) -> int:
+    try:
+        raw_inset = button.property("actionRailButtonBackplateInset")
+    except Exception:
+        raw_inset = None
+    if isinstance(raw_inset, int) and raw_inset > 0:
+        return raw_inset
+    return 0
+
+
+def _icon_pixmap_for_painter(qt: object, painter: object, icon: object, target: object) -> object:
+    size = target.size()
+    width = _qt_size_value(size, "width")
+    height = _qt_size_value(size, "height")
+    scale = _painter_device_scale(painter)
+    if scale <= 1.0 or width <= 0 or height <= 0:
+        return icon.pixmap(size)
+
+    scaled_size = qt.QtCore.QSize(
+        max(1, int(round(width * scale))),
+        max(1, int(round(height * scale))),
+    )
+    pixmap = icon.pixmap(scaled_size)
+    with suppress(Exception):
+        pixmap.setDevicePixelRatio(scale)
+    return pixmap
+
+
+def _painter_device_scale(painter: object) -> float:
+    device_transform = getattr(painter, "deviceTransform", None)
+    if callable(device_transform):
+        with suppress(Exception):
+            transform = device_transform()
+            m11 = getattr(transform, "m11", None)
+            m22 = getattr(transform, "m22", None)
+            x_scale = abs(float(m11())) if callable(m11) else 1.0
+            y_scale = abs(float(m22())) if callable(m22) else 1.0
+            return max(x_scale, y_scale, 1.0)
+
+    device = getattr(painter, "device", None)
+    if callable(device):
+        with suppress(Exception):
+            pixel_ratio = getattr(device(), "devicePixelRatioF", None)
+            if callable(pixel_ratio):
+                return max(float(pixel_ratio()), 1.0)
+    return 1.0
+
+
+def _qt_size_value(size: object, method_name: str) -> int:
+    value = getattr(size, method_name, None)
+    if callable(value):
+        with suppress(Exception):
+            return int(value())
+    raw = getattr(size, method_name, 0)
+    return int(raw) if isinstance(raw, int) else 0
 
 
 def _qt_color(qt: object, color: str) -> object:
