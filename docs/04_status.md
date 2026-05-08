@@ -60,12 +60,15 @@ still top out at 32 px in Maya's own resource catalog. Spell icons now share a
 dark tile backplate in both the Action Book and dropped action-bar slots, and
 icon-bearing action-bar slots no longer paint the underlying push-button skin,
 so active borders align to the tile while the striped rail stays visible around
-populated slots. The latest ElvUI-reference pass adds sparse per-bar
-`appearance` overrides for theme/accent/text, backdrop pattern/color, border,
-and slot colors. Quick Create now exposes those settings in a compact
-Appearance tab grouped as Theme, Backdrop Settings, Border Settings, and Slot
-Colors; the settings preview live and round-trip through saved/loaded user
-presets.
+populated slots. The latest slot-layering polish groups contiguous one-row and
+one-column button slots into a single painted rail backing, removes the extra
+icon backplate inset so placed icons fill their sockets more closely, and keeps
+per-bar icon backplate/border colors on the custom painter. The latest
+ElvUI-reference pass adds sparse per-bar `appearance` overrides for
+theme/accent/text, backdrop pattern/color, border, and slot colors. Quick
+Create now exposes those settings in a compact Appearance tab grouped as Theme,
+Backdrop Settings, Border Settings, and Slot Colors; the settings preview live
+and round-trip through saved/loaded user presets.
 
 Architecture direction is now explicitly WoW-style frames. Current rails are
 implemented action bar frames, not the whole product boundary. The planned
@@ -340,6 +343,17 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest focused slot-layering validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_theme.py`
+  -> 57 passed.
+- Latest focused slot-layering Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\widgets.py tests\\test_widgets.py`
+  -> all checks passed.
+- Latest Action Book UI Maya smoke after slot-layering polish:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_ui_smoke.py -Timeout 300`
+  -> passed; verified Action Book search/click/drop workflow and refreshed
+  `.gg-maya-sessiond/screenshots/actionrail_action_book_drop_bar.png` with a
+  continuous painted rail backing and enlarged dropped icon tile.
 - Latest focused appearance schema validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_spec.py tests\\test_authoring.py tests\\test_theme.py tests\\test_quick_create.py tests\\test_widgets.py`
   -> 142 passed.

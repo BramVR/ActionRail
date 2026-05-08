@@ -406,6 +406,29 @@ def test_build_transform_stack_constructs_scaled_horizontal_widget(monkeypatch) 
     assert cmds.calls == [("setToolTo", "moveSuperContext")]
 
 
+def test_build_transform_stack_groups_contiguous_horizontal_buttons(monkeypatch) -> None:
+    monkeypatch.setattr(widgets, "load", build_qt_binding)
+    spec = StackSpec(
+        id="button_row",
+        layout=RailLayout(anchor="viewport.bottom.center", orientation="horizontal"),
+        items=tuple(
+            StackItem(type="button", id=f"button_row.{index}", label=str(index))
+            for index in range(4)
+        ),
+    )
+
+    root = widgets.build_transform_stack(spec, create_default_registry(BuildCmds()))
+
+    assert len(root.children) == 1
+    cluster = root.children[0]
+    assert cluster.layout.spacing == widgets.DEFAULT_THEME.frame_spacing
+    assert len(cluster.layout.items) == 4
+    assert cluster.fixed_size == (
+        widgets._frame_main_axis_size(4, widgets.DEFAULT_THEME),
+        widgets.DEFAULT_THEME.rail_width,
+    )
+
+
 def test_build_transform_stack_marks_unlocked_slot_edit_buttons(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     cmds = BuildCmds()
@@ -1542,8 +1565,10 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
                 "actionRailDiagnosticBadge": "",
                 "actionRailActive": "true",
                 "actionRailButtonActiveBorder": "#8ccf3f",
-                "actionRailButtonBackplateInset": 2,
-                "actionRailButtonIconInset": 3,
+                "actionRailButtonBackplateInset": 0,
+                "actionRailButtonIconInset": 2,
+                "actionRailIconBackplate": "#444341",
+                "actionRailIconBorder": "#171716",
             }
 
         def initStyleOption(self, _option: StyleOptionButton) -> None:  # noqa: N802
@@ -1596,12 +1621,12 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
     button.paintEvent(object())
 
     assert ("control", 11, "", True) not in events
-    assert ("fill", (2, 2, -2, -2), "#444341") in events
+    assert ("fill", None, "#444341") in events
     assert ("pen", "#171716") in events
     assert ("pen", "#8ccf3f") in events
     assert ("rect", (0, 0, -1, -1)) in events
     assert ("pixmap", (32, 32)) in events
-    assert ("pixmap_drawn", (3, 3, -3, -3)) in events
+    assert ("pixmap_drawn", (2, 2, -2, -2)) in events
     assert ("text", "M", 3, None, None, 13) in events
     assert ("text", "7", 12, None, (21, 21, 8, 9), 7) in events
     assert events[-1] == ("end",)

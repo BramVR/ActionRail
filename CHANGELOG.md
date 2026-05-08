@@ -27,6 +27,9 @@
 - Documented the ElvUI-informed architecture direction: global theme defaults
   first, sparse per-bar overrides second, with profile/media systems deferred
   until the current Phase 2 authoring loop is stable.
+- Refined action-bar slot layering so contiguous one-row/one-column button
+  groups share one continuous painted rail backing, while icon tiles fill their
+  slots more tightly and honor per-bar icon backplate/border colors.
 
 ## 2026-05-07
 

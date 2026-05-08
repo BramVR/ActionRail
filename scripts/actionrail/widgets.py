@@ -177,7 +177,7 @@ def build_rail(
         if not _is_item_visible(item, context):
             continue
 
-        if item.type == "toolButton":
+        if _should_group_slot_item(item, spec.layout):
             pending_tools.append(item)
             continue
 
@@ -524,9 +524,10 @@ def _build_button(
         "true" if slot_edit_callbacks is not None and slot_edit_callbacks.unlocked else "false",
     )
     button.setProperty("actionRailButtonIconSize", theme.button_size)
-    button.setProperty("actionRailButtonBackplateInset", theme.button_border_width * 2)
-    button.setProperty("actionRailButtonIconInset", theme.spell_icon_inset)
+    button.setProperty("actionRailButtonBackplateInset", 0)
+    button.setProperty("actionRailButtonIconInset", max(0, theme.spell_icon_inset - 1))
     button.setProperty("actionRailIconBackplate", theme.spell_icon_background)
+    button.setProperty("actionRailIconBorder", theme.spell_icon_border)
     button.setProperty("actionRailButtonActiveBorder", theme.button_active_border)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
@@ -1952,7 +1953,13 @@ def _button_class(qt: object) -> type:
                             -backplate_inset,
                             -backplate_inset,
                         )
-                    _draw_icon_backplate(qt, painter, backplate)
+                    _draw_icon_backplate(
+                        qt,
+                        painter,
+                        backplate,
+                        _button_icon_backplate(self),
+                        _button_icon_border(self),
+                    )
                     if _button_is_active(self):
                         _draw_icon_backplate_border(
                             qt,
@@ -2007,15 +2014,21 @@ def _button_class(qt: object) -> type:
     return ActionRailButton
 
 
-def _draw_icon_backplate(qt: object, painter: object, rect: object) -> bool:
+def _draw_icon_backplate(
+    qt: object,
+    painter: object,
+    rect: object,
+    color: str = DEFAULT_THEME.spell_icon_background,
+    border_color: str = DEFAULT_THEME.spell_icon_border,
+) -> bool:
     fill_rect = getattr(painter, "fillRect", None)
     if not callable(fill_rect):
         return False
     try:
-        fill_rect(rect, _qt_color(qt, DEFAULT_THEME.spell_icon_background))
+        fill_rect(rect, _qt_color(qt, color))
     except Exception:
         return False
-    _draw_icon_backplate_border(qt, painter, rect, DEFAULT_THEME.spell_icon_border)
+    _draw_icon_backplate_border(qt, painter, rect, border_color)
     return True
 
 
@@ -2051,6 +2064,22 @@ def _button_active_border(button: object) -> str:
     except Exception:
         color = None
     return color if isinstance(color, str) and color else DEFAULT_THEME.button_active_border
+
+
+def _button_icon_backplate(button: object) -> str:
+    try:
+        color = button.property("actionRailIconBackplate")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.spell_icon_background
+
+
+def _button_icon_border(button: object) -> str:
+    try:
+        color = button.property("actionRailIconBorder")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.spell_icon_border
 
 
 def _button_backplate_inset(button: object) -> int:
@@ -2559,6 +2588,12 @@ def _frame_main_axis_size(item_count: int, theme: ActionRailTheme) -> int:
 
 def _uses_wrapped_layout(layout: RailLayout) -> bool:
     return layout.rows > 1 and layout.columns > 1
+
+
+def _should_group_slot_item(item: StackItem, layout: RailLayout) -> bool:
+    if item.type == "toolButton":
+        return True
+    return item.type == "button" and not _uses_wrapped_layout(layout)
 
 
 def _grid_position(index: int, layout: RailLayout) -> tuple[int, int]:
