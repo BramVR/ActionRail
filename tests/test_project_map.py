@@ -80,8 +80,10 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
         "publish polish first pass Maya-smoke verified"
     ) in output
     assert (
-        "Next: Phase 2 step 2.6 Quick Create stability, locked-preset polish, "
-        "Appearance-tab round-trip polish, and unified authoring workflow handoff"
+        "Next: Phase 2 step 2.7 dense overlay performance foundation: shared "
+        "Maya state, one refresh scheduler, cached predicates, custom-painted "
+        "dense bar prototype, dirty-slot repainting, and viewport navigation "
+        "pass-through"
     ) in output
     assert "Use --json" in output
 

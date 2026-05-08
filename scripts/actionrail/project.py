@@ -237,11 +237,15 @@ def about() -> dict[str, object]:
                 "action entries to unlocked action-bar slots; Quick Create "
                 "Lock Bar preserves dropped Action Book payloads/icons after "
                 "the preview rebuild; ElvUI-reference per-bar appearance schema "
-                "and Quick Create Appearance tab Maya-smoke verified"
+                "and Quick Create Appearance tab Maya-smoke verified; next "
+                "build/fix step is dense overlay performance foundation for "
+                "large WoW-style action-bar layouts"
             ),
             "next_slice": (
-                "Phase 2 step 2.6 Quick Create stability, locked-preset polish, "
-                "Appearance-tab round-trip polish, and unified authoring workflow handoff"
+                "Phase 2 step 2.7 dense overlay performance foundation: shared "
+                "Maya state, one refresh scheduler, cached predicates, custom-painted "
+                "dense bar prototype, dirty-slot repainting, and viewport navigation "
+                "pass-through"
             ),
             "blockers_doc": "docs/04_status.md#blockers",
         },

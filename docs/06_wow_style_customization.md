@@ -485,8 +485,16 @@ Research hints by slice:
   `research/` reference images.
 - 2.6: collapsible side panels, action-bar visibility/hotkey labels, and OPie
   only as a boundary reference for later Phase 3 command rings.
+- 2.7: dense overlay performance foundation. Before later modes, make large
+  WoW-style action-bar layouts fast over Maya by replacing per-rail polling with
+  shared state, caching predicates, prototyping a custom-painted dense bar,
+  repainting only dirty slots, and passing Maya navigation gestures through
+  unless ActionRail intentionally captures them.
 
-Exit criteria: an artist can recreate the transform stack, create a distinct custom rail, and collapse that rail to an edge tab from Maya UI without editing JSON.
+Exit criteria: an artist can recreate the transform stack, create a distinct
+custom rail, collapse that rail to an edge tab from Maya UI without editing
+JSON, and keep a dense 100+ slot layout visible while normal viewport
+tumble/pan/zoom remains usable.
 
 ### Phase 3 - Action Book, Bind Mode, Macro Book, Flyouts, And Command Rings
 

@@ -19,7 +19,12 @@ studio layout override saves. Phase 2 step 2.6 is now in progress with the
 first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
 verified, a Maya-smoke verified handle/publish polish pass, and a locally
 verified validation UX/saved-preset publish follow-up with Quick Create Maya
-smoke coverage for the custom-store Save + Publish shelf command path. The
+smoke coverage for the custom-store Save + Publish shelf command path. The next
+build/fix step is now Phase 2 step 2.7 dense overlay performance foundation:
+replace per-rail polling with shared Maya state, cache predicates, prototype a
+custom-painted dense action bar, avoid full widget rebuilds for simple state
+changes, and add viewport navigation pass-through so large WoW-style layouts
+stay usable over Maya. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -195,11 +200,15 @@ Focus the next slice on:
 - keeping the Normal Mode unlocked-slot drag/drop workflow stable: Shift-drag
   moves/swaps populated slot payloads within a rail, transfers/swaps between
   unlocked rails, and preserves the source when dropped onto a locked rail
+- building the Phase 2 step 2.7 dense overlay performance foundation before
+  later modes: shared Maya state, one refresh scheduler, cached predicates, a
+  custom-painted dense bar prototype, dirty-slot repainting, and Maya viewport
+  navigation pass-through
 
 Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
-layers, marking-menu export, or Viewport 2.0 in this slice. Keep Action Book
-growth focused on action placement and search, not on turning Quick Create into
-an action browser.
+layers, marking-menu export, or Viewport 2.0 before the performance foundation.
+Keep Action Book growth focused on action placement and search, not on turning
+Quick Create into an action browser.
 
 ## Next Agent Start
 
@@ -211,16 +220,20 @@ $env:PYTHONPATH = "scripts"
 .\.venv\Scripts\python.exe -m actionrail --json
 ```
 
-3. Continue Phase 2 step 2.6 on top of the completed Phase 2 step 2.5 Edit Mode
-   layout editing surface. The collapse schema/runtime first pass is in place
-   and Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
-   verified; the validation UX/publish follow-up is locally verified, and Quick
-   Create Maya smoke covers the custom-store Save + Publish shelf command path.
-   Edit Mode slot-payload controls have since moved out of Edit Mode and into
-   Normal Mode rail lock/unlock helpers. Treat publishing as optional
-   infrastructure; keep the main UX vocabulary aligned to frames, Action Book,
-   Macro Book, Edit Mode, and Bind Mode.
-4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
+3. Finish any necessary Phase 2 step 2.6 polish on top of the completed Phase
+   2 step 2.5 Edit Mode layout editing surface. The collapse schema/runtime
+   first pass is in place and Maya-smoke verified; the handle/publish polish
+   pass is also Maya-smoke verified; the validation UX/publish follow-up is
+   locally verified, and Quick Create Maya smoke covers the custom-store Save +
+   Publish shelf command path. Edit Mode slot-payload controls have since moved
+   out of Edit Mode and into Normal Mode rail lock/unlock helpers. Treat
+   publishing as optional infrastructure; keep the main UX vocabulary aligned
+   to frames, Action Book, Macro Book, Edit Mode, and Bind Mode.
+4. Build Phase 2 step 2.7 next: dense overlay performance for WoW-style large
+   action-bar layouts. Start with a measurable 100+ slot probe, shared Maya
+   state service, one refresh scheduler, cached predicates, custom-painted bar
+   prototype, dirty-slot repainting, and viewport navigation pass-through.
+5. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
 

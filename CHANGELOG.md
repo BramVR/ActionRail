@@ -41,6 +41,10 @@
   leaving the viewport background to Maya instead of forcing a custom color.
 - Reworked the README showcase composition to use Quick Create draft-built
   action bars: two close horizontal icon bars plus compact left/right icon bars.
+- Added Phase 2 step 2.7 to the roadmap as the next build/fix target: dense
+  overlay performance for large WoW-style action-bar layouts, including shared
+  Maya state, cached predicates, a custom-painted dense bar prototype,
+  dirty-slot repainting, and viewport navigation pass-through.
 
 ## 2026-05-07
 

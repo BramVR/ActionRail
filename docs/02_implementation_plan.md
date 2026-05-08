@@ -468,6 +468,55 @@ Research hints:
 - Skim OPie only as a boundary check: rings reduce clutter, but this step should
   ship collapsible rails, not radial command selection.
 
+#### 2.7 Dense Overlay Performance Foundation
+
+Status: next build/fix step.
+
+ActionRail must be fast with WoW-style dense action-bar layouts, not only the
+small transform-stack proof preset. The README live showcase exposed the
+current scaling limit: multiple floating Qt rail windows, widget-per-slot
+buttons, per-rail predicate timers, repeated `maya.cmds` state snapshots, and
+Qt event capture can make Maya viewport navigation feel slow. Fix this before
+expanding into Bind Mode, Macro Book UI, flyouts, command rings, profile
+layers, marking-menu export, or Viewport 2.0.
+
+- Add a shared runtime state service for Maya state used by predicates:
+  current tool, selection count, active panel/camera, playback state, and later
+  context-specific signals. Prefer Maya callbacks/events where feasible and use
+  throttled fallback polling only when needed.
+- Replace per-rail predicate refresh timers with one scheduler that updates a
+  shared snapshot, marks dependent slots dirty, and refreshes only affected
+  bars/slots.
+- Cache parsed/compiled predicate expressions and record their dependencies so
+  `maya.tool`, `selection.count`, `active.panel`, and diagnostics predicates do
+  not all refresh on every state change.
+- Prototype a dense action-bar canvas path: one custom-painted Qt widget per
+  action bar, cached slot rects, cached icon pixmaps/text metrics, manual
+  hit-testing, and no per-slot `QPushButton` objects for dense bars.
+- Add Maya navigation pass-through rules so viewport navigation gestures remain
+  responsive with UI on top: Alt/middle/right/wheel viewport gestures should
+  reach Maya unless ActionRail is in a mode that intentionally captures them.
+- Avoid full widget rebuilds for active/enabled/key-label changes. Update
+  cached slot render state and repaint dirty rects instead.
+- Add a dense-layout performance smoke/probe that exercises at least 100 visible
+  slots across multiple bars, records refresh timing, verifies viewport
+  navigation gestures are not captured outside intended slot clicks, and
+  compares the new path against the current widget-per-button path.
+
+Done when a 100+ slot ActionRail layout can stay visible over Maya while
+viewport tumble/pan/zoom remains usable, with no per-rail polling storm and no
+full-bar rebuild for simple active-state changes.
+
+Research hints:
+
+- Use WoW/Bartender/Dominos as the runtime interaction reference: many visible
+  action slots should behave like a lightweight HUD, not a form made of native
+  controls.
+- Keep Qt as the clickable backend for now, but use custom painting and manual
+  hit testing for dense bars.
+- Do not start Viewport 2.0 as the solution for clickable bars; reserve it for
+  later native drawing once the Qt interaction model is proven.
+
 ### Acceptance Criteria
 
 - An artist can recreate the reference stack from Maya UI only.
@@ -475,6 +524,8 @@ Research hints:
 - An artist can collapse a rail to a side handle and expand it again without losing its layout or bindings.
 - Edit Mode changes save to a user preset or user override, not to a locked built-in/studio preset.
 - Validation reports missing actions, missing icons, and hotkey conflicts.
+- A dense 100+ slot layout remains usable over the Maya viewport without
+  slowing normal tumble, pan, zoom, or selection workflows.
 
 ## Phase 3: Action Book, Bind Mode, Macro Book, Flyouts, And Command Rings
 
@@ -542,8 +593,9 @@ layout-map shell, direct manipulation, snap/sticky guides, Normal Mode slot
 payload lock/unlock helpers, Quick Create handoffs into both Edit Mode layout
 and Normal Mode slot editing, and user override persistence are in place.
 
-Current implementation slice: Phase 2 step 2.6 collapsible edge tabs and
-authoring workflow polish. The collapse schema/runtime first pass is implemented and
+Current implementation slice: finish Phase 2 step 2.6 collapsible edge tabs and
+authoring workflow polish, then move directly to Phase 2 step 2.7 dense overlay
+performance foundation. The collapse schema/runtime first pass is implemented and
 Maya-smoke verified; the handle/publish polish pass is also Maya-smoke
 verified. A local validation UX/saved-preset publishing polish follow-up is in
 place, Quick Create Maya smoke now covers the custom-store Save + Publish shelf
@@ -575,17 +627,21 @@ Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and
 template-to-slot-edit handoffs, and slot editing that can later connect to
-Action Book and Bind Mode. Keep `docs/06_wow_style_customization.md` in mind,
-but do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
-layers, marking-menu export, or Viewport 2.0 yet.
+Action Book and Bind Mode. The next build/fix target is runtime performance for
+dense UI: shared Maya state, cached predicates, a custom-painted dense bar
+prototype, dirty-slot repainting, and viewport navigation pass-through. Keep
+`docs/06_wow_style_customization.md` in mind, but do not implement Bind Mode,
+Macro Book UI, flyouts, command rings, profile layers, marking-menu export, or
+Viewport 2.0 yet.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Verify and continue Phase 2 step 2.6 Quick Create stability, locked-preset
-   read-only polish, and unified authoring workflow handoff.
+1. Finish any required Phase 2 step 2.6 authoring polish, then build Phase 2
+   step 2.7 dense overlay performance foundation so large action-bar layouts
+   stay fast over Maya navigation.
 2. Add the Action Book and Bind Mode.
 3. Add the Macro Book for user script actions with icons.
 4. Add flyouts, then command rings.
