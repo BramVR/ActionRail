@@ -29,6 +29,10 @@ from .spec import (
     MAX_LAYOUT_COLUMNS,
     MAX_LAYOUT_OFFSET,
     MAX_LAYOUT_SCALE,
+    RailAppearance,
+    RailBackground,
+    RailBorder,
+    RailSlotAppearance,
 )
 from .theme import DEFAULT_THEME
 
@@ -49,6 +53,10 @@ BUTTON_COUNT_OBJECT_NAME = "ActionRailQuickCreateButtonCount"
 BUTTONS_PER_ROW_OBJECT_NAME = "ActionRailQuickCreateButtonsPerRow"
 BUTTON_SIZE_OBJECT_NAME = "ActionRailQuickCreateButtonSize"
 BINDINGS_TABLE_OBJECT_NAME = "ActionRailQuickCreateBindingsTable"
+APPEARANCE_ACCENT_OBJECT_NAME = "ActionRailQuickCreateAppearanceAccent"
+APPEARANCE_BACKGROUND_COLOR_OBJECT_NAME = "ActionRailQuickCreateAppearanceBackgroundColor"
+APPEARANCE_BORDER_WIDTH_OBJECT_NAME = "ActionRailQuickCreateAppearanceBorderWidth"
+APPEARANCE_ACTIVE_COLOR_OBJECT_NAME = "ActionRailQuickCreateAppearanceActiveColor"
 
 _PANEL: Any | None = None
 _SLOT_COLUMNS = (
@@ -80,6 +88,10 @@ __all__ = [
     "BINDINGS_TABLE_OBJECT_NAME",
     "BUTTON_SIZE_OBJECT_NAME",
     "BUTTONS_PER_ROW_OBJECT_NAME",
+    "APPEARANCE_ACCENT_OBJECT_NAME",
+    "APPEARANCE_ACTIVE_COLOR_OBJECT_NAME",
+    "APPEARANCE_BACKGROUND_COLOR_OBJECT_NAME",
+    "APPEARANCE_BORDER_WIDTH_OBJECT_NAME",
     "show_quick_create_panel",
 ]
 
@@ -237,6 +249,36 @@ def _build_panel(
     collapse_trigger = qt.QtWidgets.QComboBox()
     collapse_trigger.addItems(("click", "hover"))
     collapse_default = qt.QtWidgets.QCheckBox()
+    appearance_theme = qt.QtWidgets.QComboBox()
+    appearance_theme.setEditable(True)
+    appearance_theme.addItems(("default",))
+    inherit_global = qt.QtWidgets.QCheckBox()
+    accent_color = _color_line_edit(qt, "#8ccf3f")
+    accent_color.setObjectName(APPEARANCE_ACCENT_OBJECT_NAME)
+    text_color = _color_line_edit(qt, "")
+    muted_text_color = _color_line_edit(qt, "")
+    background_enabled = qt.QtWidgets.QCheckBox()
+    background_color = _color_line_edit(qt, "#1d202a")
+    background_color.setObjectName(APPEARANCE_BACKGROUND_COLOR_OBJECT_NAME)
+    background_pattern = qt.QtWidgets.QComboBox()
+    background_pattern.addItems(("diagonal_stripes", "none"))
+    pattern_color = _color_line_edit(qt, "#2d2f3c")
+    pattern_opacity = _double_spin_box(qt, 0.0, 1.0, 1.0, 0.05)
+    pattern_scale = _double_spin_box(qt, 0.25, 4.0, 1.0, 0.05)
+    border_enabled = qt.QtWidgets.QCheckBox()
+    border_color = _color_line_edit(qt, "#030404")
+    border_width = _spin_box(qt, 0, 12, 2)
+    border_width.setObjectName(APPEARANCE_BORDER_WIDTH_OBJECT_NAME)
+    empty_socket_background = _color_line_edit(qt, "#101315")
+    empty_socket_border = _color_line_edit(qt, "#020303")
+    icon_backplate = _color_line_edit(qt, "#444341")
+    icon_border = _color_line_edit(qt, "#171716")
+    active_color = _color_line_edit(qt, "#8ccf3f")
+    active_color.setObjectName(APPEARANCE_ACTIVE_COLOR_OBJECT_NAME)
+    for widget in (appearance_theme, background_pattern):
+        widget.setMinimumWidth(150)
+    for widget in (pattern_opacity, pattern_scale, border_width):
+        widget.setMinimumWidth(104)
 
     tabs = qt.QtWidgets.QTabWidget()
     tabs.setObjectName(TABS_OBJECT_NAME)
@@ -322,6 +364,64 @@ def _build_panel(
     control_grid.setColumnStretch(0, 1)
     control_grid.setColumnStretch(2, 1)
     layout_layout.addStretch(1)
+
+    appearance_tab = qt.QtWidgets.QWidget()
+    appearance_layout = qt.QtWidgets.QVBoxLayout(appearance_tab)
+    appearance_layout.setContentsMargins(10, 10, 10, 10)
+    appearance_layout.setSpacing(10)
+    tabs.addTab(appearance_tab, "Appearance")
+
+    theme_group = _group_box(qt, "Theme")
+    theme_grid = qt.QtWidgets.QGridLayout(theme_group)
+    theme_grid.setHorizontalSpacing(14)
+    theme_grid.setVerticalSpacing(8)
+    _add_grid_field(qt, theme_grid, 0, 0, "Theme", appearance_theme)
+    _add_grid_field(qt, theme_grid, 0, 2, "Inherit Global", inherit_global)
+    _add_grid_field(qt, theme_grid, 1, 0, "Main Color", accent_color)
+    _add_grid_field(qt, theme_grid, 1, 2, "Text", text_color)
+    _add_grid_field(qt, theme_grid, 2, 0, "Muted Text", muted_text_color)
+    theme_grid.setColumnStretch(1, 1)
+    theme_grid.setColumnStretch(3, 1)
+    appearance_layout.addWidget(theme_group)
+
+    backdrop_group = _group_box(qt, "Backdrop Settings")
+    backdrop_grid = qt.QtWidgets.QGridLayout(backdrop_group)
+    backdrop_grid.setHorizontalSpacing(14)
+    backdrop_grid.setVerticalSpacing(8)
+    _add_grid_field(qt, backdrop_grid, 0, 0, "Backdrop", background_enabled)
+    _add_grid_field(qt, backdrop_grid, 0, 2, "Color", background_color)
+    _add_grid_field(qt, backdrop_grid, 1, 0, "Pattern", background_pattern)
+    _add_grid_field(qt, backdrop_grid, 1, 2, "Pattern Color", pattern_color)
+    _add_grid_field(qt, backdrop_grid, 2, 0, "Pattern Alpha", pattern_opacity)
+    _add_grid_field(qt, backdrop_grid, 2, 2, "Pattern Scale", pattern_scale)
+    backdrop_grid.setColumnStretch(1, 1)
+    backdrop_grid.setColumnStretch(3, 1)
+    appearance_layout.addWidget(backdrop_group)
+
+    border_group = _group_box(qt, "Border Settings")
+    border_grid = qt.QtWidgets.QGridLayout(border_group)
+    border_grid.setHorizontalSpacing(14)
+    border_grid.setVerticalSpacing(8)
+    _add_grid_field(qt, border_grid, 0, 0, "Border", border_enabled)
+    _add_grid_field(qt, border_grid, 0, 2, "Color", border_color)
+    _add_grid_field(qt, border_grid, 1, 0, "Thickness", border_width)
+    border_grid.setColumnStretch(1, 1)
+    border_grid.setColumnStretch(3, 1)
+    appearance_layout.addWidget(border_group)
+
+    slot_group = _group_box(qt, "Slot Colors")
+    slot_grid = qt.QtWidgets.QGridLayout(slot_group)
+    slot_grid.setHorizontalSpacing(14)
+    slot_grid.setVerticalSpacing(8)
+    _add_grid_field(qt, slot_grid, 0, 0, "Empty Socket", empty_socket_background)
+    _add_grid_field(qt, slot_grid, 0, 2, "Empty Border", empty_socket_border)
+    _add_grid_field(qt, slot_grid, 1, 0, "Icon Backplate", icon_backplate)
+    _add_grid_field(qt, slot_grid, 1, 2, "Icon Border", icon_border)
+    _add_grid_field(qt, slot_grid, 2, 0, "Active", active_color)
+    slot_grid.setColumnStretch(1, 1)
+    slot_grid.setColumnStretch(3, 1)
+    appearance_layout.addWidget(slot_group)
+    appearance_layout.addStretch(1)
 
     slots_tab = qt.QtWidgets.QWidget()
     slots_tab_layout = qt.QtWidgets.QVBoxLayout(slots_tab)
@@ -423,6 +523,28 @@ def _build_panel(
             collapse_handle_icon.setText(values.collapse_handle_icon)
             _set_combo_text(collapse_trigger, values.collapse_reveal_trigger)
             collapse_default.setChecked(values.collapse_default_collapsed)
+            _apply_appearance_values(
+                values.appearance,
+                theme=appearance_theme,
+                inherit_global=inherit_global,
+                accent=accent_color,
+                text=text_color,
+                muted_text=muted_text_color,
+                background_enabled=background_enabled,
+                background_color=background_color,
+                background_pattern=background_pattern,
+                pattern_color=pattern_color,
+                pattern_opacity=pattern_opacity,
+                pattern_scale=pattern_scale,
+                border_enabled=border_enabled,
+                border_color=border_color,
+                border_width=border_width,
+                empty_socket_background=empty_socket_background,
+                empty_socket_border=empty_socket_border,
+                icon_backplate=icon_backplate,
+                icon_border=icon_border,
+                active_color=active_color,
+            )
             _clear_slot_rows(slot_rows, slots_layout)
             for slot in values.slots:
                 _add_slot_row(qt, slots_layout, slot_rows, slot)
@@ -450,6 +572,27 @@ def _build_panel(
             collapse_handle_icon=collapse_handle_icon.text().strip(),
             collapse_reveal_trigger=collapse_trigger.currentText(),
             collapse_default_collapsed=collapse_default.isChecked(),
+            appearance=_appearance_from_panel(
+                theme=appearance_theme,
+                inherit_global=inherit_global,
+                accent=accent_color,
+                text=text_color,
+                muted_text=muted_text_color,
+                background_enabled=background_enabled,
+                background_color=background_color,
+                background_pattern=background_pattern,
+                pattern_color=pattern_color,
+                pattern_opacity=pattern_opacity,
+                pattern_scale=pattern_scale,
+                border_enabled=border_enabled,
+                border_color=border_color,
+                border_width=border_width,
+                empty_socket_background=empty_socket_background,
+                empty_socket_border=empty_socket_border,
+                icon_backplate=icon_backplate,
+                icon_border=icon_border,
+                active_color=active_color,
+            ),
         )
 
     def current_draft() -> object:
@@ -755,8 +898,44 @@ def _build_panel(
         offset_y,
         scale,
         opacity,
+        pattern_opacity,
+        pattern_scale,
+        border_width,
     ):
         widget.valueChanged.connect(lambda _value: refresh_live_preview())
+    for widget in (
+        locked,
+        collapse_enabled,
+        collapse_default,
+        inherit_global,
+        background_enabled,
+        border_enabled,
+    ):
+        widget.stateChanged.connect(lambda _value: refresh_live_preview())
+    for widget in (
+        anchor_combo,
+        orientation_combo,
+        collapse_edge,
+        collapse_trigger,
+        appearance_theme,
+        background_pattern,
+    ):
+        widget.currentTextChanged.connect(lambda _value: refresh_live_preview())
+    for widget in (
+        collapse_handle_icon,
+        accent_color,
+        text_color,
+        muted_text_color,
+        background_color,
+        pattern_color,
+        border_color,
+        empty_socket_background,
+        empty_socket_border,
+        icon_backplate,
+        icon_border,
+        active_color,
+    ):
+        widget.textChanged.connect(lambda _value: refresh_live_preview())
     template_list.setCurrentRow(0)
     tabs.setCurrentIndex(1)
     apply_values(make_default_input())
@@ -796,6 +975,91 @@ def _add_slot_row(  # pragma: no cover
             "source": slot,
         }
     )
+
+
+def _group_box(qt: QtBinding, title: str) -> Any:  # pragma: no cover
+    group = qt.QtWidgets.QGroupBox(title)
+    group.setObjectName("ActionRailQuickCreateGroup")
+    return group
+
+
+def _color_line_edit(qt: QtBinding, value: str) -> Any:  # pragma: no cover
+    edit = qt.QtWidgets.QLineEdit(value)
+    edit.setPlaceholderText("#rrggbb")
+    edit.setMinimumWidth(112)
+    return edit
+
+
+def _apply_appearance_values(  # pragma: no cover
+    appearance: RailAppearance,
+    **widgets: Any,
+) -> None:
+    widgets["theme"].setEditText(appearance.theme)
+    widgets["inherit_global"].setChecked(appearance.inherit_global)
+    widgets["accent"].setText(appearance.accent or "#8ccf3f")
+    widgets["text"].setText(appearance.text)
+    widgets["muted_text"].setText(appearance.muted_text)
+    widgets["background_enabled"].setChecked(appearance.background.enabled)
+    widgets["background_color"].setText(appearance.background.color or "#1d202a")
+    _set_combo_text(widgets["background_pattern"], appearance.background.pattern)
+    widgets["pattern_color"].setText(appearance.background.pattern_color or "#2d2f3c")
+    widgets["pattern_opacity"].setValue(appearance.background.pattern_opacity)
+    widgets["pattern_scale"].setValue(appearance.background.pattern_scale)
+    widgets["border_enabled"].setChecked(appearance.border.enabled)
+    widgets["border_color"].setText(appearance.border.color or "#030404")
+    widgets["border_width"].setValue(
+        2 if appearance.border.width is None else appearance.border.width
+    )
+    widgets["empty_socket_background"].setText(
+        appearance.slots.empty_background or "#101315"
+    )
+    widgets["empty_socket_border"].setText(appearance.slots.empty_border or "#020303")
+    widgets["icon_backplate"].setText(appearance.slots.icon_backplate or "#444341")
+    widgets["icon_border"].setText(appearance.slots.icon_border or "#171716")
+    widgets["active_color"].setText(appearance.slots.active or "#8ccf3f")
+
+
+def _appearance_from_panel(**widgets: Any) -> RailAppearance:  # pragma: no cover
+    return RailAppearance(
+        theme=widgets["theme"].currentText().strip() or "default",
+        inherit_global=widgets["inherit_global"].isChecked(),
+        accent=_optional_color_text(widgets["accent"], "#8ccf3f"),
+        text=_optional_color_text(widgets["text"], ""),
+        muted_text=_optional_color_text(widgets["muted_text"], ""),
+        background=RailBackground(
+            enabled=widgets["background_enabled"].isChecked(),
+            color=_optional_color_text(widgets["background_color"], "#1d202a"),
+            pattern=widgets["background_pattern"].currentText(),
+            pattern_color=_optional_color_text(widgets["pattern_color"], "#2d2f3c"),
+            pattern_opacity=widgets["pattern_opacity"].value(),
+            pattern_scale=widgets["pattern_scale"].value(),
+        ),
+        border=RailBorder(
+            enabled=widgets["border_enabled"].isChecked(),
+            color=_optional_color_text(widgets["border_color"], "#030404"),
+            width=_optional_int_value(widgets["border_width"], 2),
+        ),
+        slots=RailSlotAppearance(
+            empty_background=_optional_color_text(
+                widgets["empty_socket_background"],
+                "#101315",
+            ),
+            empty_border=_optional_color_text(widgets["empty_socket_border"], "#020303"),
+            icon_backplate=_optional_color_text(widgets["icon_backplate"], "#444341"),
+            icon_border=_optional_color_text(widgets["icon_border"], "#171716"),
+            active=_optional_color_text(widgets["active_color"], "#8ccf3f"),
+        ),
+    )
+
+
+def _optional_color_text(widget: Any, default_value: str) -> str:
+    value = widget.text().strip()
+    return "" if value == default_value else value
+
+
+def _optional_int_value(widget: Any, default_value: int) -> int | None:
+    value = widget.value()
+    return None if value == default_value else value
 
 
 def _clear_slot_rows(rows: list[dict[str, Any]], parent_layout: Any) -> None:  # pragma: no cover

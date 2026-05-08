@@ -27,6 +27,7 @@ from actionrail.quick_create import (
     template_choices,
 )
 from actionrail.quick_create_ui import (
+    _appearance_from_panel,
     _buttons_per_row_from_values,
     _generated_slot_input,
     _layout_rows_for_button_count,
@@ -397,6 +398,87 @@ def test_quick_create_combo_preserves_unknown_editable_text() -> None:
 
     assert combo.text == "custom.unknown"
     assert combo.index == -1
+
+
+def test_quick_create_appearance_panel_values_keep_defaults_sparse() -> None:
+    class FakeText:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def text(self) -> str:
+            return self._text
+
+    class FakeCombo:
+        def __init__(self, text: str) -> None:
+            self._text = text
+
+        def currentText(self) -> str:  # noqa: N802
+            return self._text
+
+    class FakeCheck:
+        def __init__(self, checked: bool) -> None:
+            self._checked = checked
+
+        def isChecked(self) -> bool:  # noqa: N802
+            return self._checked
+
+    class FakeValue:
+        def __init__(self, value: int | float) -> None:
+            self._value = value
+
+        def value(self) -> int | float:
+            return self._value
+
+    defaults = _appearance_from_panel(
+        theme=FakeCombo("default"),
+        inherit_global=FakeCheck(True),
+        accent=FakeText("#8ccf3f"),
+        text=FakeText(""),
+        muted_text=FakeText(""),
+        background_enabled=FakeCheck(True),
+        background_color=FakeText("#1d202a"),
+        background_pattern=FakeCombo("diagonal_stripes"),
+        pattern_color=FakeText("#2d2f3c"),
+        pattern_opacity=FakeValue(1.0),
+        pattern_scale=FakeValue(1.0),
+        border_enabled=FakeCheck(True),
+        border_color=FakeText("#030404"),
+        border_width=FakeValue(2),
+        empty_socket_background=FakeText("#101315"),
+        empty_socket_border=FakeText("#020303"),
+        icon_backplate=FakeText("#444341"),
+        icon_border=FakeText("#171716"),
+        active_color=FakeText("#8ccf3f"),
+    )
+    custom = _appearance_from_panel(
+        theme=FakeCombo("default"),
+        inherit_global=FakeCheck(True),
+        accent=FakeText("#33dd88"),
+        text=FakeText("#eeeeee"),
+        muted_text=FakeText(""),
+        background_enabled=FakeCheck(True),
+        background_color=FakeText("#111722"),
+        background_pattern=FakeCombo("none"),
+        pattern_color=FakeText("#2d2f3c"),
+        pattern_opacity=FakeValue(1.0),
+        pattern_scale=FakeValue(1.0),
+        border_enabled=FakeCheck(True),
+        border_color=FakeText("#030404"),
+        border_width=FakeValue(4),
+        empty_socket_background=FakeText("#101315"),
+        empty_socket_border=FakeText("#020303"),
+        icon_backplate=FakeText("#444341"),
+        icon_border=FakeText("#171716"),
+        active_color=FakeText("#33dd88"),
+    )
+
+    assert defaults == RailAppearance()
+    assert custom.accent == "#33dd88"
+    assert custom.text == "#eeeeee"
+    assert custom.background.color == "#111722"
+    assert custom.background.pattern == "none"
+    assert custom.border.width == 4
+    assert custom.slots.active == "#33dd88"
 
 
 def test_quick_create_row_preserves_hidden_payload_metadata() -> None:

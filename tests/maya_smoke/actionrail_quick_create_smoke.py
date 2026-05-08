@@ -33,6 +33,10 @@ import actionrail  # noqa: E402
 import actionrail.runtime as actionrail_runtime  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
 from actionrail.quick_create_ui import (  # noqa: E402
+    APPEARANCE_ACCENT_OBJECT_NAME,
+    APPEARANCE_ACTIVE_COLOR_OBJECT_NAME,
+    APPEARANCE_BACKGROUND_COLOR_OBJECT_NAME,
+    APPEARANCE_BORDER_WIDTH_OBJECT_NAME,
     BINDINGS_TABLE_OBJECT_NAME,
     BUTTON_COUNT_OBJECT_NAME,
     BUTTON_SIZE_OBJECT_NAME,
@@ -86,6 +90,19 @@ preset_id_edit = visible_panel.findChild(QtWidgets.QLineEdit, "ActionRailQuickCr
 button_count = visible_panel.findChild(QtWidgets.QSpinBox, BUTTON_COUNT_OBJECT_NAME)
 buttons_per_row = visible_panel.findChild(QtWidgets.QSpinBox, BUTTONS_PER_ROW_OBJECT_NAME)
 button_size = visible_panel.findChild(QtWidgets.QDoubleSpinBox, BUTTON_SIZE_OBJECT_NAME)
+appearance_accent = visible_panel.findChild(QtWidgets.QLineEdit, APPEARANCE_ACCENT_OBJECT_NAME)
+appearance_background = visible_panel.findChild(
+    QtWidgets.QLineEdit,
+    APPEARANCE_BACKGROUND_COLOR_OBJECT_NAME,
+)
+appearance_border_width = visible_panel.findChild(
+    QtWidgets.QSpinBox,
+    APPEARANCE_BORDER_WIDTH_OBJECT_NAME,
+)
+appearance_active = visible_panel.findChild(
+    QtWidgets.QLineEdit,
+    APPEARANCE_ACTIVE_COLOR_OBJECT_NAME,
+)
 if (
     status_label is None
     or template_combo is None
@@ -98,6 +115,10 @@ if (
     or button_count is None
     or buttons_per_row is None
     or button_size is None
+    or appearance_accent is None
+    or appearance_background is None
+    or appearance_border_width is None
+    or appearance_active is None
 ):
     raise AssertionError("Quick Create panel is missing expected child widgets.")
 
@@ -146,9 +167,24 @@ if any(slot.action or slot.icon for slot in current_draft.slots):
 
 template_combo.setCurrentIndex(2)
 app.processEvents()
+appearance_accent.setText("#33dd88")
+appearance_background.setText("#111722")
+appearance_border_width.setValue(3)
+appearance_active.setText("#33dd88")
+app.processEvents()
 horizontal_draft = visible_panel._actionrail_current_draft()
 if horizontal_draft.layout.orientation != "horizontal":
     raise AssertionError(f"Template switch did not update orientation: {horizontal_draft}")
+if (
+    horizontal_draft.appearance.accent != "#33dd88"
+    or horizontal_draft.appearance.background.color != "#111722"
+    or horizontal_draft.appearance.border.width != 3
+    or horizontal_draft.appearance.slots.active != "#33dd88"
+):
+    raise AssertionError(
+        "Appearance tab did not update the draft: "
+        f"{horizontal_draft.appearance}"
+    )
 
 visible_panel._actionrail_preview_draft()
 app.processEvents()
@@ -208,6 +244,14 @@ if host is None:
     raise AssertionError("Live preview refresh removed the Quick Create overlay.")
 if host.spec.layout.rows != 2 or host.spec.layout.columns != 5 or host.spec.layout.scale != 1.25:
     raise AssertionError(f"Live preview host did not receive updated layout: {host.spec.layout}")
+if (
+    host.spec.appearance.accent != "#33dd88"
+    or host.spec.appearance.background.color != "#111722"
+    or host.spec.appearance.border.width != 3
+):
+    raise AssertionError(
+        f"Live preview host did not receive appearance settings: {host.spec.appearance}"
+    )
 preview_buttons = host.widget.findChildren(QtWidgets.QPushButton)
 slot_buttons = [
     button for button in preview_buttons if button.property("actionRailSlotId")
@@ -298,6 +342,12 @@ app.processEvents()
 loaded_draft = visible_panel._actionrail_current_draft()
 if loaded_draft.id != "quick-horizontal-strip" or loaded_draft.layout.orientation != "horizontal":
     raise AssertionError(f"Load Existing did not restore saved bar: {loaded_draft}")
+if (
+    loaded_draft.appearance.accent != "#33dd88"
+    or loaded_draft.appearance.background.color != "#111722"
+    or loaded_draft.appearance.border.width != 3
+):
+    raise AssertionError(f"Load Existing did not restore appearance: {loaded_draft}")
 
 visible_panel._actionrail_save_publish_draft()
 app.processEvents()
@@ -367,6 +417,9 @@ result = {
     "live_preview_scale": live_draft.layout.scale,
     "live_preview_slot_count": len(live_draft.slots),
     "loaded_orientation": loaded_draft.layout.orientation,
+    "loaded_appearance_accent": loaded_draft.appearance.accent,
+    "loaded_appearance_background": loaded_draft.appearance.background.color,
+    "loaded_appearance_border_width": loaded_draft.appearance.border.width,
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,
     "preview_unlocked": preview_unlocked,
