@@ -1157,6 +1157,7 @@ def test_popover_position_and_panel_style() -> None:
     assert edit_mode._panel_width(0, 540) == 540
     assert edit_mode._panel_width(500, 540) == 484
     assert "Sticky" not in edit_mode._panel_style_sheet()
+    assert f"color: {edit_mode.DEFAULT_THEME.accent_line};" in edit_mode._panel_style_sheet()
     assert edit_mode._frame_label_font_size(frame) == 10
     assert edit_mode._frame_label_font_size(replace(frame, label="Very Long Label", width=20)) == 6
 
@@ -1187,6 +1188,110 @@ def test_panel_summary_and_lock_text_are_readable_without_selection() -> None:
         edit_mode._panel_summary_text(frame, 1)
         == "Frame\nruntime | viewport.left.top | x 150, y 120"
     )
+
+
+def test_edit_mode_paint_colors_use_green_accent_and_black_grid() -> None:
+    events: list[tuple[str, object]] = []
+
+    class Color:
+        def __init__(self, red: int, green: int, blue: int, alpha: int = 255) -> None:
+            self.value = (red, green, blue, alpha)
+
+    class Pen:
+        def __init__(self, color: Color, width: int = 1) -> None:
+            self.color = color
+            self.width = width
+
+    class Rect:
+        def __init__(self, x: int = 0, y: int = 0, width: int = 96, height: int = 64) -> None:
+            self.value = (x, y, width, height)
+
+        def width(self) -> int:
+            return self.value[2]
+
+        def height(self) -> int:
+            return self.value[3]
+
+        def adjusted(self, left: int, top: int, right: int, bottom: int) -> Rect:
+            return Rect(left, top, right, bottom)
+
+    class Font:
+        def setBold(self, _enabled: bool) -> None:  # noqa: N802
+            pass
+
+        def setPointSize(self, _size: int) -> None:  # noqa: N802
+            pass
+
+    class Painter:
+        def setPen(self, pen: Pen | Color) -> None:  # noqa: N802
+            if isinstance(pen, Pen):
+                events.append(("pen", (pen.color.value, pen.width)))
+            else:
+                events.append(("color", pen.value))
+
+        def drawLine(self, *args: int) -> None:  # noqa: N802
+            events.append(("line", args))
+
+        def fillRect(self, _rect: Rect, color: Color) -> None:  # noqa: N802
+            events.append(("fill", color.value))
+
+        def drawRect(self, _rect: Rect) -> None:  # noqa: N802
+            events.append(("rect", None))
+
+        def font(self) -> Font:
+            return Font()
+
+        def setFont(self, _font: Font) -> None:  # noqa: N802
+            pass
+
+        def drawText(self, *_args: object) -> None:  # noqa: N802
+            pass
+
+    class Qt:
+        class QtCore:
+            QRect = Rect
+
+            class Qt:
+                AlignCenter = 1
+                TextWordWrap = 2
+
+        class QtGui:
+            QColor = Color
+            QPen = Pen
+
+    frame = edit_mode.RailFrameInfo(
+        preset_id="frame",
+        label="Frame",
+        x=4,
+        y=6,
+        width=40,
+        height=30,
+        anchor="viewport.left.top",
+        offset=(0, 0),
+        orientation="horizontal",
+        rows=1,
+        columns=4,
+        scale=1.0,
+        opacity=1.0,
+        locked=False,
+    )
+
+    edit_mode._paint_grid(Qt, Painter(), Rect(), 32)
+    edit_mode._paint_frame(Qt, Painter(), frame, selected=True)
+    edit_mode._paint_guides(
+        Qt,
+        Painter(),
+        Rect(),
+        frame,
+        (frame,),
+        edit_mode.EditModeSettings(sticky_frames=True),
+    )
+
+    assert ("pen", ((0, 0, 0, 125), 1)) in events
+    assert ("pen", ((0, 0, 0, 70), 1)) in events
+    assert ("pen", ((140, 207, 63, 255), 2)) in events
+    assert ("pen", ((140, 207, 63, 115), 1)) in events
+    assert ("color", (140, 207, 63, 255)) in events
 
 
 def test_require_cmds_uses_supplied_module() -> None:

@@ -27,9 +27,20 @@
 - Documented the ElvUI-informed architecture direction: global theme defaults
   first, sparse per-bar overrides second, with profile/media systems deferred
   until the current Phase 2 authoring loop is stable.
+- Added an ElvUI source-map doc for agents, covering the local `research/`
+  package split, load order, action bar, mover, appearance, profile, options,
+  and library lookup paths.
 - Refined action-bar slot layering so contiguous one-row/one-column button
   groups share one continuous painted rail backing, while icon tiles fill their
   slots more tightly and honor per-bar icon backplate/border colors.
+- Retuned Edit Mode colors to better match the ElvUI mover reference: black
+  grid lines replace the bright blue grid, and selected frames, selected labels,
+  Sticky Frames guides, and panel check controls now use ActionRail's green
+  accent instead of yellow.
+- Refreshed the README Maya screenshots with the current action-bar look while
+  leaving the viewport background to Maya instead of forcing a custom color.
+- Reworked the README showcase composition to use Quick Create draft-built
+  action bars: two close horizontal icon bars plus compact left/right icon bars.
 
 ## 2026-05-07
 

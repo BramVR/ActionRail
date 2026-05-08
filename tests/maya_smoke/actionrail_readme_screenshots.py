@@ -4,6 +4,7 @@ import json
 import math
 import sys
 from contextlib import suppress
+from dataclasses import replace as dataclass_replace
 from pathlib import Path
 
 __args__ = globals().get("__args__", {})
@@ -16,7 +17,7 @@ from maya import cmds  # noqa: E402
 from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
-from actionrail import edit_mode  # noqa: E402
+from actionrail import edit_mode, quick_create  # noqa: E402
 
 if __args__.get("repo_root"):
     REPO_ROOT = Path(__args__["repo_root"])
@@ -163,14 +164,6 @@ def _set_viewport_style(panel: str) -> None:
         with suppress(Exception):
             cmds.modelEditor(editor, edit=True, **{flag: value})
 
-    for name, color in {
-        "background": (0.075, 0.082, 0.095),
-        "backgroundTop": (0.105, 0.115, 0.13),
-        "backgroundBottom": (0.055, 0.06, 0.07),
-    }.items():
-        with suppress(Exception):
-            cmds.displayRGBColor(name, color[0], color[1], color[2])
-
 
 ACTION_CYCLE = (
     ("move", "M", "maya.tool.move"),
@@ -249,99 +242,114 @@ def _action_item(
     )
 
 
-def _number_bar_spec() -> actionrail.StackSpec:
-    spec_id = "readme_number_actionbar"
-    key_labels = ("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=")
-    icon_ids = SHOWCASE_ICON_IDS[: len(key_labels)]
-    return actionrail.StackSpec(
-        id=spec_id,
-        layout=actionrail.RailLayout(
-            anchor="viewport.bottom.center",
-            orientation="horizontal",
-            offset=(0, -22),
-            opacity=0.95,
-        ),
-        items=tuple(
-            _action_item(
-                spec_id,
-                index,
-                icon_id,
-                key_label=key,
-                icon_only=True,
-                active=index == 1,
-            )
-            for index, (key, icon_id) in enumerate(zip(key_labels, icon_ids, strict=True))
+def _quick_create_actionbar_spec(
+    *,
+    spec_id: str,
+    anchor: str,
+    orientation: str,
+    offset: tuple[int, int],
+    icon_ids: tuple[str, ...],
+    key_labels: tuple[str, ...] = (),
+    active_index: int = -1,
+) -> actionrail.StackSpec:
+    slots = tuple(
+        quick_create.QuickCreateSlotInput(
+            id=f"slot_{index + 1}",
+            label="",
+            action=ACTION_CYCLE[index % len(ACTION_CYCLE)][2],
+            key_label=key_labels[index] if index < len(key_labels) else "",
+            icon=icon_id,
+            active_when=(
+                "maya.tool == rotate"
+                if index == active_index
+                and ACTION_CYCLE[index % len(ACTION_CYCLE)][2] == "maya.tool.rotate"
+                else ""
+            ),
+        )
+        for index, icon_id in enumerate(icon_ids)
+    )
+    rows = 1 if orientation == "horizontal" else len(slots)
+    columns = len(slots) if orientation == "horizontal" else 1
+    values = dataclass_replace(
+        quick_create.make_default_input("blank_bar"),
+        preset_id=spec_id,
+        slots=slots,
+        anchor=anchor,
+        orientation=orientation,
+        rows=rows,
+        columns=columns,
+        offset=offset,
+        opacity=0.94,
+        locked=True,
+    )
+    draft = quick_create.build_quick_create_draft(values)
+    return actionrail.build_draft_spec(draft)
+
+
+def _main_actionbar_spec() -> actionrail.StackSpec:
+    return _quick_create_actionbar_spec(
+        spec_id="readme_main_actionbar",
+        anchor="viewport.bottom.center",
+        orientation="horizontal",
+        offset=(0, -22),
+        icon_ids=SHOWCASE_ICON_IDS[:12],
+        key_labels=("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="),
+        active_index=1,
+    )
+
+
+def _secondary_actionbar_spec() -> actionrail.StackSpec:
+    return _quick_create_actionbar_spec(
+        spec_id="readme_secondary_actionbar",
+        anchor="viewport.bottom.center",
+        orientation="horizontal",
+        offset=(0, -72),
+        icon_ids=SHOWCASE_ICON_IDS[12:24],
+        key_labels=(
+            "F1",
+            "F2",
+            "F3",
+            "F4",
+            "F5",
+            "F6",
+            "F7",
+            "F8",
+            "F9",
+            "F10",
+            "F11",
+            "F12",
         ),
     )
 
 
-def _icon_strip_spec() -> actionrail.StackSpec:
-    spec_id = "readme_icon_strip"
-    icon_ids = SHOWCASE_ICON_IDS[12:20]
-    return actionrail.StackSpec(
-        id=spec_id,
-        layout=actionrail.RailLayout(
-            anchor="viewport.bottom.center",
-            orientation="horizontal",
-            offset=(0, -76),
-            opacity=0.92,
-        ),
-        items=tuple(
-            _action_item(spec_id, index, icon_id, icon_only=True)
-            for index, icon_id in enumerate(icon_ids)
-        ),
+def _left_side_actionbar_spec() -> actionrail.StackSpec:
+    return _quick_create_actionbar_spec(
+        spec_id="readme_left_actionbar",
+        anchor="viewport.left.center",
+        orientation="vertical",
+        offset=(8, -18),
+        icon_ids=SHOWCASE_ICON_IDS[24:30],
+        key_labels=("Q", "W", "E", "R", "T", "Y"),
     )
 
 
-def _left_label_column_spec() -> actionrail.StackSpec:
-    spec_id = "readme_left_label_column"
-    labels = tuple("ABCDEFGHI")
-    return actionrail.StackSpec(
-        id=spec_id,
-        layout=actionrail.RailLayout(
-            anchor="viewport.left.center",
-            orientation="vertical",
-            offset=(6, -62),
-            opacity=0.94,
-        ),
-        items=tuple(
-            _action_item(spec_id, index, "", label_override=label)
-            for index, label in enumerate(labels)
-        ),
-    )
-
-
-def _right_number_column_spec() -> actionrail.StackSpec:
-    spec_id = "readme_right_number_column"
-    icon_ids = SHOWCASE_ICON_IDS[20:27]
-    return actionrail.StackSpec(
-        id=spec_id,
-        layout=actionrail.RailLayout(
-            anchor="viewport.right.center",
-            orientation="vertical",
-            offset=(-8, -42),
-            opacity=0.94,
-        ),
-        items=tuple(
-            _action_item(
-                spec_id,
-                index,
-                icon_id,
-                key_label=str(index + 1),
-                icon_only=True,
-                active=index == 1,
-            )
-            for index, icon_id in enumerate(icon_ids)
-        ),
+def _right_side_actionbar_spec() -> actionrail.StackSpec:
+    return _quick_create_actionbar_spec(
+        spec_id="readme_right_actionbar",
+        anchor="viewport.right.center",
+        orientation="vertical",
+        offset=(-8, -18),
+        icon_ids=SHOWCASE_ICON_IDS[30:36],
+        key_labels=("A", "S", "D", "F", "G", "H"),
     )
 
 
 def _show_bars(panel: str) -> tuple[object, ...]:
     specs = (
-        _number_bar_spec(),
-        _icon_strip_spec(),
-        _left_label_column_spec(),
-        _right_number_column_spec(),
+        _main_actionbar_spec(),
+        _secondary_actionbar_spec(),
+        _left_side_actionbar_spec(),
+        _right_side_actionbar_spec(),
     )
     _assert_unique_icons(specs)
     hosts = (
@@ -636,6 +644,17 @@ def main() -> None:
     cmds.select(hero_object, replace=True)
     cmds.setToolTo("RotateSuperContext")
 
+    if __args__.get("show_only"):
+        hosts = _show_bars(panel)
+        result = {
+            "mode": "show_only",
+            "panel": panel,
+            "selected": hero_object,
+            "overlay_ids": [host.spec.id for host in hosts],
+        }
+        print(json.dumps(result, sort_keys=True))
+        return
+
     hosts = _show_bars(panel)
     try:
         captures = [
@@ -649,7 +668,7 @@ def main() -> None:
         edit_capture = _save_edit_mode_composite(
             ASSET_DIR / "actionrail_readme_edit_mode.png",
             panel=panel,
-            selected_preset_id="readme_number_actionbar",
+            selected_preset_id="readme_main_actionbar",
             blast_name="actionrail_readme_edit_mode_base.png",
         )
         captures.append(edit_capture)

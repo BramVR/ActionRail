@@ -25,7 +25,11 @@ popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
 The latest Edit Mode panel polish turns the selected rail state into a
 clickable Lock/Unlock action and makes the compact panel draggable so it can be
-moved away from rails underneath it. The latest Normal Mode slot-edit fix lets
+moved away from rails underneath it. The latest Edit Mode color polish follows
+the local ElvUI mover reference by replacing the bright blue grid with black
+grid lines and using ActionRail's green accent for selected frames, selected
+labels, Sticky Frames guides, and panel check controls. The latest Normal Mode
+slot-edit fix lets
 Shift-drag transfer or swap payloads between different unlocked rails without
 clearing the source when the target rail is locked. The newest follow-up keeps
 that cross-rail drop path stable after rail rebuilds by resolving stale Qt
@@ -343,6 +347,17 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest focused Edit Mode color validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py`
+  -> 38 passed.
+- Latest focused Edit Mode color Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\edit_mode.py tests\\test_edit_mode.py`
+  -> all checks passed.
+- Latest Edit Mode Maya smoke after color polish:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_edit_mode_smoke.py -Timeout 300`
+  -> passed; refreshed
+  `.gg-maya-sessiond/screenshots/actionrail_edit_mode_layout_map.png` with
+  green selected-frame/panel accents and black grid lines.
 - Latest focused slot-layering validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_widgets.py tests\\test_theme.py`
   -> 57 passed.
@@ -411,8 +426,10 @@ $env:PYTHONPATH = "scripts"
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_readme_screenshots.py -Timeout 300`
   -> passed; refreshed
   `docs/assets/actionrail_readme_maya_icons_showcase.png` and
-  `docs/assets/actionrail_readme_edit_mode.png` from the same Maya example
-  scene using 2x widget capture and SVG-backed Maya resources where available.
+  `docs/assets/actionrail_readme_edit_mode.png` from a Quick Create draft-built
+  showcase layout with two close horizontal icon bars plus left/right icon
+  bars, using 2x widget capture, SVG-backed Maya resources where available,
+  and Maya's current viewport background rather than a forced screenshot color.
 - Full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
   -> 501 passed.

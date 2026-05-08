@@ -153,10 +153,11 @@ $env:PYTHONPATH = "scripts"
 6. `docs/03_maya_sessiond_workflow.md`
 7. `docs/05_tech_stack.md`
 8. `docs/06_wow_style_customization.md` when planning Edit Mode, hotkeys, flyouts, rings, or profile layers.
-9. `docs/07_missing_features_research.md` when planning missing features or prioritizing the next roadmap slice.
-10. `docs/08_edit_mode.md` when using, documenting, or extending the current Edit Mode shell.
-11. `docs/history/verification_log.md` only when auditing older verification runs.
-12. `docs/01_architecture.md` and `docs/05_tech_stack.md` when deeper runtime or stack context is needed.
+9. `docs/09_elvui_source_map.md` when using the local ElvUI source in `research/` as a structure reference.
+10. `docs/07_missing_features_research.md` when planning missing features or prioritizing the next roadmap slice.
+11. `docs/08_edit_mode.md` when using, documenting, or extending the current Edit Mode shell.
+12. `docs/history/verification_log.md` only when auditing older verification runs.
+13. `docs/01_architecture.md` and `docs/05_tech_stack.md` when deeper runtime or stack context is needed.
 
 ## Product Decision
 

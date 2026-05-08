@@ -27,6 +27,11 @@ EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
 EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
 POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
 EMPTY_SLOT_LABEL = "New"
+EDIT_MODE_ACCENT_COLOR = DEFAULT_THEME.button_active_border
+EDIT_MODE_GRID_MINOR_RGB = (0, 0, 0)
+EDIT_MODE_GRID_MAJOR_RGB = (0, 0, 0)
+EDIT_MODE_GRID_MINOR_ALPHA = 70
+EDIT_MODE_GRID_MAJOR_ALPHA = 125
 
 __all__ = [
     "DEFAULT_GRID_SIZE",
@@ -1217,8 +1222,8 @@ def _paint_guides(  # pragma: no cover - covered by Maya smoke screenshots.
     frames: tuple[RailFrameInfo, ...],
     settings: EditModeSettings,
 ) -> None:
-    selected_pen = qt.QtGui.QPen(qt.QtGui.QColor(112, 226, 255, 100), 1)
-    sticky_pen = qt.QtGui.QPen(qt.QtGui.QColor(255, 211, 0, 185), 2)
+    selected_pen = qt.QtGui.QPen(qt.QtGui.QColor(140, 207, 63, 115), 1)
+    sticky_pen = qt.QtGui.QPen(qt.QtGui.QColor(140, 207, 63, 205), 2)
     for segment in _guide_segments(frame, frames, settings, rect.width(), rect.height()):
         painter.setPen(sticky_pen if segment.kind == "sticky" else selected_pen)
         painter.drawLine(segment.x1, segment.y1, segment.x2, segment.y2)
@@ -1285,8 +1290,8 @@ def _paint_grid(  # pragma: no cover - covered by Maya smoke screenshots.
     rect: Any,
     grid_size: int,
 ) -> None:
-    minor = qt.QtGui.QColor(20, 80, 110, 105)
-    major = qt.QtGui.QColor(42, 167, 227, 145)
+    minor = qt.QtGui.QColor(*EDIT_MODE_GRID_MINOR_RGB, EDIT_MODE_GRID_MINOR_ALPHA)
+    major = qt.QtGui.QColor(*EDIT_MODE_GRID_MAJOR_RGB, EDIT_MODE_GRID_MAJOR_ALPHA)
     grid_size = max(MIN_GRID_SIZE, int(grid_size))
     painter.setPen(qt.QtGui.QPen(minor, 1))
     for x_pos in range(0, rect.width() + grid_size, grid_size):
@@ -1307,10 +1312,15 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     painter.fillRect(rect, qt.QtGui.QColor(2, 8, 12, 235))
     outline = qt.QtGui.QColor(0, 176, 255, 235)
     if selected:
-        outline = qt.QtGui.QColor(255, 211, 0, 255)
+        outline = _qt_color_from_hex(qt, EDIT_MODE_ACCENT_COLOR)
     painter.setPen(qt.QtGui.QPen(outline, 2 if selected else 1))
     painter.drawRect(rect.adjusted(0, 0, -1, -1))
-    painter.setPen(qt.QtGui.QColor(0, 184, 255, 255))
+    label_color = (
+        _qt_color_from_hex(qt, EDIT_MODE_ACCENT_COLOR)
+        if selected
+        else qt.QtGui.QColor(0, 184, 255, 255)
+    )
+    painter.setPen(label_color)
     font = painter.font()
     font.setBold(True)
     font.setPointSize(_frame_label_font_size(frame))
@@ -1321,6 +1331,21 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     elif frame.collapse_enabled:
         label = f"{label}\n{'Collapsed' if frame.collapsed else 'Expanded'}"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
+
+
+def _qt_color_from_hex(qt: Any, color: str, alpha: int = 255) -> Any:
+    color = color.strip()
+    if len(color) == 7 and color.startswith("#"):
+        try:
+            return qt.QtGui.QColor(
+                int(color[1:3], 16),
+                int(color[3:5], 16),
+                int(color[5:7], 16),
+                alpha,
+            )
+        except ValueError:
+            pass
+    return qt.QtGui.QColor(140, 207, 63, alpha)
 
 
 def _frame_label_font_size(frame: RailFrameInfo) -> int:
@@ -1388,7 +1413,7 @@ def _panel_style_sheet() -> str:
         background: transparent;
     }}
     QCheckBox {{
-        color: {theme.warning};
+        color: {theme.accent_line};
         border: 0;
         background: transparent;
     }}
