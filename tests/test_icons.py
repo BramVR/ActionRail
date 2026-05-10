@@ -126,6 +126,25 @@ def test_icon_status_verifies_existing_maya_resource_with_cmds() -> None:
     assert status.qt_name == "setKeyframe.png"
 
 
+def test_maya_resource_verification_is_cached_per_cmds_instance() -> None:
+    class ResourceCmds:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def resourceManager(self, *, nameFilter: str):  # noqa: N802
+            self.calls += 1
+            return [nameFilter]
+
+    cmds = ResourceCmds()
+    other_cmds = ResourceCmds()
+
+    assert icons._maya_resource_exists("move_M.png", cmds) is True
+    assert icons._maya_resource_exists("move_M.png", cmds) is True
+    assert icons._maya_resource_exists("move_M.png", other_cmds) is True
+    assert cmds.calls == 1
+    assert other_cmds.calls == 1
+
+
 def test_icon_status_reports_unknown_icon() -> None:
     status = icon_status("missing.icon")
 

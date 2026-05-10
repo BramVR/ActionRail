@@ -470,8 +470,8 @@ Research hints:
 
 #### 2.7 Dense Overlay Performance Foundation
 
-Status: implemented; focused local validation added, with Maya smoke coverage in
-`actionrail_dense_overlay_smoke.py`.
+Status: implemented and hardened; focused local validation added, with Maya
+smoke coverage in `actionrail_dense_overlay_smoke.py`.
 
 ActionRail must be fast with WoW-style dense action-bar layouts, not only the
 small transform-stack proof preset. The README live showcase exposed the
@@ -497,7 +497,8 @@ layers, marking-menu export, or Viewport 2.0.
 - Prototype a dense action-bar canvas path: one custom-painted Qt widget per
   action bar, cached slot rects, cached icon pixmaps/text metrics, manual
   hit-testing, and no per-slot `QPushButton` objects for dense bars. First pass
-  done for large locked bars.
+  done for large locked bars; dense paint now reuses per-widget icon and pixmap
+  objects instead of recreating them during each paint pass.
 - Add Maya navigation pass-through rules so viewport navigation gestures remain
   responsive with UI on top: Alt/middle/right/wheel viewport gestures should
   reach Maya unless ActionRail is in a mode that intentionally captures them.
@@ -505,6 +506,11 @@ layers, marking-menu export, or Viewport 2.0.
 - Avoid full widget rebuilds for active/enabled/key-label changes. Update
   cached slot render state and repaint dirty rects instead. First pass done for
   dense bars.
+- Avoid redundant Maya/icon work on refresh. Maya icon resource checks are now
+  cached per `cmds` session object, each slot resolves icon diagnostics and
+  render data from one lookup, static/non-state predicates do not start a
+  scheduler, and the shared scheduler samples only the Maya state fields needed
+  by active predicate dependencies.
 - Add a dense-layout performance smoke/probe that exercises at least 100 visible
   slots across multiple bars, records refresh timing, verifies viewport
   navigation gestures are not captured outside intended slot clicks, and
@@ -635,21 +641,21 @@ Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and
 template-to-slot-edit handoffs, and slot editing that can later connect to
-Action Book and Bind Mode. The next build/fix target is runtime performance for
-dense UI: shared Maya state, cached predicates, a custom-painted dense bar
-prototype, dirty-slot repainting, and viewport navigation pass-through. Keep
-`docs/06_wow_style_customization.md` in mind, but do not implement Bind Mode,
-Macro Book UI, flyouts, command rings, profile layers, marking-menu export, or
-Viewport 2.0 yet.
+Action Book and Bind Mode. The current build/fix target is keeping the runtime
+performance foundation stable: shared Maya state, cached predicates, a
+custom-painted dense bar prototype, dirty-slot repainting, cached
+icon/resource lookups, dependency-aware state sampling, and viewport navigation
+pass-through. Keep `docs/06_wow_style_customization.md` in mind, but do not
+implement Bind Mode, Macro Book UI, flyouts, command rings, profile layers,
+marking-menu export, or Viewport 2.0 yet.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Finish any required Phase 2 step 2.6 authoring polish, then build Phase 2
-   step 2.7 dense overlay performance foundation so large action-bar layouts
-   stay fast over Maya navigation.
+1. Keep Phase 2 step 2.7 dense overlay performance foundation stable so large
+   action-bar layouts stay fast over Maya navigation.
 2. Add the Action Book and Bind Mode.
 3. Add the Macro Book for user script actions with icons.
 4. Add flyouts, then command rings.

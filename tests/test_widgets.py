@@ -3,6 +3,7 @@ from __future__ import annotations
 import actionrail.slot_state as slot_state
 import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
+from actionrail.icon_types import IconStatus
 from actionrail.predicates import PredicateContext
 from actionrail.qt import QtBinding
 from actionrail.spec import (
@@ -1866,6 +1867,33 @@ def test_slot_render_state_resolves_maya_icon_name() -> None:
     assert state.text == "M"
 
 
+def test_slot_render_state_resolves_each_icon_once(monkeypatch) -> None:
+    calls = []
+
+    def fake_icon_status(icon_id: str, *, cmds_module: object | None = None) -> IconStatus:
+        calls.append((icon_id, cmds_module))
+        return IconStatus(icon_id, qt_name="move_M.png", provider="maya")
+
+    monkeypatch.setattr(slot_state, "icon_status", fake_icon_status)
+    item = StackItem(
+        type="button",
+        id="icon.once",
+        label="M",
+        action="maya.tool.move",
+        icon="maya.move",
+    )
+    cmds = object()
+
+    state = resolve_slot_render_state(
+        item,
+        create_default_registry(BuildCmds()),
+        PredicateContext(cmds_module=cmds),
+    )
+
+    assert state.icon_name == "move_M.png"
+    assert calls == [("maya.move", cmds)]
+
+
 def test_build_transform_stack_validates_maya_icon_resource(monkeypatch) -> None:
     monkeypatch.setattr(widgets, "load", build_qt_binding)
     cmds = MissingMayaIconResourceCmds()
@@ -2352,6 +2380,134 @@ def test_dense_action_bar_uses_single_canvas_and_dirty_slot_refresh(monkeypatch)
     assert root.updates
     assert widgets.set_slot_key_label(root, "dense.0", "F12") == 1
     assert root._actionrail_slots["dense.0"].state.key_label == "F12"
+
+
+def test_dense_slot_paint_reuses_icon_and_pixmap_caches() -> None:
+    events = []
+
+    class Size:
+        def __init__(self, width: int, height: int) -> None:
+            self._width = width
+            self._height = height
+
+        def width(self) -> int:
+            return self._width
+
+        def height(self) -> int:
+            return self._height
+
+    class Rect:
+        def __init__(self, width: int = 32, height: int = 32) -> None:
+            self._width = width
+            self._height = height
+
+        def adjusted(self, left: int, top: int, right: int, bottom: int) -> Rect:
+            return Rect(self._width - left + right, self._height - top + bottom)
+
+        def size(self) -> Size:
+            return Size(self._width, self._height)
+
+    class Pixmap:
+        pass
+
+    class Icon:
+        def __init__(self, source: str) -> None:
+            self.source = source
+            events.append(("icon", source))
+
+        def pixmap(self, size: Size) -> Pixmap:
+            events.append(("pixmap", self.source, size.width(), size.height()))
+            return Pixmap()
+
+    class Pen:
+        def __init__(self, color: str) -> None:
+            self.color = color
+
+        def setWidth(self, width: int) -> None:  # noqa: N802
+            self.width = width
+
+    class Font:
+        def pointSize(self) -> int:  # noqa: N802
+            return 10
+
+        def setPointSize(self, _size: int) -> None:  # noqa: N802
+            return None
+
+    class Painter:
+        def fillRect(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+        def setPen(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+        def setBrush(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+        def drawRect(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+        def drawPixmap(self, *_args: object) -> None:  # noqa: N802
+            events.append(("draw",))
+
+        def font(self) -> Font:
+            return Font()
+
+        def setFont(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+        def drawText(self, *_args: object) -> None:  # noqa: N802
+            return None
+
+    class PaintQt:
+        class QtCore:
+            class Qt:
+                AlignCenter = 1
+                AlignRight = 2
+                AlignBottom = 4
+                NoBrush = 8
+
+        class QtGui:
+            QIcon = Icon
+            QPen = Pen
+
+    slot = widgets._DenseSlot(
+        item=StackItem(type="button", id="dense.icon", label="M", action="maya.tool.move"),
+        state=SlotRenderState(
+            label="M",
+            key_label="1",
+            icon="maya.move",
+            icon_path="",
+            icon_name="move_M.png",
+            tone="neutral",
+            tooltip="",
+            enabled=True,
+            active=False,
+        ),
+        rect=Rect(),
+    )
+    icon_cache: dict[str, object] = {}
+    pixmap_cache: dict[tuple[str, int, int, float], object] = {}
+
+    widgets._paint_dense_slot(
+        PaintQt,
+        Painter(),
+        slot,
+        widgets.DEFAULT_THEME,
+        icon_cache=icon_cache,
+        pixmap_cache=pixmap_cache,
+    )
+    widgets._paint_dense_slot(
+        PaintQt,
+        Painter(),
+        slot,
+        widgets.DEFAULT_THEME,
+        icon_cache=icon_cache,
+        pixmap_cache=pixmap_cache,
+    )
+
+    assert events.count(("icon", ":/move_M.png")) == 1
+    assert events.count(("pixmap", ":/move_M.png", 26, 26)) == 1
+    assert events.count(("draw",)) == 2
 
 
 def test_viewport_navigation_events_pass_through_to_maya() -> None:

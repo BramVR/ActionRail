@@ -18,7 +18,7 @@ from .actions import ActionRegistry, create_default_registry
 from .predicates import predicate_dependencies
 from .qt import load
 from .spec import StackSpec
-from .state import MayaStateService, snapshot
+from .state import STATE_DEPENDENCIES, MayaStateService, snapshot
 from .widgets import (
     PredicateRefreshResult,
     SlotEditCallbacks,
@@ -302,8 +302,17 @@ class PredicateRefreshScheduler:
             self.stop()
             return
 
+        dependencies = frozenset().union(
+            *(
+                getattr(host, "_predicate_dependencies", frozenset())
+                for host in live_hosts
+            )
+        )
+        state_dependencies = dependencies.intersection(STATE_DEPENDENCIES)
+        if not state_dependencies:
+            return
         panels = tuple({host.panel for host in live_hosts if getattr(host, "panel", "")})
-        self.service.refresh(active_panels=panels)
+        self.service.refresh(active_panels=panels, dependencies=state_dependencies)
         changed = self.service.changed_dependencies
         if not changed:
             return
@@ -841,6 +850,13 @@ class ViewportOverlayHost:
         if self.predicate_refresh_interval_ms <= 0 or self._predicate_refresh_timer is not None:
             return
         if not _spec_uses_predicates(self.spec):
+            return
+        dependencies = getattr(
+            self,
+            "_predicate_dependencies",
+            _spec_predicate_dependencies(self.spec),
+        )
+        if not dependencies.intersection(STATE_DEPENDENCIES):
             return
         if not hasattr(self, "cmds"):
             return

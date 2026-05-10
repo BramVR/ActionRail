@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from pathlib import Path
+from weakref import WeakKeyDictionary
 
 from . import icon_manifest, icon_paths
 from .icon_types import IconDescriptor, IconManifestIssue, IconStatus
@@ -272,6 +273,8 @@ MAYA_ICON_DESCRIPTORS: tuple[IconDescriptor, ...] = (
     ),
 )
 MAYA_ICON_BY_ID = {descriptor.id: descriptor for descriptor in MAYA_ICON_DESCRIPTORS}
+_MAYA_RESOURCE_EXISTS_CACHE: WeakKeyDictionary[object, dict[str, bool]] = WeakKeyDictionary()
+_MAYA_RESOURCE_EXISTS_ID_CACHE: dict[int, dict[str, bool]] = {}
 
 
 def resolve_icon_path(icon_id: str) -> Path | None:
@@ -367,15 +370,35 @@ def maya_icon_status(icon_id: str, *, cmds_module: object | None) -> IconStatus 
 
 
 def maya_resource_exists(resource_name: str, cmds_module: object) -> bool:
+    cache = _maya_resource_cache(cmds_module)
+    if resource_name in cache:
+        return cache[resource_name]
+
     resource_manager = getattr(cmds_module, "resourceManager", None)
     if not callable(resource_manager):
+        cache[resource_name] = False
         return False
 
     try:
         resources = resource_manager(nameFilter=resource_name) or ()
     except Exception:
+        cache[resource_name] = False
         return False
-    return resource_name in set(string_values(resources))
+    exists = resource_name in set(string_values(resources))
+    cache[resource_name] = exists
+    return exists
+
+
+def _maya_resource_cache(cmds_module: object) -> dict[str, bool]:
+    try:
+        cache = _MAYA_RESOURCE_EXISTS_CACHE.get(cmds_module)
+    except TypeError:
+        cache = _MAYA_RESOURCE_EXISTS_ID_CACHE.setdefault(id(cmds_module), {})
+    else:
+        if cache is None:
+            cache = {}
+            _MAYA_RESOURCE_EXISTS_CACHE[cmds_module] = cache
+    return cache
 
 
 def string_values(values: Iterable[object]) -> tuple[str, ...]:

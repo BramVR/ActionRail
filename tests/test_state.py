@@ -5,7 +5,7 @@ from types import ModuleType
 
 import pytest
 
-from actionrail.state import current_tool, selection_count, snapshot
+from actionrail.state import MayaStateService, current_tool, selection_count, snapshot
 
 
 class FakeCmds:
@@ -120,3 +120,52 @@ def test_state_snapshot_ignores_non_string_panel_and_camera() -> None:
     assert state.active_camera == ""
     assert state.playback_playing is True
     assert unfocused_state.active_panel == ""
+
+
+def test_state_service_reads_only_requested_dependencies() -> None:
+    class CountingCmds(FakeCmds):
+        def __init__(self) -> None:
+            super().__init__()
+            self.current_ctx_calls = 0
+            self.selection_calls = 0
+            self.panel_calls = 0
+            self.camera_calls = 0
+            self.play_calls = 0
+
+        def currentCtx(self) -> str:  # noqa: N802
+            self.current_ctx_calls += 1
+            return "moveSuperContext"
+
+        def ls(self, selection: bool = False) -> list[str]:
+            self.selection_calls += 1
+            return super().ls(selection=selection)
+
+        def getPanel(self, **kwargs: object) -> object:  # noqa: N802
+            self.panel_calls += 1
+            return super().getPanel(**kwargs)
+
+        def modelPanel(self, panel: str, **kwargs: object) -> str:  # noqa: N802
+            self.camera_calls += 1
+            return super().modelPanel(panel, **kwargs)
+
+        def play(self, **kwargs: object) -> bool:
+            self.play_calls += 1
+            return super().play(**kwargs)
+
+    cmds = CountingCmds()
+    service = MayaStateService(cmds)
+
+    state = service.refresh(
+        active_panels=("modelPanel4",),
+        dependencies=frozenset({"maya.tool"}),
+    )
+
+    assert state.current_tool == "moveSuperContext"
+    assert state.selection_count == 0
+    assert state.active_panel == ""
+    assert state.active_camera == ""
+    assert cmds.current_ctx_calls == 1
+    assert cmds.selection_calls == 0
+    assert cmds.panel_calls == 0
+    assert cmds.camera_calls == 0
+    assert cmds.play_calls == 0

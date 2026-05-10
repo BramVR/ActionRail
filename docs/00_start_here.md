@@ -135,9 +135,10 @@ Snapshot:
   offsets plus unlocked built-in and studio user override presets. The 2.7
   performance step now has shared Maya state, a single predicate scheduler,
   cached predicate dependencies, a custom-painted dense action-bar prototype,
-  dirty-slot repainting, and viewport navigation pass-through before later
-  modes. Do not start Bind Mode, flyouts, command rings, profile layers,
-  marking-menu export, or Viewport 2.0 yet.
+  dirty-slot repainting, viewport navigation pass-through, cached Maya icon
+  resource checks, dense icon/pixmap reuse, and dependency-aware Maya state
+  sampling before later modes. Do not start Bind Mode, flyouts, command rings,
+  profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -198,7 +199,8 @@ later authoring modes:
    optional Save + Publish paths.
 3. Keep Phase 2 step 2.7 stable: shared Maya state, one refresh scheduler,
    cached predicates, a custom-painted dense action-bar prototype, dirty-slot
-   repainting, and pass-through rules for Maya tumble/pan/zoom gestures.
+   repainting, cached icon/resource lookups, dependency-aware state sampling,
+   and pass-through rules for Maya tumble/pan/zoom gestures.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
 5. Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile

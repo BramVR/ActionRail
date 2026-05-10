@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-08
+Last updated: 2026-05-10
 
 ## Current Snapshot
 
@@ -24,7 +24,9 @@ step 2.7 dense overlay performance foundation is implemented: shared Maya
 state, one predicate refresh scheduler, cached predicate dependencies, a
 custom-painted dense action bar path, dirty-slot repainting for simple state
 changes, and viewport navigation pass-through so large WoW-style layouts stay
-usable over Maya. The
+usable over Maya. The latest performance hardening removes repeated per-slot
+Maya icon resource checks, reuses dense icon/pixmap objects during paint, and
+samples only predicate-needed Maya state on refresh ticks. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -365,20 +367,27 @@ $env:PYTHONPATH = "scripts"
 
 - Latest Phase 2 step 2.7 dense overlay validation:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 515 passed.
+  -> 519 passed.
 - Latest Phase 2 step 2.7 Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
+- Latest performance hardening checks:
+  focused local coverage verifies per-slot icon status resolves once, Maya icon
+  resource checks cache per `cmds` session object, dense paint reuses icon and
+  pixmap caches, and `MayaStateService.refresh(..., dependencies={"maya.tool"})`
+  does not touch selection, panel, camera, or playback APIs. The dense Maya
+  smoke now also records scheduler and per-host refresh timing.
 - Latest dense overlay Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -Script actionrail_dense_overlay_smoke.py -Timeout 300`
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_dense_overlay_smoke.py -Timeout 300`
   -> passed; verified 120 visible dense slots across two custom-painted dense
   canvas bars, no per-slot dense `QPushButton` objects, a 20-button widget
   baseline on the legacy path, one shared predicate scheduler, dirty refresh
   without rebuilds, pass-through for wheel/Alt/middle while plain left clicks
-  stay with ActionRail, and screenshot capture at
+  stay with ActionRail, scheduler refresh timing around `0.083 ms`,
+  per-host dense refresh timing around `1.4-1.9 ms`, and screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_dense_overlay.png`.
 - Latest full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
+  `.\\scripts\\maya-smoke.ps1 -NoStart -Script all -Timeout 300`
   -> passed against the running MayaSessiond state on port `7217`; includes the
   new dense overlay probe plus the existing Action Book, capture, custom
   preset-store, diagnostics, Edit Mode, hidden visibility, horizontal and Maya

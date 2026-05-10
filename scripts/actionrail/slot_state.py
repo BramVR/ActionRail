@@ -97,8 +97,8 @@ def resolve_slot_render_state(
     """Resolve the public render-state contract for one action slot."""
 
     item_context = _item_context(item, registry, context)
-    diagnostic = _slot_diagnostic(item, registry, item_context)
     icon = _icon_status(item.icon, item_context) if item.icon else None
+    diagnostic = _slot_diagnostic(item, registry, item_context, icon_status=icon)
     locked = not bool(item.action)
     return SlotRenderState(
         label=item.label,
@@ -140,6 +140,8 @@ def _slot_diagnostic(
     item: StackItem,
     registry: ActionRegistry | None = None,
     context: PredicateContext | None = None,
+    *,
+    icon_status: IconStatus | None = None,
 ) -> _SlotDiagnostic:
     get_action = getattr(registry, "get", None)
     if item.action and get_action is not None:
@@ -158,7 +160,7 @@ def _slot_diagnostic(
         return availability_diagnostic
 
     if item.icon:
-        return _icon_diagnostic(item.icon, context)
+        return _icon_diagnostic(item.icon, context, icon_status=icon_status)
 
     return _NO_SLOT_DIAGNOSTIC
 
@@ -166,8 +168,10 @@ def _slot_diagnostic(
 def _icon_diagnostic(
     icon_id: str,
     context: PredicateContext | None = None,
+    *,
+    icon_status: IconStatus | None = None,
 ) -> _SlotDiagnostic:
-    status = _icon_status(icon_id, context)
+    status = icon_status or _icon_status(icon_id, context)
     if status.ok:
         return _NO_SLOT_DIAGNOSTIC
     if status.issue is not None:

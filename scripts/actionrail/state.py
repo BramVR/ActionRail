@@ -35,22 +35,56 @@ class MayaStateService:
         self.changed_dependencies: frozenset[str] = STATE_DEPENDENCIES
         self._camera_by_panel: dict[str, str] = {}
 
-    def refresh(self, *, active_panels: tuple[str, ...] = ()) -> MayaStateSnapshot:
+    def refresh(
+        self,
+        *,
+        active_panels: tuple[str, ...] = (),
+        dependencies: frozenset[str] | None = None,
+    ) -> MayaStateSnapshot:
         """Read Maya state once and cache per-panel camera lookups."""
 
-        panel = _active_panel(self.cmds)
+        dependencies = STATE_DEPENDENCIES if dependencies is None else dependencies
         previous = self.snapshot
-        cameras = {
-            panel_id: _active_camera(self.cmds, panel_id)
-            for panel_id in dict.fromkeys((panel, *active_panels))
-            if panel_id
-        }
+        panel = (
+            _active_panel(self.cmds)
+            if dependencies.intersection({"active.panel", "active.camera"})
+            else previous.active_panel
+            if previous is not None
+            else ""
+        )
+        cameras = (
+            {
+                panel_id: _active_camera(self.cmds, panel_id)
+                for panel_id in dict.fromkeys((panel, *active_panels))
+                if panel_id
+            }
+            if "active.camera" in dependencies
+            else dict(self._camera_by_panel)
+        )
         base = MayaStateSnapshot(
-            current_tool=current_tool(self.cmds),
-            selection_count=selection_count(self.cmds),
+            current_tool=(
+                current_tool(self.cmds)
+                if "maya.tool" in dependencies
+                else previous.current_tool
+                if previous is not None
+                else ""
+            ),
+            selection_count=(
+                selection_count(self.cmds)
+                if "selection.count" in dependencies
+                else previous.selection_count
+                if previous is not None
+                else 0
+            ),
             active_panel=panel,
             active_camera=cameras.get(panel, ""),
-            playback_playing=_playback_playing(self.cmds),
+            playback_playing=(
+                _playback_playing(self.cmds)
+                if "playback.playing" in dependencies
+                else previous.playback_playing
+                if previous is not None
+                else False
+            ),
         )
         self.snapshot = base
         self._camera_by_panel = cameras

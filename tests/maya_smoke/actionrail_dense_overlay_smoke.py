@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 __args__ = globals().get("__args__", {})
@@ -117,10 +118,15 @@ if len(overlay._PREDICATE_REFRESH_SCHEDULERS) != 1:
         f"{len(overlay._PREDICATE_REFRESH_SCHEDULERS)}."
     )
 
+refresh_started = time.perf_counter()
 scheduler = next(iter(overlay._PREDICATE_REFRESH_SCHEDULERS.values()))
 scheduler.refresh()
+dense_scheduler_refresh_ms = (time.perf_counter() - refresh_started) * 1000.0
+dense_host_refresh_ms = {}
 for host in dense_hosts:
+    refresh_started = time.perf_counter()
     result = host.refresh_state()
+    dense_host_refresh_ms[host.spec.id] = (time.perf_counter() - refresh_started) * 1000.0
     if result.needs_rebuild:
         raise AssertionError(f"{host.spec.id} requested a dense refresh rebuild.")
 
@@ -178,7 +184,9 @@ report = {
     "dense_canvas_count": len(dense_hosts),
     "baseline_button_count": len(baseline_buttons),
     "dense_threshold": DENSE_ACTION_BAR_MIN_SLOTS,
+    "host_refresh_ms": dense_host_refresh_ms,
     "scheduler_count": len(overlay._PREDICATE_REFRESH_SCHEDULERS),
+    "scheduler_refresh_ms": dense_scheduler_refresh_ms,
     "pass_through": pass_through_checks,
     "screenshot": str(output_path),
 }

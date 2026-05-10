@@ -421,6 +421,8 @@ def _build_dense_action_bar(
             self._actionrail_theme = theme
             self._actionrail_slots: dict[str, _DenseSlot] = {}
             self._actionrail_visible_slot_ids: tuple[str, ...] = ()
+            self._actionrail_icon_cache: dict[str, object] = {}
+            self._actionrail_pixmap_cache: dict[tuple[str, int, int, float], object] = {}
             self._actionrail_refresh_dense(context)
 
         def _actionrail_refresh_dense(
@@ -484,7 +486,14 @@ def _build_dense_action_bar(
             try:
                 _paint_dense_backing(qt, painter, self.rect(), theme)
                 for slot in self._actionrail_slots.values():
-                    _paint_dense_slot(qt, painter, slot, theme)
+                    _paint_dense_slot(
+                        qt,
+                        painter,
+                        slot,
+                        theme,
+                        icon_cache=self._actionrail_icon_cache,
+                        pixmap_cache=self._actionrail_pixmap_cache,
+                    )
             finally:
                 painter.end()
 
@@ -612,6 +621,9 @@ def _paint_dense_slot(
     painter: object,
     slot: _DenseSlot,
     theme: ActionRailTheme,
+    *,
+    icon_cache: dict[str, object] | None = None,
+    pixmap_cache: dict[tuple[str, int, int, float], object] | None = None,
 ) -> None:
     state = slot.state
     rect = slot.rect
@@ -627,9 +639,16 @@ def _paint_dense_slot(
 
     icon_source = _qt_icon_source(state.icon_path, state.icon_name)
     if icon_source:
-        icon = qt.QtGui.QIcon(icon_source)
+        icon = _cached_icon(qt, icon_source, icon_cache)
         target = _adjusted_rect(rect, 3, 3, -3, -3)
-        pixmap = _icon_pixmap_for_painter(qt, painter, icon, target)
+        pixmap = _cached_icon_pixmap_for_painter(
+            qt,
+            painter,
+            icon,
+            target,
+            icon_source,
+            pixmap_cache,
+        )
         if pixmap:
             painter.drawPixmap(target, pixmap)
     elif state.label:
@@ -648,6 +667,52 @@ def _paint_dense_slot(
             qt.QtCore.Qt.AlignRight | qt.QtCore.Qt.AlignBottom,
             secondary,
         )
+
+
+def _cached_icon(
+    qt: object,
+    icon_source: str,
+    icon_cache: dict[str, object] | None,
+) -> object:
+    if icon_cache is None:
+        return qt.QtGui.QIcon(icon_source)
+    icon = icon_cache.get(icon_source)
+    if icon is None:
+        icon = qt.QtGui.QIcon(icon_source)
+        icon_cache[icon_source] = icon
+    return icon
+
+
+def _cached_icon_pixmap_for_painter(
+    qt: object,
+    painter: object,
+    icon: object,
+    target: object,
+    icon_source: str,
+    pixmap_cache: dict[tuple[str, int, int, float], object] | None,
+) -> object:
+    if pixmap_cache is None:
+        return _icon_pixmap_for_painter(qt, painter, icon, target)
+    key = _icon_pixmap_cache_key(painter, target, icon_source)
+    pixmap = pixmap_cache.get(key)
+    if pixmap is None:
+        pixmap = _icon_pixmap_for_painter(qt, painter, icon, target)
+        pixmap_cache[key] = pixmap
+    return pixmap
+
+
+def _icon_pixmap_cache_key(
+    painter: object,
+    target: object,
+    icon_source: str,
+) -> tuple[str, int, int, float]:
+    size = target.size()
+    return (
+        icon_source,
+        _qt_size_value(size, "width"),
+        _qt_size_value(size, "height"),
+        round(_painter_device_scale(painter), 3),
+    )
 
 
 def _rect_dimension(rect: object, method_name: str) -> int:

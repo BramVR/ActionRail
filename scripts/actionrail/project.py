@@ -58,7 +58,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/slot_state.py",
-        "owns": "pure slot render-state resolution, predicate/icon diagnostics, visibility",
+        "owns": (
+            "pure slot render-state resolution, predicate/icon diagnostics, "
+            "visibility, and single-pass icon lookup"
+        ),
         "tests": ("tests/test_widgets.py",),
     },
     {
@@ -67,7 +70,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
             "Qt rail/widget construction, custom button and dense action-bar "
             "painting, diagnostic badge display, per-bar appearance rendering, "
             "Normal Mode slot-edit context menus, Shift-drag gestures, dirty-slot "
-            "repainting, and viewport navigation pass-through"
+            "repainting, dense icon/pixmap caching, and viewport navigation pass-through"
         ),
         "tests": (
             "tests/test_widgets.py",
@@ -95,7 +98,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/state.py",
-        "owns": "shared Maya state snapshots for predicate refresh and dense overlay updates",
+        "owns": (
+            "shared dependency-aware Maya state snapshots for predicate refresh "
+            "and dense overlay updates"
+        ),
         "tests": ("tests/test_overlay.py", "tests/maya_smoke/actionrail_dense_overlay_smoke.py"),
     },
     {
@@ -150,7 +156,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/icon_catalog.py",
-        "owns": "provider catalog, picker-facing descriptors, and runtime icon id lookup",
+        "owns": (
+            "provider catalog, picker-facing descriptors, runtime icon id lookup, "
+            "and Maya resource existence caching"
+        ),
         "tests": ("tests/test_icons.py",),
     },
     {
@@ -256,11 +265,13 @@ def about() -> dict[str, object]:
                 "step 2.7 dense overlay performance foundation is implemented "
                 "with shared Maya state, one predicate scheduler, cached "
                 "predicate dependencies, custom-painted dense bars, dirty-slot "
-                "repainting, and viewport navigation pass-through"
+                "repainting, viewport navigation pass-through, cached Maya icon "
+                "resource checks, dense icon/pixmap reuse, and dependency-aware "
+                "state sampling"
             ),
             "next_slice": (
-                "Review and harden the Phase 2 step 2.7 dense overlay foundation "
-                "with Maya smoke evidence before moving to later authoring modes"
+                "Keep the Phase 2 step 2.7 dense overlay foundation stable with "
+                "Maya smoke evidence before moving to later authoring modes"
             ),
             "blockers_doc": "docs/04_status.md#blockers",
         },

@@ -19,9 +19,14 @@
 - Added dirty-slot repainting and key-label refresh for dense bars, plus
   Alt/middle/right/wheel pass-through rules so normal Maya viewport navigation
   gestures are not captured by ActionRail outside intentional slot clicks.
+- Hardened dense overlay refresh and paint hot paths: repeated Maya icon
+  resource checks are cached per session, each slot resolves icon diagnostics
+  and render data from one lookup, dense bars reuse icon/pixmap objects while
+  painting, and the shared predicate scheduler now samples only the Maya state
+  dependencies active predicates actually use.
 - Added `actionrail_dense_overlay_smoke.py`, a 100+ slot Maya probe that
   compares dense bars against the widget path, checks the shared scheduler, and
-  captures a dense overlay screenshot.
+  records refresh timings, and captures a dense overlay screenshot.
 
 ## 2026-05-08
 
