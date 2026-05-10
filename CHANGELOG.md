@@ -19,6 +19,10 @@
 - Added dirty-slot repainting and key-label refresh for dense bars, plus
   Alt/middle/right/wheel pass-through rules so normal Maya viewport navigation
   gestures are not captured by ActionRail outside intentional slot clicks.
+- Fixed Maya mesh selection redraw while ActionRail overlays are visible by
+  installing a shared Maya selection-change callback that defers a current-view
+  refresh after selection changes; kept a `scriptJob` fallback for older
+  callback environments.
 - Hardened dense overlay refresh and paint hot paths: repeated Maya icon
   resource checks are cached per session, each slot resolves icon diagnostics
   and render data from one lookup, dense bars reuse icon/pixmap objects while
@@ -27,6 +31,9 @@
 - Added `actionrail_dense_overlay_smoke.py`, a 100+ slot Maya probe that
   compares dense bars against the widget path, checks the shared scheduler, and
   records refresh timings, and captures a dense overlay screenshot.
+- Added `actionrail_selection_redraw_smoke.py`, a Maya smoke that recreates the
+  overlay-visible selection path and verifies each Maya selection change
+  schedules `cmds.refresh(currentView=True, force=True)`.
 
 ## 2026-05-08
 

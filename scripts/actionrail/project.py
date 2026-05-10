@@ -94,6 +94,7 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
             "tests/test_overlay.py",
             "tests/maya_smoke/actionrail_overlay_cleanup_smoke.py",
             "tests/maya_smoke/actionrail_dense_overlay_smoke.py",
+            "tests/maya_smoke/actionrail_selection_redraw_smoke.py",
         ),
     },
     {

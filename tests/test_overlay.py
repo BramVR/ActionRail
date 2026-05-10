@@ -1767,3 +1767,149 @@ def test_predicate_refresh_scheduler_shares_state_snapshot_across_hosts() -> Non
     assert FakeTimer.instances[-1].stopped is False
     scheduler.unregister(second)
     assert FakeTimer.instances[-1].stopped is True
+
+
+def test_viewport_selection_refresh_scheduler_refreshes_current_view_once() -> None:
+    class FakeTimer:
+        callbacks: list[object] = []
+
+        @staticmethod
+        def singleShot(_delay: int, callback: object) -> None:  # noqa: N802
+            FakeTimer.callbacks.append(callback)
+
+    class FakeQt:
+        class QtCore:
+            QTimer = FakeTimer
+
+    class FakeCmds:
+        def __init__(self) -> None:
+            self.selection_callback = None
+            self.refresh_calls: list[dict[str, object]] = []
+            self.killed: list[tuple[int, bool]] = []
+
+        def scriptJob(self, **kwargs: object) -> int:  # noqa: N802
+            if "kill" in kwargs:
+                self.killed.append((int(kwargs["kill"]), bool(kwargs.get("force"))))
+                return 0
+            event = kwargs["event"]
+            assert event[0] == "SelectionChanged"
+            self.selection_callback = event[1]
+            return 42
+
+        def refresh(self, **kwargs: object) -> None:
+            self.refresh_calls.append(dict(kwargs))
+
+    class Widget:
+        def isVisible(self) -> bool:  # noqa: N802
+            return True
+
+    class Host:
+        def __init__(self) -> None:
+            self.qt = FakeQt
+            self.cmds = cmds
+            self.widget = Widget()
+
+    overlay._VIEWPORT_SELECTION_REFRESH_SCHEDULERS.clear()
+    FakeTimer.callbacks.clear()
+    cmds = FakeCmds()
+    first = Host()
+    second = Host()
+
+    scheduler = overlay.ViewportSelectionRefreshScheduler.for_host(first)
+    scheduler.register(first)
+    scheduler.register(second)
+
+    assert scheduler.job_id == 42
+    assert callable(cmds.selection_callback)
+    cmds.selection_callback()
+    cmds.selection_callback()
+    assert cmds.refresh_calls == []
+    assert len(FakeTimer.callbacks) == 1
+
+    callback = FakeTimer.callbacks.pop()
+    assert callable(callback)
+    callback()
+
+    assert cmds.refresh_calls == [{"currentView": True, "force": True}]
+    scheduler.unregister(first)
+    assert cmds.killed == []
+    scheduler.unregister(second)
+    assert cmds.killed == [(42, True)]
+    assert overlay._VIEWPORT_SELECTION_REFRESH_SCHEDULERS == {}
+
+
+def test_viewport_selection_refresh_scheduler_prefers_maya_callback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeQt:
+        class QtCore:
+            class QTimer:
+                @staticmethod
+                def singleShot(_delay: int, callback: object) -> None:  # noqa: N802
+                    assert callable(callback)
+                    callback()
+
+    class FakeCmds:
+        def __init__(self) -> None:
+            self.script_jobs = 0
+            self.refresh_calls = 0
+
+        def scriptJob(self, **_kwargs: object) -> int:  # noqa: N802
+            self.script_jobs += 1
+            return 7
+
+        def refresh(self, **_kwargs: object) -> None:
+            self.refresh_calls += 1
+
+    class Widget:
+        def isVisible(self) -> bool:  # noqa: N802
+            return True
+
+    callbacks = []
+    removed = []
+
+    def add_callback(callback: object) -> str:
+        callbacks.append(callback)
+        return "maya-callback-id"
+
+    def remove_callback(callback_id: object) -> None:
+        removed.append(callback_id)
+
+    monkeypatch.setattr(overlay, "_add_maya_selection_callback", add_callback)
+    monkeypatch.setattr(overlay, "_remove_maya_callback", remove_callback)
+    overlay._VIEWPORT_SELECTION_REFRESH_SCHEDULERS.clear()
+    cmds = FakeCmds()
+    host = type("Host", (), {"qt": FakeQt, "cmds": cmds, "widget": Widget()})()
+
+    scheduler = overlay.ViewportSelectionRefreshScheduler.for_host(host)
+    scheduler.register(host)
+
+    assert scheduler.callback_id == "maya-callback-id"
+    assert scheduler.job_id is None
+    assert cmds.script_jobs == 0
+    assert len(callbacks) == 1
+    callbacks[0]()
+    assert cmds.refresh_calls == 1
+
+    scheduler.unregister(host)
+    assert removed == ["maya-callback-id"]
+
+
+def test_refresh_current_maya_view_falls_back_when_current_view_flag_fails() -> None:
+    class FakeCmds:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, object]] = []
+
+        def refresh(self, **kwargs: object) -> None:
+            self.calls.append(dict(kwargs))
+            if "currentView" in kwargs:
+                raise RuntimeError("unsupported")
+
+    cmds = FakeCmds()
+
+    overlay._refresh_current_maya_view(cmds)
+
+    assert cmds.calls == [
+        {"currentView": True, "force": True},
+        {"force": True},
+    ]
