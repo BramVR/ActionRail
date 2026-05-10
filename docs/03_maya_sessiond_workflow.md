@@ -157,6 +157,11 @@ Useful variants:
   Qt resource names and render as non-null button icons in Maya.
 - `actionrail_hidden_visibility_smoke.py`: literal false visibility handling and empty-cluster regression.
 - `actionrail_predicates_smoke.py`: selection/tool/action/command predicates driving initial visible, enabled, and active button state plus automatic timer refresh after tool and selection changes.
+- `actionrail_dense_overlay_smoke.py`: 100+ slot dense overlay probe using two
+  custom-painted dense bars plus a widget baseline; verifies one shared
+  predicate scheduler, no per-slot dense `QPushButton` objects, dirty refresh
+  without rebuilds, viewport navigation pass-through rules, and screenshot
+  capture.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
 - `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
 - `actionrail_overlay_cleanup_smoke.py`: repeated show/reload cleanup for stale ActionRail viewport widgets and origin-placement regression coverage.

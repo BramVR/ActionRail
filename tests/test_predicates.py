@@ -10,8 +10,10 @@ from actionrail.predicates import (
     _PredicateEvaluator,
     availability_blocking_targets,
     availability_targets,
+    compile_predicate,
     evaluate_predicate,
     missing_availability_targets,
+    predicate_dependencies,
 )
 from actionrail.spec import StackItem
 from actionrail.state import MayaStateSnapshot
@@ -230,3 +232,22 @@ def test_predicate_evaluator_rejects_unknown_bool_operator_directly() -> None:
 
     with pytest.raises(ValueError, match="Unsupported ActionRail predicate"):
         evaluator.visit_BoolOp(node)
+
+
+def test_predicate_compile_cache_records_state_dependencies() -> None:
+    compile_predicate.cache_clear()
+    first = compile_predicate(
+        "maya.tool == 'move' and selection.count > 0 and command.exists('setKeyframe')"
+    )
+    second = compile_predicate(
+        "maya.tool == 'move' and selection.count > 0 and command.exists('setKeyframe')"
+    )
+
+    assert first is second
+    assert predicate_dependencies(
+        "maya.tool == 'move' and selection.count > 0 and command.exists('setKeyframe')"
+    ) == frozenset({"maya.tool", "selection.count", "command.exists"})
+    assert predicate_dependencies("active.panel == 'modelPanel4'") == frozenset(
+        {"active.panel"}
+    )
+    assert predicate_dependencies("not valid python") == frozenset()

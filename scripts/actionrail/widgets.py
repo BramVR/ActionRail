@@ -29,6 +29,7 @@ from .theme import (
 
 BUTTON_SIZE = DEFAULT_THEME.button_size
 BUTTON_OUTER_SIZE = DEFAULT_THEME.button_outer_size
+DENSE_ACTION_BAR_MIN_SLOTS = 48
 ACTION_RAIL_ROOT_OBJECT_NAME = "ActionRailRoot"
 ACTION_RAIL_ROOT_PROPERTY = "actionRailRoot"
 ACTION_RAIL_VIEWPORT_OVERLAY_PREFIX = "ActionRailViewportOverlay_"
@@ -49,12 +50,14 @@ __all__ = [
     "RAIL_WIDTH",
     "STYLE_SHEET",
     "ActionRailRoot",
+    "DENSE_ACTION_BAR_MIN_SLOTS",
     "PredicateRefreshResult",
     "SlotEditCallbacks",
     "SlotRenderState",
     "build_rail",
     "build_collapsed_handle",
     "build_transform_stack",
+    "event_should_pass_through_to_maya",
     "refresh_predicate_state",
     "resolve_slot_render_state",
     "set_slot_key_label",
@@ -106,6 +109,13 @@ class _SlotDragDropTarget:
     same_rail: bool = False
 
 
+@dataclass(frozen=True)
+class _DenseSlot:
+    item: StackItem
+    state: SlotRenderState
+    rect: object
+
+
 class ActionRailRoot:
     """Factory wrapper for the root widget class.
 
@@ -127,15 +137,27 @@ class ActionRailRoot:
                 self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
 
             def mousePressEvent(self, event):  # type: ignore[no-untyped-def]
+                if event_should_pass_through_to_maya(event, qt=qt):
+                    event.ignore()
+                    return None
                 event.ignore()
 
             def mouseMoveEvent(self, event):  # type: ignore[no-untyped-def]
+                if event_should_pass_through_to_maya(event, qt=qt):
+                    event.ignore()
+                    return None
                 event.ignore()
 
             def mouseReleaseEvent(self, event):  # type: ignore[no-untyped-def]
+                if event_should_pass_through_to_maya(event, qt=qt):
+                    event.ignore()
+                    return None
                 event.ignore()
 
             def wheelEvent(self, event):  # type: ignore[no-untyped-def]
+                if event_should_pass_through_to_maya(event, qt=qt):
+                    event.ignore()
+                    return None
                 event.ignore()
 
         return _ActionRailRoot()
@@ -155,6 +177,14 @@ def build_rail(
     theme = apply_appearance_overrides(theme, getattr(spec, "appearance", None))
     theme = _scaled_theme(theme, spec.layout.scale)
     context = PredicateContext(state=state_snapshot, registry=registry, cmds_module=cmds_module)
+    if _should_use_dense_canvas(spec, slot_edit_callbacks):
+        return _build_dense_action_bar(
+            spec,
+            registry,
+            theme,
+            context,
+        )
+
     root = ActionRailRoot.create()
     root.setStyleSheet(generate_style_sheet(theme))
     root.setWindowOpacity(spec.layout.opacity)
@@ -351,6 +381,301 @@ def build_transform_stack(
         cmds_module=cmds_module,
         slot_edit_callbacks=slot_edit_callbacks,
     )
+
+
+def _should_use_dense_canvas(
+    spec: StackSpec,
+    slot_edit_callbacks: SlotEditCallbacks | None = None,
+) -> bool:
+    if slot_edit_callbacks is not None and slot_edit_callbacks.unlocked:
+        return False
+    return _dense_slot_count(spec) >= DENSE_ACTION_BAR_MIN_SLOTS
+
+
+def _dense_slot_count(spec: StackSpec) -> int:
+    return sum(1 for item in spec.items if item.type in {"button", "toolButton"})
+
+
+def _build_dense_action_bar(
+    spec: StackSpec,
+    registry: ActionRegistry,
+    theme: ActionRailTheme,
+    context: PredicateContext,
+) -> object:
+    qt = load()
+    base = qt.QtWidgets.QWidget
+
+    class DenseActionBar(base):  # type: ignore[misc, valid-type]
+        def __init__(self) -> None:
+            super().__init__()
+            self.setObjectName(ACTION_RAIL_ROOT_OBJECT_NAME)
+            self.setProperty(ACTION_RAIL_ROOT_PROPERTY, "true")
+            self.setProperty("actionRailDense", "true")
+            self.setAttribute(qt.QtCore.Qt.WA_TranslucentBackground, True)
+            self.setAttribute(qt.QtCore.Qt.WA_NoSystemBackground, True)
+            self.setFocusPolicy(qt.QtCore.Qt.NoFocus)
+            self.setStyleSheet(generate_style_sheet(theme))
+            self.setWindowOpacity(spec.layout.opacity)
+            self._actionrail_spec = spec
+            self._actionrail_registry = registry
+            self._actionrail_theme = theme
+            self._actionrail_slots: dict[str, _DenseSlot] = {}
+            self._actionrail_visible_slot_ids: tuple[str, ...] = ()
+            self._actionrail_refresh_dense(context)
+
+        def _actionrail_refresh_dense(
+            self,
+            predicate_context: PredicateContext,
+        ) -> PredicateRefreshResult:
+            visible_items = tuple(_visible_action_items(spec, predicate_context))
+            visible_slot_ids = tuple(item.id for item in visible_items)
+            rendered_slot_ids = tuple(self._actionrail_slots)
+            if rendered_slot_ids and visible_slot_ids != rendered_slot_ids:
+                return PredicateRefreshResult(
+                    refreshed=0,
+                    needs_rebuild=True,
+                    visible_slot_ids=visible_slot_ids,
+                    rendered_slot_ids=rendered_slot_ids,
+                )
+
+            rects = _dense_slot_rects(qt, len(visible_items), spec.layout, theme)
+            refreshed = 0
+            slots: dict[str, _DenseSlot] = {}
+            for item, rect in zip(visible_items, rects, strict=True):
+                previous = self._actionrail_slots.get(item.id)
+                previous_key = previous.state.key_label if previous is not None else None
+                state = resolve_slot_render_state(
+                    item,
+                    registry,
+                    predicate_context,
+                    key_label=previous_key,
+                )
+                slots[item.id] = _DenseSlot(item=item, state=state, rect=rect)
+                if previous is None or previous.state != state:
+                    refreshed += 1
+                    with suppress(Exception):
+                        self.update(rect)
+            self._actionrail_slots = slots
+            self._actionrail_visible_slot_ids = visible_slot_ids
+            size = _dense_bar_size(len(visible_items), spec.layout, theme)
+            self.setFixedSize(size[0], size[1])
+            return PredicateRefreshResult(
+                refreshed=refreshed,
+                needs_rebuild=False,
+                visible_slot_ids=visible_slot_ids,
+                rendered_slot_ids=visible_slot_ids,
+            )
+
+        def _actionrail_set_slot_key_label(self, slot_id: str, key_label: str) -> int:
+            slot = self._actionrail_slots.get(slot_id)
+            if slot is None:
+                return 0
+            state = replace(slot.state, key_label=key_label)
+            self._actionrail_slots[slot_id] = replace(slot, state=state)
+            with suppress(Exception):
+                self.update(slot.rect)
+            return 1
+
+        def paintEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            painter_class = getattr(qt.QtGui, "QPainter", None)
+            if painter_class is None:
+                return super().paintEvent(event)
+            painter = painter_class(self)
+            try:
+                _paint_dense_backing(qt, painter, self.rect(), theme)
+                for slot in self._actionrail_slots.values():
+                    _paint_dense_slot(qt, painter, slot, theme)
+            finally:
+                painter.end()
+
+        def mousePressEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
+            slot = _dense_slot_at_point(self._actionrail_slots.values(), _event_local_point(event))
+            if slot is None or not slot.state.enabled:
+                event.ignore()
+                return None
+            action_id = slot.item.action
+            if action_id:
+                registry.run(action_id)
+                _accept_event(event)
+                return None
+            event.ignore()
+            return None
+
+        def mouseMoveEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            event.ignore()
+
+        def mouseReleaseEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            event.ignore()
+
+        def wheelEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
+            return super().wheelEvent(event)
+
+    return DenseActionBar()
+
+
+def _dense_bar_grid(slot_count: int, layout: RailLayout) -> tuple[int, int]:
+    if slot_count <= 0:
+        return (0, 0)
+    if _uses_wrapped_layout(layout):
+        columns = max(1, min(layout.columns, slot_count))
+        rows = max(1, (slot_count + columns - 1) // columns)
+        return rows, columns
+    if layout.orientation == "horizontal":
+        return 1, slot_count
+    return slot_count, 1
+
+
+def _dense_bar_size(
+    slot_count: int,
+    layout: RailLayout,
+    theme: ActionRailTheme,
+) -> tuple[int, int]:
+    rows, columns = _dense_bar_grid(slot_count, layout)
+    pad = theme.frame_padding + theme.cluster_border_width
+    if rows == 0 or columns == 0:
+        return theme.rail_width, theme.rail_width
+    width = columns * theme.button_outer_size + max(0, columns - 1) * theme.frame_spacing
+    height = rows * theme.button_outer_size + max(0, rows - 1) * theme.frame_spacing
+    return width + pad * 2, height + pad * 2
+
+
+def _dense_slot_rects(
+    qt: object,
+    slot_count: int,
+    layout: RailLayout,
+    theme: ActionRailTheme,
+) -> tuple[object, ...]:
+    rows, columns = _dense_bar_grid(slot_count, layout)
+    if rows == 0 or columns == 0:
+        return ()
+    rects: list[object] = []
+    pad = theme.frame_padding + theme.cluster_border_width
+    for index in range(slot_count):
+        if _uses_wrapped_layout(layout):
+            row, column = _grid_position(index, layout)
+        elif layout.orientation == "horizontal":
+            row, column = 0, index
+        else:
+            row, column = index, 0
+        x_pos = pad + column * (theme.button_outer_size + theme.frame_spacing)
+        y_pos = pad + row * (theme.button_outer_size + theme.frame_spacing)
+        rects.append(
+            qt.QtCore.QRect(
+                x_pos,
+                y_pos,
+                theme.button_outer_size,
+                theme.button_outer_size,
+            )
+        )
+    return tuple(rects)
+
+
+def _paint_dense_backing(
+    qt: object,
+    painter: object,
+    rect: object,
+    theme: ActionRailTheme,
+) -> None:
+    painter.fillRect(
+        rect,
+        _qt_rgb_color(qt, *theme.cluster_base_rgb, alpha=theme.cluster_base_opacity),
+    )
+    pen = qt.QtGui.QPen(
+        _qt_rgb_color(qt, *theme.cluster_stripe_rgb, alpha=theme.cluster_stripe_opacity)
+    )
+    pen.setWidth(max(1, int(round(theme.cluster_border_width * 0.5))))
+    painter.setPen(pen)
+    spacing = max(4, int(round(theme.button_size * 0.18 * theme.cluster_pattern_scale)))
+    height = _rect_dimension(rect, "height")
+    left = _rect_edge(rect, "left")
+    right = _rect_edge(rect, "right")
+    bottom = _rect_edge(rect, "bottom")
+    top = _rect_edge(rect, "top")
+    for x_pos in range(left - height, right + height + spacing, spacing):
+        painter.drawLine(x_pos, bottom + 1, x_pos + height + spacing, top - 1)
+    if theme.cluster_border_width:
+        border_pen = qt.QtGui.QPen(_qt_color(qt, theme.cluster_border))
+        border_pen.setWidth(theme.cluster_border_width)
+        painter.setPen(border_pen)
+        painter.setBrush(qt.QtCore.Qt.NoBrush)
+        painter.drawRect(_adjusted_rect(rect, 0, 0, -1, -1))
+
+
+def _paint_dense_slot(
+    qt: object,
+    painter: object,
+    slot: _DenseSlot,
+    theme: ActionRailTheme,
+) -> None:
+    state = slot.state
+    rect = slot.rect
+    painter.fillRect(rect, _qt_color(qt, theme.button_background))
+    border = theme.button_active_border if state.active else theme.button_border
+    if not state.enabled:
+        border = theme.button_disabled_border
+    pen = qt.QtGui.QPen(_qt_color(qt, border))
+    pen.setWidth(max(1, theme.button_border_width))
+    painter.setPen(pen)
+    painter.setBrush(qt.QtCore.Qt.NoBrush)
+    painter.drawRect(_adjusted_rect(rect, 0, 0, -1, -1))
+
+    icon_source = _qt_icon_source(state.icon_path, state.icon_name)
+    if icon_source:
+        icon = qt.QtGui.QIcon(icon_source)
+        target = _adjusted_rect(rect, 3, 3, -3, -3)
+        pixmap = _icon_pixmap_for_painter(qt, painter, icon, target)
+        if pixmap:
+            painter.drawPixmap(target, pixmap)
+    elif state.label:
+        painter.setPen(_qt_color(qt, theme.button_color))
+        painter.drawText(rect, qt.QtCore.Qt.AlignCenter, state.label)
+
+    secondary = _button_secondary_text(state.key_label, state.diagnostic_badge)
+    if secondary:
+        font = painter.font()
+        with suppress(Exception):
+            font.setPointSize(_secondary_font_size(font.pointSize()))
+            painter.setFont(font)
+        painter.setPen(_qt_color(qt, theme.accent))
+        painter.drawText(
+            _adjusted_rect(rect, 2, 2, -2, -1),
+            qt.QtCore.Qt.AlignRight | qt.QtCore.Qt.AlignBottom,
+            secondary,
+        )
+
+
+def _rect_dimension(rect: object, method_name: str) -> int:
+    method = getattr(rect, method_name, None)
+    if callable(method):
+        with suppress(Exception):
+            return int(method())
+    return 0
+
+
+def _rect_edge(rect: object, method_name: str) -> int:
+    method = getattr(rect, method_name, None)
+    if callable(method):
+        with suppress(Exception):
+            return int(method())
+    return 0
+
+
+def _dense_slot_at_point(slots: object, point: object | None) -> _DenseSlot | None:
+    if point is None:
+        return None
+    for slot in slots:
+        contains = getattr(slot.rect, "contains", None)
+        if callable(contains):
+            with suppress(Exception):
+                if contains(point):
+                    return slot
+    return None
 
 
 def _build_cluster(
@@ -1900,6 +2225,65 @@ def _accept_event(event: object) -> None:
             accept()
 
 
+def event_should_pass_through_to_maya(
+    event: object,
+    *,
+    qt: object | None = None,
+    captures_navigation: bool = False,
+) -> bool:
+    """Return whether a Qt input event should be ignored so Maya handles it."""
+
+    if captures_navigation:
+        return False
+    if qt is None:
+        qt = load()
+
+    if _event_is_wheel(event, qt):
+        return True
+    if _event_has_alt_modifier(event, qt):
+        return True
+    return _event_uses_navigation_button(event, qt)
+
+
+def _event_is_wheel(event: object, qt: object) -> bool:
+    event_type = getattr(event, "type", None)
+    wheel_type = getattr(getattr(getattr(qt, "QtCore", None), "QEvent", object), "Wheel", None)
+    if wheel_type is None:
+        return False
+    if callable(event_type):
+        with suppress(Exception):
+            return event_type() == wheel_type
+    return False
+
+
+def _event_has_alt_modifier(event: object, qt: object) -> bool:
+    modifiers = getattr(event, "modifiers", None)
+    alt_modifier = getattr(getattr(getattr(qt, "QtCore", None), "Qt", object), "AltModifier", 0)
+    if not alt_modifier:
+        return False
+    if callable(modifiers):
+        with suppress(Exception):
+            return bool(modifiers() & alt_modifier)
+    return False
+
+
+def _event_uses_navigation_button(event: object, qt: object) -> bool:
+    button = getattr(event, "button", None)
+    buttons = getattr(event, "buttons", None)
+    qt_constants = getattr(getattr(qt, "QtCore", None), "Qt", object())
+    navigation_buttons = (
+        getattr(qt_constants, "MiddleButton", 0),
+        getattr(qt_constants, "RightButton", 0),
+    )
+    for value_method in (button, buttons):
+        if callable(value_method):
+            with suppress(Exception):
+                value = value_method()
+                if any(value & button_value for button_value in navigation_buttons):
+                    return True
+    return False
+
+
 def _button_class(qt: object) -> type:
     base = qt.QtWidgets.QPushButton
     if (
@@ -1913,19 +2297,34 @@ def _button_class(qt: object) -> type:
         _actionrail_supports_slot_drag_events = True
 
         def mousePressEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
             if _handle_slot_drag_press(self, event):
                 return None
             return super().mousePressEvent(event)
 
         def mouseMoveEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
             if _handle_slot_drag_move(self, event):
                 return None
             return super().mouseMoveEvent(event)
 
         def mouseReleaseEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
             if _handle_slot_drag_release(self, event):
                 return None
             return super().mouseReleaseEvent(event)
+
+        def wheelEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
+            if event_should_pass_through_to_maya(event, qt=qt):
+                event.ignore()
+                return None
+            return super().wheelEvent(event)
 
         def paintEvent(self, event):  # type: ignore[no-untyped-def]  # noqa: N802
             painter = qt.QtGui.QPainter(self)
@@ -2182,6 +2581,11 @@ def _adjusted_rect(rect: object, left: int, top: int, right: int, bottom: int) -
 def set_slot_key_label(root: object, slot_id: str, key_label: str) -> int:
     """Update rendered button text for a slot and return the number of matches."""
 
+    dense_setter = getattr(root, "_actionrail_set_slot_key_label", None)
+    if callable(dense_setter):
+        with suppress(Exception):
+            return int(dense_setter(slot_id, key_label))
+
     qt = load()
     updated = 0
     for button in root.findChildren(qt.QtWidgets.QPushButton):
@@ -2238,6 +2642,11 @@ def refresh_predicate_state(
     """
 
     context = PredicateContext(state=state_snapshot, registry=registry, cmds_module=cmds_module)
+    dense_refresh = getattr(root, "_actionrail_refresh_dense", None)
+    if callable(dense_refresh):
+        with suppress(Exception):
+            return dense_refresh(context)
+
     visible_items = tuple(_visible_action_items(spec, context))
     visible_slot_ids = tuple(item.id for item in visible_items)
     buttons = _slot_buttons(root)

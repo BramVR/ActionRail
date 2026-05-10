@@ -10,6 +10,19 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-10
+
+- Implemented Phase 2 step 2.7 dense overlay performance foundation: predicate
+  expressions are cached with dependency metadata, overlay hosts share one Maya
+  state snapshot and scheduler, and large locked action bars can render as a
+  single custom-painted Qt canvas instead of per-slot buttons.
+- Added dirty-slot repainting and key-label refresh for dense bars, plus
+  Alt/middle/right/wheel pass-through rules so normal Maya viewport navigation
+  gestures are not captured by ActionRail outside intentional slot clicks.
+- Added `actionrail_dense_overlay_smoke.py`, a 100+ slot Maya probe that
+  compares dense bars against the widget path, checks the shared scheduler, and
+  captures a dense overlay screenshot.
+
 ## 2026-05-08
 
 - Added sparse per-bar appearance data to presets and drafts, including theme

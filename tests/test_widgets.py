@@ -2227,3 +2227,169 @@ def test_set_button_property_and_diagnostic_tooltip_helpers() -> None:
         == "Problem"
     )
     assert widgets._scaled_theme(widgets.DEFAULT_THEME, 1.0) is widgets.DEFAULT_THEME
+
+
+def test_dense_action_bar_uses_single_canvas_and_dirty_slot_refresh(monkeypatch) -> None:
+    class Point:
+        def __init__(self, x_pos: int, y_pos: int) -> None:
+            self.x_pos = x_pos
+            self.y_pos = y_pos
+
+    class Rect:
+        def __init__(self, x_pos: int, y_pos: int, width: int, height: int) -> None:
+            self.x_pos = x_pos
+            self.y_pos = y_pos
+            self._width = width
+            self._height = height
+
+        def width(self) -> int:
+            return self._width
+
+        def height(self) -> int:
+            return self._height
+
+        def contains(self, point: Point) -> bool:
+            return (
+                self.x_pos <= point.x_pos < self.x_pos + self._width
+                and self.y_pos <= point.y_pos < self.y_pos + self._height
+            )
+
+    class DenseWidget:
+        def __init__(self) -> None:
+            self.properties = {}
+            self.updates = []
+            self.fixed_size = None
+
+        def setObjectName(self, name: str) -> None:  # noqa: N802
+            self.object_name = name
+
+        def setProperty(self, name: str, value: object) -> None:  # noqa: N802
+            self.properties[name] = value
+
+        def property(self, name: str) -> object:
+            return self.properties.get(name)
+
+        def setAttribute(self, *args: object) -> None:  # noqa: N802
+            self.attribute = args
+
+        def setFocusPolicy(self, policy: object) -> None:  # noqa: N802
+            self.focus_policy = policy
+
+        def setStyleSheet(self, style: str) -> None:  # noqa: N802
+            self.style_sheet = style
+
+        def setWindowOpacity(self, opacity: float) -> None:  # noqa: N802
+            self.opacity = opacity
+
+        def setFixedSize(self, width: int, height: int) -> None:  # noqa: N802
+            self.fixed_size = (width, height)
+
+        def update(self, rect: object | None = None) -> None:
+            self.updates.append(rect)
+
+        def findChildren(self, _widget_type: object) -> list[object]:  # noqa: N802
+            return []
+
+    class DenseQt:
+        class QtCore:
+            QRect = Rect
+
+            class Qt:
+                WA_TranslucentBackground = 1
+                WA_NoSystemBackground = 2
+                NoFocus = 3
+                AlignCenter = 4
+                AlignRight = 8
+                AlignBottom = 16
+                MiddleButton = 4
+                RightButton = 2
+                AltModifier = 32
+
+        class QtWidgets:
+            QWidget = DenseWidget
+            QPushButton = BuildButton
+
+        class QtGui:
+            pass
+
+    monkeypatch.setattr(widgets, "load", lambda: DenseQt)
+    spec = StackSpec(
+        id="dense",
+        layout=RailLayout(anchor="viewport.bottom.center", orientation="horizontal"),
+        items=tuple(
+            StackItem(
+                type="button",
+                id=f"dense.{index}",
+                label=str(index),
+                action="maya.tool.select",
+                enabled_when="selection.count > 0",
+            )
+            for index in range(widgets.DENSE_ACTION_BAR_MIN_SLOTS)
+        ),
+    )
+
+    root = widgets.build_transform_stack(
+        spec,
+        create_default_registry(BuildCmds()),
+        state_snapshot=MayaStateSnapshot(current_tool="", selection_count=0),
+    )
+
+    assert root.property("actionRailDense") == "true"
+    assert root.findChildren(DenseQt.QtWidgets.QPushButton) == []
+    assert len(root._actionrail_slots) == widgets.DENSE_ACTION_BAR_MIN_SLOTS
+    assert root.fixed_size[0] > widgets.DENSE_ACTION_BAR_MIN_SLOTS * widgets.BUTTON_OUTER_SIZE
+
+    result = widgets.refresh_predicate_state(
+        root,
+        spec,
+        registry=create_default_registry(BuildCmds()),
+        state_snapshot=MayaStateSnapshot(current_tool="", selection_count=1),
+    )
+
+    assert result.needs_rebuild is False
+    assert result.refreshed == widgets.DENSE_ACTION_BAR_MIN_SLOTS
+    assert root._actionrail_slots["dense.0"].state.enabled is True
+    assert root.updates
+    assert widgets.set_slot_key_label(root, "dense.0", "F12") == 1
+    assert root._actionrail_slots["dense.0"].state.key_label == "F12"
+
+
+def test_viewport_navigation_events_pass_through_to_maya() -> None:
+    class NavQt:
+        class QtCore:
+            class QEvent:
+                Wheel = 10
+
+            class Qt:
+                AltModifier = 1
+                RightButton = 2
+                MiddleButton = 4
+
+    class Event:
+        def __init__(self, *, event_type: int = 0, modifiers: int = 0, button: int = 0) -> None:
+            self._type = event_type
+            self._modifiers = modifiers
+            self._button = button
+
+        def type(self) -> int:
+            return self._type
+
+        def modifiers(self) -> int:
+            return self._modifiers
+
+        def button(self) -> int:
+            return self._button
+
+        def buttons(self) -> int:
+            return self._button
+
+    assert widgets.event_should_pass_through_to_maya(Event(event_type=10), qt=NavQt)
+    assert widgets.event_should_pass_through_to_maya(Event(modifiers=1), qt=NavQt)
+    assert widgets.event_should_pass_through_to_maya(Event(button=4), qt=NavQt)
+    assert widgets.event_should_pass_through_to_maya(Event(button=2), qt=NavQt)
+    assert not widgets.event_should_pass_through_to_maya(Event(), qt=NavQt)
+    assert not widgets.event_should_pass_through_to_maya(
+        Event(button=4),
+        qt=NavQt,
+        captures_navigation=True,
+    )

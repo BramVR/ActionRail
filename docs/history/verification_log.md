@@ -12,6 +12,19 @@ This archive preserves older verification history. Keep `docs/04_status.md` focu
 
 ## History
 
+- 2026-05-10 Phase 2 step 2.7 dense overlay performance foundation:
+  - `.\\.venv\\Scripts\\python.exe -m pytest` -> 515 passed.
+  - `.\\.venv\\Scripts\\python.exe -m ruff check .` -> all checks passed.
+  - `.\\scripts\\maya-smoke.ps1 -Script actionrail_dense_overlay_smoke.py -Timeout 300`
+    -> passed; verified 120 dense slots across two custom-painted dense canvas
+    bars, one shared predicate scheduler, no dense per-slot `QPushButton`
+    objects, a 20-button widget baseline, dirty refresh without rebuilds,
+    viewport navigation pass-through, and screenshot capture.
+  - `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300` -> passed against
+    the running MayaSessiond state on port `7217`, including the new dense
+    overlay smoke plus the existing Action Book, capture, custom preset-store,
+    diagnostics, Edit Mode, hotkey, import/recovery, menu/shelf, overlay
+    cleanup, predicate, Quick Create, StackItem ABI, and transform-stack smokes.
 - 2026-05-06 48-hour regression audit:
   - Reviewed commits from the last 48 hours and past Codex logs; the review of
     `869467f` found three collapsible edge-tab regressions, fixed by

@@ -15,6 +15,65 @@ class MayaStateSnapshot:
     playback_playing: bool = False
 
 
+STATE_DEPENDENCIES = frozenset(
+    {
+        "maya.tool",
+        "selection.count",
+        "active.panel",
+        "active.camera",
+        "playback.playing",
+    }
+)
+
+
+class MayaStateService:
+    """Shared Maya state snapshot cache for predicate refresh schedulers."""
+
+    def __init__(self, cmds_module: Any | None = None) -> None:
+        self.cmds = _require_cmds(cmds_module)
+        self.snapshot: MayaStateSnapshot | None = None
+        self.changed_dependencies: frozenset[str] = STATE_DEPENDENCIES
+        self._camera_by_panel: dict[str, str] = {}
+
+    def refresh(self, *, active_panels: tuple[str, ...] = ()) -> MayaStateSnapshot:
+        """Read Maya state once and cache per-panel camera lookups."""
+
+        panel = _active_panel(self.cmds)
+        previous = self.snapshot
+        cameras = {
+            panel_id: _active_camera(self.cmds, panel_id)
+            for panel_id in dict.fromkeys((panel, *active_panels))
+            if panel_id
+        }
+        base = MayaStateSnapshot(
+            current_tool=current_tool(self.cmds),
+            selection_count=selection_count(self.cmds),
+            active_panel=panel,
+            active_camera=cameras.get(panel, ""),
+            playback_playing=_playback_playing(self.cmds),
+        )
+        self.snapshot = base
+        self._camera_by_panel = cameras
+        self.changed_dependencies = _changed_dependencies(previous, base)
+        return base
+
+    def snapshot_for_panel(self, panel: str | None = None) -> MayaStateSnapshot:
+        """Return the cached snapshot, overriding panel fields for a host."""
+
+        base = self.snapshot
+        if base is None:
+            base = self.refresh(active_panels=(panel,) if panel else ())
+        if not panel:
+            return base
+        return MayaStateSnapshot(
+            current_tool=base.current_tool,
+            selection_count=base.selection_count,
+            active_panel=panel,
+            active_camera=self._camera_by_panel.get(panel, ""),
+            playback_playing=base.playback_playing,
+        )
+
+
 def _require_cmds(cmds_module: Any | None = None) -> Any:
     if cmds_module is not None:
         return cmds_module
@@ -29,12 +88,18 @@ def _require_cmds(cmds_module: Any | None = None) -> Any:
 
 def current_tool(cmds_module: Any | None = None) -> str:
     cmds = _require_cmds(cmds_module)
-    return cmds.currentCtx()
+    try:
+        return str(cmds.currentCtx())
+    except Exception:
+        return ""
 
 
 def selection_count(cmds_module: Any | None = None) -> int:
     cmds = _require_cmds(cmds_module)
-    return len(cmds.ls(selection=True) or [])
+    try:
+        return len(cmds.ls(selection=True) or [])
+    except Exception:
+        return 0
 
 
 def snapshot(cmds_module: Any | None = None, active_panel: str | None = None) -> MayaStateSnapshot:
@@ -47,6 +112,27 @@ def snapshot(cmds_module: Any | None = None, active_panel: str | None = None) ->
         active_camera=_active_camera(cmds, panel),
         playback_playing=_playback_playing(cmds),
     )
+
+
+def _changed_dependencies(
+    previous: MayaStateSnapshot | None,
+    current: MayaStateSnapshot,
+) -> frozenset[str]:
+    if previous is None:
+        return STATE_DEPENDENCIES
+
+    changed: set[str] = set()
+    if previous.current_tool != current.current_tool:
+        changed.add("maya.tool")
+    if previous.selection_count != current.selection_count:
+        changed.add("selection.count")
+    if previous.active_panel != current.active_panel:
+        changed.add("active.panel")
+    if previous.active_camera != current.active_camera:
+        changed.add("active.camera")
+    if previous.playback_playing != current.playback_playing:
+        changed.add("playback.playing")
+    return frozenset(changed)
 
 
 def _active_panel(cmds: Any) -> str:

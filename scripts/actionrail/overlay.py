@@ -15,9 +15,10 @@ from typing import Any
 from weakref import ref
 
 from .actions import ActionRegistry, create_default_registry
+from .predicates import predicate_dependencies
 from .qt import load
 from .spec import StackSpec
-from .state import snapshot
+from .state import MayaStateService, snapshot
 from .widgets import (
     PredicateRefreshResult,
     SlotEditCallbacks,
@@ -32,12 +33,14 @@ CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
 DEFAULT_MARGIN = 12
 COLLAPSED_HANDLE_EDGE_MARGIN = 4
 PREDICATE_REFRESH_INTERVAL_MS = 250
+_PREDICATE_REFRESH_SCHEDULERS: dict[tuple[int, int, int], PredicateRefreshScheduler] = {}
 
 __all__ = [
     "CONTAINER_OBJECT_NAME_PREFIX",
     "DEFAULT_MARGIN",
     "OBJECT_NAME_PREFIX",
     "PREDICATE_REFRESH_INTERVAL_MS",
+    "PredicateRefreshScheduler",
     "ViewportOverlayHost",
     "active_model_panel",
     "cleanup_overlay_widgets",
@@ -255,6 +258,113 @@ class _ResizeEventFilter:
         return self._object
 
 
+class PredicateRefreshScheduler:
+    """One Qt timer that refreshes predicate-bearing overlay hosts together."""
+
+    def __init__(self, qt: Any, cmds_module: Any, interval_ms: int) -> None:
+        self.qt = qt
+        self.cmds = cmds_module
+        self.interval_ms = interval_ms
+        self.service = MayaStateService(cmds_module)
+        self.hosts: list[ref[ViewportOverlayHost]] = []
+        self.timer: Any | None = None
+
+    @classmethod
+    def for_host(cls, host: ViewportOverlayHost) -> PredicateRefreshScheduler:
+        if not hasattr(host, "cmds"):
+            msg = "Predicate refresh requires a Maya cmds module."
+            raise RuntimeError(msg)
+        key = (id(host.qt), id(host.cmds), int(host.predicate_refresh_interval_ms))
+        scheduler = _PREDICATE_REFRESH_SCHEDULERS.get(key)
+        if scheduler is None:
+            scheduler = cls(host.qt, host.cmds, host.predicate_refresh_interval_ms)
+            _PREDICATE_REFRESH_SCHEDULERS[key] = scheduler
+        return scheduler
+
+    def register(self, host: ViewportOverlayHost) -> None:
+        self._prune_hosts()
+        if not any(existing() is host for existing in self.hosts):
+            self.hosts.append(ref(host))
+        self._ensure_timer()
+
+    def unregister(self, host: ViewportOverlayHost) -> None:
+        self.hosts = [
+            existing
+            for existing in self.hosts
+            if existing() is not None and existing() is not host
+        ]
+        if not self.hosts:
+            self.stop()
+
+    def refresh(self) -> None:
+        live_hosts = tuple(self._live_visible_hosts())
+        if not live_hosts:
+            self.stop()
+            return
+
+        panels = tuple({host.panel for host in live_hosts if getattr(host, "panel", "")})
+        self.service.refresh(active_panels=panels)
+        changed = self.service.changed_dependencies
+        if not changed:
+            return
+        for host in live_hosts:
+            dependencies = getattr(host, "_predicate_dependencies", frozenset())
+            if dependencies and not dependencies.intersection(changed):
+                continue
+            host.refresh_state(
+                state_snapshot=self.service.snapshot_for_panel(getattr(host, "panel", "")),
+            )
+
+    def stop(self) -> None:
+        timer = self.timer
+        if timer is not None:
+            with suppress(Exception):
+                timer.stop()
+            with suppress(Exception):
+                timer.deleteLater()
+        self.timer = None
+        self._remove_from_registry()
+
+    def _ensure_timer(self) -> None:
+        if self.timer is not None:
+            return
+        timer_class = getattr(self.qt.QtCore, "QTimer", None)
+        if timer_class is None:
+            return
+        timer = timer_class()
+        timer.setInterval(self.interval_ms)
+        coarse_timer = getattr(self.qt.QtCore.Qt, "CoarseTimer", None)
+        if coarse_timer is not None and hasattr(timer, "setTimerType"):
+            timer.setTimerType(coarse_timer)
+        timer.timeout.connect(self._refresh_from_timer)
+        timer.start()
+        self.timer = timer
+
+    def _refresh_from_timer(self) -> None:
+        try:
+            self.refresh()
+        except Exception:
+            self.stop()
+
+    def _live_visible_hosts(self) -> Iterator[ViewportOverlayHost]:
+        self._prune_hosts()
+        for host_ref in tuple(self.hosts):
+            host = host_ref()
+            if host is None or host.widget is None or not _qt_widget_is_valid(host.widget):
+                continue
+            with suppress(Exception):
+                if host.widget.isVisible():
+                    yield host
+
+    def _prune_hosts(self) -> None:
+        self.hosts = [host_ref for host_ref in self.hosts if host_ref() is not None]
+
+    def _remove_from_registry(self) -> None:
+        for key, scheduler in tuple(_PREDICATE_REFRESH_SCHEDULERS.items()):
+            if scheduler is self:
+                _PREDICATE_REFRESH_SCHEDULERS.pop(key, None)
+
+
 def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) -> int:
     """Hide/delete stale ActionRail widgets under a Maya panel widget."""
 
@@ -382,6 +492,8 @@ class ViewportOverlayHost:
         self._collapsed = bool(spec.collapse.enabled and spec.collapse.default_collapsed)
         self._slot_edit_unlocked = False
         self._runtime_key_labels: dict[str, str] = {}
+        self._predicate_dependencies = _spec_predicate_dependencies(spec)
+        self._predicate_refresh_scheduler: PredicateRefreshScheduler | None = None
         self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
@@ -489,7 +601,10 @@ class ViewportOverlayHost:
         self._resize_filter = None
         self._predicate_refresh_timer = None
 
-    def refresh_state(self) -> PredicateRefreshResult:
+    def refresh_state(
+        self,
+        state_snapshot: object | None = None,
+    ) -> PredicateRefreshResult:
         """Refresh predicate-driven button state from current Maya state."""
 
         if getattr(self, "_collapsed", False) and self.spec.collapse.enabled:
@@ -500,7 +615,8 @@ class ViewportOverlayHost:
                 rendered_slot_ids=(),
             )
 
-        state_snapshot = snapshot(self.cmds, active_panel=self.panel)
+        if state_snapshot is None:
+            state_snapshot = snapshot(self.cmds, active_panel=self.panel)
         result = refresh_predicate_state(
             self.widget,
             self.spec,
@@ -515,6 +631,8 @@ class ViewportOverlayHost:
     def _rebuild_widget(self, state_snapshot: object) -> None:
         old_widget = self.widget
         was_visible = bool(old_widget is not None and old_widget.isVisible())
+        if hasattr(self, "spec"):
+            self._predicate_dependencies = _spec_predicate_dependencies(self.spec)
         key_labels = {
             **_rendered_key_labels(old_widget, self.qt),
             **getattr(self, "_runtime_key_labels", {}),
@@ -724,29 +842,25 @@ class ViewportOverlayHost:
             return
         if not _spec_uses_predicates(self.spec):
             return
-
-        timer_class = getattr(self.qt.QtCore, "QTimer", None)
-        if timer_class is None:
+        if not hasattr(self, "cmds"):
             return
-
-        timer = timer_class()
-        timer.setInterval(self.predicate_refresh_interval_ms)
-        coarse_timer = getattr(self.qt.QtCore.Qt, "CoarseTimer", None)
-        if coarse_timer is not None and hasattr(timer, "setTimerType"):
-            timer.setTimerType(coarse_timer)
-        timer.timeout.connect(self._refresh_predicates_from_timer)
-        timer.start()
-        self._predicate_refresh_timer = timer
+        scheduler = PredicateRefreshScheduler.for_host(self)
+        scheduler.register(self)
+        self._predicate_refresh_scheduler = scheduler
+        self._predicate_refresh_timer = scheduler.timer
 
     def _stop_predicate_refresh_timer(self) -> None:
-        timer = self._predicate_refresh_timer
-        if timer is None:
-            return
-
-        with suppress(Exception):
-            timer.stop()
-        with suppress(Exception):
-            timer.deleteLater()
+        scheduler = getattr(self, "_predicate_refresh_scheduler", None)
+        if scheduler is not None:
+            scheduler.unregister(self)
+        else:
+            timer = self._predicate_refresh_timer
+            if timer is not None:
+                with suppress(Exception):
+                    timer.stop()
+                with suppress(Exception):
+                    timer.deleteLater()
+        self._predicate_refresh_scheduler = None
         self._predicate_refresh_timer = None
 
     def _refresh_predicates_from_timer(self) -> None:
@@ -768,6 +882,15 @@ def _spec_uses_predicates(spec: StackSpec) -> bool:
         bool(item.visible_when.strip() or item.enabled_when.strip() or item.active_when.strip())
         for item in spec.items
     )
+
+
+def _spec_predicate_dependencies(spec: StackSpec) -> frozenset[str]:
+    dependencies: set[str] = set()
+    for item in spec.items:
+        for predicate in (item.visible_when, item.enabled_when, item.active_when):
+            if predicate.strip():
+                dependencies.update(predicate_dependencies(predicate))
+    return frozenset(dependencies)
 
 
 def _anchored_position(

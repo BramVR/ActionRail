@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 from .actions import (
@@ -29,6 +31,15 @@ class PredicateContext:
     availability_overrides: Mapping[tuple[str, str], bool] | None = None
 
 
+@dataclass(frozen=True)
+class CompiledPredicate:
+    """Cached parsed predicate expression plus the state it depends on."""
+
+    source: str
+    expression: ast.AST | None
+    dependencies: frozenset[str]
+
+
 def evaluate_predicate(predicate: str, context: PredicateContext | None = None) -> bool:
     """Evaluate a small safe boolean expression.
 
@@ -47,25 +58,58 @@ def evaluate_predicate(predicate: str, context: PredicateContext | None = None) 
     if lowered == "false":
         return False
 
+    compiled = compile_predicate(predicate)
+    if compiled.expression is None:
+        return True
     evaluator = _PredicateEvaluator(context or PredicateContext(), expression)
+    return bool(evaluator.visit(compiled.expression))
+
+
+@lru_cache(maxsize=512)
+def compile_predicate(predicate: str) -> CompiledPredicate:
+    """Parse and cache a predicate expression with coarse dependency metadata."""
+
+    expression = predicate.strip()
+    if not expression or expression.lower() in {"true", "false"}:
+        return CompiledPredicate(
+            source=expression,
+            expression=ast.Constant(value=expression.lower() != "false"),
+            dependencies=frozenset(),
+        )
+
     try:
         parsed = ast.parse(expression, mode="eval")
     except SyntaxError as exc:
         msg = f"Invalid ActionRail predicate: {predicate}"
         raise ValueError(msg) from exc
-    return bool(evaluator.visit(parsed.body))
+    return CompiledPredicate(
+        source=expression,
+        expression=parsed.body,
+        dependencies=frozenset(_predicate_dependencies(parsed.body)),
+    )
+
+
+def predicate_dependencies(predicate: str) -> frozenset[str]:
+    """Return cached dependency names referenced by a predicate."""
+
+    try:
+        return compile_predicate(predicate).dependencies
+    except ValueError:
+        return frozenset()
 
 
 def availability_targets(predicate: str) -> tuple[tuple[str, str], ...]:
     """Return command/plugin availability targets referenced by a predicate."""
 
     try:
-        parsed = ast.parse(predicate, mode="eval")
-    except SyntaxError:
+        compiled = compile_predicate(predicate)
+    except ValueError:
+        return ()
+    if compiled.expression is None:
         return ()
 
     targets: list[tuple[str, str]] = []
-    for node in ast.walk(parsed):
+    for node in ast.walk(compiled.expression):
         if not isinstance(node, ast.Call) or len(node.args) != 1:
             continue
         try:
@@ -79,6 +123,34 @@ def availability_targets(predicate: str) -> tuple[tuple[str, str], ...]:
         if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
             targets.append(("command" if name == "command.exists" else "plugin", arg.value))
     return tuple(targets)
+
+
+def _predicate_dependencies(node: ast.AST) -> set[str]:
+    dependencies: set[str] = set()
+    for child in ast.walk(node):
+        if isinstance(child, ast.Call):
+            with suppress(ValueError):
+                name = _dotted_name(child.func)
+                if name in {"command.exists", "plugin.exists", "action.exists"}:
+                    dependencies.add(name)
+            continue
+        if isinstance(child, ast.Name | ast.Attribute):
+            with suppress(ValueError):
+                name = _dotted_name(child) if isinstance(child, ast.Attribute) else child.id
+                if name in _STATE_DEPENDENCY_NAMES:
+                    dependencies.add(_STATE_DEPENDENCY_NAMES[name])
+    return dependencies
+
+
+_STATE_DEPENDENCY_NAMES = {
+    "selection.count": "selection.count",
+    "current_tool": "maya.tool",
+    "maya.tool": "maya.tool",
+    "tool": "maya.tool",
+    "active.panel": "active.panel",
+    "active.camera": "active.camera",
+    "playback.playing": "playback.playing",
+}
 
 
 def missing_availability_targets(

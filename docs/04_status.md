@@ -19,12 +19,12 @@ studio layout override saves. Phase 2 step 2.6 is now in progress with the
 first collapsible edge-tab schema/runtime slice implemented and Maya-smoke
 verified, a Maya-smoke verified handle/publish polish pass, and a locally
 verified validation UX/saved-preset publish follow-up with Quick Create Maya
-smoke coverage for the custom-store Save + Publish shelf command path. The next
-build/fix step is now Phase 2 step 2.7 dense overlay performance foundation:
-replace per-rail polling with shared Maya state, cache predicates, prototype a
-custom-painted dense action bar, avoid full widget rebuilds for simple state
-changes, and add viewport navigation pass-through so large WoW-style layouts
-stay usable over Maya. The
+smoke coverage for the custom-store Save + Publish shelf command path. Phase 2
+step 2.7 dense overlay performance foundation is implemented: shared Maya
+state, one predicate refresh scheduler, cached predicate dependencies, a
+custom-painted dense action bar path, dirty-slot repainting for simple state
+changes, and viewport navigation pass-through so large WoW-style layouts stay
+usable over Maya. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -101,8 +101,11 @@ Working surface:
 
 - JSON presets and Python builder API for viewport rails.
 - Built-in presets: `transform_stack`, `horizontal_tools`, and `maya_tools`.
-- Qt overlay lifecycle, model-panel anchoring, predicate refresh, reusable Maya
-  actions, and runtime-command hotkey publishing.
+- Qt overlay lifecycle, model-panel anchoring, shared predicate refresh
+  scheduling, reusable Maya actions, and runtime-command hotkey publishing.
+- Dense locked action bars above the large-layout threshold now render as one
+  custom-painted Qt canvas with cached slot rects/state, dirty-slot repainting,
+  and Alt/middle/right/wheel viewport navigation pass-through.
 - Public slot binding-target metadata through `actionrail.slot_binding_targets()`,
   including slot ids, labels, key labels, runtime commands, and Maya
   nameCommands for saved bars.
@@ -200,7 +203,7 @@ Focus the next slice on:
 - keeping the Normal Mode unlocked-slot drag/drop workflow stable: Shift-drag
   moves/swaps populated slot payloads within a rail, transfers/swaps between
   unlocked rails, and preserves the source when dropped onto a locked rail
-- building the Phase 2 step 2.7 dense overlay performance foundation before
+- hardening the Phase 2 step 2.7 dense overlay performance foundation before
   later modes: shared Maya state, one refresh scheduler, cached predicates, a
   custom-painted dense bar prototype, dirty-slot repainting, and Maya viewport
   navigation pass-through
@@ -229,10 +232,10 @@ $env:PYTHONPATH = "scripts"
    out of Edit Mode and into Normal Mode rail lock/unlock helpers. Treat
    publishing as optional infrastructure; keep the main UX vocabulary aligned
    to frames, Action Book, Macro Book, Edit Mode, and Bind Mode.
-4. Build Phase 2 step 2.7 next: dense overlay performance for WoW-style large
-   action-bar layouts. Start with a measurable 100+ slot probe, shared Maya
+4. Harden Phase 2 step 2.7: keep the 100+ slot dense overlay probe, shared Maya
    state service, one refresh scheduler, cached predicates, custom-painted bar
-   prototype, dirty-slot repainting, and viewport navigation pass-through.
+   prototype, dirty-slot repainting, and viewport navigation pass-through green
+   before starting later authoring modes.
 5. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when feasible.
 
 ## Latest Handoff
@@ -360,6 +363,28 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest Phase 2 step 2.7 dense overlay validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest`
+  -> 515 passed.
+- Latest Phase 2 step 2.7 Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check .`
+  -> all checks passed.
+- Latest dense overlay Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_dense_overlay_smoke.py -Timeout 300`
+  -> passed; verified 120 visible dense slots across two custom-painted dense
+  canvas bars, no per-slot dense `QPushButton` objects, a 20-button widget
+  baseline on the legacy path, one shared predicate scheduler, dirty refresh
+  without rebuilds, pass-through for wheel/Alt/middle while plain left clicks
+  stay with ActionRail, and screenshot capture at
+  `.gg-maya-sessiond/screenshots/actionrail_dense_overlay.png`.
+- Latest full Maya smoke baseline:
+  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
+  -> passed against the running MayaSessiond state on port `7217`; includes the
+  new dense overlay probe plus the existing Action Book, capture, custom
+  preset-store, diagnostics, Edit Mode, hidden visibility, horizontal and Maya
+  icon rails, hotkey bridge/sync, import/recovery, menu/shelf UI, missing Maya
+  icon resources, overlay cleanup, Phase 0, predicates, Quick Create,
+  StackItem ABI, and transform-stack state smoke scripts.
 - Latest focused Edit Mode color validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_edit_mode.py`
   -> 38 passed.

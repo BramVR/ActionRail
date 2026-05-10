@@ -1659,3 +1659,111 @@ def test_map_to_global_and_deferred_delete_helpers_handle_failures() -> None:
                     return App()
 
     overlay._flush_qt_deferred_deletes(QtWithBrokenApp)
+
+
+def test_predicate_refresh_scheduler_shares_state_snapshot_across_hosts() -> None:
+    class FakeSignal:
+        def __init__(self) -> None:
+            self.callback = None
+
+        def connect(self, callback: object) -> None:
+            self.callback = callback
+
+        def emit(self) -> None:
+            assert self.callback is not None
+            self.callback()
+
+    class FakeTimer:
+        instances: list[FakeTimer] = []
+
+        def __init__(self) -> None:
+            self.timeout = FakeSignal()
+            self.started = False
+            self.stopped = False
+            FakeTimer.instances.append(self)
+
+        def setInterval(self, interval: int) -> None:  # noqa: N802
+            self.interval = interval
+
+        def setTimerType(self, timer_type: object) -> None:  # noqa: N802
+            self.timer_type = timer_type
+
+        def start(self) -> None:
+            self.started = True
+
+        def stop(self) -> None:
+            self.stopped = True
+
+        def deleteLater(self) -> None:  # noqa: N802
+            self.deleted = True
+
+    class FakeQt:
+        class QtCore:
+            class Qt:
+                CoarseTimer = 1
+
+            QTimer = FakeTimer
+
+    class FakeCmds:
+        def __init__(self) -> None:
+            self.current_ctx_calls = 0
+            self.selection_calls = 0
+
+        def currentCtx(self) -> str:  # noqa: N802
+            self.current_ctx_calls += 1
+            return "moveSuperContext"
+
+        def ls(self, *, selection: bool = False) -> list[str]:
+            self.selection_calls += 1
+            return ["pCube1"] if selection else []
+
+        def getPanel(self, **kwargs: object) -> str:
+            if kwargs.get("withFocus"):
+                return "modelPanel4"
+            return ""
+
+        def modelPanel(self, panel: str, *, query: bool = False, camera: bool = False) -> str:  # noqa: N802
+            return f"{panel}Camera" if query and camera else ""
+
+        def play(self, *, query: bool = False, state: bool = False) -> bool:
+            _ = query, state
+            return False
+
+    class Widget:
+        def isVisible(self) -> bool:  # noqa: N802
+            return True
+
+    class Host:
+        def __init__(self, panel: str) -> None:
+            self.panel = panel
+            self.widget = Widget()
+            self._predicate_dependencies = frozenset({"maya.tool", "selection.count"})
+            self.snapshots = []
+
+        def refresh_state(self, state_snapshot: object | None = None) -> None:
+            self.snapshots.append(state_snapshot)
+
+    cmds = FakeCmds()
+    scheduler = overlay.PredicateRefreshScheduler(FakeQt, cmds, 250)
+    first = Host("modelPanel1")
+    second = Host("modelPanel2")
+
+    scheduler.register(first)
+    scheduler.register(second)
+    FakeTimer.instances[-1].timeout.emit()
+
+    assert cmds.current_ctx_calls == 1
+    assert cmds.selection_calls == 1
+    assert len(first.snapshots) == 1
+    assert len(second.snapshots) == 1
+    assert first.snapshots[0].active_panel == "modelPanel1"
+    assert second.snapshots[0].active_panel == "modelPanel2"
+    FakeTimer.instances[-1].timeout.emit()
+    assert cmds.current_ctx_calls == 2
+    assert cmds.selection_calls == 2
+    assert len(first.snapshots) == 1
+    assert len(second.snapshots) == 1
+    scheduler.unregister(first)
+    assert FakeTimer.instances[-1].stopped is False
+    scheduler.unregister(second)
+    assert FakeTimer.instances[-1].stopped is True

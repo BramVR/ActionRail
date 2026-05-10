@@ -64,13 +64,15 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     {
         "path": "scripts/actionrail/widgets.py",
         "owns": (
-            "Qt rail/widget construction, custom button painting, diagnostic badge "
-            "display, per-bar appearance rendering, Normal Mode slot-edit context "
-            "menus, and Shift-drag gestures"
+            "Qt rail/widget construction, custom button and dense action-bar "
+            "painting, diagnostic badge display, per-bar appearance rendering, "
+            "Normal Mode slot-edit context menus, Shift-drag gestures, dirty-slot "
+            "repainting, and viewport navigation pass-through"
         ),
         "tests": (
             "tests/test_widgets.py",
             "tests/maya_smoke/actionrail_diagnostic_badges_smoke.py",
+            "tests/maya_smoke/actionrail_dense_overlay_smoke.py",
         ),
     },
     {
@@ -82,9 +84,19 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "path": "scripts/actionrail/overlay.py",
         "owns": (
             "Maya model-panel anchoring, floating rail host, overlay cleanup, "
-            "and active rail slot-edit lock/move state"
+            "shared predicate refresh scheduling, and active rail slot-edit "
+            "lock/move state"
         ),
-        "tests": ("tests/test_overlay.py", "tests/maya_smoke/actionrail_overlay_cleanup_smoke.py"),
+        "tests": (
+            "tests/test_overlay.py",
+            "tests/maya_smoke/actionrail_overlay_cleanup_smoke.py",
+            "tests/maya_smoke/actionrail_dense_overlay_smoke.py",
+        ),
+    },
+    {
+        "path": "scripts/actionrail/state.py",
+        "owns": "shared Maya state snapshots for predicate refresh and dense overlay updates",
+        "tests": ("tests/test_overlay.py", "tests/maya_smoke/actionrail_dense_overlay_smoke.py"),
     },
     {
         "path": "scripts/actionrail/slot_payloads.py",
@@ -120,7 +132,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/predicates.py",
-        "owns": "safe predicate evaluator and availability target analysis",
+        "owns": (
+            "safe cached predicate evaluator, dependency metadata, and "
+            "availability target analysis"
+        ),
         "tests": ("tests/test_predicates.py", "tests/maya_smoke/actionrail_predicates_smoke.py"),
     },
     {
@@ -237,15 +252,15 @@ def about() -> dict[str, object]:
                 "action entries to unlocked action-bar slots; Quick Create "
                 "Lock Bar preserves dropped Action Book payloads/icons after "
                 "the preview rebuild; ElvUI-reference per-bar appearance schema "
-                "and Quick Create Appearance tab Maya-smoke verified; next "
-                "build/fix step is dense overlay performance foundation for "
-                "large WoW-style action-bar layouts"
+                "and Quick Create Appearance tab Maya-smoke verified; Phase 2 "
+                "step 2.7 dense overlay performance foundation is implemented "
+                "with shared Maya state, one predicate scheduler, cached "
+                "predicate dependencies, custom-painted dense bars, dirty-slot "
+                "repainting, and viewport navigation pass-through"
             ),
             "next_slice": (
-                "Phase 2 step 2.7 dense overlay performance foundation: shared "
-                "Maya state, one refresh scheduler, cached predicates, custom-painted "
-                "dense bar prototype, dirty-slot repainting, and viewport navigation "
-                "pass-through"
+                "Review and harden the Phase 2 step 2.7 dense overlay foundation "
+                "with Maya smoke evidence before moving to later authoring modes"
             ),
             "blockers_doc": "docs/04_status.md#blockers",
         },

@@ -470,7 +470,8 @@ Research hints:
 
 #### 2.7 Dense Overlay Performance Foundation
 
-Status: next build/fix step.
+Status: implemented; focused local validation added, with Maya smoke coverage in
+`actionrail_dense_overlay_smoke.py`.
 
 ActionRail must be fast with WoW-style dense action-bar layouts, not only the
 small transform-stack proof preset. The README live showcase exposed the
@@ -483,25 +484,32 @@ layers, marking-menu export, or Viewport 2.0.
 - Add a shared runtime state service for Maya state used by predicates:
   current tool, selection count, active panel/camera, playback state, and later
   context-specific signals. Prefer Maya callbacks/events where feasible and use
-  throttled fallback polling only when needed.
+  throttled fallback polling only when needed. First pass done through
+  `actionrail.state.MayaStateService`.
 - Replace per-rail predicate refresh timers with one scheduler that updates a
   shared snapshot, marks dependent slots dirty, and refreshes only affected
-  bars/slots.
+  bars/slots. First pass done through
+  `actionrail.overlay.PredicateRefreshScheduler`.
 - Cache parsed/compiled predicate expressions and record their dependencies so
   `maya.tool`, `selection.count`, `active.panel`, and diagnostics predicates do
-  not all refresh on every state change.
+  not all refresh on every state change. Done through cached predicate ASTs and
+  `predicate_dependencies()`.
 - Prototype a dense action-bar canvas path: one custom-painted Qt widget per
   action bar, cached slot rects, cached icon pixmaps/text metrics, manual
-  hit-testing, and no per-slot `QPushButton` objects for dense bars.
+  hit-testing, and no per-slot `QPushButton` objects for dense bars. First pass
+  done for large locked bars.
 - Add Maya navigation pass-through rules so viewport navigation gestures remain
   responsive with UI on top: Alt/middle/right/wheel viewport gestures should
   reach Maya unless ActionRail is in a mode that intentionally captures them.
+  First pass done for root, button, and dense-canvas events.
 - Avoid full widget rebuilds for active/enabled/key-label changes. Update
-  cached slot render state and repaint dirty rects instead.
+  cached slot render state and repaint dirty rects instead. First pass done for
+  dense bars.
 - Add a dense-layout performance smoke/probe that exercises at least 100 visible
   slots across multiple bars, records refresh timing, verifies viewport
   navigation gestures are not captured outside intended slot clicks, and
-  compares the new path against the current widget-per-button path.
+  compares the new path against the current widget-per-button path. Added as
+  `tests/maya_smoke/actionrail_dense_overlay_smoke.py`.
 
 Done when a 100+ slot ActionRail layout can stay visible over Maya while
 viewport tumble/pan/zoom remains usable, with no per-rail polling storm and no

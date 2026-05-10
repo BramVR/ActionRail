@@ -109,10 +109,10 @@ Snapshot:
   action entries with the same icons used by action bars, supports click-to-run
   action previews, and drags Action Book payloads onto unlocked Normal Mode
   action-bar slots.
-- Current next implementation slice: finish Phase 2 step 2.6 collapsible edge
-  tabs and authoring workflow polish, then build Phase 2 step 2.7 dense overlay
-  performance foundation so large WoW-style action-bar layouts stay fast over
-  Maya navigation. The first collapse schema/runtime pass is implemented and
+- Current implementation slice: Phase 2 step 2.7 dense overlay performance
+  foundation is implemented on top of the completed Phase 2 step 2.6 authoring
+  polish so large WoW-style action-bar layouts stay fast over Maya navigation.
+  The first collapse schema/runtime pass is implemented and
   Maya-smoke verified. A Maya-smoke verified handle/publish polish pass now makes
   collapsed handles larger, positions them flush to viewport edges, adds
   publish-facing diagnostics for missing actions/icons/hotkey label conflicts,
@@ -133,10 +133,11 @@ Snapshot:
   Phase 2 step 2.5 layout editing and direct
   manipulation is complete; Edit Mode can save unlocked runtime/user rail
   offsets plus unlocked built-in and studio user override presets. The 2.7
-  performance step should replace per-rail polling with shared state, cache
-  predicates, prototype a custom-painted dense bar, and add viewport navigation
-  pass-through before later modes. Do not start Bind Mode, flyouts, command
-  rings, profile layers, marking-menu export, or Viewport 2.0 yet.
+  performance step now has shared Maya state, a single predicate scheduler,
+  cached predicate dependencies, a custom-painted dense action-bar prototype,
+  dirty-slot repainting, and viewport navigation pass-through before later
+  modes. Do not start Bind Mode, flyouts, command rings, profile layers,
+  marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -185,8 +186,8 @@ Build PySide6/Qt overlay first.
 Phase 1 declarative MVP and Phase 2 steps 2.1-2.5 are complete for their first
 useful slices. Phase 2 step 2.5 has direct-manipulation controls plus
 user-preset, built-in user-override, and studio user-override layout-save paths.
-Continue Phase 2 with collapsible edge tabs, unified authoring workflow polish,
-and the dense overlay performance foundation:
+Continue Phase 2 by hardening the dense overlay performance foundation before
+later authoring modes:
 
 1. Read `docs/06_wow_style_customization.md` before shaping authoring UX.
 2. Continue Quick Create round-trip stability, locked built-in/studio
@@ -195,7 +196,7 @@ and the dense overlay performance foundation:
    validated collapsed-handle, Normal Mode slot payload lock/unlock plus
    Shift-drag same-rail and cross-rail editing, guide, Edit Mode panel, and
    optional Save + Publish paths.
-3. Build Phase 2 step 2.7 next: shared Maya state, one refresh scheduler,
+3. Keep Phase 2 step 2.7 stable: shared Maya state, one refresh scheduler,
    cached predicates, a custom-painted dense action-bar prototype, dirty-slot
    repainting, and pass-through rules for Maya tumble/pan/zoom gestures.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
