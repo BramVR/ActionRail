@@ -137,8 +137,11 @@ Snapshot:
   cached predicate dependencies, a custom-painted dense action-bar prototype,
   dirty-slot repainting, viewport navigation pass-through, cached Maya icon
   resource checks, dense icon/pixmap reuse, and dependency-aware Maya state
-  sampling before later modes. Do not start Bind Mode, flyouts, command rings,
-  profile layers, marking-menu export, or Viewport 2.0 yet.
+  sampling before later modes. The forced selection-redraw workaround has been
+  removed so native Maya select/delete redraw can be observed without
+  ActionRail scheduling `cmds.refresh()` calls. Do not start Bind Mode,
+  flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
+  yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.

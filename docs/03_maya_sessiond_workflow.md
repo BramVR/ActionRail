@@ -163,9 +163,9 @@ Useful variants:
   without rebuilds, viewport navigation pass-through rules, and screenshot
   capture.
 - `actionrail_selection_redraw_smoke.py`: README-style scene/overlay selection
-  redraw regression; verifies visible overlays install one shared Maya
-  selection-change callback and that selection changes schedule
-  `cmds.refresh(currentView=True, force=True)`.
+  redraw regression; verifies visible overlays no longer install the removed
+  selection-refresh scheduler, and that native select/delete completes without
+  ActionRail forcing `cmds.refresh()`.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
 - `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
 - `actionrail_overlay_cleanup_smoke.py`: repeated show/reload cleanup for stale ActionRail viewport widgets and origin-placement regression coverage.

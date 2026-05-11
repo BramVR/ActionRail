@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-10
+Last updated: 2026-05-11
 
 ## Current Snapshot
 
@@ -26,11 +26,10 @@ custom-painted dense action bar path, dirty-slot repainting for simple state
 changes, and viewport navigation pass-through so large WoW-style layouts stay
 usable over Maya. The latest performance hardening removes repeated per-slot
 Maya icon resource checks, reuses dense icon/pixmap objects during paint, and
-samples only predicate-needed Maya state on refresh ticks. The latest viewport
-redraw fix installs one shared Maya selection-change callback while overlays
-are visible and defers `cmds.refresh(currentView=True, force=True)` so mesh
-selection highlighting appears immediately in the README-style scene instead
-of waiting for a camera move. The
+samples only predicate-needed Maya state on refresh ticks. The latest native
+selection redraw cleanup removes the `ViewportSelectionRefreshScheduler`
+workaround entirely: overlays no longer install a Maya selection callback or
+scriptJob and no longer force `cmds.refresh()` after selection changes. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -213,6 +212,9 @@ Focus the next slice on:
   later modes: shared Maya state, one refresh scheduler, cached predicates, a
   custom-painted dense bar prototype, dirty-slot repainting, and Maya viewport
   navigation pass-through
+- keep the native selection/delete redraw path under observation now that the
+  forced selection-refresh workaround has been removed; add a narrower fix only
+  if the original viewport highlight lag returns in real Maya use.
 
 Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
 layers, marking-menu export, or Viewport 2.0 before the performance foundation.
@@ -371,22 +373,23 @@ $env:PYTHONPATH = "scripts"
 
 - Latest Phase 2 step 2.7 dense overlay validation:
   `.\\.venv\\Scripts\\python.exe -m pytest`
-  -> 522 passed.
+  -> 520 passed.
 - Latest Phase 2 step 2.7 Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
-- Latest selection redraw regression validation:
+- Latest selection redraw removal validation:
   `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_overlay.py tests\\test_state.py`
-  -> 49 passed.
+  -> 47 passed.
 - Latest selection redraw Ruff:
   `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\overlay.py tests\\test_overlay.py tests\\maya_smoke\\actionrail_selection_redraw_smoke.py`
   -> all checks passed.
 - Latest selection redraw Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_selection_redraw_smoke.py -Timeout 240`
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_selection_redraw_smoke.py -Timeout 240`
   -> passed against the running MayaSessiond state on port `7217`; verified
-  the README-style overlay-visible selection path uses one shared Maya API
-  selection callback and that two mesh selection changes each call
-  `cmds.refresh(currentView=True, force=True)`.
+  the README-style overlay-visible selection path has no
+  `ViewportSelectionRefreshScheduler`, no host selection scheduler, and no
+  forced `cmds.refresh()` calls while selecting two meshes and deleting the
+  selected mesh.
 - Latest performance hardening checks:
   focused local coverage verifies per-slot icon status resolves once, Maya icon
   resource checks cache per `cmds` session object, dense paint reuses icon and
@@ -394,18 +397,18 @@ $env:PYTHONPATH = "scripts"
   does not touch selection, panel, camera, or playback APIs. The dense Maya
   smoke now also records scheduler and per-host refresh timing.
 - Latest dense overlay Maya smoke:
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script actionrail_dense_overlay_smoke.py -Timeout 300`
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_dense_overlay_smoke.py -Timeout 300`
   -> passed; verified 120 visible dense slots across two custom-painted dense
   canvas bars, no per-slot dense `QPushButton` objects, a 20-button widget
   baseline on the legacy path, one shared predicate scheduler, dirty refresh
   without rebuilds, pass-through for wheel/Alt/middle while plain left clicks
-  stay with ActionRail, scheduler refresh timing around `0.093 ms`,
-  per-host dense refresh timing around `1.2-1.4 ms`, and screenshot capture at
+  stay with ActionRail, scheduler refresh timing around `0.081 ms`,
+  per-host dense refresh timing around `1.26-1.57 ms`, and screenshot capture at
   `.gg-maya-sessiond/screenshots/actionrail_dense_overlay.png`.
 - Latest full Maya smoke baseline:
-  `.\\scripts\\maya-smoke.ps1 -NoStart -Script all -Timeout 300`
+  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
   -> passed against the running MayaSessiond state on port `7217`; includes the
-  dense overlay probe, the new selection-redraw regression, Action Book,
+  dense overlay probe, the selection-redraw removal regression, Action Book,
   capture, custom preset-store, diagnostics, Edit Mode, hidden visibility,
   horizontal and Maya icon rails, hotkey bridge/sync, import/recovery,
   menu/shelf UI, missing Maya icon resources, overlay cleanup, Phase 0,

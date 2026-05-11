@@ -10,6 +10,15 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-11
+
+- Removed the `ViewportSelectionRefreshScheduler` workaround, so visible
+  overlays no longer install Maya selection callbacks or `scriptJob`s and no
+  longer force `cmds.refresh()` after selection changes.
+- Reworked the selection redraw smoke to exercise native Maya select/delete
+  with overlays visible and verify ActionRail schedules zero forced refresh
+  calls; dense overlay timing remains low after the removal.
+
 ## 2026-05-10
 
 - Implemented Phase 2 step 2.7 dense overlay performance foundation: predicate

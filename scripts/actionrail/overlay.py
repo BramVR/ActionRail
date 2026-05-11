@@ -34,10 +34,6 @@ DEFAULT_MARGIN = 12
 COLLAPSED_HANDLE_EDGE_MARGIN = 4
 PREDICATE_REFRESH_INTERVAL_MS = 250
 _PREDICATE_REFRESH_SCHEDULERS: dict[tuple[int, int, int], PredicateRefreshScheduler] = {}
-_VIEWPORT_SELECTION_REFRESH_SCHEDULERS: dict[
-    tuple[int, int],
-    ViewportSelectionRefreshScheduler,
-] = {}
 
 __all__ = [
     "CONTAINER_OBJECT_NAME_PREFIX",
@@ -45,7 +41,6 @@ __all__ = [
     "OBJECT_NAME_PREFIX",
     "PREDICATE_REFRESH_INTERVAL_MS",
     "PredicateRefreshScheduler",
-    "ViewportSelectionRefreshScheduler",
     "ViewportOverlayHost",
     "active_model_panel",
     "cleanup_overlay_widgets",
@@ -379,120 +374,6 @@ class PredicateRefreshScheduler:
                 _PREDICATE_REFRESH_SCHEDULERS.pop(key, None)
 
 
-class ViewportSelectionRefreshScheduler:
-    """Shared Maya selection-change job that nudges the current viewport to repaint."""
-
-    def __init__(self, qt: Any, cmds_module: Any) -> None:
-        self.qt = qt
-        self.cmds = cmds_module
-        self.hosts: list[ref[ViewportOverlayHost]] = []
-        self.callback_id: Any | None = None
-        self.job_id: int | None = None
-        self._refresh_queued = False
-
-    @classmethod
-    def for_host(cls, host: ViewportOverlayHost) -> ViewportSelectionRefreshScheduler:
-        if not hasattr(host, "cmds"):
-            msg = "Viewport selection refresh requires a Maya cmds module."
-            raise RuntimeError(msg)
-        key = (id(host.qt), id(host.cmds))
-        scheduler = _VIEWPORT_SELECTION_REFRESH_SCHEDULERS.get(key)
-        if scheduler is None:
-            scheduler = cls(host.qt, host.cmds)
-            _VIEWPORT_SELECTION_REFRESH_SCHEDULERS[key] = scheduler
-        return scheduler
-
-    def register(self, host: ViewportOverlayHost) -> None:
-        self._prune_hosts()
-        if not any(existing() is host for existing in self.hosts):
-            self.hosts.append(ref(host))
-        self._ensure_job()
-
-    def unregister(self, host: ViewportOverlayHost) -> None:
-        self.hosts = [
-            existing
-            for existing in self.hosts
-            if existing() is not None and existing() is not host
-        ]
-        if not self.hosts:
-            self.stop()
-
-    def stop(self) -> None:
-        callback_id = self.callback_id
-        if callback_id is not None:
-            _remove_maya_callback(callback_id)
-        self.callback_id = None
-        job_id = self.job_id
-        if job_id is not None:
-            with suppress(Exception):
-                self.cmds.scriptJob(kill=job_id, force=True)
-        self.job_id = None
-        self._refresh_queued = False
-        self._remove_from_registry()
-
-    def _ensure_job(self) -> None:
-        if self.callback_id is not None or self.job_id is not None:
-            return
-        callback_id = _add_maya_selection_callback(self._selection_changed)
-        if callback_id is not None:
-            self.callback_id = callback_id
-            return
-        script_job = getattr(self.cmds, "scriptJob", None)
-        if not callable(script_job):
-            return
-        try:
-            self.job_id = int(
-                script_job(
-                    event=["SelectionChanged", self._selection_changed],
-                    protected=True,
-                )
-            )
-        except Exception:
-            self.job_id = None
-
-    def _selection_changed(self) -> None:
-        if not tuple(self._live_visible_hosts()):
-            if not self.hosts:
-                self.stop()
-            return
-        if self._refresh_queued:
-            return
-        self._refresh_queued = True
-        timer_class = getattr(getattr(self.qt, "QtCore", None), "QTimer", None)
-        single_shot = getattr(timer_class, "singleShot", None)
-        if callable(single_shot):
-            with suppress(Exception):
-                single_shot(0, self._refresh_current_view)
-                return
-        self._refresh_current_view()
-
-    def _refresh_current_view(self) -> None:
-        self._refresh_queued = False
-        if not tuple(self._live_visible_hosts()):
-            if not self.hosts:
-                self.stop()
-            return
-        _refresh_current_maya_view(self.cmds)
-
-    def _live_visible_hosts(self) -> Iterator[ViewportOverlayHost]:
-        self._prune_hosts()
-        for host_ref in tuple(self.hosts):
-            host = host_ref()
-            if host is None or host.widget is None or not _qt_widget_is_valid(host.widget):
-                continue
-            with suppress(Exception):
-                if host.widget.isVisible():
-                    yield host
-
-    def _prune_hosts(self) -> None:
-        self.hosts = [host_ref for host_ref in self.hosts if host_ref() is not None]
-
-    def _remove_from_registry(self) -> None:
-        for key, scheduler in tuple(_VIEWPORT_SELECTION_REFRESH_SCHEDULERS.items()):
-            if scheduler is self:
-                _VIEWPORT_SELECTION_REFRESH_SCHEDULERS.pop(key, None)
-
-
 def cleanup_overlay_widgets(parent: Any, spec_id: str, qt: Any | None = None) -> int:
     """Hide/delete stale ActionRail widgets under a Maya panel widget."""
 
@@ -622,9 +503,6 @@ class ViewportOverlayHost:
         self._runtime_key_labels: dict[str, str] = {}
         self._predicate_dependencies = _spec_predicate_dependencies(spec)
         self._predicate_refresh_scheduler: PredicateRefreshScheduler | None = None
-        self._viewport_selection_refresh_scheduler: (
-            ViewportSelectionRefreshScheduler | None
-        ) = None
         self.widget = self._build_widget(snapshot(self.cmds, active_panel=self.panel))
         self.widget.hide()
         self._resize_filter = _ResizeEventFilter(self)
@@ -667,7 +545,6 @@ class ViewportOverlayHost:
 
     def show(self) -> None:
         self._start_predicate_refresh_timer()
-        self._start_viewport_selection_refresh()
         self.position()
         self.widget.show()
         self.widget.raise_()
@@ -713,7 +590,6 @@ class ViewportOverlayHost:
 
     def close(self) -> None:
         self._stop_predicate_refresh_timer()
-        self._stop_viewport_selection_refresh()
 
         if self._resize_filter is not None:
             for target in self._filter_targets:
@@ -1003,21 +879,6 @@ class ViewportOverlayHost:
         self._predicate_refresh_scheduler = None
         self._predicate_refresh_timer = None
 
-    def _start_viewport_selection_refresh(self) -> None:
-        if getattr(self, "_viewport_selection_refresh_scheduler", None) is not None:
-            return
-        if not hasattr(self, "cmds"):
-            return
-        scheduler = ViewportSelectionRefreshScheduler.for_host(self)
-        scheduler.register(self)
-        self._viewport_selection_refresh_scheduler = scheduler
-
-    def _stop_viewport_selection_refresh(self) -> None:
-        scheduler = getattr(self, "_viewport_selection_refresh_scheduler", None)
-        if scheduler is not None:
-            scheduler.unregister(self)
-        self._viewport_selection_refresh_scheduler = None
-
     def _refresh_predicates_from_timer(self) -> None:
         if self.widget is None or not _qt_widget_is_valid(self.widget):
             self._stop_predicate_refresh_timer()
@@ -1046,66 +907,6 @@ def _spec_predicate_dependencies(spec: StackSpec) -> frozenset[str]:
             if predicate.strip():
                 dependencies.update(predicate_dependencies(predicate))
     return frozenset(dependencies)
-
-
-def _refresh_current_maya_view(cmds: Any) -> None:
-    refresh = getattr(cmds, "refresh", None)
-    if not callable(refresh):
-        return
-    try:
-        refresh(currentView=True, force=True)
-        return
-    except Exception:
-        pass
-    try:
-        refresh(force=True)
-        return
-    except Exception:
-        pass
-    with suppress(Exception):
-        refresh()
-
-
-def _add_maya_selection_callback(callback: Any) -> Any | None:
-    event_message = _maya_event_message()
-    add_callback = getattr(event_message, "addEventCallback", None)
-    if not callable(add_callback):
-        return None
-    try:
-        return add_callback("SelectionChanged", lambda *_args: callback())
-    except Exception:
-        return None
-
-
-def _remove_maya_callback(callback_id: Any) -> None:
-    message = _maya_message()
-    remove_callback = getattr(message, "removeCallback", None)
-    if not callable(remove_callback):
-        return
-    with suppress(Exception):
-        remove_callback(callback_id)
-
-
-def _maya_event_message() -> Any | None:
-    try:
-        from maya.api import OpenMaya as om  # type: ignore[import-not-found]
-    except Exception:
-        try:
-            from maya import OpenMaya as om  # type: ignore[import-not-found,no-redef]
-        except Exception:
-            return None
-    return getattr(om, "MEventMessage", None)
-
-
-def _maya_message() -> Any | None:
-    try:
-        from maya.api import OpenMaya as om  # type: ignore[import-not-found]
-    except Exception:
-        try:
-            from maya import OpenMaya as om  # type: ignore[import-not-found,no-redef]
-        except Exception:
-            return None
-    return getattr(om, "MMessage", None)
 
 
 def _anchored_position(

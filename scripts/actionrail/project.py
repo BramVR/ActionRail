@@ -268,7 +268,9 @@ def about() -> dict[str, object]:
                 "predicate dependencies, custom-painted dense bars, dirty-slot "
                 "repainting, viewport navigation pass-through, cached Maya icon "
                 "resource checks, dense icon/pixmap reuse, and dependency-aware "
-                "state sampling"
+                "state sampling; the forced selection-redraw scheduler has been "
+                "removed so visible overlays no longer install selection callbacks "
+                "or force current-view refreshes"
             ),
             "next_slice": (
                 "Keep the Phase 2 step 2.7 dense overlay foundation stable with "

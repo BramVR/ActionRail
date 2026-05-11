@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 
 __args__ = globals().get("__args__", {})
 
@@ -15,6 +14,7 @@ from maya import utils as maya_utils  # noqa: E402
 from PySide6 import QtCore, QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
+from actionrail import overlay  # noqa: E402
 
 app = QtWidgets.QApplication.instance()
 if app is None:
@@ -41,16 +41,6 @@ def _process_events(delay_ms: int = 0) -> None:
         QtCore.QThread.msleep(delay_ms)
         app.processEvents()
         maya_utils.processIdleEvents()
-
-
-def _wait_for_refresh_call(calls: list[dict[str, object]], expected_count: int) -> bool:
-    deadline = time.monotonic() + 2.0
-    while time.monotonic() < deadline:
-        _process_events(25)
-        if len(calls) >= expected_count:
-            return True
-    _process_events()
-    return len(calls) >= expected_count
 
 
 def _make_scene() -> tuple[str, str]:
@@ -102,20 +92,14 @@ hosts = (
 )
 _process_events(150)
 
-schedulers = {
-    getattr(host, "_viewport_selection_refresh_scheduler", None) for host in hosts
-}
-if None in schedulers or len(schedulers) != 1:
-    raise AssertionError(f"Expected one shared selection refresh scheduler: {schedulers}")
+if hasattr(overlay, "ViewportSelectionRefreshScheduler"):
+    raise AssertionError("Selection redraw scheduler still exists in actionrail.overlay.")
 
-scheduler = next(iter(schedulers))
-job_id = getattr(scheduler, "job_id", None)
-callback_id = getattr(scheduler, "callback_id", None)
-if callback_id is None and (not isinstance(job_id, int) or job_id <= 0):
-    raise AssertionError(
-        "Selection refresh callback was not installed: "
-        f"callback_id={callback_id!r}, job_id={job_id!r}"
-    )
+host_schedulers = [
+    getattr(host, "_viewport_selection_refresh_scheduler", None) for host in hosts
+]
+if any(scheduler is not None for scheduler in host_schedulers):
+    raise AssertionError(f"Unexpected selection refresh scheduler on hosts: {host_schedulers}")
 
 refresh_calls: list[dict[str, object]] = []
 original_refresh = cmds.refresh
@@ -129,30 +113,36 @@ def _recording_refresh(*_args: object, **kwargs: object) -> object:
 cmds.refresh = _recording_refresh
 try:
     cmds.select(cube_a, replace=True)
-    if not _wait_for_refresh_call(refresh_calls, 1):
-        raise AssertionError("Selecting the first mesh did not schedule a viewport refresh.")
+    _process_events(150)
+    selected_after_a = cmds.ls(selection=True) or []
     cmds.select(cube_b, replace=True)
-    if not _wait_for_refresh_call(refresh_calls, 2):
-        raise AssertionError("Selecting the second mesh did not schedule a viewport refresh.")
+    _process_events(150)
+    selected_after_b = cmds.ls(selection=True) or []
+    cmds.delete(cube_b)
+    _process_events(150)
+    cube_b_exists_after_delete = bool(cmds.objExists(cube_b))
 finally:
     cmds.refresh = original_refresh
 
-expected = {"currentView": True, "force": True}
-if not all(call == expected for call in refresh_calls[:2]):
-    raise AssertionError(f"Unexpected selection refresh calls: {refresh_calls}")
+if selected_after_a != [cube_a]:
+    raise AssertionError(f"First mesh was not selected natively: {selected_after_a}")
+if selected_after_b != [cube_b]:
+    raise AssertionError(f"Second mesh was not selected natively: {selected_after_b}")
+if cube_b_exists_after_delete:
+    raise AssertionError("Selected mesh delete did not complete while overlays were visible.")
+if refresh_calls:
+    raise AssertionError(f"ActionRail scheduled forced selection refresh calls: {refresh_calls}")
 
 result = {
-    "callback_id": repr(callback_id),
-    "job_id": job_id,
+    "forced_refresh_calls": refresh_calls,
+    "host_selection_schedulers": [repr(scheduler) for scheduler in host_schedulers],
     "panel": panel,
-    "refresh_calls": refresh_calls[:2],
-    "selected": cmds.ls(selection=True) or [],
+    "selected_after_a": selected_after_a,
+    "selected_after_b": selected_after_b,
+    "cube_b_exists_after_delete": cube_b_exists_after_delete,
 }
 
 actionrail.hide_all()
 _process_events(100)
-
-if getattr(scheduler, "callback_id", None) is not None or getattr(scheduler, "job_id", None):
-    raise AssertionError("Selection refresh callback was not removed after hide_all().")
 
 print(json.dumps(result, sort_keys=True))
