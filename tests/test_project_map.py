@@ -25,7 +25,7 @@ def test_about_returns_json_safe_agent_map() -> None:
     assert "maya.tool.rotate" in project["builtins"]["action_ids"]
     assert "directory" in project["user_presets"]
     assert "directory" in project["studio_presets"]
-    assert {"id": "maya", "icon_count": 36} in project["icons"]["providers"]
+    assert {"id": "maya", "icon_count": 53} in project["icons"]["providers"]
     assert any(entry["path"] == "docs/00_start_here.md" for entry in project["docs"])
     assert any(entry["path"] == "docs/08_edit_mode.md" for entry in project["docs"])
     assert any(module["path"] == "scripts/actionrail/icons.py" for module in project["modules"])

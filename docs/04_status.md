@@ -97,9 +97,12 @@ that catalog for action picker choices, and Toggle Grid is now Maya-smoke
 verified as the first non-transform viewport action in the catalog. The latest
 Action Book backend expansion adds Select, Clear Selection, and Frame Selection
 as Maya-smoke verified entries and saves a catalog JSON artifact for review.
-The newest Action Book starter-set pass adds Toggle Isolate Selected, Center
-Pivot, Freeze Transforms, and Delete History, bringing the smoke-verified
-catalog to 13 entries. Do not keep expanding the catalog one item at a time in
+The newest Action Book shelf-replacement pass adds 20 shelf-derived polygon
+modeling actions using Maya shelf command/icon names: Polygon Cube/Sphere/
+Cylinder/Cone/Torus/Plane, Combine, Mirror, Smooth, Reduce, Remesh,
+Retopologize, Extrude, Smart Extrude, Bridge, Bevel Components, Merge,
+Multi-Cut Tool, Target Weld Tool, and Quad Draw Tool. The smoke-verified catalog
+now has 33 entries. Do not keep expanding the catalog one item at a time in
 Phase 2.6; move the next work back to workflow-level architecture.
 
 Working surface:
@@ -115,13 +118,11 @@ Working surface:
   including slot ids, labels, key labels, runtime commands, and Maya
   nameCommands for saved bars.
 - Action Book backend metadata for registered Maya actions, currently consumed
-  by Quick Create picker choices, including the Maya-smoke verified
-  `maya.display.toggle_grid` viewport action and the Maya-smoke verified
-  `maya.tool.select`, `maya.selection.clear`, and
-  `maya.view.frame_selection` selection/viewport entries. The current
-  starter set also includes Maya-smoke verified `maya.view.toggle_isolate_selected`,
-  `maya.modeling.center_pivot`, `maya.modeling.freeze_transforms`, and
-  `maya.modeling.delete_history`.
+  by Quick Create picker choices, including Maya-smoke verified
+  viewport/selection entries plus the 20-action shelf-derived polygon modeling
+  pack. The modeling pack covers primitive creation, combine, mirror, smooth,
+  reduce, remesh, retopologize, extrude, smart extrude, bridge, bevel, merge,
+  Multi-Cut, Target Weld, and Quad Draw.
 - Dockable Action Book panel opened from the ActionRail menu through
   `actionrail.show_action_book_panel()`. It searches the Action Book catalog,
   renders each entry with its slot icon and tooltip summary, executes clicked
@@ -342,8 +343,8 @@ $env:PYTHONPATH = "scripts"
   placement, with a Lock Bar/Unlock Bar toggle replacing the old Edit Slots UI
   label.
 - The first Action Book placement surface is implemented: it opens
-  as its own dockable Maya panel, searches the current 13-entry Action Book
-  starter catalog, runs clicked entries, and drops action payloads onto unlocked
+  as its own dockable Maya panel, searches the current 33-entry Action Book
+  catalog, runs clicked entries, and drops action payloads onto unlocked
   slots using the same icons as the bar.
 - The latest Quick Create/Action Book round-trip fix preserves dropped live
   payloads when Lock Bar rebuilds the Quick Create preview, so the assigned
@@ -657,13 +658,15 @@ $env:PYTHONPATH = "scripts"
   `.gg-maya-sessiond/screenshots/actionrail_quick_create_slots.png`.
 - Latest Action Book viewport validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_smoke.py -Timeout 240`
-  -> passed; verified 13 Action Book entries; `maya.display.toggle_grid`
+  -> passed; verified 33 Action Book entries; `maya.display.toggle_grid`
   metadata (`Viewport`, `maya.grid`) and real Maya grid state transitions from
   on to off and back on; Select changes Maya to `selectSuperContext`; Frame
   Selection executes `viewFit`; Clear Selection empties Maya selection; Center
   Pivot executes on a selected cube; Freeze Transforms resets translate/rotate/
   scale channels; Delete History removes bevel construction history; Toggle
-  Isolate Selected flips active model-panel isolate state; and the viewable
+  Isolate Selected flips active model-panel isolate state; the 20 shelf-derived
+  polygon modeling actions have valid MEL command names and Maya icon resources;
+  Polygon Cube and Polygon Sphere execute live shelf commands; and the viewable
   catalog artifact was saved to
   `.gg-maya-sessiond/screenshots/actionrail_action_book_catalog.json`.
 - Latest hotkey binding-target validation:
@@ -673,7 +676,7 @@ $env:PYTHONPATH = "scripts"
   through the public `actionrail.slot_binding_targets()` API.
 - Latest Action Book UI validation:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_action_book_ui_smoke.py -Timeout 240`
-  -> passed; verified 13 rendered Action Book entries, search narrowing to
+  -> passed; verified 33 rendered Action Book entries, search narrowing to
   `maya.tool.scale`, click-to-run Select changing Maya to `selectSuperContext`,
   drag/drop assignment of `maya.tool.scale` onto an unlocked blank Quick Create
   slot with `maya.scale` through the real Qt drag-enter/drop path, Lock Bar

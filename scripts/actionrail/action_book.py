@@ -86,6 +86,106 @@ _ACTION_METADATA: dict[str, dict[str, object]] = {
         "icon": "maya.objects",
         "keywords": ("delete", "history", "construction", "modeling", "cleanup"),
     },
+    "maya.modeling.poly_cube": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_cube",
+        "keywords": ("polygon", "poly", "cube", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.poly_sphere": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_sphere",
+        "keywords": ("polygon", "poly", "sphere", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.poly_cylinder": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_cylinder",
+        "keywords": ("polygon", "poly", "cylinder", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.poly_cone": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_cone",
+        "keywords": ("polygon", "poly", "cone", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.poly_torus": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_torus",
+        "keywords": ("polygon", "poly", "torus", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.poly_plane": {
+        "category": "Modeling Primitives",
+        "icon": "maya.poly_plane",
+        "keywords": ("polygon", "poly", "plane", "primitive", "modeling", "shelf"),
+    },
+    "maya.modeling.combine": {
+        "category": "Modeling",
+        "icon": "maya.poly_combine",
+        "keywords": ("combine", "unite", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.mirror": {
+        "category": "Modeling",
+        "icon": "maya.poly_mirror",
+        "keywords": ("mirror", "symmetry", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.smooth": {
+        "category": "Modeling",
+        "icon": "maya.poly_smooth",
+        "keywords": ("smooth", "subdivision", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.reduce": {
+        "category": "Modeling",
+        "icon": "maya.poly_reduce",
+        "keywords": ("reduce", "decimate", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.remesh": {
+        "category": "Modeling",
+        "icon": "maya.poly_remesh",
+        "keywords": ("remesh", "triangulate", "topology", "modeling", "shelf"),
+    },
+    "maya.modeling.retopologize": {
+        "category": "Modeling",
+        "icon": "maya.poly_retopologize",
+        "keywords": ("retopologize", "retopo", "quad", "topology", "modeling", "shelf"),
+    },
+    "maya.modeling.extrude": {
+        "category": "Modeling",
+        "icon": "maya.extrude",
+        "keywords": ("extrude", "face", "edge", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.smart_extrude": {
+        "category": "Modeling",
+        "icon": "maya.smart_extrude",
+        "keywords": ("smart", "extrude", "face", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.bridge": {
+        "category": "Modeling",
+        "icon": "maya.poly_bridge",
+        "keywords": ("bridge", "edge", "face", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.bevel": {
+        "category": "Modeling",
+        "icon": "maya.bevel",
+        "keywords": ("bevel", "chamfer", "edge", "face", "modeling", "shelf"),
+    },
+    "maya.modeling.merge": {
+        "category": "Modeling",
+        "icon": "maya.poly_merge",
+        "keywords": ("merge", "vertex", "edge", "polygon", "modeling", "shelf"),
+    },
+    "maya.modeling.multi_cut": {
+        "category": "Modeling Tools",
+        "icon": "maya.multi_cut",
+        "keywords": ("multi-cut", "cut", "slice", "insert edge", "modeling", "shelf"),
+    },
+    "maya.modeling.target_weld": {
+        "category": "Modeling Tools",
+        "icon": "maya.target_weld",
+        "keywords": ("target", "weld", "merge", "vertex", "edge", "modeling", "shelf"),
+    },
+    "maya.modeling.quad_draw": {
+        "category": "Modeling Tools",
+        "icon": "maya.quad_draw",
+        "keywords": ("quad", "draw", "retopology", "topology", "modeling", "shelf"),
+    },
     "maya.view.frame_selection": {
         "category": "Viewport",
         "icon": "maya.camera",

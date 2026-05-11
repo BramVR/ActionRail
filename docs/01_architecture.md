@@ -238,9 +238,11 @@ Each action entry should provide a stable id, label, category, icon id, tooltip,
 execution function or command payload, and optional safe predicates. Slots
 reference action ids and may override display fields locally.
 
-The first implementation is intentionally backend-only: `actionrail.action_book`
-wraps registered actions with picker-facing metadata, and Quick Create consumes
-that catalog while preserving its existing slot/action combo behavior.
+The current implementation has a searchable Action Book panel backed by
+`actionrail.action_book`. Its starter catalog is intentionally curated rather
+than exhaustive: transform/key/viewport basics, selection utilities, and a
+33-entry smoke-verified shelf-replacement set with 20 polygon modeling actions
+using Maya shelf command/icon names.
 
 ### State
 

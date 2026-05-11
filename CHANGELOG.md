@@ -12,6 +12,13 @@
 
 ## 2026-05-11
 
+- Expanded the Action Book from the 13-entry starter catalog to 33 entries with
+  20 shelf-derived polygon modeling actions, using Maya shelf command/icon names
+  for primitives, combine/mirror/smooth/reduce/remesh/retopo, extrusion,
+  bridge, bevel, merge, Multi-Cut, Target Weld, and Quad Draw.
+- Updated Action Book Maya smoke coverage to verify the expanded catalog,
+  shelf MEL command availability, Maya icon resources, live Polygon Cube/Sphere
+  execution, and the 33-entry Action Book UI render/drop workflow.
 - Removed the `ViewportSelectionRefreshScheduler` workaround, so visible
   overlays no longer install Maya selection callbacks or `scriptJob`s and no
   longer force `cmds.refresh()` after selection changes.

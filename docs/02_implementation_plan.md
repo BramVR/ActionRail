@@ -632,11 +632,13 @@ rebuilds that preview.
 The Action Book backend has also expanded beyond the original transform/key/grid
 seed set with Maya-smoke verified selection, viewport, and modeling entries:
 Select, Clear Selection, Frame Selection, Toggle Isolate Selected, Center
-Pivot, Freeze Transforms, and Delete History. The smoke writes a catalog JSON
-artifact for backend review, and the dedicated Action Book UI now renders that
-starter set for placement. Stop broadening the catalog one item at a time for
-now; treat this as a useful starter set and move the next effort back to
-workflow-level architecture.
+Pivot, Freeze Transforms, Delete History, and a 20-action shelf-derived polygon
+modeling pack using Maya shelf command/icon names for primitives,
+combine/mirror/smooth/reduce/remesh/retopo, extrusion, bridge, bevel, merge,
+Multi-Cut, Target Weld, and Quad Draw. The smoke writes a catalog JSON artifact
+for backend review, and the dedicated Action Book UI now renders the 33-entry
+catalog for placement. Treat this as a useful shelf-replacement starter set and
+move the next effort back to workflow-level architecture.
 Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and

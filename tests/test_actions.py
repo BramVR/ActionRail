@@ -18,6 +18,7 @@ from actionrail.actions import (
     delete_history,
     frame_selection,
     freeze_transforms,
+    run_mel_command,
     set_tool_context,
     toggle_grid,
     toggle_isolate_selected,
@@ -112,6 +113,14 @@ class FakeCmds:
         return None
 
 
+class FakeMel:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def eval(self, command: str) -> None:  # noqa: A003
+        self.calls.append(command)
+
+
 class FakeSelectionCmds(FakeCmds):
     def __init__(self, selection: list[str]) -> None:
         super().__init__()
@@ -126,7 +135,7 @@ class FakeSelectionCmds(FakeCmds):
 def test_default_registry_contains_phase_zero_actions() -> None:
     registry = create_default_registry(FakeCmds())
 
-    assert registry.ids() == (
+    expected_base_ids = (
         "maya.tool.select",
         "maya.tool.move",
         "maya.tool.translate",
@@ -141,6 +150,30 @@ def test_default_registry_contains_phase_zero_actions() -> None:
         "maya.display.toggle_grid",
         "maya.view.toggle_isolate_selected",
     )
+    expected_modeling_ids = (
+        "maya.modeling.poly_cube",
+        "maya.modeling.poly_sphere",
+        "maya.modeling.poly_cylinder",
+        "maya.modeling.poly_cone",
+        "maya.modeling.poly_torus",
+        "maya.modeling.poly_plane",
+        "maya.modeling.combine",
+        "maya.modeling.mirror",
+        "maya.modeling.smooth",
+        "maya.modeling.reduce",
+        "maya.modeling.remesh",
+        "maya.modeling.retopologize",
+        "maya.modeling.extrude",
+        "maya.modeling.smart_extrude",
+        "maya.modeling.bridge",
+        "maya.modeling.bevel",
+        "maya.modeling.merge",
+        "maya.modeling.multi_cut",
+        "maya.modeling.target_weld",
+        "maya.modeling.quad_draw",
+    )
+
+    assert registry.ids() == (*expected_base_ids, *expected_modeling_ids)
 
 
 @pytest.mark.parametrize(
@@ -252,6 +285,44 @@ def test_toggle_isolate_selected_falls_back_to_visible_model_panel() -> None:
     assert cmds.calls == [
         ("isolateSelect", {"panel": "modelPanel7", "state": True}),
     ]
+
+
+@pytest.mark.parametrize(
+    ("action_id", "command"),
+    [
+        ("maya.modeling.poly_cube", "CreatePolygonCube"),
+        ("maya.modeling.poly_sphere", "CreatePolygonSphere"),
+        ("maya.modeling.poly_cylinder", "CreatePolygonCylinder"),
+        ("maya.modeling.poly_cone", "CreatePolygonCone"),
+        ("maya.modeling.poly_torus", "CreatePolygonTorus"),
+        ("maya.modeling.poly_plane", "CreatePolygonPlane"),
+        ("maya.modeling.combine", "CombinePolygons"),
+        ("maya.modeling.mirror", "MirrorPolygonGeometry"),
+        ("maya.modeling.smooth", "SmoothPolygon"),
+        ("maya.modeling.reduce", "ReducePolygon"),
+        ("maya.modeling.remesh", "PolyRemesh"),
+        ("maya.modeling.retopologize", "PolyRetopo"),
+        ("maya.modeling.extrude", "PolyExtrude"),
+        ("maya.modeling.smart_extrude", "SmartExtrude"),
+        ("maya.modeling.bridge", "performBridgeOrFill"),
+        ("maya.modeling.bevel", "performBevelOrChamfer"),
+        ("maya.modeling.merge", "PolyMerge"),
+        ("maya.modeling.multi_cut", "dR_multiCutTool"),
+        ("maya.modeling.target_weld", "MergeVertexTool"),
+        ("maya.modeling.quad_draw", "dR_quadDrawTool"),
+    ],
+)
+def test_modeling_shelf_actions_run_mel_commands(action_id: str, command: str) -> None:
+    mel = FakeMel()
+    registry = create_default_registry(FakeCmds(), mel)
+
+    assert registry.run(action_id) == command
+    assert mel.calls == [command]
+
+
+def test_run_mel_command_rejects_empty_commands() -> None:
+    with pytest.raises(ValueError, match="cannot be empty"):
+        run_mel_command("  ", FakeMel())
 
 
 def test_registry_rejects_duplicate_action_ids() -> None:

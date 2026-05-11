@@ -88,7 +88,7 @@ def entry_button(action_id: str) -> QtWidgets.QToolButton:
 
 initial_entries = action_book_entries()
 initial_buttons = entry_buttons()
-if len(initial_entries) < 13 or len(initial_buttons) != len(initial_entries):
+if len(initial_entries) < 33 or len(initial_buttons) != len(initial_entries):
     raise AssertionError(
         "Action Book did not render the current catalog: "
         f"entries={len(initial_entries)} buttons={len(initial_buttons)}"

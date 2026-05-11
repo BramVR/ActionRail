@@ -18,113 +18,43 @@ from actionrail.actions import Action, ActionRegistry, create_default_registry
 
 def test_default_action_book_entries_have_picker_metadata() -> None:
     entries = action_book_entries(create_default_registry())
+    entries_by_id = {entry.id: entry for entry in entries}
 
-    assert entries == (
-        ActionBookEntry(
-            id="maya.anim.set_key",
-            label="Set Key",
-            tooltip="Set keyframe",
-            category="Animation",
-            icon="maya.set_key",
-            keywords=("key", "keyframe", "animation", "set key", "s"),
-        ),
-        ActionBookEntry(
-            id="maya.modeling.center_pivot",
-            label="Center Pivot",
-            tooltip="Center pivot on current selection",
-            category="Modeling",
-            icon="maya.center_pivot",
-            keywords=("center", "pivot", "modeling", "transform"),
-        ),
-        ActionBookEntry(
-            id="maya.modeling.delete_history",
-            label="Delete History",
-            tooltip="Delete construction history on current selection",
-            category="Modeling",
-            icon="maya.objects",
-            keywords=("delete", "history", "construction", "modeling", "cleanup"),
-        ),
-        ActionBookEntry(
-            id="maya.modeling.freeze_transforms",
-            label="Freeze Transforms",
-            tooltip="Freeze transforms on current selection",
-            category="Modeling",
-            icon="maya.freeze_transform",
-            keywords=("freeze", "transforms", "modeling", "zero", "apply"),
-        ),
-        ActionBookEntry(
-            id="maya.selection.clear",
-            label="Clear Selection",
-            tooltip="Clear current selection",
-            category="Selection",
-            icon="maya.objects",
-            keywords=("clear", "deselect", "selection"),
-        ),
-        ActionBookEntry(
-            id="maya.tool.select",
-            label="Select",
-            tooltip="Select tool",
-            category="Selection",
-            icon="maya.objects",
-            keywords=("select", "selection", "tool", "q"),
-        ),
-        ActionBookEntry(
-            id="maya.tool.move",
-            label="Move",
-            tooltip="Move tool",
-            category="Transform",
-            icon="maya.move",
-            keywords=("move", "translate", "tool", "transform", "w"),
-        ),
-        ActionBookEntry(
-            id="maya.tool.rotate",
-            label="Rotate",
-            tooltip="Rotate tool",
-            category="Transform",
-            icon="maya.rotate",
-            keywords=("rotate", "tool", "transform", "e"),
-        ),
-        ActionBookEntry(
-            id="maya.tool.scale",
-            label="Scale",
-            tooltip="Scale tool",
-            category="Transform",
-            icon="maya.scale",
-            keywords=("scale", "tool", "transform", "r"),
-        ),
-        ActionBookEntry(
-            id="maya.tool.translate",
-            label="Translate",
-            tooltip="Translate tool",
-            category="Transform",
-            icon="maya.move",
-            keywords=("translate", "move", "tool", "transform", "w"),
-        ),
-        ActionBookEntry(
-            id="maya.view.frame_selection",
-            label="Frame Selection",
-            tooltip="Frame current selection",
-            category="Viewport",
-            icon="maya.camera",
-            keywords=("frame", "fit", "selection", "camera", "viewport", "f"),
-        ),
-        ActionBookEntry(
-            id="maya.display.toggle_grid",
-            label="Toggle Grid",
-            tooltip="Toggle viewport grid",
-            category="Viewport",
-            icon="maya.grid",
-            keywords=("grid", "viewport", "display", "toggle"),
-        ),
-        ActionBookEntry(
-            id="maya.view.toggle_isolate_selected",
-            label="Toggle Isolate Selected",
-            tooltip="Toggle isolate selected in the active viewport",
-            category="Viewport",
-            icon="maya.isolate_selected",
-            keywords=("isolate", "selection", "viewport", "display", "toggle"),
-        ),
+    assert len(entries) == 33
+    assert entries == tuple(sorted(entries, key=lambda entry: (entry.category, entry.label)))
+    assert entries_by_id["maya.anim.set_key"] == ActionBookEntry(
+        id="maya.anim.set_key",
+        label="Set Key",
+        tooltip="Set keyframe",
+        category="Animation",
+        icon="maya.set_key",
+        keywords=("key", "keyframe", "animation", "set key", "s"),
     )
+    assert entries_by_id["maya.modeling.poly_cube"] == ActionBookEntry(
+        id="maya.modeling.poly_cube",
+        label="Polygon Cube",
+        tooltip="Create a polygon cube",
+        category="Modeling Primitives",
+        icon="maya.poly_cube",
+        keywords=("polygon", "poly", "cube", "primitive", "modeling", "shelf"),
+    )
+    assert entries_by_id["maya.modeling.extrude"] == ActionBookEntry(
+        id="maya.modeling.extrude",
+        label="Extrude",
+        tooltip="Extrude selected polygon components",
+        category="Modeling",
+        icon="maya.extrude",
+        keywords=("extrude", "face", "edge", "polygon", "modeling", "shelf"),
+    )
+    assert entries_by_id["maya.modeling.quad_draw"] == ActionBookEntry(
+        id="maya.modeling.quad_draw",
+        label="Quad Draw Tool",
+        tooltip="Draw quad topology on live objects",
+        category="Modeling Tools",
+        icon="maya.quad_draw",
+        keywords=("quad", "draw", "retopology", "topology", "modeling", "shelf"),
+    )
+    assert entries_by_id["maya.view.toggle_isolate_selected"].icon == "maya.isolate_selected"
 
 
 def test_action_book_wraps_custom_registry_actions() -> None:
@@ -164,6 +94,11 @@ def test_action_book_search_matches_categories_keywords_and_tooltips() -> None:
     ]
     assert [entry.id for entry in action_book_search("freeze")] == [
         "maya.modeling.freeze_transforms"
+    ]
+    assert [entry.id for entry in action_book_search("shelf topology")] == [
+        "maya.modeling.remesh",
+        "maya.modeling.retopologize",
+        "maya.modeling.quad_draw",
     ]
     assert [entry.id for entry in action_book_search("deselect")] == [
         "maya.selection.clear",

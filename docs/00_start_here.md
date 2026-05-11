@@ -100,10 +100,12 @@ Snapshot:
   now have picker-facing category/icon/keyword metadata through
   `actionrail.action_book`, Quick Create action choices route through that
   catalog instead of reading raw registry actions directly, and the catalog now
-  includes Maya-smoke verified viewport and selection actions beyond the
-  original transform/keyframe examples: Toggle Grid, Select, Clear Selection,
-  Frame Selection, Toggle Isolate Selected, Center Pivot, Freeze Transforms,
-  and Delete History.
+  includes Maya-smoke verified viewport, selection, and modeling actions beyond
+  the original transform/keyframe examples: Toggle Grid, Select, Clear
+  Selection, Frame Selection, Toggle Isolate Selected, Center Pivot, Freeze
+  Transforms, Delete History, and a 20-action shelf-derived polygon modeling
+  pack covering primitives, combine/mirror/smooth/reduce/remesh/retopo,
+  extrusion, bridge, bevel, merge, Multi-Cut, Target Weld, and Quad Draw.
 - The first Action Book UI slice is implemented as a separate
   dockable Maya panel, not part of Quick Create. It shows searchable Maya
   action entries with the same icons used by action bars, supports click-to-run

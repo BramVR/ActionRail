@@ -27,6 +27,7 @@ __all__ = [
     "delete_history",
     "frame_selection",
     "freeze_transforms",
+    "run_mel_command",
     "set_keyframe",
     "set_tool_context",
     "toggle_grid",
@@ -87,12 +88,36 @@ def _require_cmds(cmds_module: Any | None = None) -> Any:
     return cmds
 
 
+def _require_mel(mel_module: Any | None = None) -> Any:
+    if mel_module is not None:
+        return mel_module
+
+    try:
+        import maya.mel as mel  # type: ignore[import-not-found]
+    except Exception as exc:  # pragma: no cover - exercised only outside Maya.
+        msg = "ActionRail Maya shelf actions require maya.mel inside Maya."
+        raise RuntimeError(msg) from exc
+    return mel
+
+
 def set_tool_context(context_name: str, cmds_module: Any | None = None) -> str:
     """Set Maya's active tool context and return the requested context."""
 
     cmds = _require_cmds(cmds_module)
     cmds.setToolTo(context_name)
     return context_name
+
+
+def run_mel_command(command: str, mel_module: Any | None = None) -> str:
+    """Run a Maya MEL command/procedure and return the command name."""
+
+    clean_command = command.strip()
+    if not clean_command:
+        msg = "Maya MEL action command cannot be empty."
+        raise ValueError(msg)
+    mel = _require_mel(mel_module)
+    mel.eval(clean_command)
+    return clean_command
 
 
 def set_keyframe(cmds_module: Any | None = None) -> str:
@@ -174,6 +199,130 @@ def toggle_isolate_selected(cmds_module: Any | None = None) -> str:
     return f"isolateSelected:{'on' if next_state else 'off'}"
 
 
+_MAYA_SHELF_ACTIONS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "maya.modeling.poly_cube",
+        "Polygon Cube",
+        "Create a polygon cube",
+        "CreatePolygonCube",
+    ),
+    (
+        "maya.modeling.poly_sphere",
+        "Polygon Sphere",
+        "Create a polygon sphere",
+        "CreatePolygonSphere",
+    ),
+    (
+        "maya.modeling.poly_cylinder",
+        "Polygon Cylinder",
+        "Create a polygon cylinder",
+        "CreatePolygonCylinder",
+    ),
+    (
+        "maya.modeling.poly_cone",
+        "Polygon Cone",
+        "Create a polygon cone",
+        "CreatePolygonCone",
+    ),
+    (
+        "maya.modeling.poly_torus",
+        "Polygon Torus",
+        "Create a polygon torus",
+        "CreatePolygonTorus",
+    ),
+    (
+        "maya.modeling.poly_plane",
+        "Polygon Plane",
+        "Create a polygon plane",
+        "CreatePolygonPlane",
+    ),
+    (
+        "maya.modeling.combine",
+        "Combine",
+        "Combine selected polygon objects",
+        "CombinePolygons",
+    ),
+    (
+        "maya.modeling.mirror",
+        "Mirror",
+        "Mirror selected polygon geometry",
+        "MirrorPolygonGeometry",
+    ),
+    (
+        "maya.modeling.smooth",
+        "Smooth",
+        "Smooth selected polygon objects",
+        "SmoothPolygon",
+    ),
+    (
+        "maya.modeling.reduce",
+        "Reduce",
+        "Reduce selected polygon objects",
+        "ReducePolygon",
+    ),
+    (
+        "maya.modeling.remesh",
+        "Remesh",
+        "Remesh selected polygon objects",
+        "PolyRemesh",
+    ),
+    (
+        "maya.modeling.retopologize",
+        "Retopologize",
+        "Retopologize selected polygon objects",
+        "PolyRetopo",
+    ),
+    (
+        "maya.modeling.extrude",
+        "Extrude",
+        "Extrude selected polygon components",
+        "PolyExtrude",
+    ),
+    (
+        "maya.modeling.smart_extrude",
+        "Smart Extrude",
+        "Interactively smart extrude selected mesh faces",
+        "SmartExtrude",
+    ),
+    (
+        "maya.modeling.bridge",
+        "Bridge",
+        "Bridge selected polygon edges or faces",
+        "performBridgeOrFill",
+    ),
+    (
+        "maya.modeling.bevel",
+        "Bevel Components",
+        "Bevel selected polygon edges or faces",
+        "performBevelOrChamfer",
+    ),
+    (
+        "maya.modeling.merge",
+        "Merge",
+        "Merge selected polygon vertices or border edges",
+        "PolyMerge",
+    ),
+    (
+        "maya.modeling.multi_cut",
+        "Multi-Cut Tool",
+        "Cut, slice, and insert edges on polygons",
+        "dR_multiCutTool",
+    ),
+    (
+        "maya.modeling.target_weld",
+        "Target Weld Tool",
+        "Merge one edge or vertex into another",
+        "MergeVertexTool",
+    ),
+    (
+        "maya.modeling.quad_draw",
+        "Quad Draw Tool",
+        "Draw quad topology on live objects",
+        "dR_quadDrawTool",
+    ),
+)
+
+
 def _current_selection(cmds: Any) -> tuple[str, ...]:
     list_selection = getattr(cmds, "ls", None)
     if not callable(list_selection):
@@ -216,7 +365,10 @@ def _is_model_panel(cmds: Any, panel: str) -> bool:
         return False
 
 
-def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
+def create_default_registry(
+    cmds_module: Any | None = None,
+    mel_module: Any | None = None,
+) -> ActionRegistry:
     """Create the default Maya action registry.
 
     ``cmds_module`` is injectable so unit tests can exercise command binding
@@ -328,6 +480,15 @@ def create_default_registry(cmds_module: Any | None = None) -> ActionRegistry:
             callback=lambda: toggle_isolate_selected(cmds_module),
         )
     )
+    for action_id, label, tooltip, command in _MAYA_SHELF_ACTIONS:
+        registry.register(
+            Action(
+                id=action_id,
+                label=label,
+                tooltip=tooltip,
+                callback=lambda command=command: run_mel_command(command, mel_module),
+            )
+        )
     return registry
 
 
