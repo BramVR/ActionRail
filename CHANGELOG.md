@@ -10,6 +10,15 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-12
+
+- Replaced visible `Locked` text in Edit Mode frames with a minimal icon-only
+  lock/unlock affordance in each frame's top-right corner, using a
+  Lucide-inspired lock shape and preserving click-to-toggle behavior from both
+  the frame and compact panel.
+- Refreshed the README Edit Mode screenshot so the public image shows the new
+  icon-only lock controls.
+
 ## 2026-05-11
 
 - Expanded the Action Book from the 13-entry starter catalog to 33 entries with
@@ -25,6 +34,12 @@
 - Reworked the selection redraw smoke to exercise native Maya select/delete
   with overlays visible and verify ActionRail schedules zero forced refresh
   calls; dense overlay timing remains low after the removal.
+- Refreshed the README normal and Edit Mode screenshots with a workflow-shaped
+  Action Book showcase: one longer modeling primitive/action bar, a smaller
+  selection context bar above it, transform/keying and cleanup side bars, unique
+  hotkey labels, and only one active rotate-tool slot.
+- Updated the README screenshot smoke to assert unique icon and hotkey labels
+  for the public showcase composition.
 
 ## 2026-05-10
 

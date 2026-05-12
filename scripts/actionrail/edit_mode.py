@@ -25,6 +25,7 @@ MIN_GRID_SIZE = 16
 MAX_GRID_SIZE = 512
 EDIT_OVERLAY_OBJECT_NAME = "ActionRailEditModeOverlay"
 EDIT_PANEL_OBJECT_NAME = "ActionRailEditModePanel"
+EDIT_LOCK_BUTTON_OBJECT_NAME = "ActionRailEditModeLockButton"
 POSITION_POPOVER_OBJECT_NAME = "ActionRailEditModePositionPopover"
 EMPTY_SLOT_LABEL = "New"
 EDIT_MODE_ACCENT_COLOR = DEFAULT_THEME.button_active_border
@@ -32,12 +33,15 @@ EDIT_MODE_GRID_MINOR_RGB = (0, 0, 0)
 EDIT_MODE_GRID_MAJOR_RGB = (0, 0, 0)
 EDIT_MODE_GRID_MINOR_ALPHA = 70
 EDIT_MODE_GRID_MAJOR_ALPHA = 125
+EDIT_LOCK_ICON_SIZE = 22
+EDIT_LOCK_ICON_PADDING = 4
 
 __all__ = [
     "DEFAULT_GRID_SIZE",
     "EMPTY_SLOT_LABEL",
     "EDIT_OVERLAY_OBJECT_NAME",
     "EDIT_PANEL_OBJECT_NAME",
+    "EDIT_LOCK_BUTTON_OBJECT_NAME",
     "POSITION_POPOVER_OBJECT_NAME",
     "EditModeSettings",
     "EditModeState",
@@ -617,6 +621,14 @@ class _EditModeCanvas:  # pragma: no cover - covered by Maya smoke tests.
                     event.accept()
                     return
                 self._host.select_rail(frame.preset_id)
+                if (
+                    event.button() == qt.QtCore.Qt.LeftButton
+                    and _frame_lock_rect(qt, frame).contains(event.pos())
+                ):
+                    self._drag_preset_id = ""
+                    self._host.toggle_selected_lock()
+                    event.accept()
+                    return
                 if event.button() == qt.QtCore.Qt.LeftButton and not frame.locked:
                     point = event.pos()
                     self._drag_preset_id = frame.preset_id
@@ -687,18 +699,19 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                 self.grid_size.setRange(MIN_GRID_SIZE, MAX_GRID_SIZE)
                 self.grid_size.setSingleStep(4)
                 self.grid_size_label = qt.QtWidgets.QLabel("Grid Size")
-                self.lock_button = qt.QtWidgets.QPushButton("Lock")
+                self.lock_button = qt.QtWidgets.QPushButton()
+                self.lock_button.setObjectName(EDIT_LOCK_BUTTON_OBJECT_NAME)
+                self.lock_button.setText("")
+                self.lock_button.setFixedSize(28, 28)
+                self.lock_button.setIconSize(qt.QtCore.QSize(18, 18))
                 self.lock_button.setEnabled(False)
-                self.lock_button.setToolTip(
-                    "Toggle whether the selected rail can move in Edit Mode."
-                )
 
-                layout.addWidget(self.title, 0, 0, 1, 4)
+                layout.addWidget(self.title, 0, 0, 1, 3)
+                layout.addWidget(self.lock_button, 0, 3, 1, 1)
                 layout.addWidget(self.summary, 1, 0, 1, 4)
                 layout.addWidget(self.grid_check, 2, 0)
                 layout.addWidget(self.grid_size_label, 2, 1)
                 layout.addWidget(self.grid_size, 2, 2)
-                layout.addWidget(self.lock_button, 2, 3)
                 layout.addWidget(self.snap_check, 3, 0, 1, 2)
                 layout.addWidget(self.sticky_check, 3, 2, 1, 2)
                 self.adjustSize()
@@ -734,7 +747,10 @@ class _EditModePanel:  # pragma: no cover - covered by Maya smoke tests.
                         len(self._owner._host.frames),
                     )
                 )
-                self.lock_button.setText(_lock_button_text(selected))
+                self.lock_button.setText("")
+                self.lock_button.setIcon(_lock_button_icon(qt, selected))
+                self.lock_button.setToolTip(_lock_button_tooltip(selected))
+                self.lock_button.setAccessibleName(_lock_button_accessible_name(selected))
                 self.lock_button.setEnabled(selected is not None)
                 self._resize_to_owner()
                 self.setFixedHeight(self.sizeHint().height())
@@ -1326,11 +1342,96 @@ def _paint_frame(  # pragma: no cover - covered by Maya smoke screenshots.
     font.setPointSize(_frame_label_font_size(frame))
     painter.setFont(font)
     label = f"{frame.label}\n{frame.source_layer.title()}"
-    if frame.locked:
-        label = f"{label}\nLocked"
-    elif frame.collapse_enabled:
+    if frame.collapse_enabled:
         label = f"{label}\n{'Collapsed' if frame.collapsed else 'Expanded'}"
     painter.drawText(rect, qt.QtCore.Qt.AlignCenter | qt.QtCore.Qt.TextWordWrap, label)
+    _paint_lock_state_icon(
+        qt,
+        painter,
+        _frame_lock_rect(qt, frame),
+        locked=frame.locked,
+        selected=selected,
+    )
+
+
+def _frame_lock_rect(qt: Any, frame: RailFrameInfo) -> Any:
+    padding = min(EDIT_LOCK_ICON_PADDING, max(1, int(min(frame.width, frame.height) / 6)))
+    size = min(
+        EDIT_LOCK_ICON_SIZE,
+        max(10, frame.width - (padding * 2)),
+        max(10, frame.height - (padding * 2)),
+    )
+    x_pos = max(frame.x + 1, frame.right - size - padding)
+    y_pos = max(frame.y + 1, frame.y + padding)
+    return qt.QtCore.QRect(x_pos, y_pos, size, size)
+
+
+def _paint_lock_state_icon(  # pragma: no cover - covered by Maya smoke screenshots.
+    qt: Any,
+    painter: Any,
+    rect: Any,
+    *,
+    locked: bool,
+    selected: bool,
+) -> None:
+    """Paint a Lucide-inspired lock state icon without visible state text.
+
+    Shape source: Lucide `lock` and `lock-open` SVG icons, ISC licensed.
+    """
+
+    color = (
+        _qt_color_from_hex(qt, EDIT_MODE_ACCENT_COLOR)
+        if selected
+        else qt.QtGui.QColor(0, 184, 255, 245)
+    )
+    background = qt.QtGui.QColor(2, 8, 12, 210)
+    painter.fillRect(rect, background)
+    painter.setPen(qt.QtGui.QPen(color, 2))
+
+    left = int(rect.x())
+    top = int(rect.y())
+    width = max(1, int(rect.width()))
+    height = max(1, int(rect.height()))
+
+    def px(value: float) -> int:
+        return left + int(round((value / 24.0) * width))
+
+    def py(value: float) -> int:
+        return top + int(round((value / 24.0) * height))
+
+    body = qt.QtCore.QRect(px(5), py(11), max(1, px(19) - px(5)), max(1, py(20) - py(11)))
+    draw_rounded_rect = getattr(painter, "drawRoundedRect", None)
+    if callable(draw_rounded_rect):
+        draw_rounded_rect(body, 2, 2)
+    else:
+        painter.drawRect(body)
+
+    painter.drawLine(px(8), py(11), px(8), py(8))
+    painter.drawLine(px(8), py(8), px(10), py(5))
+    painter.drawLine(px(10), py(5), px(14), py(5))
+    if locked:
+        painter.drawLine(px(14), py(5), px(16), py(8))
+        painter.drawLine(px(16), py(8), px(16), py(11))
+    else:
+        painter.drawLine(px(14), py(5), px(17), py(6))
+
+
+def _lock_button_icon(qt: Any, selected: RailFrameInfo | None) -> Any:
+    pixmap = qt.QtGui.QPixmap(18, 18)
+    pixmap.fill(qt.QtCore.Qt.transparent)
+    painter = qt.QtGui.QPainter(pixmap)
+    try:
+        painter.setRenderHint(qt.QtGui.QPainter.Antialiasing, True)
+        _paint_lock_state_icon(
+            qt,
+            painter,
+            qt.QtCore.QRect(0, 0, 18, 18),
+            locked=bool(selected.locked) if selected is not None else True,
+            selected=selected is not None,
+        )
+    finally:
+        painter.end()
+    return qt.QtGui.QIcon(pixmap)
 
 
 def _qt_color_from_hex(qt: Any, color: str, alpha: int = 255) -> Any:
@@ -1388,10 +1489,18 @@ def _panel_summary_text(
     )
 
 
-def _lock_button_text(selected: RailFrameInfo | None) -> str:
+def _lock_button_tooltip(selected: RailFrameInfo | None) -> str:
     if selected is None:
-        return "Select Rail"
-    return "Unlock" if selected.locked else "Lock"
+        return "Select a rail to lock or unlock movement."
+    if selected.locked:
+        return "Rail locked. Click to unlock movement in Edit Mode."
+    return "Rail unlocked. Click to lock movement in Edit Mode."
+
+
+def _lock_button_accessible_name(selected: RailFrameInfo | None) -> str:
+    if selected is None:
+        return "No rail selected"
+    return "Locked rail" if selected.locked else "Unlocked rail"
 
 
 def _frame_label(preset_id: str) -> str:

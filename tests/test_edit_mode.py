@@ -1162,7 +1162,7 @@ def test_popover_position_and_panel_style() -> None:
     assert edit_mode._frame_label_font_size(replace(frame, label="Very Long Label", width=20)) == 6
 
 
-def test_panel_summary_and_lock_text_are_readable_without_selection() -> None:
+def test_panel_summary_and_lock_state_helpers_are_readable_without_selection() -> None:
     frame = edit_mode.RailFrameInfo(
         preset_id="frame",
         label="Frame",
@@ -1181,9 +1181,12 @@ def test_panel_summary_and_lock_text_are_readable_without_selection() -> None:
     )
 
     assert edit_mode._panel_summary_text(None, 1) == "1 rail frame(s) | no frame selected"
-    assert edit_mode._lock_button_text(None) == "Select Rail"
-    assert edit_mode._lock_button_text(frame) == "Lock"
-    assert edit_mode._lock_button_text(replace(frame, locked=True)) == "Unlock"
+    assert edit_mode._lock_button_accessible_name(None) == "No rail selected"
+    assert edit_mode._lock_button_accessible_name(frame) == "Unlocked rail"
+    assert edit_mode._lock_button_accessible_name(replace(frame, locked=True)) == "Locked rail"
+    assert "Select a rail" in edit_mode._lock_button_tooltip(None)
+    assert "Click to lock" in edit_mode._lock_button_tooltip(frame)
+    assert "Click to unlock" in edit_mode._lock_button_tooltip(replace(frame, locked=True))
     assert (
         edit_mode._panel_summary_text(frame, 1)
         == "Frame\nruntime | viewport.left.top | x 150, y 120"
@@ -1205,6 +1208,12 @@ def test_edit_mode_paint_colors_use_green_accent_and_black_grid() -> None:
     class Rect:
         def __init__(self, x: int = 0, y: int = 0, width: int = 96, height: int = 64) -> None:
             self.value = (x, y, width, height)
+
+        def x(self) -> int:
+            return self.value[0]
+
+        def y(self) -> int:
+            return self.value[1]
 
         def width(self) -> int:
             return self.value[2]
@@ -1245,7 +1254,7 @@ def test_edit_mode_paint_colors_use_green_accent_and_black_grid() -> None:
             pass
 
         def drawText(self, *_args: object) -> None:  # noqa: N802
-            pass
+            events.append(("text", _args[-1]))
 
     class Qt:
         class QtCore:
@@ -1292,6 +1301,10 @@ def test_edit_mode_paint_colors_use_green_accent_and_black_grid() -> None:
     assert ("pen", ((140, 207, 63, 255), 2)) in events
     assert ("pen", ((140, 207, 63, 115), 1)) in events
     assert ("color", (140, 207, 63, 255)) in events
+    assert not any(
+        event[0] == "text" and "Locked" in str(event[1])
+        for event in events
+    )
 
 
 def test_require_cmds_uses_supplied_module() -> None:

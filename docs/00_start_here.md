@@ -129,9 +129,9 @@ Snapshot:
   belongs to Normal Mode rail lock/unlock helpers, including Shift-drag
   move/swap/clear-out for populated unlocked slots and cross-rail transfers
   between unlocked rails. Quick Create can now hand the current draft directly
-  to that unlocked slot-edit state. Edit Mode panel polish now provides a clickable
-  Lock/Unlock action for the selected rail and lets the compact panel be
-  dragged away from rails it covers.
+  to that unlocked slot-edit state. Edit Mode lock polish now uses icon-only
+  lock/unlock controls in the frame corner and compact panel, and the panel can
+  be dragged away from rails it covers.
   Phase 2 step 2.5 layout editing and direct
   manipulation is complete; Edit Mode can save unlocked runtime/user rail
   offsets plus unlocked built-in and studio user override presets. The 2.7

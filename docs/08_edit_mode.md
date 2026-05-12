@@ -31,9 +31,10 @@ When Edit Mode is enabled, ActionRail draws:
 - one dark labeled frame for each active runtime rail
 - selected-frame styling
 - selected-frame guide lines and axis-aligned Sticky Frames alignment guides
-- rail source layer and lock state labels
+- rail source layer labels plus icon-only lock state controls in each frame's
+  top-right corner
 - a draggable compact Edit Mode panel with Grid, Grid Size, Snap to Grid,
-  Sticky Frames, and selected Lock/Unlock control
+  Sticky Frames, and an icon-only selected-frame lock control
 - a selected-rail position popover with arrow nudges, numeric X/Y controls, and
   Reset
 
@@ -70,8 +71,9 @@ Inside Edit Mode:
 - enable Sticky Frames to align moved rails to nearby rail edges
 - drag the Edit Mode panel out of the way when it covers the rail you want to
   move
-- click Unlock or Lock in the Edit Mode panel to toggle whether the selected
-  rail can be moved in the current Edit Mode session
+- click the frame's top-right lock icon, or the lock icon in the Edit Mode
+  panel, to toggle whether the selected rail can be moved in the current Edit
+  Mode session
 - use `save_edit_mode_layout()` to persist an unlocked runtime/user rail as a
   user preset or an unlocked built-in/studio rail as a user override
 
@@ -156,7 +158,7 @@ Implemented now:
 - left-click frame selection
 - selected-frame X/Y popover
 - draggable Edit Mode control panel
-- selected-frame Lock/Unlock panel control
+- selected-frame icon-only lock/unlock controls in the frame corner and panel
 - X/Y movement for unlocked rails
 - direct frame dragging
 - snap-to-grid and Sticky Frames during movement

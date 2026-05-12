@@ -4,6 +4,7 @@ import json
 import math
 import sys
 from contextlib import suppress
+from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
 from pathlib import Path
 
@@ -165,81 +166,13 @@ def _set_viewport_style(panel: str) -> None:
             cmds.modelEditor(editor, edit=True, **{flag: value})
 
 
-ACTION_CYCLE = (
-    ("move", "M", "maya.tool.move"),
-    ("rotate", "R", "maya.tool.rotate"),
-    ("scale", "S", "maya.tool.scale"),
-    ("key", "K", "maya.anim.set_key"),
-)
-SHOWCASE_ICON_IDS = (
-    "maya.move",
-    "maya.rotate",
-    "maya.scale",
-    "maya.set_key",
-    "maya.camera",
-    "maya.light",
-    "maya.grid",
-    "maya.isolate_selected",
-    "maya.center_pivot",
-    "maya.freeze_transform",
-    "maya.knife",
-    "maya.quad_draw",
-    "maya.area_light",
-    "maya.directional_light",
-    "maya.point_light",
-    "maya.spot_light",
-    "maya.volume_light",
-    "maya.image_plane",
-    "maya.depth_of_field",
-    "maya.film_gate",
-    "maya.cut",
-    "maya.cut_edge",
-    "maya.smooth_brush",
-    "maya.auto_weld",
-    "maya.bevel",
-    "maya.extrude",
-    "maya.pan_zoom",
-    "maya.reflection",
-    "maya.resolution_gate",
-    "maya.high_quality",
-    "maya.low_quality",
-    "maya.objects",
-    "maya.lock",
-    "maya.regular_viewport",
-    "maya.camera_lock",
-    "maya.translate",
-)
-
-
-def _action_item(
-    spec_id: str,
-    index: int,
-    icon_id: str,
-    *,
-    label_override: str | None = None,
-    key_label: str = "",
-    icon_only: bool = False,
-    active: bool = False,
-) -> actionrail.StackItem:
-    action_name, label, action_id = ACTION_CYCLE[index % len(ACTION_CYCLE)]
-    active_when = ""
-    if active and action_id == "maya.tool.rotate":
-        active_when = "maya.tool == rotate"
-    elif active and action_id == "maya.tool.move":
-        active_when = "maya.tool == move"
-    elif active and action_id == "maya.tool.scale":
-        active_when = "maya.tool == scale"
-
-    return actionrail.StackItem(
-        type="toolButton",
-        id=f"{spec_id}.{action_name}_{index + 1}",
-        label="" if icon_only else (label_override if label_override is not None else label),
-        action=action_id,
-        icon=icon_id,
-        key_label=key_label,
-        tooltip=f"{label_override or label} action",
-        active_when=active_when,
-    )
+@dataclass(frozen=True)
+class ShowcaseSlot:
+    id: str
+    action: str
+    icon: str
+    key_label: str
+    label: str = ""
 
 
 def _quick_create_actionbar_spec(
@@ -248,25 +181,17 @@ def _quick_create_actionbar_spec(
     anchor: str,
     orientation: str,
     offset: tuple[int, int],
-    icon_ids: tuple[str, ...],
-    key_labels: tuple[str, ...] = (),
-    active_index: int = -1,
+    slots: tuple[ShowcaseSlot, ...],
 ) -> actionrail.StackSpec:
     slots = tuple(
         quick_create.QuickCreateSlotInput(
-            id=f"slot_{index + 1}",
-            label="",
-            action=ACTION_CYCLE[index % len(ACTION_CYCLE)][2],
-            key_label=key_labels[index] if index < len(key_labels) else "",
-            icon=icon_id,
-            active_when=(
-                "maya.tool == rotate"
-                if index == active_index
-                and ACTION_CYCLE[index % len(ACTION_CYCLE)][2] == "maya.tool.rotate"
-                else ""
-            ),
+            id=slot.id,
+            label=slot.label,
+            action=slot.action,
+            key_label=slot.key_label,
+            icon=slot.icon,
         )
-        for index, icon_id in enumerate(icon_ids)
+        for slot in slots
     )
     rows = 1 if orientation == "horizontal" else len(slots)
     columns = len(slots) if orientation == "horizontal" else 1
@@ -288,59 +213,81 @@ def _quick_create_actionbar_spec(
 
 def _main_actionbar_spec() -> actionrail.StackSpec:
     return _quick_create_actionbar_spec(
-        spec_id="readme_main_actionbar",
+        spec_id="readme_modeling_primitives",
         anchor="viewport.bottom.center",
         orientation="horizontal",
         offset=(0, -22),
-        icon_ids=SHOWCASE_ICON_IDS[:12],
-        key_labels=("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="),
-        active_index=1,
+        slots=(
+            ShowcaseSlot("cube", "maya.modeling.poly_cube", "maya.poly_cube", "1"),
+            ShowcaseSlot("sphere", "maya.modeling.poly_sphere", "maya.poly_sphere", "2"),
+            ShowcaseSlot("cylinder", "maya.modeling.poly_cylinder", "maya.poly_cylinder", "3"),
+            ShowcaseSlot("cone", "maya.modeling.poly_cone", "maya.poly_cone", "4"),
+            ShowcaseSlot("torus", "maya.modeling.poly_torus", "maya.poly_torus", "5"),
+            ShowcaseSlot("plane", "maya.modeling.poly_plane", "maya.poly_plane", "6"),
+            ShowcaseSlot("extrude", "maya.modeling.extrude", "maya.extrude", "7"),
+            ShowcaseSlot("bevel", "maya.modeling.bevel", "maya.bevel", "8"),
+            ShowcaseSlot("bridge", "maya.modeling.bridge", "maya.poly_bridge", "9"),
+            ShowcaseSlot("multi_cut", "maya.modeling.multi_cut", "maya.multi_cut", "0"),
+            ShowcaseSlot("target_weld", "maya.modeling.target_weld", "maya.target_weld", "-"),
+            ShowcaseSlot("combine", "maya.modeling.combine", "maya.poly_combine", "="),
+            ShowcaseSlot("mirror", "maya.modeling.mirror", "maya.poly_mirror", "["),
+            ShowcaseSlot("smooth", "maya.modeling.smooth", "maya.poly_smooth", "]"),
+        ),
     )
 
 
 def _secondary_actionbar_spec() -> actionrail.StackSpec:
     return _quick_create_actionbar_spec(
-        spec_id="readme_secondary_actionbar",
+        spec_id="readme_selection_context",
         anchor="viewport.bottom.center",
         orientation="horizontal",
         offset=(0, -72),
-        icon_ids=SHOWCASE_ICON_IDS[12:24],
-        key_labels=(
-            "F1",
-            "F2",
-            "F3",
-            "F4",
-            "F5",
-            "F6",
-            "F7",
-            "F8",
-            "F9",
-            "F10",
-            "F11",
-            "F12",
+        slots=(
+            ShowcaseSlot("select", "maya.tool.select", "maya.objects", "Q"),
+            ShowcaseSlot("frame", "maya.view.frame_selection", "maya.camera", "F"),
+            ShowcaseSlot(
+                "isolate",
+                "maya.view.toggle_isolate_selected",
+                "maya.isolate_selected",
+                "I",
+            ),
+            ShowcaseSlot("clear", "maya.selection.clear", "maya.regular_viewport", "Esc"),
         ),
     )
 
 
 def _left_side_actionbar_spec() -> actionrail.StackSpec:
     return _quick_create_actionbar_spec(
-        spec_id="readme_left_actionbar",
+        spec_id="readme_transform_keys",
         anchor="viewport.left.center",
         orientation="vertical",
         offset=(8, -18),
-        icon_ids=SHOWCASE_ICON_IDS[24:30],
-        key_labels=("Q", "W", "E", "R", "T", "Y"),
+        slots=(
+            ShowcaseSlot("move", "maya.tool.move", "maya.move", "W"),
+            ShowcaseSlot("rotate", "maya.tool.rotate", "maya.rotate", "E"),
+            ShowcaseSlot("scale", "maya.tool.scale", "maya.scale", "R"),
+            ShowcaseSlot("set_key", "maya.anim.set_key", "maya.set_key", "S"),
+        ),
     )
 
 
 def _right_side_actionbar_spec() -> actionrail.StackSpec:
     return _quick_create_actionbar_spec(
-        spec_id="readme_right_actionbar",
+        spec_id="readme_modeling_cleanup",
         anchor="viewport.right.center",
         orientation="vertical",
         offset=(-8, -18),
-        icon_ids=SHOWCASE_ICON_IDS[30:36],
-        key_labels=("A", "S", "D", "F", "G", "H"),
+        slots=(
+            ShowcaseSlot("center_pivot", "maya.modeling.center_pivot", "maya.center_pivot", "P"),
+            ShowcaseSlot(
+                "freeze_transforms",
+                "maya.modeling.freeze_transforms",
+                "maya.freeze_transform",
+                "T",
+            ),
+            ShowcaseSlot("delete_history", "maya.modeling.delete_history", "maya.cut_edge", "H"),
+            ShowcaseSlot("grid", "maya.display.toggle_grid", "maya.grid", "G"),
+        ),
     )
 
 
@@ -352,6 +299,7 @@ def _show_bars(panel: str) -> tuple[object, ...]:
         _right_side_actionbar_spec(),
     )
     _assert_unique_icons(specs)
+    _assert_unique_hotkeys(specs)
     hosts = (
         actionrail.show_spec(specs[0], panel=panel),
         actionrail.show_spec(specs[1], panel=panel),
@@ -375,6 +323,13 @@ def _assert_unique_icons(specs: tuple[actionrail.StackSpec, ...]) -> None:
     duplicates = sorted({icon_id for icon_id in icon_ids if icon_ids.count(icon_id) > 1})
     if duplicates:
         raise AssertionError(f"README showcase icon ids must be unique: {duplicates}")
+
+
+def _assert_unique_hotkeys(specs: tuple[actionrail.StackSpec, ...]) -> None:
+    key_labels = [item.key_label for spec in specs for item in spec.items if item.key_label]
+    duplicates = sorted({label for label in key_labels if key_labels.count(label) > 1})
+    if duplicates:
+        raise AssertionError(f"README showcase hotkey labels must be unique: {duplicates}")
 
 
 def _process_events(delay_ms: int = 0) -> None:
@@ -668,7 +623,7 @@ def main() -> None:
         edit_capture = _save_edit_mode_composite(
             ASSET_DIR / "actionrail_readme_edit_mode.png",
             panel=panel,
-            selected_preset_id="readme_main_actionbar",
+            selected_preset_id="readme_modeling_primitives",
             blast_name="actionrail_readme_edit_mode_base.png",
         )
         captures.append(edit_capture)

@@ -299,11 +299,18 @@ grid_check = next(
     None,
 )
 grid_size_spin = panel.findChild(QtWidgets.QSpinBox)
-lock_button = panel.findChild(QtWidgets.QPushButton)
+lock_button = panel.findChild(QtWidgets.QPushButton, edit_mode.EDIT_LOCK_BUTTON_OBJECT_NAME)
 if grid_check is None or grid_size_spin is None or lock_button is None:
     raise AssertionError("Edit Mode panel is missing expected grid or lock controls.")
-if lock_button.text() != "Select Rail":
-    raise AssertionError(f"Expected neutral lock text before selection, got {lock_button.text()!r}")
+if lock_button.text():
+    raise AssertionError(
+        f"Expected icon-only lock button before selection, got {lock_button.text()!r}"
+    )
+if lock_button.accessibleName() != "No rail selected":
+    raise AssertionError(
+        "Expected neutral lock accessible name before selection, got "
+        f"{lock_button.accessibleName()!r}"
+    )
 panel_start = panel.pos()
 QtTest.QTest.mousePress(
     panel,
@@ -390,19 +397,21 @@ for _attempt in range(3):
         break
 if state_after_left_click.selected_preset_id != "edit_mode_custom":
     raise AssertionError(f"Left click did not select custom rail: {state_after_left_click}")
-if lock_button.text() != "Lock":
+if lock_button.text() or lock_button.accessibleName() != "Unlocked rail":
     raise AssertionError(
-        f"Expected Lock action after unlocked selection, got {lock_button.text()!r}"
+        "Expected unlocked icon-only control after unlocked selection, got "
+        f"text={lock_button.text()!r}, name={lock_button.accessibleName()!r}"
     )
 
 before_lock_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
 QtTest.QTest.mouseClick(lock_button, QtCore.Qt.LeftButton)
 app.processEvents()
 locked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
-if lock_button.text() != "Unlock" or not locked_frame.locked:
+if lock_button.text() or lock_button.accessibleName() != "Locked rail" or not locked_frame.locked:
     raise AssertionError(
-        "Edit Mode Lock button did not lock the selected rail: "
-        f"{lock_button.text()!r}, {locked_frame}"
+        "Edit Mode lock icon button did not lock the selected rail: "
+        f"text={lock_button.text()!r}, name={lock_button.accessibleName()!r}, "
+        f"{locked_frame}"
     )
 host.nudge_selected(32, 0)
 app.processEvents()
@@ -412,10 +421,39 @@ if still_locked_frame.x != before_lock_frame.x:
 QtTest.QTest.mouseClick(lock_button, QtCore.Qt.LeftButton)
 app.processEvents()
 unlocked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
-if lock_button.text() != "Lock" or unlocked_frame.locked:
+if lock_button.text() or lock_button.accessibleName() != "Unlocked rail" or unlocked_frame.locked:
     raise AssertionError(
-        "Edit Mode Unlock button did not unlock the selected rail: "
-        f"{lock_button.text()!r}, {unlocked_frame}"
+        "Edit Mode lock icon button did not unlock the selected rail: "
+        f"text={lock_button.text()!r}, name={lock_button.accessibleName()!r}, "
+        f"{unlocked_frame}"
+    )
+frame_icon_rect = edit_mode._frame_lock_rect(edit_mode.load(), unlocked_frame)
+QtTest.QTest.mouseClick(
+    edit_widget,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    frame_icon_rect.center(),
+)
+app.processEvents()
+icon_locked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+if not icon_locked_frame.locked or lock_button.accessibleName() != "Locked rail":
+    raise AssertionError(
+        "Edit Mode frame lock icon did not lock the selected rail: "
+        f"{lock_button.accessibleName()!r}, {icon_locked_frame}"
+    )
+frame_icon_rect = edit_mode._frame_lock_rect(edit_mode.load(), icon_locked_frame)
+QtTest.QTest.mouseClick(
+    edit_widget,
+    QtCore.Qt.LeftButton,
+    QtCore.Qt.NoModifier,
+    frame_icon_rect.center(),
+)
+app.processEvents()
+unlocked_frame = next(frame for frame in host.frames if frame.preset_id == "edit_mode_custom")
+if unlocked_frame.locked or lock_button.accessibleName() != "Unlocked rail":
+    raise AssertionError(
+        "Edit Mode frame lock icon did not unlock the selected rail: "
+        f"{lock_button.accessibleName()!r}, {unlocked_frame}"
     )
 runtime_widget = edit_mode._runtime_hosts()["edit_mode_custom"].widget
 top_widget = QtWidgets.QApplication.widgetAt(

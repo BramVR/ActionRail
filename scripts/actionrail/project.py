@@ -247,7 +247,7 @@ def about() -> dict[str, object]:
                 "publish polish first pass Maya-smoke verified; validation UX "
                 "publish follow-up locally verified with Quick Create Maya smoke; "
                 "Edit Mode options cleanup and Normal Mode slot-edit locking/dragging "
-                "locally verified; Edit Mode panel Lock/Unlock, drag polish, "
+                "locally verified; Edit Mode icon-only lock controls, drag polish, "
                 "cross-rail unlocked slot transfers Maya-smoke verified; "
                 "architecture reframed around WoW-style frames, Action Book, "
                 "Macro Book, and Bind Mode; Action Book Toggle Grid viewport "

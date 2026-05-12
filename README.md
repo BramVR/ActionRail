@@ -20,9 +20,12 @@ part of Maya instead of a large docked tool window.
   <img src="docs/assets/actionrail_readme_maya_icons_showcase.png" alt="ActionRail action bars with Maya icons shown over a minimal Maya viewport scene">
 </p>
 
-Normal Mode keeps action bars compact in the viewport. Icon-backed slots use a
-dark button backplate, visible hotkey badges, active-state accents, and the
-same slot rendering used when actions are placed from the Action Book.
+Normal Mode keeps action bars compact in the viewport. The README showcase
+uses a longer primitive/modeling bar, a short selection row above it, and side
+bars for transform, keying, cleanup, and viewport toggles. Icon-backed slots
+use a dark button backplate, unique visible hotkey badges, active-state
+accents, and the same slot rendering used when actions are placed from the
+Action Book.
 
 ## Edit Mode Overview
 
