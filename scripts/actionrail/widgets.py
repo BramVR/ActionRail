@@ -15,6 +15,8 @@ from dataclasses import dataclass, replace
 from . import slot_state as _slot_state
 from .action_book import ACTION_BOOK_MIME_TYPE, action_book_action_id_from_mime_text
 from .actions import ActionRegistry
+from .bind_mode import HotkeyChord
+from .hotkeys import HotkeyConflictError
 from .predicates import PredicateContext
 from .qt import load
 from .slot_payloads import item_has_payload
@@ -219,6 +221,7 @@ def build_rail(
                         tuple(pending_tools),
                         registry,
                         theme,
+                        spec.id,
                         spec.layout.orientation,
                         context,
                         slot_edit_callbacks,
@@ -243,6 +246,7 @@ def build_rail(
                     item,
                     registry,
                     theme,
+                    spec.id,
                     spec.layout.orientation,
                     context,
                     slot_edit_callbacks,
@@ -258,6 +262,7 @@ def build_rail(
                     tuple(pending_tools),
                     registry,
                     theme,
+                    spec.id,
                     spec.layout.orientation,
                     context,
                     slot_edit_callbacks,
@@ -747,6 +752,7 @@ def _build_cluster(
     items: tuple[StackItem, ...],
     registry: ActionRegistry,
     theme: ActionRailTheme,
+    preset_id: str,
     orientation: str,
     context: PredicateContext | None = None,
     slot_edit_callbacks: SlotEditCallbacks | None = None,
@@ -770,7 +776,9 @@ def _build_cluster(
     layout.setSpacing(theme.frame_spacing)
 
     for item in items:
-        layout.addWidget(_build_button(item, registry, theme, context, slot_edit_callbacks))
+        layout.addWidget(
+            _build_button(item, registry, theme, preset_id, context, slot_edit_callbacks)
+        )
 
     main_axis_size = _frame_main_axis_size(len(items), theme)
     if orientation == "horizontal":
@@ -784,6 +792,7 @@ def _build_single_button(
     item: StackItem,
     registry: ActionRegistry,
     theme: ActionRailTheme,
+    preset_id: str,
     orientation: str,
     context: PredicateContext | None = None,
     slot_edit_callbacks: SlotEditCallbacks | None = None,
@@ -800,7 +809,7 @@ def _build_single_button(
         content_margin,
     )
     layout.setSpacing(0)
-    layout.addWidget(_build_button(item, registry, theme, context, slot_edit_callbacks))
+    layout.addWidget(_build_button(item, registry, theme, preset_id, context, slot_edit_callbacks))
 
     frame.setFixedSize(theme.rail_width, theme.rail_width)
     return frame
@@ -901,6 +910,7 @@ def _build_button(
     item: StackItem,
     registry: ActionRegistry,
     theme: ActionRailTheme,
+    preset_id: str,
     context: PredicateContext | None = None,
     slot_edit_callbacks: SlotEditCallbacks | None = None,
 ) -> object:
@@ -908,6 +918,7 @@ def _build_button(
     state = resolve_slot_render_state(item, registry, context)
     button = _button_class(qt)(state.text)
     button.setProperty("actionRailRole", "button")
+    button.setProperty("actionRailPresetId", preset_id)
     button.setProperty("actionRailSlotId", item.id)
     button.setProperty(
         "actionRailSlotEditUnlocked",
@@ -930,6 +941,7 @@ def _build_button(
         _install_slot_edit_menu(button, item, registry, slot_edit_callbacks)
         _install_action_book_drop(button, item, slot_edit_callbacks)
         _install_slot_drag_edit(button, item, slot_edit_callbacks)
+    _install_bind_mode_capture(qt, button, item, preset_id)
     if item.action and not (
         slot_edit_callbacks is not None and slot_edit_callbacks.unlocked
     ):
@@ -1006,6 +1018,185 @@ def _show_slot_edit_menu(
         unlock_action.triggered.connect(lambda _checked=False: callbacks.unlock_rail())
     with suppress(Exception):
         menu.exec(button.mapToGlobal(point))
+
+
+def _install_bind_mode_capture(
+    qt: object,
+    button: object,
+    item: StackItem,
+    preset_id: str,
+) -> bool:
+    """Install the hover/key capture used by ActionRail Bind Mode."""
+
+    if not item.action:
+        return False
+    object_class = getattr(getattr(qt, "QtCore", None), "QObject", None)
+    event_class = getattr(getattr(qt, "QtCore", None), "QEvent", None)
+    install_event_filter = getattr(button, "installEventFilter", None)
+    if object_class is None or event_class is None or not callable(install_event_filter):
+        return False
+
+    enter_type = getattr(event_class, "Enter", None)
+    leave_type = getattr(event_class, "Leave", None)
+    key_release_type = getattr(event_class, "KeyRelease", None)
+    mouse_press_type = getattr(event_class, "MouseButtonPress", None)
+    mouse_release_type = getattr(event_class, "MouseButtonRelease", None)
+    if enter_type is None or leave_type is None or key_release_type is None:
+        return False
+
+    slot_id = _slot_suffix(preset_id, item.id)
+
+    class _BindModeFilter(object_class):  # type: ignore[misc, valid-type]
+        def eventFilter(self, watched: object, event: object) -> bool:  # noqa: N802
+            from . import bind_mode
+
+            if not bind_mode.bind_mode_state().enabled:
+                return False
+
+            event_type = event.type()
+            if event_type == enter_type:
+                bind_mode.select_bind_mode_slot(preset_id, slot_id)
+                _grab_bind_mode_keyboard(watched)
+                return False
+
+            if event_type == leave_type:
+                _release_bind_mode_keyboard(watched)
+                return False
+
+            if event_type in (mouse_press_type, mouse_release_type):
+                bind_mode.select_bind_mode_slot(preset_id, slot_id)
+                _accept_event(event)
+                return True
+
+            if event_type != key_release_type:
+                return False
+
+            bind_mode.select_bind_mode_slot(preset_id, slot_id)
+            chord = _bind_mode_chord_from_key_event(qt, event)
+            if chord is None:
+                return False
+            if _hotkey_chord_is_escape(chord):
+                bind_mode.clear_hovered_hotkey()
+                _accept_event(event)
+                return True
+            try:
+                bind_mode.assign_hovered_hotkey(
+                    chord.key,
+                    ctrl=chord.ctrl,
+                    alt=chord.alt,
+                    shift=chord.shift,
+                    command=chord.command,
+                    release=chord.release,
+                )
+                _clear_bind_mode_conflict(watched)
+            except HotkeyConflictError as exc:
+                _record_bind_mode_conflict(watched, str(exc))
+            _accept_event(event)
+            return True
+
+    bind_filter = _BindModeFilter()
+    try:
+        install_event_filter(bind_filter)
+    except Exception:
+        return False
+    button._actionrail_bind_mode_filter = bind_filter
+    return True
+
+
+def _bind_mode_chord_from_key_event(qt: object, event: object) -> HotkeyChord | None:
+    key_value = _event_key_value(event)
+    if key_value is None or _is_modifier_key(qt, key_value):
+        return None
+    key = _qt_key_text(qt, key_value)
+    if not key:
+        return None
+    modifiers = _event_modifier_value(event)
+    qt_constants = getattr(getattr(qt, "QtCore", None), "Qt", object())
+    return HotkeyChord(
+        key,
+        ctrl=bool(modifiers & getattr(qt_constants, "ControlModifier", 0)),
+        alt=bool(modifiers & getattr(qt_constants, "AltModifier", 0)),
+        shift=bool(modifiers & getattr(qt_constants, "ShiftModifier", 0)),
+        command=bool(modifiers & getattr(qt_constants, "MetaModifier", 0)),
+    )
+
+
+def _event_key_value(event: object) -> int | None:
+    key = getattr(event, "key", None)
+    if not callable(key):
+        return None
+    with suppress(Exception):
+        return int(key())
+    return None
+
+
+def _event_modifier_value(event: object) -> int:
+    modifiers = getattr(event, "modifiers", None)
+    if not callable(modifiers):
+        return 0
+    with suppress(Exception):
+        return int(modifiers())
+    return 0
+
+
+def _qt_key_text(qt: object, key_value: int) -> str:
+    key_sequence = getattr(getattr(qt, "QtGui", None), "QKeySequence", None)
+    if key_sequence is not None:
+        with suppress(Exception):
+            text = key_sequence(key_value).toString()
+            if isinstance(text, str) and text:
+                return text.split("+")[-1]
+    return chr(key_value).upper() if 32 < key_value < 127 else ""
+
+
+def _is_modifier_key(qt: object, key_value: int) -> bool:
+    qt_constants = getattr(getattr(qt, "QtCore", None), "Qt", object())
+    modifier_keys = (
+        getattr(qt_constants, "Key_Shift", None),
+        getattr(qt_constants, "Key_Control", None),
+        getattr(qt_constants, "Key_Alt", None),
+        getattr(qt_constants, "Key_Meta", None),
+        getattr(qt_constants, "Key_unknown", None),
+    )
+    return any(value is not None and key_value == int(value) for value in modifier_keys)
+
+
+def _hotkey_chord_is_escape(chord: HotkeyChord) -> bool:
+    return chord.key.lower() in {"esc", "escape"}
+
+
+def _slot_suffix(preset_id: str, slot_id: str) -> str:
+    prefix = f"{preset_id}."
+    if slot_id.startswith(prefix):
+        return slot_id.removeprefix(prefix)
+    return slot_id
+
+
+def _grab_bind_mode_keyboard(widget: object) -> None:
+    grab_keyboard = getattr(widget, "grabKeyboard", None)
+    if callable(grab_keyboard):
+        with suppress(Exception):
+            grab_keyboard()
+
+
+def _release_bind_mode_keyboard(widget: object) -> None:
+    release_keyboard = getattr(widget, "releaseKeyboard", None)
+    if callable(release_keyboard):
+        with suppress(Exception):
+            release_keyboard()
+
+
+def _record_bind_mode_conflict(widget: object, message: str) -> None:
+    with suppress(Exception):
+        widget.setProperty("actionRailBindConflict", message)
+    if hasattr(widget, "setToolTip"):
+        with suppress(Exception):
+            widget.setToolTip(message)
+
+
+def _clear_bind_mode_conflict(widget: object) -> None:
+    with suppress(Exception):
+        widget.setProperty("actionRailBindConflict", "")
 
 
 def _install_action_book_drop(

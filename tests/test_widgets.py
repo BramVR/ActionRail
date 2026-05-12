@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+
+import actionrail.bind_mode as bind_mode
 import actionrail.slot_state as slot_state
 import actionrail.widgets as widgets
 from actionrail.actions import create_default_registry
@@ -2380,6 +2383,194 @@ def test_dense_action_bar_uses_single_canvas_and_dirty_slot_refresh(monkeypatch)
     assert root.updates
     assert widgets.set_slot_key_label(root, "dense.0", "F12") == 1
     assert root._actionrail_slots["dense.0"].state.key_label == "F12"
+
+
+def test_bind_mode_filter_selects_slot_and_assigns_keyboard_chord(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assigned = []
+    selected = []
+
+    class Event:
+        def __init__(self, event_type: int, key: int = 0, modifiers: int = 0) -> None:
+            self.event_type = event_type
+            self.key_value = key
+            self.modifier_value = modifiers
+            self.accepted = False
+
+        def type(self) -> int:
+            return self.event_type
+
+        def key(self) -> int:
+            return self.key_value
+
+        def modifiers(self) -> int:
+            return self.modifier_value
+
+        def accept(self) -> None:
+            self.accepted = True
+
+    class Button:
+        def __init__(self) -> None:
+            self.properties = {}
+            self.grabbed = 0
+
+        def setProperty(self, name: str, value: object) -> None:  # noqa: N802
+            self.properties[name] = value
+
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            self.event_filter = event_filter
+
+        def grabKeyboard(self) -> None:  # noqa: N802
+            self.grabbed += 1
+
+    class BindQt:
+        class QtCore:
+            class QObject:
+                pass
+
+            class QEvent:
+                Enter = 1
+                Leave = 2
+                KeyRelease = 3
+                MouseButtonPress = 4
+                MouseButtonRelease = 5
+
+            class Qt:
+                ControlModifier = 1
+                AltModifier = 2
+                ShiftModifier = 4
+                MetaModifier = 8
+                Key_Control = 1001
+                Key_Shift = 1002
+                Key_Alt = 1003
+                Key_Meta = 1004
+                Key_unknown = 1005
+
+        class QtGui:
+            class QKeySequence:
+                def __init__(self, key: int) -> None:
+                    self.key = key
+
+                def toString(self) -> str:  # noqa: N802
+                    return {75: "K"}.get(self.key, "")
+
+    monkeypatch.setattr(bind_mode, "select_bind_mode_slot", lambda *args: selected.append(args))
+    monkeypatch.setattr(
+        bind_mode,
+        "assign_hovered_hotkey",
+        lambda *args, **kwargs: assigned.append((args, kwargs)),
+    )
+
+    bind_mode.enter_bind_mode()
+    button = Button()
+
+    assert widgets._install_bind_mode_capture(
+        BindQt,
+        button,
+        StackItem(type="button", id="test.slot", label="S", action="maya.tool.select"),
+        "test",
+    )
+
+    assert button.event_filter.eventFilter(button, Event(BindQt.QtCore.QEvent.Enter)) is False
+    key_event = Event(
+        BindQt.QtCore.QEvent.KeyRelease,
+        key=75,
+        modifiers=BindQt.QtCore.Qt.ControlModifier | BindQt.QtCore.Qt.ShiftModifier,
+    )
+    assert button.event_filter.eventFilter(button, key_event) is True
+
+    assert selected[-1] == ("test", "slot")
+    assert assigned == [
+        (
+            ("K",),
+            {
+                "ctrl": True,
+                "alt": False,
+                "shift": True,
+                "command": False,
+                "release": False,
+            },
+        )
+    ]
+    assert key_event.accepted is True
+    assert button.grabbed == 1
+    bind_mode.exit_bind_mode(save=False, cmds_module=object())
+
+
+def test_bind_mode_filter_clears_hovered_slot_on_escape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cleared = []
+
+    class Event:
+        accepted = False
+
+        def type(self) -> int:
+            return 3
+
+        def key(self) -> int:
+            return 27
+
+        def modifiers(self) -> int:
+            return 0
+
+        def accept(self) -> None:
+            self.accepted = True
+
+    class Button:
+        def __init__(self) -> None:
+            self.properties = {}
+
+        def setProperty(self, name: str, value: object) -> None:  # noqa: N802
+            self.properties[name] = value
+
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            self.event_filter = event_filter
+
+    class BindQt:
+        class QtCore:
+            class QObject:
+                pass
+
+            class QEvent:
+                Enter = 1
+                Leave = 2
+                KeyRelease = 3
+                MouseButtonPress = 4
+                MouseButtonRelease = 5
+
+            class Qt:
+                ControlModifier = 1
+                AltModifier = 2
+                ShiftModifier = 4
+                MetaModifier = 8
+
+        class QtGui:
+            class QKeySequence:
+                def __init__(self, key: int) -> None:
+                    self.key = key
+
+                def toString(self) -> str:  # noqa: N802
+                    return {27: "Esc"}.get(self.key, "")
+
+    monkeypatch.setattr(bind_mode, "select_bind_mode_slot", lambda *_args: None)
+    monkeypatch.setattr(bind_mode, "clear_hovered_hotkey", lambda: cleared.append(True))
+
+    bind_mode.enter_bind_mode()
+    button = Button()
+    widgets._install_bind_mode_capture(
+        BindQt,
+        button,
+        StackItem(type="button", id="test.slot", label="S", action="maya.tool.select"),
+        "test",
+    )
+    event = Event()
+
+    assert button.event_filter.eventFilter(button, event) is True
+    assert cleared == [True]
+    assert event.accepted is True
+    bind_mode.exit_bind_mode(save=False, cmds_module=object())
 
 
 def test_dense_slot_paint_reuses_icon_and_pixmap_caches() -> None:
