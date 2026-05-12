@@ -5,13 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from . import action_book_ui, diagnostics, edit_mode, quick_create_ui, runtime
+from . import action_book_ui, bind_mode, diagnostics, edit_mode, quick_create_ui, runtime
 from .qt import load
 from .spec import TRANSFORM_STACK_ID
 
 MENU_NAME = "ActionRailMenu"
 MENU_ITEM_NAME = "ActionRailToggleTransformStackMenuItem"
 MENU_EDIT_MODE_ITEM_NAME = "ActionRailEditModeMenuItem"
+MENU_BIND_MODE_ITEM_NAME = "ActionRailBindModeMenuItem"
+MENU_BIND_MODE_SAVE_ITEM_NAME = "ActionRailBindModeSaveMenuItem"
+MENU_BIND_MODE_DISCARD_ITEM_NAME = "ActionRailBindModeDiscardMenuItem"
+MENU_BIND_MODE_CLEAR_ITEM_NAME = "ActionRailBindModeClearMenuItem"
 MENU_QUICK_CREATE_ITEM_NAME = "ActionRailQuickCreateMenuItem"
 MENU_ACTION_BOOK_ITEM_NAME = "ActionRailActionBookMenuItem"
 MENU_RUN_DIAGNOSTICS_ITEM_NAME = "ActionRailRunDiagnosticsMenuItem"
@@ -65,6 +69,14 @@ def install_menu_toggle(
         cmds.deleteUI(MENU_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_EDIT_MODE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_EDIT_MODE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_SAVE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_SAVE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_DISCARD_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_DISCARD_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_CLEAR_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_CLEAR_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ACTION_BOOK_ITEM_NAME, exists=True):
@@ -91,6 +103,38 @@ def install_menu_toggle(
         label="Toggle Edit Mode",
         annotation="Show or hide ActionRail Edit Mode layout-map controls.",
         command=toggle_edit_mode_command(),
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    cmds.menuItem(
+        MENU_BIND_MODE_ITEM_NAME,
+        label="Toggle Bind Mode",
+        annotation="Bind visible ActionRail slots by hovering a slot and pressing a key.",
+        command=toggle_bind_mode_command(),
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    cmds.menuItem(
+        MENU_BIND_MODE_SAVE_ITEM_NAME,
+        label="Save Bind Mode Changes",
+        annotation="Leave Bind Mode and keep hotkeys assigned during this session.",
+        command=save_bind_mode_command(),
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    cmds.menuItem(
+        MENU_BIND_MODE_DISCARD_ITEM_NAME,
+        label="Discard Bind Mode Changes",
+        annotation="Leave Bind Mode and restore touched hotkeys and visible labels.",
+        command=discard_bind_mode_command(),
+        parent=MENU_NAME,
+        sourceType="python",
+    )
+    cmds.menuItem(
+        MENU_BIND_MODE_CLEAR_ITEM_NAME,
+        label="Clear Hovered Slot Binding",
+        annotation="Clear the visible hotkey label for the current Bind Mode slot.",
+        command=clear_bind_mode_hovered_command(),
         parent=MENU_NAME,
         sourceType="python",
     )
@@ -145,6 +189,14 @@ def uninstall_menu_toggle(*, cmds_module: Any | None = None) -> None:
         cmds.deleteUI(MENU_ACTION_BOOK_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_QUICK_CREATE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_QUICK_CREATE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_CLEAR_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_CLEAR_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_DISCARD_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_DISCARD_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_SAVE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_SAVE_ITEM_NAME, menuItem=True)
+    if cmds.menuItem(MENU_BIND_MODE_ITEM_NAME, exists=True):
+        cmds.deleteUI(MENU_BIND_MODE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_EDIT_MODE_ITEM_NAME, exists=True):
         cmds.deleteUI(MENU_EDIT_MODE_ITEM_NAME, menuItem=True)
     if cmds.menuItem(MENU_ICON_IMPORT_DIAGNOSTICS_ITEM_NAME, exists=True):
@@ -286,6 +338,36 @@ def toggle_edit_mode(
     """Toggle the edit-only layout-map overlay from Maya UI."""
 
     return edit_mode.toggle_edit_mode(panel=panel)
+
+
+def toggle_bind_mode() -> bind_mode.BindModeState:
+    """Toggle WoW-style slot hotkey binding from Maya UI."""
+
+    return bind_mode.toggle_bind_mode()
+
+
+def toggle_bind_mode_command() -> str:
+    """Return the Python command string for the Maya Bind Mode toggle."""
+
+    return "import actionrail; actionrail.toggle_bind_mode()"
+
+
+def save_bind_mode_command() -> str:
+    """Return the Python command string for saving Bind Mode changes."""
+
+    return "import actionrail; actionrail.exit_bind_mode(save=True)"
+
+
+def discard_bind_mode_command() -> str:
+    """Return the Python command string for discarding Bind Mode changes."""
+
+    return "import actionrail; actionrail.exit_bind_mode(save=False)"
+
+
+def clear_bind_mode_hovered_command() -> str:
+    """Return the Python command string for clearing the hovered Bind Mode slot."""
+
+    return "import actionrail; actionrail.clear_hovered_hotkey()"
 
 
 def diagnose_icon_import_from_maya(

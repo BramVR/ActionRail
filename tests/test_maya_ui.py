@@ -107,6 +107,18 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
     assert maya_ui.toggle_edit_mode_command() == (
         "import actionrail; actionrail.toggle_edit_mode()"
     )
+    assert maya_ui.toggle_bind_mode_command() == (
+        "import actionrail; actionrail.toggle_bind_mode()"
+    )
+    assert maya_ui.save_bind_mode_command() == (
+        "import actionrail; actionrail.exit_bind_mode(save=True)"
+    )
+    assert maya_ui.discard_bind_mode_command() == (
+        "import actionrail; actionrail.exit_bind_mode(save=False)"
+    )
+    assert maya_ui.clear_bind_mode_hovered_command() == (
+        "import actionrail; actionrail.clear_hovered_hotkey()"
+    )
     assert maya_ui.run_diagnostics_from_maya_command() == (
         "import actionrail; actionrail.run_diagnostics_from_maya()"
     )
@@ -193,6 +205,10 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert tuple(cmds.menu_items) == (
         maya_ui.MENU_ITEM_NAME,
         maya_ui.MENU_EDIT_MODE_ITEM_NAME,
+        maya_ui.MENU_BIND_MODE_ITEM_NAME,
+        maya_ui.MENU_BIND_MODE_SAVE_ITEM_NAME,
+        maya_ui.MENU_BIND_MODE_DISCARD_ITEM_NAME,
+        maya_ui.MENU_BIND_MODE_CLEAR_ITEM_NAME,
         maya_ui.MENU_QUICK_CREATE_ITEM_NAME,
         maya_ui.MENU_ACTION_BOOK_ITEM_NAME,
         maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME,
@@ -203,6 +219,18 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert cmds.menu_items[maya_ui.MENU_EDIT_MODE_ITEM_NAME][
         "command"
     ] == maya_ui.toggle_edit_mode_command()
+    assert cmds.menu_items[maya_ui.MENU_BIND_MODE_ITEM_NAME][
+        "command"
+    ] == maya_ui.toggle_bind_mode_command()
+    assert cmds.menu_items[maya_ui.MENU_BIND_MODE_SAVE_ITEM_NAME][
+        "command"
+    ] == maya_ui.save_bind_mode_command()
+    assert cmds.menu_items[maya_ui.MENU_BIND_MODE_DISCARD_ITEM_NAME][
+        "command"
+    ] == maya_ui.discard_bind_mode_command()
+    assert cmds.menu_items[maya_ui.MENU_BIND_MODE_CLEAR_ITEM_NAME][
+        "command"
+    ] == maya_ui.clear_bind_mode_hovered_command()
     assert cmds.menu_items[maya_ui.MENU_QUICK_CREATE_ITEM_NAME][
         "command"
     ] == maya_ui.show_quick_create_panel_command()
@@ -221,6 +249,10 @@ def test_install_menu_toggle_is_idempotent() -> None:
     assert cmds.deleted == [
         (maya_ui.MENU_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_EDIT_MODE_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_BIND_MODE_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_BIND_MODE_SAVE_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_BIND_MODE_DISCARD_ITEM_NAME, {"menuItem": True}),
+        (maya_ui.MENU_BIND_MODE_CLEAR_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_ACTION_BOOK_ITEM_NAME, {"menuItem": True}),
         (maya_ui.MENU_RUN_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}),
@@ -239,6 +271,10 @@ def test_uninstall_menu_toggle_removes_empty_actionrail_menu_only() -> None:
     assert cmds.menus == {}
     assert (maya_ui.MENU_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_EDIT_MODE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_BIND_MODE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_BIND_MODE_SAVE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_BIND_MODE_DISCARD_ITEM_NAME, {"menuItem": True}) in cmds.deleted
+    assert (maya_ui.MENU_BIND_MODE_CLEAR_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_QUICK_CREATE_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_ACTION_BOOK_ITEM_NAME, {"menuItem": True}) in cmds.deleted
     assert (maya_ui.MENU_DIAGNOSTICS_ITEM_NAME, {"menuItem": True}) in cmds.deleted
@@ -476,6 +512,19 @@ def test_toggle_edit_mode_forwards_panel(monkeypatch) -> None:
 
     assert maya_ui.toggle_edit_mode(panel="modelPanel4") == "state"
     assert calls["toggle"] == {"panel": "modelPanel4"}
+
+
+def test_toggle_bind_mode_forwards_to_bind_mode(monkeypatch) -> None:
+    calls = []
+
+    def toggle_bind_mode() -> str:
+        calls.append("toggle")
+        return "state"
+
+    monkeypatch.setattr(maya_ui.bind_mode, "toggle_bind_mode", toggle_bind_mode)
+
+    assert maya_ui.toggle_bind_mode() == "state"
+    assert calls == ["toggle"]
 
 
 def test_show_quick_create_panel_creates_workspace_control(monkeypatch) -> None:
