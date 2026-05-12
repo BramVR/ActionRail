@@ -363,6 +363,9 @@ def active_quick_create_preview_spec(preset_id: str) -> Any | None:
     spec = getattr(host, "spec", None)
     if getattr(spec, "id", "") != preset_id:
         return None
+    runtime_key_labels = getattr(host, "_runtime_key_labels", {})
+    if runtime_key_labels:
+        spec = _spec_with_runtime_key_labels(spec, runtime_key_labels)
     return spec
 
 
@@ -384,10 +387,34 @@ def _spec_with_active_preview_payloads(spec: Any) -> Any:
             items.append(item)
             continue
         updated = item
-        for field_name in ("action", "icon", "tone", "tooltip", "enabled_when", "active_when"):
+        for field_name in (
+            "action",
+            "icon",
+            "tone",
+            "tooltip",
+            "key_label",
+            "enabled_when",
+            "active_when",
+        ):
             live_value = getattr(live_item, field_name, "")
             if getattr(updated, field_name, "") != live_value:
                 updated = dataclass_replace(updated, **{field_name: live_value})
+        changed = changed or updated is not item
+        items.append(updated)
+    if not changed:
+        return spec
+    return dataclass_replace(spec, items=tuple(items))
+
+
+def _spec_with_runtime_key_labels(spec: Any, key_labels: dict[str, str]) -> Any:
+    items = []
+    changed = False
+    for item in getattr(spec, "items", ()):
+        key_label = key_labels.get(getattr(item, "id", ""))
+        if key_label is None:
+            items.append(item)
+            continue
+        updated = dataclass_replace(item, key_label=key_label)
         changed = changed or updated is not item
         items.append(updated)
     if not changed:

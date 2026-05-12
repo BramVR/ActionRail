@@ -355,7 +355,7 @@ def toggle_bind_mode_command() -> str:
 def save_bind_mode_command() -> str:
     """Return the Python command string for saving Bind Mode changes."""
 
-    return "import actionrail; actionrail.exit_bind_mode(save=True)"
+    return "import actionrail; actionrail.exit_bind_mode(save=True, persist=True)"
 
 
 def discard_bind_mode_command() -> str:

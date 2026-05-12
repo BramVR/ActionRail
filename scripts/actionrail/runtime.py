@@ -20,6 +20,7 @@ __all__ = [
     "reload",
     "run_action",
     "run_slot",
+    "refresh_bind_mode_visuals",
     "set_rail_slots_unlocked",
     "show_example",
     "show_preset",
@@ -144,6 +145,38 @@ def update_slot_key_label(preset_id: str, slot_id: str, key_label: str) -> int:
     return host.update_slot_key_label(_qualified_slot_id(preset_id, slot_id), key_label)
 
 
+def refresh_bind_mode_visuals(
+    *,
+    enabled: bool,
+    preset_id: str = "",
+    slot_id: str = "",
+    pending_change_count: int = 0,
+) -> int:
+    """Refresh visible Bind Mode affordances on active overlays."""
+
+    updated = 0
+    for active_preset_id, host in tuple(_OVERLAYS.items()):
+        updater = getattr(host, "update_bind_mode_visuals", None)
+        if not callable(updater):
+            continue
+        hovered_slot_id = (
+            _qualified_slot_id(active_preset_id, slot_id)
+            if enabled and preset_id == active_preset_id and slot_id
+            else ""
+        )
+        try:
+            updated += int(
+                updater(
+                    enabled=enabled,
+                    hovered_slot_id=hovered_slot_id,
+                    pending_change_count=pending_change_count,
+                )
+            )
+        except Exception:
+            continue
+    return updated
+
+
 def set_rail_slots_unlocked(preset_id: str, unlocked: bool) -> bool:
     """Toggle Normal Mode slot payload editing for an active rail."""
 
@@ -185,11 +218,16 @@ def run_slot(
 ) -> Any:
     """Run the action attached to a slot in a resolved preset."""
 
-    spec = resolve_preset(
-        preset_id,
-        user_preset_dir=user_preset_dir,
-        studio_preset_dir=studio_preset_dir,
-    )
+    host = _OVERLAYS.get(preset_id)
+    if host is not None and getattr(getattr(host, "spec", None), "id", "") == preset_id:
+        spec = host.spec
+        registry = registry or getattr(host, "registry", None)
+    else:
+        spec = resolve_preset(
+            preset_id,
+            user_preset_dir=user_preset_dir,
+            studio_preset_dir=studio_preset_dir,
+        )
     qualified_slot_id = _qualified_slot_id(preset_id, slot_id)
     for item in spec.items:
         if item.id == qualified_slot_id:

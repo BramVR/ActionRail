@@ -56,6 +56,10 @@ def test_default_qss_preserves_reference_tones() -> None:
     assert "border-top-color: #8ccf3f;" not in qss
     assert "background: #101315;" in qss
     assert 'QPushButton[actionRailRole="button"][actionRailActive="true"]' in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailBindMode="true"]' in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailBindMode="true"]:disabled' in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailBindHovered="true"]' in qss
+    assert 'QPushButton[actionRailRole="button"][actionRailBindHovered="true"]:disabled' in qss
     assert 'QPushButton[actionRailRole="button"]:disabled' in qss
     assert 'QPushButton[actionRailRole="button"][actionRailLocked="true"]' in qss
     assert "background: #0d1011;" in qss
@@ -128,6 +132,10 @@ def test_appearance_overrides_resolve_to_theme_tokens() -> None:
     )
 
     assert theme.accent == "#33dd88"
+    assert theme.bind_mode_border == "#33dd88"
+    assert theme.bind_mode_background == "#0a2c1b"
+    assert theme.bind_mode_hover_border == "#60e4a2"
+    assert theme.bind_mode_hover_background == "#10472c"
     assert theme.button_color == "#f8f8f8"
     assert theme.text_muted == "#888888"
     assert theme.cluster_base_rgb == (17, 23, 34)

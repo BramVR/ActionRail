@@ -554,9 +554,12 @@ user macro actions with icons, and then add compact grouped access patterns.
   implemented in Phase 2.6; shelf imports, studio providers, and macro entries
   remain future work.
 - Hover-to-bind Bind Mode. First keyboard-capture slice implemented:
-  `actionrail.enter_bind_mode()`, visible slot hover/key capture,
-  conflict-aware assignment through Maya runtime commands, immediate key-label
-  sync, Escape clear, and session save/discard restoration for touched chords.
+  `actionrail.enter_bind_mode()`, visible slot hover/key capture, Quick Create
+  preview socket capture, conflict-aware assignment through Maya runtime
+  commands, immediate key-label sync, theme-derived active/hovered slot
+  affordances, a floating appearance-derived Bind Mode HUD, tooltip guidance,
+  temporary empty-slot hover enablement, Escape clear, and session save/discard
+  restoration for touched chords.
 - Slot conflict warnings and clear-binding command. First pass implemented for
   keyboard chords through existing `HotkeyConflictError` handling and the
   hovered slot's conflict property/tooltip state.
@@ -649,10 +652,12 @@ WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and
 template-to-slot-edit handoffs, and slot editing that can later connect to
 Action Book and Bind Mode. The runtime performance foundation is now stable
-enough for the first keyboard-only Bind Mode slice: visible action slots can
-capture keyboard shortcuts, update key badges immediately, clear the hovered
-slot with Escape, and save or discard touched hotkey changes through Maya
-menu/API commands. Keep `docs/06_wow_style_customization.md` in mind, but do
+enough for the first keyboard-only Bind Mode slice: visible slot buttons,
+including Quick Create preview sockets, can capture keyboard shortcuts, update
+key badges immediately, show theme-derived active and hovered-slot Bind Mode
+affordances, clear the hovered slot with Escape, and save or discard touched
+hotkey changes through Maya menu/API commands. Keep
+`docs/06_wow_style_customization.md` in mind, but do
 not implement mouse/wheel binding, Macro Book UI, flyouts, command rings,
 profile layers, marking-menu export, or Viewport 2.0 yet.
 

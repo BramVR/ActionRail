@@ -19,17 +19,20 @@ from .predicates import predicate_dependencies
 from .qt import load
 from .spec import StackSpec
 from .state import STATE_DEPENDENCIES, MayaStateService, snapshot
+from .theme import DEFAULT_THEME
 from .widgets import (
     PredicateRefreshResult,
     SlotEditCallbacks,
     build_collapsed_handle,
     build_transform_stack,
     refresh_predicate_state,
+    set_bind_mode_visual_state,
     set_slot_key_label,
 )
 
 OBJECT_NAME_PREFIX = "ActionRailViewportOverlay"
 CONTAINER_OBJECT_NAME_PREFIX = f"{OBJECT_NAME_PREFIX}Container"
+BIND_MODE_HUD_OBJECT_NAME_PREFIX = "ActionRailBindModeHud"
 DEFAULT_MARGIN = 12
 COLLAPSED_HANDLE_EDGE_MARGIN = 4
 PREDICATE_REFRESH_INTERVAL_MS = 250
@@ -500,6 +503,10 @@ class ViewportOverlayHost:
         self._floating = self.window_parent is not None
         self._collapsed = bool(spec.collapse.enabled and spec.collapse.default_collapsed)
         self._slot_edit_unlocked = False
+        self._bind_mode_hud: Any | None = None
+        self._bind_mode_hud_enabled = False
+        self._bind_mode_hud_hovered_slot_id = ""
+        self._bind_mode_hud_pending_change_count = 0
         self._runtime_key_labels: dict[str, str] = {}
         self._predicate_dependencies = _spec_predicate_dependencies(spec)
         self._predicate_refresh_scheduler: PredicateRefreshScheduler | None = None
@@ -587,6 +594,7 @@ class ViewportOverlayHost:
             self.widget.move(_map_to_global(self.parent, x_pos, y_pos, self.qt))
         else:
             self.widget.move(x_pos, y_pos)
+        self._position_bind_mode_hud_at(x_pos, y_pos, size.width(), size.height())
 
     def close(self) -> None:
         self._stop_predicate_refresh_timer()
@@ -602,6 +610,7 @@ class ViewportOverlayHost:
             self.widget.hide()
             self.widget.setParent(None)
             self.widget.deleteLater()
+        self._close_bind_mode_hud()
 
         self.widget = None
         self.parent = None
@@ -660,6 +669,12 @@ class ViewportOverlayHost:
 
         if was_visible:
             self.show()
+        if getattr(self, "_bind_mode_hud_enabled", False):
+            self.update_bind_mode_visuals(
+                enabled=True,
+                hovered_slot_id=getattr(self, "_bind_mode_hud_hovered_slot_id", ""),
+                pending_change_count=getattr(self, "_bind_mode_hud_pending_change_count", 0),
+            )
 
     def update_slot_key_label(self, slot_id: str, key_label: str) -> int:
         """Update the key label for a rendered slot."""
@@ -673,6 +688,147 @@ class ViewportOverlayHost:
         if self.widget is None or getattr(self, "_collapsed", False):
             return 0
         return set_slot_key_label(self.widget, slot_id, key_label)
+
+    def update_bind_mode_visuals(
+        self,
+        *,
+        enabled: bool,
+        hovered_slot_id: str = "",
+        pending_change_count: int = 0,
+    ) -> int:
+        """Update visible Bind Mode affordances for rendered slots."""
+
+        if self.widget is None or getattr(self, "_collapsed", False):
+            self._update_bind_mode_hud(
+                enabled=False,
+                hovered_slot_id=hovered_slot_id,
+                pending_change_count=pending_change_count,
+            )
+            return 0
+        updated = set_bind_mode_visual_state(
+            self.widget,
+            enabled=enabled,
+            hovered_slot_id=hovered_slot_id,
+            pending_change_count=pending_change_count,
+        )
+        self._update_bind_mode_hud(
+            enabled=enabled,
+            hovered_slot_id=hovered_slot_id,
+            pending_change_count=pending_change_count,
+        )
+        return updated
+
+    def _update_bind_mode_hud(
+        self,
+        *,
+        enabled: bool,
+        hovered_slot_id: str = "",
+        pending_change_count: int = 0,
+    ) -> None:
+        self._bind_mode_hud_enabled = bool(enabled)
+        self._bind_mode_hud_hovered_slot_id = hovered_slot_id
+        self._bind_mode_hud_pending_change_count = pending_change_count
+        hud = self._ensure_bind_mode_hud() if enabled else self._bind_mode_hud
+        if hud is None or not _qt_widget_is_valid(hud):
+            return
+        if not enabled:
+            with suppress(Exception):
+                hud.hide()
+            return
+
+        theme = getattr(self.widget, "_actionrail_theme", DEFAULT_THEME)
+        hud.setText(_bind_mode_hud_text(hovered_slot_id, pending_change_count))
+        hud.setStyleSheet(_bind_mode_hud_style(theme))
+        hud.setToolTip("Bind Mode is active. Hover a visible slot and press a key.")
+        hud.adjustSize()
+        hud.show()
+        hud.raise_()
+        self.position()
+
+    def _ensure_bind_mode_hud(self) -> Any | None:
+        if self._bind_mode_hud is not None and _qt_widget_is_valid(self._bind_mode_hud):
+            return self._bind_mode_hud
+        parent = self.window_parent if self._floating else self.parent
+        if parent is None or not _qt_widget_is_valid(parent):
+            return None
+        hud = self.qt.QtWidgets.QLabel(parent)
+        hud.setObjectName(f"{BIND_MODE_HUD_OBJECT_NAME_PREFIX}_{self.spec.id}")
+        hud.setProperty("actionRailRole", "bindModeHud")
+        hud.setFocusPolicy(self.qt.QtCore.Qt.NoFocus)
+        hud.setAttribute(self.qt.QtCore.Qt.WA_TransparentForMouseEvents, True)
+        if self._floating:
+            hud.setWindowFlags(_floating_window_flags(self.qt))
+            hud.setAttribute(self.qt.QtCore.Qt.WA_ShowWithoutActivating, True)
+        else:
+            hud.setWindowFlags(self.qt.QtCore.Qt.Widget)
+        self._bind_mode_hud = hud
+        return hud
+
+    def _position_bind_mode_hud_at(
+        self,
+        x_pos: int,
+        y_pos: int,
+        widget_width: int,
+        widget_height: int,
+    ) -> None:
+        if not getattr(self, "_bind_mode_hud_enabled", False):
+            return
+        hud = self._bind_mode_hud
+        if (
+            hud is None
+            or self.parent is None
+            or not _qt_widget_is_valid(hud)
+            or not _qt_widget_is_valid(self.parent)
+        ):
+            return
+
+        parent_rect = self.parent.rect()
+        hud.adjustSize()
+        hud_size = hud.sizeHint()
+        hud_width = hud_size.width()
+        hud_height = hud_size.height()
+        if hud_width <= 0 or hud_height <= 0:
+            hud_width = max(hud.width(), 1)
+            hud_height = max(hud.height(), 1)
+
+        inset = 6
+        gap = 8
+        available_width = max(1, parent_rect.width() - (inset * 2))
+        hud.setMinimumWidth(0)
+        hud.setMaximumWidth(16777215)
+        if hud_width > available_width:
+            hud.setWordWrap(True)
+            hud.setFixedWidth(available_width)
+            hud.adjustSize()
+            hud_width = hud.width()
+            hud_height = hud.height()
+        else:
+            hud.setWordWrap(False)
+
+        centered_x = x_pos + round((widget_width - hud_width) / 2)
+        hud_x = _clamp_int(centered_x, inset, parent_rect.width() - hud_width - inset)
+        above_y = y_pos - hud_height - gap
+        if above_y >= inset:
+            hud_y = above_y
+        else:
+            below_y = y_pos + widget_height + gap
+            hud_y = _clamp_int(below_y, inset, parent_rect.height() - hud_height - inset)
+
+        if self._floating:
+            hud.move(_map_to_global(self.parent, hud_x, hud_y, self.qt))
+        else:
+            hud.move(hud_x, hud_y)
+
+    def _close_bind_mode_hud(self) -> None:
+        hud = getattr(self, "_bind_mode_hud", None)
+        if hud is None or not _qt_widget_is_valid(hud):
+            self._bind_mode_hud = None
+            return
+        with suppress(Exception):
+            hud.hide()
+            hud.setParent(None)
+            hud.deleteLater()
+        self._bind_mode_hud = None
 
     def set_slot_edit_unlocked(self, unlocked: bool) -> bool:
         """Toggle Normal Mode slot payload editing for this active rail."""
@@ -1000,6 +1156,36 @@ def _map_to_global(parent: Any, x_pos: int, y_pos: int, qt: Any) -> Any:
         return map_to_global(point)
     except Exception:
         return point
+
+
+def _bind_mode_hud_text(hovered_slot_id: str, pending_change_count: int) -> str:
+    parts = ["BIND MODE", "hover a slot, press a key", "Esc clears"]
+    if hovered_slot_id:
+        parts.append(f"slot: {hovered_slot_id}")
+    if pending_change_count > 0:
+        parts.append(f"pending: {pending_change_count}")
+    return " | ".join(parts)
+
+
+def _bind_mode_hud_style(theme: Any) -> str:
+    return f"""
+QLabel {{
+    background: {getattr(theme, "bind_mode_background", DEFAULT_THEME.bind_mode_background)};
+    border: 2px solid {getattr(theme, "bind_mode_border", DEFAULT_THEME.bind_mode_border)};
+    border-radius: 4px;
+    color: {getattr(theme, "button_color", DEFAULT_THEME.button_color)};
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0px;
+    padding: 6px 10px;
+}}
+"""
+
+
+def _clamp_int(value: int, minimum: int, maximum: int) -> int:
+    if maximum < minimum:
+        return minimum
+    return min(max(minimum, value), maximum)
 
 
 def _rendered_key_labels(widget: Any, qt: Any) -> dict[str, str]:

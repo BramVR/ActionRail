@@ -111,7 +111,7 @@ def test_toggle_command_uses_public_actionrail_api() -> None:
         "import actionrail; actionrail.toggle_bind_mode()"
     )
     assert maya_ui.save_bind_mode_command() == (
-        "import actionrail; actionrail.exit_bind_mode(save=True)"
+        "import actionrail; actionrail.exit_bind_mode(save=True, persist=True)"
     )
     assert maya_ui.discard_bind_mode_command() == (
         "import actionrail; actionrail.exit_bind_mode(save=False)"

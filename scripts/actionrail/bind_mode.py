@@ -15,10 +15,15 @@ from typing import Any
 
 from .hotkeys import (
     HotkeyBinding,
+    _maya_key_shortcut,
+    activate_hotkey_set,
     assign_hotkey,
     assign_slot_hotkey,
+    current_hotkey_set,
+    ensure_editable_hotkey_set,
     publish_slot,
     query_hotkey_binding,
+    save_hotkey_preferences,
     slot_binding_targets,
 )
 
@@ -63,6 +68,7 @@ class _BindModeSession:
     preset_id: str = ""
     slot_id: str = ""
     user_preset_dir: str | Path | None = None
+    original_hotkey_set: str = ""
     original_bindings: dict[HotkeyChord, HotkeyBinding | None] = field(default_factory=dict)
     original_slot_labels: dict[tuple[str, str], str] = field(default_factory=dict)
 
@@ -74,24 +80,31 @@ def enter_bind_mode() -> BindModeState:
     """Start a slot-hover binding session."""
 
     _SESSION.enabled = True
+    _refresh_bind_mode_visuals()
     return bind_mode_state()
 
 
 def exit_bind_mode(
     *,
     save: bool = True,
+    persist: bool = False,
     cmds_module: Any | None = None,
 ) -> BindModeState:
     """End Bind Mode, optionally discarding assignments made during the session."""
 
     if _SESSION.enabled and not save:
         _restore_session(cmds_module=cmds_module)
+        _restore_original_hotkey_set(cmds_module=cmds_module)
+    elif _SESSION.enabled and save and persist and _SESSION.original_bindings:
+        save_hotkey_preferences(cmds_module=cmds_module)
     _SESSION.enabled = False
     _SESSION.preset_id = ""
     _SESSION.slot_id = ""
     _SESSION.user_preset_dir = None
+    _SESSION.original_hotkey_set = ""
     _SESSION.original_bindings.clear()
     _SESSION.original_slot_labels.clear()
+    _refresh_bind_mode_visuals()
     return bind_mode_state()
 
 
@@ -125,6 +138,7 @@ def select_bind_mode_slot(
     _SESSION.preset_id = preset_id
     _SESSION.slot_id = _slot_suffix(preset_id, slot_id)
     _SESSION.user_preset_dir = user_preset_dir
+    _refresh_bind_mode_visuals()
     return bind_mode_state()
 
 
@@ -136,12 +150,13 @@ def assign_hovered_hotkey(
     shift: bool = False,
     command: bool = False,
     release: bool = False,
-    overwrite: bool = False,
+    overwrite: bool = True,
     cmds_module: Any | None = None,
 ) -> HotkeyBinding:
     """Assign a captured hotkey chord to the currently selected Bind Mode slot."""
 
     _require_active_slot()
+    _ensure_session_hotkey_set(cmds_module=cmds_module)
     chord = HotkeyChord(key, ctrl, alt, shift, command, release)
     _remember_chord(chord, cmds_module=cmds_module)
     _remember_slot_label(
@@ -149,7 +164,7 @@ def assign_hovered_hotkey(
         _SESSION.slot_id,
         user_preset_dir=_SESSION.user_preset_dir,
     )
-    return assign_slot_hotkey(
+    binding = assign_slot_hotkey(
         _SESSION.preset_id,
         _SESSION.slot_id,
         key,
@@ -163,6 +178,8 @@ def assign_hovered_hotkey(
         user_preset_dir=_SESSION.user_preset_dir,
         cmds_module=cmds_module,
     )
+    _refresh_bind_mode_visuals()
+    return binding
 
 
 def clear_hovered_hotkey(*, cmds_module: Any | None = None) -> bool:
@@ -171,6 +188,7 @@ def clear_hovered_hotkey(*, cmds_module: Any | None = None) -> bool:
     _require_active_slot()
     preset_id = _SESSION.preset_id
     slot_id = _SESSION.slot_id
+    _ensure_session_hotkey_set(cmds_module=cmds_module)
     _remember_slot_label(preset_id, slot_id, user_preset_dir=_SESSION.user_preset_dir)
     published = publish_slot(
         preset_id,
@@ -197,10 +215,23 @@ def clear_hovered_hotkey(*, cmds_module: Any | None = None) -> bool:
     from .runtime import update_slot_key_label
 
     update_slot_key_label(preset_id, slot_id, "")
+    _refresh_bind_mode_visuals()
     return True
 
 
+def _refresh_bind_mode_visuals() -> None:
+    from .runtime import refresh_bind_mode_visuals
+
+    refresh_bind_mode_visuals(
+        enabled=_SESSION.enabled,
+        preset_id=_SESSION.preset_id,
+        slot_id=_SESSION.slot_id,
+        pending_change_count=len(_SESSION.original_bindings),
+    )
+
+
 def _restore_session(*, cmds_module: Any | None = None) -> None:
+    _ensure_session_hotkey_set(cmds_module=cmds_module)
     for chord, binding in _SESSION.original_bindings.items():
         if binding is None:
             _clear_hotkey(chord, cmds_module=cmds_module)
@@ -221,6 +252,25 @@ def _restore_session(*, cmds_module: Any | None = None) -> None:
 
     for (preset_id, slot_id), key_label in _SESSION.original_slot_labels.items():
         update_slot_key_label(preset_id, slot_id, key_label)
+
+
+def _ensure_session_hotkey_set(*, cmds_module: Any | None = None) -> None:
+    if not _SESSION.original_hotkey_set:
+        try:
+            _SESSION.original_hotkey_set = current_hotkey_set(cmds_module=cmds_module)
+        except RuntimeError:
+            _SESSION.original_hotkey_set = ""
+    ensure_editable_hotkey_set(cmds_module=cmds_module)
+
+
+def _restore_original_hotkey_set(*, cmds_module: Any | None = None) -> None:
+    if not _SESSION.original_hotkey_set:
+        return
+    try:
+        if current_hotkey_set(cmds_module=cmds_module) != _SESSION.original_hotkey_set:
+            activate_hotkey_set(_SESSION.original_hotkey_set, cmds_module=cmds_module)
+    except RuntimeError:
+        return
 
 
 def _remember_chord(
@@ -261,21 +311,45 @@ def _binding_target(
     user_preset_dir: str | Path | None = None,
 ):
     target_id = f"{preset_id}.{_slot_suffix(preset_id, slot_id)}"
-    for target in slot_binding_targets(
-        preset_id,
-        user_preset_dir=user_preset_dir,
-        include_empty=True,
-    ):
+    try:
+        targets = slot_binding_targets(
+            preset_id,
+            user_preset_dir=user_preset_dir,
+            include_empty=True,
+        )
+    except Exception:
+        targets = _active_overlay_binding_targets(preset_id, user_preset_dir=user_preset_dir)
+    for target in targets:
         if target.target_id == target_id:
             return target
     return None
 
 
+def _active_overlay_binding_targets(
+    preset_id: str,
+    *,
+    user_preset_dir: str | Path | None = None,
+):
+    from . import runtime
+
+    host = getattr(runtime, "_OVERLAYS", {}).get(preset_id)
+    spec = getattr(host, "spec", None)
+    if spec is None:
+        return ()
+    return slot_binding_targets(
+        preset_id,
+        spec=spec,
+        user_preset_dir=user_preset_dir,
+        include_empty=True,
+    )
+
+
 def _clear_hotkey(chord: HotkeyChord, *, cmds_module: Any | None = None) -> None:
+    _ensure_session_hotkey_set(cmds_module=cmds_module)
     cmds = _require_cmds(cmds_module)
     flag = "releaseName" if chord.release else "name"
     cmds.hotkey(
-        keyShortcut=chord.key,
+        keyShortcut=_maya_key_shortcut(chord.key),
         ctrlModifier=chord.ctrl,
         altModifier=chord.alt,
         shiftModifier=chord.shift,

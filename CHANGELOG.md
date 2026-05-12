@@ -19,6 +19,27 @@
   assignment through existing Maya runtime commands, Escape-based visible
   binding clear, focused Python tests, and a Maya smoke for hover/key capture
   and discard restoration.
+- Fixed Bind Mode capture on Quick Create preview sockets, including blank
+  generated slots, and kept preview key-label changes alive through preview
+  refresh/save sync.
+- Added theme-derived Bind Mode visual affordances: active Bind Mode now tints
+  visible slot buttons from the rail's resolved appearance accent, highlights
+  the hovered slot more strongly, and swaps slot tooltips to binding guidance.
+- Added an ElvUI-style floating Bind Mode HUD above active rails so the mode is
+  obvious even on tiny Quick Create previews; the HUD uses the rail's resolved
+  appearance accent instead of a hard-coded color.
+- Fixed empty Quick Create sockets in Bind Mode so blank slots temporarily
+  become hoverable, show the Bind Mode tint/highlight, and restore their
+  disabled empty-slot state after Bind Mode exits.
+- Fixed the floating Bind Mode info bar disappearing on repeated socket hover;
+  it now stays visible for the whole Bind Mode session instead of depending on
+  whether a slot property changed during the latest hover refresh.
+- Fixed icon-bearing slots in Bind Mode so their custom-painted icon backplate
+  uses the theme-derived Bind Mode fill/border on hover instead of hiding the
+  green state behind the normal dark icon tile.
+- Fixed Bind Mode hotkey assignment for default Maya keys such as `W`, `E`,
+  `R`, `S`, and number keys by creating/selecting an editable `ActionRail`
+  hotkey set before writing bindings through code.
 - Replaced visible `Locked` text in Edit Mode frames with a minimal icon-only
   lock/unlock affordance in each frame's top-right corner, using a
   Lucide-inspired lock shape and preserving click-to-toggle behavior from both

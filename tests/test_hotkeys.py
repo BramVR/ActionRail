@@ -19,6 +19,8 @@ from actionrail.hotkeys import (
     assign_slot_hotkey,
     clear_visible_key_label,
     clear_visible_published_key_label,
+    current_hotkey_set,
+    ensure_editable_hotkey_set,
     format_hotkey,
     list_published_commands,
     name_command_name,
@@ -28,6 +30,7 @@ from actionrail.hotkeys import (
     publish_slot,
     query_hotkey_binding,
     runtime_command_name,
+    save_hotkey_preferences,
     slot_binding_targets,
     slot_target_id,
     sync_default_actions,
@@ -42,6 +45,9 @@ class FakeCmds:
         self.runtime_commands: dict[str, dict[str, object]] = {}
         self.name_commands: dict[str, dict[str, object]] = {}
         self.hotkeys: dict[tuple[str, bool, bool, bool, bool, bool], str] = {}
+        self.hotkey_sets: set[str] = {"Maya_Default"}
+        self.current_hotkey_set = "Maya_Default"
+        self.saved_hotkeys = 0
         self.query_hotkeys = True
         self.reject_duplicate_name_commands = False
 
@@ -84,7 +90,32 @@ class FakeCmds:
         value = kwargs.get("releaseName", kwargs.get("name"))
         if value:
             self.hotkeys[key] = str(value)
+        else:
+            self.hotkeys.pop(key, None)
         return None
+
+    def hotkeySet(self, name: str = "", **kwargs: object) -> object:  # noqa: N802
+        if kwargs.get("query") and kwargs.get("current"):
+            return self.current_hotkey_set
+        if kwargs.get("query") and kwargs.get("hotkeySetArray"):
+            return tuple(sorted(self.hotkey_sets))
+        if kwargs.get("delete"):
+            self.hotkey_sets.discard(name)
+            if self.current_hotkey_set == name:
+                self.current_hotkey_set = "Maya_Default"
+            return None
+        if kwargs.get("source") is not None:
+            self.hotkey_sets.add(name)
+            return name
+        if kwargs.get("current"):
+            self.hotkey_sets.add(name)
+            self.current_hotkey_set = name
+            return name
+        return name
+
+    def savePrefs(self, **kwargs: object) -> None:  # noqa: N802
+        if kwargs.get("hotkeys"):
+            self.saved_hotkeys += 1
 
 
 class StringCommandArrayCmds(FakeCmds):
@@ -466,6 +497,8 @@ def test_assign_hotkey_rejects_existing_binding_without_overwrite() -> None:
     with pytest.raises(HotkeyConflictError, match="ExistingCommand"):
         assign_hotkey("ActionRail_slot_transform_stack_set_key_NameCommand", "S", cmds_module=cmds)
 
+    assert cmds.current_hotkey_set == "ActionRail"
+
 
 def test_assign_hotkey_allows_same_binding_without_overwrite() -> None:
     cmds = FakeCmds()
@@ -475,6 +508,7 @@ def test_assign_hotkey_allows_same_binding_without_overwrite() -> None:
     binding = assign_hotkey(name, "S", cmds_module=cmds)
 
     assert binding.name == name
+    assert cmds.current_hotkey_set == "ActionRail"
     assert query_hotkey_binding("S", cmds_module=cmds).name == name
 
 
@@ -486,7 +520,44 @@ def test_assign_hotkey_allows_overwrite_and_reports_binding() -> None:
     binding = assign_hotkey(name, "S", overwrite=True, cmds_module=cmds)
 
     assert binding.name == name
+    assert cmds.current_hotkey_set == "ActionRail"
     assert query_hotkey_binding("S", cmds_module=cmds).name == name
+
+
+def test_assign_hotkey_uses_lowercase_maya_shortcut_for_plain_letters() -> None:
+    cmds = FakeCmds()
+    name = name_command_name("ActionRail_action_maya_tool_move")
+    cmds.hotkeys[("W", False, False, False, False, False)] = "LegacyUppercaseQuery"
+
+    binding = assign_hotkey(name, "W", overwrite=True, cmds_module=cmds)
+
+    assert binding.key == "W"
+    assert cmds.current_hotkey_set == "ActionRail"
+    assert cmds.hotkeys[("w", False, False, False, False, False)] == name
+    assert query_hotkey_binding("W", cmds_module=cmds).name == name
+
+
+def test_ensure_editable_hotkey_set_copies_current_set_once() -> None:
+    cmds = FakeCmds()
+    cmds.current_hotkey_set = "Studio_Default"
+    cmds.hotkey_sets.add("Studio_Default")
+
+    activation = ensure_editable_hotkey_set(cmds_module=cmds)
+    second = ensure_editable_hotkey_set(cmds_module=cmds)
+
+    assert activation.previous == "Studio_Default"
+    assert activation.current == "ActionRail"
+    assert activation.created is True
+    assert second.previous == "ActionRail"
+    assert second.created is False
+    assert current_hotkey_set(cmds_module=cmds) == "ActionRail"
+
+
+def test_save_hotkey_preferences_uses_maya_hotkey_pref_bucket() -> None:
+    cmds = FakeCmds()
+
+    assert save_hotkey_preferences(cmds_module=cmds) is True
+    assert cmds.saved_hotkeys == 1
 
 
 def test_assign_published_hotkey_syncs_slot_label(

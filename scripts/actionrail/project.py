@@ -142,7 +142,10 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
     },
     {
         "path": "scripts/actionrail/hotkeys.py",
-        "owns": "Maya runtime-command publishing, nameCommands, hotkey labels",
+        "owns": (
+            "Maya runtime-command publishing, nameCommands, hotkey labels, "
+            "and editable hotkey-set activation"
+        ),
         "tests": ("tests/test_hotkeys.py", "tests/maya_smoke/actionrail_hotkey_bridge_smoke.py"),
     },
     {
@@ -280,10 +283,12 @@ def about() -> dict[str, object]:
                 "state sampling; the forced selection-redraw scheduler has been "
                 "removed so visible overlays no longer install selection callbacks "
                 "or force current-view refreshes; the first Bind Mode "
-                "keyboard-capture slice now lets visible action slots capture "
-                "keyboard shortcuts, update key badges immediately, clear the "
-                "hovered slot with Escape, and save or discard touched hotkey "
-                "changes through Maya menu/API commands"
+                "keyboard-capture slice now lets visible slot buttons, including "
+                "Quick Create preview sockets, capture keyboard shortcuts, update "
+                "key badges immediately, show theme-derived active/hovered Bind "
+                "Mode affordances plus a floating appearance-derived Bind Mode "
+                "HUD, clear the hovered slot with Escape, and save or discard "
+                "touched hotkey changes through Maya menu/API commands"
             ),
             "next_slice": (
                 "Harden the first keyboard-only Bind Mode slice in Maya, then "

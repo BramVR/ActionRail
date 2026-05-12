@@ -51,10 +51,20 @@ Snapshot:
   `actionrail.slot_binding_targets()`, including slot ids, key labels, runtime
   commands, and Maya nameCommands for current Hotkey Editor use and future
   Bind Mode.
-- The first Bind Mode slice now works for visible action slots: enter Bind
-  Mode, hover a slot, press a keyboard shortcut, update the key badge
-  immediately, clear the hovered slot with Escape, and save or discard touched
-  hotkey changes through Maya menu/API commands.
+- The first Bind Mode slice now works for visible slot buttons, including Quick
+  Create preview sockets: enter Bind Mode, hover a slot, press a keyboard
+  shortcut, update the key badge immediately, clear the hovered slot with
+  Escape, and save or discard touched hotkey changes through Maya menu/API
+  commands. Bind Mode creates/selects an editable `ActionRail` Maya hotkey set
+  before assigning keys so default-set built-ins such as `W`, `E`, `R`, `S`,
+  and number keys can be overridden through code while remaining visible in
+  Maya's Hotkey Editor. While active, Bind Mode tints visible slots with colors derived
+  from each rail's resolved appearance accent, highlights the hovered slot, and
+  shows an appearance-derived floating HUD plus binding guidance in slot
+  tooltips. Empty Quick Create sockets temporarily become hoverable in Bind Mode
+  so their tint/highlight appears, then return to their disabled empty-slot
+  state on exit. Icon-bearing slots also paint their icon backplate with the
+  Bind Mode hover fill/border so the green state remains visible behind icons.
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.

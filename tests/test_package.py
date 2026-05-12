@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Iterator
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -149,6 +149,35 @@ def test_runtime_show_spec_supports_user_authored_specs(monkeypatch) -> None:
         ("close", "custom_tools"),
         ("show", "custom_tools:modelPanel5"),
     ]
+
+
+def test_runtime_run_slot_prefers_active_overlay_spec() -> None:
+    events: list[str] = []
+
+    class Registry:
+        def run(self, action_id: str) -> str:
+            events.append(action_id)
+            return "ran"
+
+    spec = StackSpec(
+        id="quick-preview",
+        layout=RailLayout(anchor="viewport.bottom.center", orientation="horizontal"),
+        items=(
+            StackItem(
+                type="button",
+                id="quick-preview.slot_1",
+                action="maya.tool.move",
+            ),
+        ),
+    )
+    runtime._OVERLAYS["quick-preview"] = SimpleNamespace(
+        spec=spec,
+        registry=Registry(),
+        close=lambda: None,
+    )
+
+    assert runtime.run_slot("quick-preview", "slot_1") == "ran"
+    assert events == ["maya.tool.move"]
 
 
 def test_runtime_show_preset_and_reload_resolve_user_presets(tmp_path, monkeypatch) -> None:

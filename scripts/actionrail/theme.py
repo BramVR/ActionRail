@@ -78,6 +78,10 @@ class ActionRailTheme:
     accent: str = "#8ccf3f"
     accent_hover: str = "#a6e45b"
     accent_line: str = "#8ccf3f"
+    bind_mode_border: str = "#8ccf3f"
+    bind_mode_background: str = "#1f3118"
+    bind_mode_hover_border: str = "#a6e45b"
+    bind_mode_hover_background: str = "#29401f"
     success: str = "#2dff87"
     warning: str = "#ffb200"
     error: str = "#ff5a64"
@@ -150,6 +154,10 @@ def apply_appearance_overrides(
                 "button_active_border": accent,
                 "button_active_background": _mix_hex(accent, "#000000", 0.28),
                 "button_active_hover_background": _mix_hex(accent, "#000000", 0.40),
+                "bind_mode_border": accent,
+                "bind_mode_background": _mix_hex(accent, "#000000", 0.20),
+                "bind_mode_hover_border": _mix_hex(accent, "#ffffff", 0.78),
+                "bind_mode_hover_background": _mix_hex(accent, "#000000", 0.32),
             }
         )
     if text:
@@ -300,6 +308,28 @@ QPushButton[actionRailRole="button"][actionRailDiagnosticSeverity="error"] {{
     background: #4b171c;
     border-color: {theme.error};
     color: #fff1f2;
+}}
+QPushButton[actionRailRole="button"][actionRailBindMode="true"] {{
+    background: {theme.bind_mode_background};
+    border-color: {theme.bind_mode_border};
+}}
+QPushButton[actionRailRole="button"][actionRailBindMode="true"]:hover {{
+    background: {theme.bind_mode_hover_background};
+    border-color: {theme.bind_mode_hover_border};
+}}
+QPushButton[actionRailRole="button"][actionRailBindMode="true"]:disabled {{
+    background: {theme.bind_mode_background};
+    border-color: {theme.bind_mode_border};
+    color: {theme.button_color};
+}}
+QPushButton[actionRailRole="button"][actionRailBindHovered="true"] {{
+    background: {theme.bind_mode_hover_background};
+    border-color: {theme.bind_mode_hover_border};
+}}
+QPushButton[actionRailRole="button"][actionRailBindHovered="true"]:disabled {{
+    background: {theme.bind_mode_hover_background};
+    border-color: {theme.bind_mode_hover_border};
+    color: {theme.button_color};
 }}
 """
 

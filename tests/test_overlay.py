@@ -159,6 +159,34 @@ def test_cleanup_overlay_widgets_closes_owning_host_before_delete() -> None:
     assert stale.deleted is False
 
 
+def test_bind_mode_hud_stays_visible_when_slot_visuals_do_not_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    host = overlay.ViewportOverlayHost.__new__(overlay.ViewportOverlayHost)
+    host.widget = object()
+    host._collapsed = False
+    host._update_bind_mode_hud = lambda **kwargs: calls.append(kwargs)  # type: ignore[method-assign]
+
+    monkeypatch.setattr(overlay, "set_bind_mode_visual_state", lambda *args, **kwargs: 0)
+
+    updated = host.update_bind_mode_visuals(
+        enabled=True,
+        hovered_slot_id="quick.slot_5",
+        pending_change_count=0,
+    )
+
+    assert updated == 0
+    assert calls == [
+        {
+            "enabled": True,
+            "hovered_slot_id": "quick.slot_5",
+            "pending_change_count": 0,
+        }
+    ]
+
+
 def test_cleanup_overlay_widgets_finds_floating_widget_from_qapplication() -> None:
     class FakeWidget:
         def __init__(self, object_name: str) -> None:

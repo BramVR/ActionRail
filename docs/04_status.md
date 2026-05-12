@@ -30,14 +30,32 @@ samples only predicate-needed Maya state on refresh ticks. The latest native
 selection redraw cleanup removes the `ViewportSelectionRefreshScheduler`
 workaround entirely: overlays no longer install a Maya selection callback or
 scriptJob and no longer force `cmds.refresh()` after selection changes. The
-first Bind Mode keyboard-capture slice is now implemented: visible action slots
-install a Bind Mode event filter, hovering a slot selects it for binding, key
+first Bind Mode keyboard-capture slice is now implemented: visible slot
+buttons install a Bind Mode event filter, including Quick Create preview
+sockets and blank generated slots. Hovering a slot selects it for binding, key
 release assigns through the existing Maya runtime-command bridge, the key badge
 updates immediately, Escape clears the hovered slot's visible binding, and
-session save/discard can keep or restore touched hotkey changes. Maya menu
+session save/discard can keep or restore touched hotkey changes. The hotkey
+bridge now mirrors Maya's Hotkey Editor workflow by creating/selecting an
+editable `ActionRail` hotkey set before writes, which lets Bind Mode take over
+default-set built-ins such as `W`, `E`, `R`, `S`, and number keys through code.
+Bind Mode now
+also applies theme-derived visual affordances to visible slots: active slots
+use colors derived from each rail's resolved appearance accent, the hovered
+slot gets a stronger highlight, and slot tooltips switch to binding guidance
+until Bind Mode exits. A floating ElvUI-style Bind Mode HUD appears above
+active rails, using the same resolved appearance accent so tiny Quick Create
+previews visibly read as Bind Mode. Empty Quick Create sockets temporarily
+become hoverable while Bind Mode is active so blank slots show the same
+tint/highlight, then restore their disabled empty-slot state on exit. The HUD
+now stays visible for the full Bind Mode session, including repeated hover over
+the same socket when no slot visual property changes. Icon-bearing slots now
+paint their custom icon backplate with the theme-derived Bind Mode fill/border
+on hover, so icon tiles show the same green state as empty sockets. Maya menu
 entries expose Toggle Bind Mode, Save Bind Mode Changes, Discard Bind Mode
-Changes, and Clear Hovered Slot Binding. Mouse button and wheel binding remain
-future work pending Maya native hotkey/focus verification. The
+Changes, and Clear Hovered Slot Binding. Mouse
+button and wheel binding remain future work pending Maya native hotkey/focus
+verification. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -398,18 +416,43 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
-- Latest Bind Mode local validation:
-  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_bind_mode.py tests\\test_widgets.py`
-  -> 103 passed.
-- Latest Bind Mode Ruff:
-  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\project.py tests\\maya_smoke\\actionrail_bind_mode_smoke.py tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_bind_mode.py tests\\test_widgets.py`
+- Latest full pytest:
+  `.\\.venv\\Scripts\\python.exe -m pytest`
+  -> 556 passed.
+- Latest full Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check .`
   -> all checks passed.
 - Latest Bind Mode Maya smoke:
   `.\\scripts\\maya-smoke.ps1 -Script actionrail_bind_mode_smoke.py -Timeout 300`
   -> passed against the running MayaSessiond state on port `7217`; verified
-  hover/key capture on the visible Set Key slot, immediate
-  `Ctrl+Alt+Shift+F12` key-label update, discard restoration to `S`, and Escape
-  clear behavior.
+  themed Bind Mode button state toggles on, the hovered Set Key slot is marked,
+  the floating Bind Mode HUD appears and hides on exit, immediate
+  `Ctrl+Alt+Shift+F12` key-label update, discard restoration to `S`, visual
+  state turns off on exit, editable `ActionRail` hotkey-set activation for
+  plain `W` and `1` built-in overrides, discard restoration of those Maya
+  bindings, and Escape clear behavior.
+- Latest focused Bind Mode hotkey-set validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_hotkeys.py tests\\test_bind_mode.py tests\\test_maya_ui.py`
+  -> 98 passed.
+- Latest focused Bind Mode hotkey-set Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\hotkeys.py scripts\\actionrail\\bind_mode.py scripts\\actionrail\\maya_ui.py scripts\\actionrail\\__init__.py scripts\\actionrail\\project.py tests\\test_hotkeys.py tests\\test_bind_mode.py tests\\test_maya_ui.py tests\\maya_smoke\\actionrail_bind_mode_smoke.py`
+  -> all checks passed.
+- Latest Quick Create preview Bind Mode Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_quick_create_smoke.py -Timeout 300`
+  -> passed against the running MayaSessiond state on port `7217`; verified
+  Quick Create preview blank slot Bind Mode capture, themed preview slot state,
+  appearance-accent HUD styling, temporary empty-slot enablement during Bind
+  Mode, restored disabled empty-slot state after exit, hovered-slot marking,
+  persistent HUD visibility after repeated hover over the same socket,
+  immediate `Ctrl+Alt+Shift+F11` key-label update, and active preview key-label
+  retention before the normal Quick Create save/publish path.
+- Latest Bind Mode empty-slot screenshot check:
+  temporary MayaSessiond screenshot probe -> passed; saved active Quick Create
+  Bind Mode empty-slot hover screenshot at
+  `.gg-maya-sessiond/screenshots/actionrail_bind_mode_empty_slot_hover.png`.
+- Latest full Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script all -Timeout 300`
+  -> passed against the running MayaSessiond state on port `7217`.
 - Latest docs/project checks:
   `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
   `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and local Markdown link

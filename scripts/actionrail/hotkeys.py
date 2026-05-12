@@ -23,24 +23,30 @@ from .spec import StackSpec
 COMMAND_PREFIX = "ActionRail"
 COMMAND_CATEGORY = "ActionRail"
 NAME_COMMAND_SUFFIX = "_NameCommand"
+HOTKEY_SET_NAME = "ActionRail"
 
 TargetKind = Literal["action", "slot"]
 
 __all__ = [
     "COMMAND_CATEGORY",
     "COMMAND_PREFIX",
+    "HOTKEY_SET_NAME",
     "NAME_COMMAND_SUFFIX",
     "CommandSyncResult",
     "HotkeyBinding",
     "HotkeyConflictError",
+    "HotkeySetActivation",
     "PublishedCommand",
+    "activate_hotkey_set",
     "SlotBindingTarget",
     "TargetKind",
     "assign_hotkey",
     "assign_published_hotkey",
     "assign_slot_hotkey",
+    "current_hotkey_set",
     "clear_visible_key_label",
     "clear_visible_published_key_label",
+    "ensure_editable_hotkey_set",
     "format_hotkey",
     "list_published_commands",
     "name_command_name",
@@ -50,6 +56,7 @@ __all__ = [
     "publish_slot",
     "query_hotkey_binding",
     "runtime_command_name",
+    "save_hotkey_preferences",
     "slot_target_id",
     "slot_binding_targets",
     "sync_default_actions",
@@ -95,6 +102,15 @@ class HotkeyBinding:
     shift: bool = False
     command: bool = False
     release: bool = False
+
+
+@dataclass(frozen=True)
+class HotkeySetActivation:
+    """Hotkey-set state after making a writable set active."""
+
+    previous: str
+    current: str
+    created: bool = False
 
 
 @dataclass(frozen=True)
@@ -392,8 +408,9 @@ def query_hotkey_binding(
 
     cmds = _require_cmds(cmds_module)
     flag = "releaseName" if release else "name"
+    query_key = _maya_key_shortcut(key)
     name = cmds.hotkey(
-        key,
+        query_key,
         query=True,
         ctrlModifier=ctrl,
         altModifier=alt,
@@ -401,9 +418,82 @@ def query_hotkey_binding(
         commandModifier=command,
         **{flag: True},
     )
+    if not name and query_key != key:
+        name = cmds.hotkey(
+            key,
+            query=True,
+            ctrlModifier=ctrl,
+            altModifier=alt,
+            shiftModifier=shift,
+            commandModifier=command,
+            **{flag: True},
+        )
     if not name:
         return None
     return HotkeyBinding(key, str(name), ctrl, alt, shift, command, release)
+
+
+def current_hotkey_set(*, cmds_module: Any | None = None) -> str:
+    """Return Maya's current hotkey set name when available."""
+
+    cmds = _require_cmds(cmds_module)
+    return str(cmds.hotkeySet(query=True, current=True) or "")
+
+
+def activate_hotkey_set(
+    set_name: str,
+    *,
+    cmds_module: Any | None = None,
+) -> str:
+    """Make an existing Maya hotkey set current."""
+
+    cmds = _require_cmds(cmds_module)
+    cmds.hotkeySet(set_name, edit=True, current=True)
+    return current_hotkey_set(cmds_module=cmds)
+
+
+def ensure_editable_hotkey_set(
+    set_name: str = HOTKEY_SET_NAME,
+    *,
+    cmds_module: Any | None = None,
+) -> HotkeySetActivation:
+    """Create/select ActionRail's editable Maya hotkey set before writes.
+
+    Maya's bundled hotkey sets are locked. Creating a user set from the current
+    one mirrors the Hotkey Editor workflow while keeping Bind Mode code-driven.
+    """
+
+    cmds = _require_cmds(cmds_module)
+    previous = current_hotkey_set(cmds_module=cmds)
+    hotkey_sets = cmds.hotkeySet(query=True, hotkeySetArray=True) or ()
+    if isinstance(hotkey_sets, str):
+        known_sets = {hotkey_sets}
+    else:
+        known_sets = {str(name) for name in hotkey_sets}
+
+    created = False
+    if set_name not in known_sets:
+        if previous:
+            cmds.hotkeySet(set_name, source=previous)
+        else:
+            cmds.hotkeySet(set_name, current=True)
+        created = True
+
+    if current_hotkey_set(cmds_module=cmds) != set_name:
+        cmds.hotkeySet(set_name, edit=True, current=True)
+
+    return HotkeySetActivation(previous=previous, current=set_name, created=created)
+
+
+def save_hotkey_preferences(*, cmds_module: Any | None = None) -> bool:
+    """Persist hotkey preference changes when Maya exposes `savePrefs`."""
+
+    cmds = _require_cmds(cmds_module)
+    save_prefs = getattr(cmds, "savePrefs", None)
+    if save_prefs is None:
+        return False
+    save_prefs(hotkeys=True)
+    return True
 
 
 def assign_hotkey(
@@ -416,9 +506,14 @@ def assign_hotkey(
     command: bool = False,
     release: bool = False,
     overwrite: bool = False,
+    hotkey_set: str = HOTKEY_SET_NAME,
+    ensure_hotkey_set: bool = True,
     cmds_module: Any | None = None,
 ) -> HotkeyBinding:
     """Assign a Maya hotkey after checking for an existing binding."""
+
+    if ensure_hotkey_set:
+        ensure_editable_hotkey_set(hotkey_set, cmds_module=cmds_module)
 
     existing = query_hotkey_binding(
         key,
@@ -436,8 +531,18 @@ def assign_hotkey(
 
     cmds = _require_cmds(cmds_module)
     flag = "releaseName" if release else "name"
+    key_shortcut = _maya_key_shortcut(key)
+    if existing is not None and existing.name != name_command and overwrite:
+        cmds.hotkey(
+            keyShortcut=key_shortcut,
+            ctrlModifier=ctrl,
+            altModifier=alt,
+            shiftModifier=shift,
+            commandModifier=command,
+            **{flag: ""},
+        )
     cmds.hotkey(
-        keyShortcut=key,
+        keyShortcut=key_shortcut,
         ctrlModifier=ctrl,
         altModifier=alt,
         shiftModifier=shift,
@@ -767,6 +872,12 @@ def _hotkey_cache_key(
     release: bool = False,
 ) -> tuple[str, bool, bool, bool, bool, bool]:
     return (key, ctrl, alt, shift, command, release)
+
+
+def _maya_key_shortcut(key: str) -> str:
+    """Return the key token Maya's `hotkey` command expects."""
+
+    return key.lower() if len(key) == 1 and key.isalpha() else key
 
 
 def _published_command_from_name_command(

@@ -62,6 +62,7 @@ __all__ = [
     "event_should_pass_through_to_maya",
     "refresh_predicate_state",
     "resolve_slot_render_state",
+    "set_bind_mode_visual_state",
     "set_slot_key_label",
 ]
 
@@ -190,6 +191,7 @@ def build_rail(
     root = ActionRailRoot.create()
     root.setStyleSheet(generate_style_sheet(theme))
     root.setWindowOpacity(spec.layout.opacity)
+    root._actionrail_theme = theme
 
     if _uses_wrapped_layout(spec.layout):
         layout = qt.QtWidgets.QGridLayout(root)
@@ -303,6 +305,7 @@ def build_collapsed_handle(
     root = ActionRailRoot.create()
     root.setStyleSheet(generate_style_sheet(theme))
     root.setWindowOpacity(spec.layout.opacity)
+    root._actionrail_theme = theme
 
     layout = qt.QtWidgets.QVBoxLayout(root)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -930,6 +933,10 @@ def _build_button(
     button.setProperty("actionRailIconBackplate", theme.spell_icon_background)
     button.setProperty("actionRailIconBorder", theme.spell_icon_border)
     button.setProperty("actionRailButtonActiveBorder", theme.button_active_border)
+    button.setProperty("actionRailBindModeBackground", theme.bind_mode_background)
+    button.setProperty("actionRailBindModeBorder", theme.bind_mode_border)
+    button.setProperty("actionRailBindModeHoverBackground", theme.bind_mode_hover_background)
+    button.setProperty("actionRailBindModeHoverBorder", theme.bind_mode_hover_border)
     button.setFixedSize(theme.button_outer_size, theme.button_outer_size)
     button.setFocusPolicy(qt.QtCore.Qt.NoFocus)
     button.setCursor(
@@ -1028,7 +1035,7 @@ def _install_bind_mode_capture(
 ) -> bool:
     """Install the hover/key capture used by ActionRail Bind Mode."""
 
-    if not item.action:
+    if not item.id:
         return False
     object_class = getattr(getattr(qt, "QtCore", None), "QObject", None)
     event_class = getattr(getattr(qt, "QtCore", None), "QEvent", None)
@@ -1087,6 +1094,7 @@ def _install_bind_mode_capture(
                     shift=chord.shift,
                     command=chord.command,
                     release=chord.release,
+                    overwrite=True,
                 )
                 _clear_bind_mode_conflict(watched)
             except HotkeyConflictError as exc:
@@ -2619,14 +2627,23 @@ def _button_class(qt: object) -> type:
                             -backplate_inset,
                             -backplate_inset,
                         )
+                    backplate_color = _button_icon_backplate(self)
+                    backplate_border = _button_icon_border(self)
+                    if _button_bind_mode(self):
+                        if _button_bind_hovered(self):
+                            backplate_color = _button_bind_hover_background(self)
+                            backplate_border = _button_bind_hover_border(self)
+                        else:
+                            backplate_color = _button_bind_background(self)
+                            backplate_border = _button_bind_border(self)
                     _draw_icon_backplate(
                         qt,
                         painter,
                         backplate,
-                        _button_icon_backplate(self),
-                        _button_icon_border(self),
+                        backplate_color,
+                        backplate_border,
                     )
-                    if _button_is_active(self):
+                    if _button_is_active(self) and not _button_bind_mode(self):
                         _draw_icon_backplate_border(
                             qt,
                             painter,
@@ -2730,6 +2747,52 @@ def _button_active_border(button: object) -> str:
     except Exception:
         color = None
     return color if isinstance(color, str) and color else DEFAULT_THEME.button_active_border
+
+
+def _button_bind_mode(button: object) -> bool:
+    try:
+        return button.property("actionRailBindMode") == "true"
+    except Exception:
+        return False
+
+
+def _button_bind_hovered(button: object) -> bool:
+    try:
+        return button.property("actionRailBindHovered") == "true"
+    except Exception:
+        return False
+
+
+def _button_bind_background(button: object) -> str:
+    try:
+        color = button.property("actionRailBindModeBackground")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.bind_mode_background
+
+
+def _button_bind_border(button: object) -> str:
+    try:
+        color = button.property("actionRailBindModeBorder")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.bind_mode_border
+
+
+def _button_bind_hover_background(button: object) -> str:
+    try:
+        color = button.property("actionRailBindModeHoverBackground")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.bind_mode_hover_background
+
+
+def _button_bind_hover_border(button: object) -> str:
+    try:
+        color = button.property("actionRailBindModeHoverBorder")
+    except Exception:
+        color = None
+    return color if isinstance(color, str) and color else DEFAULT_THEME.bind_mode_hover_border
 
 
 def _button_icon_backplate(button: object) -> str:
@@ -3141,6 +3204,7 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
 
     tool_tip = getattr(button, "toolTip", None)
     set_tool_tip = getattr(button, "setToolTip", None)
+    _set_button_property(button, "actionRailBaseTooltip", state.tooltip)
     if callable(tool_tip) and callable(set_tool_tip):
         try:
             if tool_tip() != state.tooltip:
@@ -3166,6 +3230,123 @@ def _apply_slot_render_state(button: object, state: SlotRenderState) -> int:
         _refresh_button_style(button)
 
     return refreshed
+
+
+def set_bind_mode_visual_state(
+    root: object,
+    *,
+    enabled: bool,
+    hovered_slot_id: str = "",
+    pending_change_count: int = 0,
+) -> int:
+    """Apply visible Bind Mode state to rendered slot buttons."""
+
+    refreshed = 0
+    refreshed += _set_button_property(
+        root,
+        "actionRailBindMode",
+        "true" if enabled else "false",
+    )
+    for slot_id, button in _slot_buttons(root).items():
+        is_hovered = bool(enabled and hovered_slot_id and slot_id == hovered_slot_id)
+        changed = 0
+        changed += _set_button_property(
+            button,
+            "actionRailBindMode",
+            "true" if enabled else "false",
+        )
+        changed += _set_button_property(
+            button,
+            "actionRailBindHovered",
+            "true" if is_hovered else "false",
+        )
+        changed += _set_bind_mode_enabled_state(button, enabled=enabled)
+        if enabled:
+            _set_bind_mode_tooltip(
+                button,
+                slot_id=slot_id,
+                hovered=is_hovered,
+                pending_change_count=pending_change_count,
+            )
+        else:
+            _restore_base_tooltip(button)
+        if changed:
+            _refresh_button_style(button)
+        refreshed += changed
+    return refreshed
+
+
+def _set_bind_mode_enabled_state(button: object, *, enabled: bool) -> int:
+    is_enabled = getattr(button, "isEnabled", None)
+    set_enabled = getattr(button, "setEnabled", None)
+    if not callable(is_enabled) or not callable(set_enabled):
+        return 0
+
+    changed = 0
+    if enabled:
+        if _button_property(button, "actionRailBindBaseEnabled") is None:
+            with suppress(Exception):
+                button.setProperty(
+                    "actionRailBindBaseEnabled",
+                    "true" if bool(is_enabled()) else "false",
+                )
+        try:
+            if not bool(is_enabled()):
+                set_enabled(True)
+                changed += 1
+        except Exception:
+            return changed
+        return changed
+
+    base_enabled = _button_property(button, "actionRailBindBaseEnabled")
+    if base_enabled not in {"true", "false"}:
+        return 0
+
+    should_enable = base_enabled == "true"
+    try:
+        if bool(is_enabled()) != should_enable:
+            set_enabled(should_enable)
+            changed += 1
+    except Exception:
+        return changed
+    with suppress(Exception):
+        button.setProperty("actionRailBindBaseEnabled", None)
+    return changed
+
+
+def _set_bind_mode_tooltip(
+    button: object,
+    *,
+    slot_id: str,
+    hovered: bool,
+    pending_change_count: int,
+) -> None:
+    set_tool_tip = getattr(button, "setToolTip", None)
+    if not callable(set_tool_tip):
+        return
+    key_label = _button_property(button, "actionRailKeyLabel")
+    current = f" Current: {key_label}." if isinstance(key_label, str) and key_label else ""
+    pending = (
+        f" Pending changes: {pending_change_count}."
+        if pending_change_count > 0
+        else ""
+    )
+    state = "hovered" if hovered else "available"
+    with suppress(Exception):
+        set_tool_tip(
+            "Bind Mode is on. "
+            f"{slot_id} is {state}: press a key to bind it; Esc clears it."
+            f"{current}{pending} Use ActionRail > Save or Discard Bind Mode Changes."
+        )
+
+
+def _restore_base_tooltip(button: object) -> None:
+    set_tool_tip = getattr(button, "setToolTip", None)
+    if not callable(set_tool_tip):
+        return
+    tooltip = _button_property(button, "actionRailBaseTooltip")
+    with suppress(Exception):
+        set_tool_tip(tooltip if isinstance(tooltip, str) else "")
 
 
 def _apply_button_icon(button: object, icon_path: str, icon_name: str = "") -> int:

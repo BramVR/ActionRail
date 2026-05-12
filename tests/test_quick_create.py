@@ -13,6 +13,7 @@ from actionrail.quick_create import (
     QuickCreateDraftInput,
     QuickCreateSlotInput,
     action_choices,
+    active_quick_create_preview_spec,
     build_quick_create_draft,
     clear_quick_create_previews,
     edit_quick_create_layout,
@@ -594,10 +595,14 @@ def test_quick_create_preview_uses_runtime_and_cleans_previous_preview(monkeypat
     draft = build_quick_create_draft(make_default_input("horizontal_strip"))
     first = preview_quick_create_draft(draft, panel="modelPanel4")
     second = preview_quick_create_draft(draft, panel="modelPanel5")
+    second._runtime_key_labels = {"quick-horizontal-strip.move": "Ctrl+F12"}
+    active_spec = active_quick_create_preview_spec("quick-horizontal-strip")
     cleared = clear_quick_create_previews()
 
     assert isinstance(first, FakeHost)
     assert isinstance(second, FakeHost)
+    assert active_spec is not None
+    assert active_spec.items[0].key_label == "Ctrl+F12"
     assert cleared == 1
     assert runtime.active_overlay_ids() == ()
     assert events == [

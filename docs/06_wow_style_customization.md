@@ -255,8 +255,22 @@ state helpers, hovered-slot selection, conflict-aware key assignment through
 Maya runtime commands/nameCommands, immediate visible key-label refresh, session
 save/discard restoration for touched chords, Escape clear for the current slot,
 Maya menu entries, and Maya smoke coverage for hover/key capture on a visible
-slot. Mouse button and wheel binding remain future work because Maya's native
-Hotkey Editor path is keyboard-command oriented.
+slot. Quick Create preview sockets now participate too, including blank
+generated slots, and preview key-label changes are retained through live preview
+refresh/save sync. The first visual clarity pass now mirrors the useful ElvUI
+idea of a visible bind state: all visible slot buttons receive a theme-derived
+Bind Mode tint, the hovered slot receives a stronger accent highlight, and
+slot tooltips show binding guidance/current binding details until Bind Mode
+exits. A floating ElvUI-style Bind Mode HUD now appears above the active rail so
+tiny Quick Create previews still read as an explicit mode. The HUD and slot
+colors derive from the rail's resolved appearance accent so Quick Create
+appearance overrides stay in theme. Empty Quick Create sockets temporarily
+become hoverable while Bind Mode is active so blank slots receive the same
+tint/highlight before returning to their disabled empty-slot state on exit.
+Icon-bearing slots paint their custom icon backplate with the same Bind Mode
+fill/border so the hover state remains visible behind Maya/action icons.
+Mouse button and wheel binding remain future work because Maya's native Hotkey
+Editor path is keyboard-command oriented.
 
 ### Flyouts
 

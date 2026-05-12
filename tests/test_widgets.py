@@ -1573,6 +1573,12 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
                 "actionRailButtonIconInset": 2,
                 "actionRailIconBackplate": "#444341",
                 "actionRailIconBorder": "#171716",
+                "actionRailBindMode": "true",
+                "actionRailBindHovered": "true",
+                "actionRailBindModeBackground": "#1f3118",
+                "actionRailBindModeBorder": "#8ccf3f",
+                "actionRailBindModeHoverBackground": "#29401f",
+                "actionRailBindModeHoverBorder": "#a6e45b",
             }
 
         def initStyleOption(self, _option: StyleOptionButton) -> None:  # noqa: N802
@@ -1625,9 +1631,10 @@ def test_action_rail_button_paints_hotkey_in_bottom_right() -> None:
     button.paintEvent(object())
 
     assert ("control", 11, "", True) not in events
-    assert ("fill", None, "#444341") in events
-    assert ("pen", "#171716") in events
-    assert ("pen", "#8ccf3f") in events
+    assert ("fill", None, "#29401f") in events
+    assert ("pen", "#a6e45b") in events
+    assert ("pen", "#171716") not in events
+    assert ("pen", "#8ccf3f") not in events
     assert ("rect", (0, 0, -1, -1)) in events
     assert ("pixmap", (32, 32)) in events
     assert ("pixmap_drawn", (2, 2, -2, -2)) in events
@@ -2490,12 +2497,106 @@ def test_bind_mode_filter_selects_slot_and_assigns_keyboard_chord(
                 "shift": True,
                 "command": False,
                 "release": False,
+                "overwrite": True,
             },
         )
     ]
     assert key_event.accepted is True
     assert button.grabbed == 1
     bind_mode.exit_bind_mode(save=False, cmds_module=object())
+
+
+def test_bind_mode_filter_installs_on_empty_slot() -> None:
+    class Button:
+        def installEventFilter(self, event_filter: object) -> None:  # noqa: N802
+            self.event_filter = event_filter
+
+    class BindQt:
+        class QtCore:
+            class QObject:
+                pass
+
+            class QEvent:
+                Enter = 1
+                Leave = 2
+                KeyRelease = 3
+                MouseButtonPress = 4
+                MouseButtonRelease = 5
+
+    button = Button()
+
+    assert widgets._install_bind_mode_capture(
+        BindQt,
+        button,
+        StackItem(type="button", id="quick.slot_1", label="", key_label="1"),
+        "quick",
+    )
+    assert hasattr(button, "event_filter")
+
+
+def test_bind_mode_visual_state_marks_slots_and_preserves_base_tooltip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(widgets, "load", lambda: FakeQt)
+    first = FakeButton("quick.slot_1", key_label="1", tooltip="Base tooltip")
+    second = FakeButton("quick.slot_2", key_label="2", tooltip="Second tooltip")
+    first.setProperty("actionRailBaseTooltip", "Base tooltip")
+    second.setProperty("actionRailBaseTooltip", "Second tooltip")
+    root = FakeRoot([first, second])
+
+    changed = widgets.set_bind_mode_visual_state(
+        root,
+        enabled=True,
+        hovered_slot_id="quick.slot_1",
+        pending_change_count=2,
+    )
+
+    assert changed == 4
+    assert first.property("actionRailBindMode") == "true"
+    assert first.property("actionRailBindHovered") == "true"
+    assert "Bind Mode is on" in first.toolTip()
+    assert "Current: 1" in first.toolTip()
+    assert "Pending changes: 2" in first.toolTip()
+    assert second.property("actionRailBindMode") == "true"
+    assert second.property("actionRailBindHovered") == "false"
+    assert first.style_object.polished == 1
+
+    widgets.set_bind_mode_visual_state(root, enabled=False)
+
+    assert first.property("actionRailBindMode") == "false"
+    assert first.property("actionRailBindHovered") == "false"
+    assert first.toolTip() == "Base tooltip"
+    assert second.toolTip() == "Second tooltip"
+
+
+def test_bind_mode_visual_state_temporarily_enables_empty_slots(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(widgets, "load", lambda: FakeQt)
+    empty = FakeButton("quick.slot_5", key_label="5", enabled=False, tooltip="Empty")
+    empty.setProperty("actionRailLocked", "true")
+    empty.setProperty("actionRailBaseTooltip", "Empty")
+    root = FakeRoot([empty])
+
+    changed = widgets.set_bind_mode_visual_state(
+        root,
+        enabled=True,
+        hovered_slot_id="quick.slot_5",
+    )
+
+    assert changed == 3
+    assert empty.isEnabled() is True
+    assert empty.property("actionRailBindBaseEnabled") == "false"
+    assert empty.property("actionRailBindMode") == "true"
+    assert empty.property("actionRailBindHovered") == "true"
+    assert "Bind Mode is on" in empty.toolTip()
+
+    widgets.set_bind_mode_visual_state(root, enabled=False)
+
+    assert empty.isEnabled() is False
+    assert empty.property("actionRailBindBaseEnabled") is None
+    assert empty.property("actionRailBindMode") == "false"
+    assert empty.toolTip() == "Empty"
 
 
 def test_bind_mode_filter_clears_hovered_slot_on_escape(

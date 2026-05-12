@@ -27,11 +27,12 @@ if saved_path.exists():
     saved_path.unlink()
 
 from maya import cmds  # noqa: E402
-from PySide6 import QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
 
 import actionrail  # noqa: E402
 import actionrail.runtime as actionrail_runtime  # noqa: E402
 from actionrail import maya_ui  # noqa: E402
+from actionrail import quick_create as actionrail_quick_create  # noqa: E402
 from actionrail.quick_create_ui import (  # noqa: E402
     APPEARANCE_ACCENT_OBJECT_NAME,
     APPEARANCE_ACTIVE_COLOR_OBJECT_NAME,
@@ -49,6 +50,30 @@ from actionrail.quick_create_ui import (  # noqa: E402
     TABS_OBJECT_NAME,
     TEMPLATE_COMBO_OBJECT_NAME,
 )
+
+
+def _send_bind_key(button, key: int, modifiers=QtCore.Qt.KeyboardModifier.NoModifier) -> None:
+    enter = QtCore.QEvent(QtCore.QEvent.Type.Enter)
+    QtWidgets.QApplication.sendEvent(button, enter)
+    event = QtGui.QKeyEvent(
+        QtCore.QEvent.Type.KeyRelease,
+        key,
+        modifiers,
+    )
+    QtWidgets.QApplication.sendEvent(button, event)
+
+
+def _bind_mode_hud(preset_id: str):
+    object_name = f"ActionRailBindModeHud_{preset_id}"
+    return next(
+        (
+            widget
+            for widget in QtWidgets.QApplication.allWidgets()
+            if widget.objectName() == object_name and widget.isVisible()
+        ),
+        None,
+    )
+
 
 app = QtWidgets.QApplication.instance()
 if app is None:
@@ -292,6 +317,110 @@ if slot_lock_button.text() != "Lock Bar":
         f"Expected Lock Bar action after unlocked preview: {slot_lock_button.text()}"
     )
 
+blank_bind_button = next(
+    (
+        button
+        for button in unlocked_buttons
+        if button.property("actionRailSlotId") == "quick-horizontal-strip.slot_5"
+    ),
+    None,
+)
+if blank_bind_button is None:
+    raise AssertionError("Quick Create preview did not expose blank slot_5 for Bind Mode.")
+cmds.hotkey(
+    keyShortcut="F11",
+    ctrlModifier=True,
+    altModifier=True,
+    shiftModifier=True,
+    name="",
+)
+actionrail.enter_bind_mode()
+app.processEvents()
+quick_bind_mode_property = blank_bind_button.property("actionRailBindMode")
+quick_bind_enabled_during_mode = bool(blank_bind_button.isEnabled())
+quick_bind_hud = _bind_mode_hud("quick-horizontal-strip")
+quick_bind_hud_text = ""
+quick_bind_hud_style = ""
+QtWidgets.QApplication.sendEvent(
+    blank_bind_button,
+    QtCore.QEvent(QtCore.QEvent.Type.Enter),
+)
+app.processEvents()
+QtWidgets.QApplication.sendEvent(
+    blank_bind_button,
+    QtCore.QEvent(QtCore.QEvent.Type.Enter),
+)
+app.processEvents()
+quick_bind_hud_after_rehover = _bind_mode_hud("quick-horizontal-strip")
+_send_bind_key(
+    blank_bind_button,
+    QtCore.Qt.Key.Key_F11,
+    QtCore.Qt.KeyboardModifier.ControlModifier
+    | QtCore.Qt.KeyboardModifier.AltModifier
+    | QtCore.Qt.KeyboardModifier.ShiftModifier,
+)
+app.processEvents()
+quick_bind_state = actionrail.bind_mode_state()
+quick_bind_hover_property = blank_bind_button.property("actionRailBindHovered")
+if quick_bind_mode_property != "true":
+    raise AssertionError(
+        f"Quick Create Bind Mode did not mark preview slots: {quick_bind_mode_property}"
+    )
+if quick_bind_hud is None or "BIND MODE" not in quick_bind_hud.text():
+    raise AssertionError("Quick Create Bind Mode did not show the floating HUD.")
+if quick_bind_hud_after_rehover is None:
+    raise AssertionError("Quick Create Bind Mode HUD disappeared after repeated socket hover.")
+if not quick_bind_enabled_during_mode:
+    raise AssertionError("Quick Create empty slot did not become hoverable in Bind Mode.")
+quick_bind_hud_text = quick_bind_hud.text()
+quick_bind_hud_style = quick_bind_hud.styleSheet()
+if "#33dd88" not in quick_bind_hud_style:
+    raise AssertionError(
+        "Quick Create Bind Mode HUD did not use the appearance accent: "
+        f"{quick_bind_hud_style}"
+    )
+actionrail.exit_bind_mode(save=True)
+app.processEvents()
+quick_bind_label = blank_bind_button.property("actionRailKeyLabel")
+quick_bind_mode_property_after_exit = blank_bind_button.property("actionRailBindMode")
+quick_bind_enabled_after_exit = bool(blank_bind_button.isEnabled())
+quick_bind_hud_visible_after_exit = _bind_mode_hud("quick-horizontal-strip") is not None
+if quick_bind_label != "Ctrl+Alt+Shift+F11":
+    raise AssertionError(
+        f"Quick Create preview blank slot did not capture Bind Mode key: {quick_bind_label}"
+    )
+if quick_bind_state.slot_id != "slot_5":
+    raise AssertionError(f"Quick Create Bind Mode selected wrong slot: {quick_bind_state}")
+if quick_bind_hover_property != "true":
+    raise AssertionError(
+        f"Quick Create Bind Mode did not mark hovered preview slot: {quick_bind_hover_property}"
+    )
+if quick_bind_mode_property_after_exit != "false":
+    raise AssertionError(
+        "Quick Create Bind Mode visual state did not turn off: "
+        f"{quick_bind_mode_property_after_exit}"
+    )
+if quick_bind_enabled_after_exit:
+    raise AssertionError("Quick Create empty slot did not restore disabled state after Bind Mode.")
+if quick_bind_hud_visible_after_exit:
+    raise AssertionError("Quick Create Bind Mode HUD stayed visible after exit.")
+preview_spec_after_bind = actionrail_quick_create.active_quick_create_preview_spec(
+    "quick-horizontal-strip"
+)
+bound_item = next(
+    (
+        item
+        for item in preview_spec_after_bind.items
+        if item.id == "quick-horizontal-strip.slot_5"
+    ),
+    None,
+)
+if bound_item is None or bound_item.key_label != "Ctrl+Alt+Shift+F11":
+    raise AssertionError(
+        "Quick Create active preview spec did not retain Bind Mode label: "
+        f"{getattr(bound_item, 'key_label', None)}"
+    )
+
 visible_panel._actionrail_toggle_slot_lock()
 app.processEvents()
 cmds.refresh(force=True)
@@ -423,6 +552,14 @@ result = {
     "panel_visible": bool(visible_panel.isVisible()),
     "parent_resize_synced": workspace_parent is not None,
     "preview_unlocked": preview_unlocked,
+    "quick_bind_hover_property": quick_bind_hover_property,
+    "quick_bind_enabled_after_exit": quick_bind_enabled_after_exit,
+    "quick_bind_enabled_during_mode": quick_bind_enabled_during_mode,
+    "quick_bind_hud_visible_after_rehover": quick_bind_hud_after_rehover is not None,
+    "quick_bind_hud_text": quick_bind_hud_text,
+    "quick_bind_hud_visible_after_exit": quick_bind_hud_visible_after_exit,
+    "quick_bind_label": quick_bind_label,
+    "quick_bind_mode_property": quick_bind_mode_property,
     "binding_target_count": len(binding_targets),
     "binding_name_commands": binding_name_commands,
     "edit_layout_selected": edit_state.selected_preset_id,
