@@ -279,11 +279,16 @@ def about() -> dict[str, object]:
                 "resource checks, dense icon/pixmap reuse, and dependency-aware "
                 "state sampling; the forced selection-redraw scheduler has been "
                 "removed so visible overlays no longer install selection callbacks "
-                "or force current-view refreshes"
+                "or force current-view refreshes; the first Bind Mode "
+                "keyboard-capture slice now lets visible action slots capture "
+                "keyboard shortcuts, update key badges immediately, clear the "
+                "hovered slot with Escape, and save or discard touched hotkey "
+                "changes through Maya menu/API commands"
             ),
             "next_slice": (
-                "Keep the Phase 2 step 2.7 dense overlay foundation stable with "
-                "Maya smoke evidence before moving to later authoring modes"
+                "Harden the first keyboard-only Bind Mode slice in Maya, then "
+                "continue Macro Book, flyouts, command rings, profile layers, "
+                "marking-menu export, and Viewport 2.0 as later work"
             ),
             "blockers_doc": "docs/04_status.md#blockers",
         },

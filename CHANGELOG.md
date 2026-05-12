@@ -12,6 +12,13 @@
 
 ## 2026-05-12
 
+- Added the first WoW-style Bind Mode slice: visible action slots can capture a
+  key while Bind Mode is active, update the slot hotkey badge immediately, and
+  save or discard touched hotkey changes through the Maya menu.
+- Added Bind Mode backend state, hovered-slot selection, conflict-aware
+  assignment through existing Maya runtime commands, Escape-based visible
+  binding clear, focused Python tests, and a Maya smoke for hover/key capture
+  and discard restoration.
 - Replaced visible `Locked` text in Edit Mode frames with a minimal icon-only
   lock/unlock affordance in each frame's top-right corner, using a
   Lucide-inspired lock shape and preserving click-to-toggle behavior from both

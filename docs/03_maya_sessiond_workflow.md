@@ -168,6 +168,9 @@ Useful variants:
   ActionRail forcing `cmds.refresh()`.
 - `actionrail_hotkey_bridge_smoke.py`: runtime command publishing/execution for an action and preset slot without a visible overlay.
 - `actionrail_hotkey_label_sync_smoke.py`: visible slot key-label update after ActionRail hotkey assignment.
+- `actionrail_bind_mode_smoke.py`: Bind Mode hover/key capture on a visible
+  slot, immediate key-label update, discard restoration, and Escape clear
+  behavior.
 - `actionrail_overlay_cleanup_smoke.py`: repeated show/reload cleanup for stale ActionRail viewport widgets and origin-placement regression coverage.
 - `actionrail_maya_ui_smoke.py`: Maya menu/shelf toggle install, idempotency, command text, show/hide behavior, and uninstall cleanup.
 - `actionrail_diagnostics_smoke.py`: safe-mode diagnostics, missing command/plugin/action/icon reporting, and `safe_start()` startup behavior.

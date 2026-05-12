@@ -115,6 +115,9 @@ Conceptual states:
   layout/configuration, not slot payload editing or macro authoring.
 - **Bind Mode**: user hovers or selects a slot, presses a shortcut, and
   ActionRail publishes/updates the slot's Maya runtime command and hotkey.
+  The first keyboard-capture slice is implemented for visible action slots:
+  enter Bind Mode, hover a slot, press a key, clear the hovered slot with
+  Escape, and save or discard touched chords.
 - **Action Book**: user browses available Maya actions and assigns them to
   slots.
 - **Macro Book**: user creates custom script actions with icons, then places
@@ -401,6 +404,10 @@ The intended artist workflow is:
 3. Use Edit Mode to move/configure frames.
 4. Use Bind Mode to hover/click slots and assign hotkeys.
 5. Save the frame/layout as a user preset or user override.
+
+The first Bind Mode slice supports keyboard chords only. Mouse button and wheel
+binding should wait until Maya focus and native hotkey-editor compatibility are
+verified.
 
 Optional shelf toggles and runtime-command publishing remain useful plumbing,
 but they should not be the primary concept shown to artists.

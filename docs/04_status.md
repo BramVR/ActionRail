@@ -30,6 +30,14 @@ samples only predicate-needed Maya state on refresh ticks. The latest native
 selection redraw cleanup removes the `ViewportSelectionRefreshScheduler`
 workaround entirely: overlays no longer install a Maya selection callback or
 scriptJob and no longer force `cmds.refresh()` after selection changes. The
+first Bind Mode keyboard-capture slice is now implemented: visible action slots
+install a Bind Mode event filter, hovering a slot selects it for binding, key
+release assigns through the existing Maya runtime-command bridge, the key badge
+updates immediately, Escape clears the hovered slot's visible binding, and
+session save/discard can keep or restore touched hotkey changes. Maya menu
+entries expose Toggle Bind Mode, Save Bind Mode Changes, Discard Bind Mode
+Changes, and Clear Hovered Slot Binding. Mouse button and wheel binding remain
+future work pending Maya native hotkey/focus verification. The
 latest local cleanup keeps Edit Mode layout-only by removing the frame options
 popover and moving slot payload editing to Normal Mode rail lock/unlock
 helpers, including Shift-drag move/swap/clear-out for populated unlocked slots.
@@ -124,6 +132,10 @@ Working surface:
 - Public slot binding-target metadata through `actionrail.slot_binding_targets()`,
   including slot ids, labels, key labels, runtime commands, and Maya
   nameCommands for saved bars.
+- Public Bind Mode helpers through `actionrail.enter_bind_mode()`,
+  `actionrail.toggle_bind_mode()`, `actionrail.select_bind_mode_slot()`,
+  `actionrail.assign_hovered_hotkey()`, `actionrail.clear_hovered_hotkey()`,
+  and `actionrail.exit_bind_mode(save=...)`.
 - Action Book backend metadata for registered Maya actions, currently consumed
   by Quick Create picker choices, including Maya-smoke verified
   viewport/selection entries plus the 20-action shelf-derived polygon modeling
@@ -139,7 +151,8 @@ Working surface:
   preflight, generated SVG PNG fallbacks, and fallback preset recovery.
 - User preset storage and shared bundled/user preset resolver.
 - Maya menu and shelf entry points, including diagnostics, SVG import
-  diagnostics, Quick Create, and Toggle Edit Mode.
+  diagnostics, Quick Create, Toggle Edit Mode, and Bind Mode save/discard
+  controls.
 - Dockable Quick Create panel with template selection, preview, clear preview,
   save, overwrite, custom user preset store support, custom action/icon id
   preservation, load-existing user preset workflow, live preview refresh for
@@ -225,10 +238,11 @@ Focus the next slice on:
   forced selection-refresh workaround has been removed; add a narrower fix only
   if the original viewport highlight lag returns in real Maya use.
 
-Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
-layers, marking-menu export, or Viewport 2.0 before the performance foundation.
-Keep Action Book growth focused on action placement and search, not on turning
-Quick Create into an action browser.
+The first keyboard-only Bind Mode slice is implemented because the performance
+foundation is in place. Do not implement mouse/wheel binding, Macro Book UI,
+flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
+yet. Keep Action Book growth focused on action placement and search, not on
+turning Quick Create into an action browser.
 
 ## Next Agent Start
 
@@ -384,6 +398,22 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest Bind Mode local validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_bind_mode.py tests\\test_widgets.py`
+  -> 103 passed.
+- Latest Bind Mode Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\project.py tests\\maya_smoke\\actionrail_bind_mode_smoke.py tests\\test_project_map.py tests\\test_maya_ui.py tests\\test_bind_mode.py tests\\test_widgets.py`
+  -> all checks passed.
+- Latest Bind Mode Maya smoke:
+  `.\\scripts\\maya-smoke.ps1 -Script actionrail_bind_mode_smoke.py -Timeout 300`
+  -> passed against the running MayaSessiond state on port `7217`; verified
+  hover/key capture on the visible Set Key slot, immediate
+  `Ctrl+Alt+Shift+F12` key-label update, discard restoration to `S`, and Escape
+  clear behavior.
+- Latest docs/project checks:
+  `$env:PYTHONPATH='scripts'; .\\.venv\\Scripts\\python.exe -m actionrail --json`,
+  `& ..\\bram-agent-scripts\\scripts\\docs-list.ps1`, and local Markdown link
+  scan -> passed.
 - Latest Phase 2 step 2.7 dense overlay validation:
   `.\\.venv\\Scripts\\python.exe -m pytest`
   -> 520 passed.

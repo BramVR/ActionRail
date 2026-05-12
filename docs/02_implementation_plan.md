@@ -553,8 +553,13 @@ user macro actions with icons, and then add compact grouped access patterns.
   studio tools, and user macros. First curated Maya-action placement slice is
   implemented in Phase 2.6; shelf imports, studio providers, and macro entries
   remain future work.
-- Hover-to-bind Bind Mode.
-- Slot conflict warnings and clear-binding command.
+- Hover-to-bind Bind Mode. First keyboard-capture slice implemented:
+  `actionrail.enter_bind_mode()`, visible slot hover/key capture,
+  conflict-aware assignment through Maya runtime commands, immediate key-label
+  sync, Escape clear, and session save/discard restoration for touched chords.
+- Slot conflict warnings and clear-binding command. First pass implemented for
+  keyboard chords through existing `HotkeyConflictError` handling and the
+  hovered slot's conflict property/tooltip state.
 - Macro Book for user-authored Python/MEL actions with stable ids, icons,
   tooltips, and optional safe predicates.
 - Flyout widget for grouped related actions.
@@ -643,22 +648,22 @@ Carry forward only polish that naturally supports 2.6 and the unified
 WoW-style workflow, such as Quick Create round-trip stability, locked
 built-in/studio read-only behavior, clearer template-to-Edit-Mode and
 template-to-slot-edit handoffs, and slot editing that can later connect to
-Action Book and Bind Mode. The current build/fix target is keeping the runtime
-performance foundation stable: shared Maya state, cached predicates, a
-custom-painted dense bar prototype, dirty-slot repainting, cached
-icon/resource lookups, dependency-aware state sampling, and viewport navigation
-pass-through. Keep `docs/06_wow_style_customization.md` in mind, but do not
-implement Bind Mode, Macro Book UI, flyouts, command rings, profile layers,
-marking-menu export, or Viewport 2.0 yet.
+Action Book and Bind Mode. The runtime performance foundation is now stable
+enough for the first keyboard-only Bind Mode slice: visible action slots can
+capture keyboard shortcuts, update key badges immediately, clear the hovered
+slot with Escape, and save or discard touched hotkey changes through Maya
+menu/API commands. Keep `docs/06_wow_style_customization.md` in mind, but do
+not implement mouse/wheel binding, Macro Book UI, flyouts, command rings,
+profile layers, marking-menu export, or Viewport 2.0 yet.
 
 ## Research Backlog
 
 See `docs/07_missing_features_research.md` for the current feature-gap report.
 The active backlog priorities are:
 
-1. Keep Phase 2 step 2.7 dense overlay performance foundation stable so large
+1. Harden the first keyboard-only Bind Mode slice in Maya.
+2. Keep Phase 2 step 2.7 dense overlay performance foundation stable so large
    action-bar layouts stay fast over Maya navigation.
-2. Add the Action Book and Bind Mode.
 3. Add the Macro Book for user script actions with icons.
 4. Add flyouts, then command rings.
 5. Broaden the workflow action library beyond transform/keyframe.

@@ -250,6 +250,14 @@ Maya integration should prefer runtime commands so bindings remain visible in
 Maya's Hotkey Editor. This publishing is infrastructure; artists should see the
 WoW-like action of binding a visible slot, not a runtime-command management task.
 
+First keyboard-capture slice implemented: ActionRail now has public Bind Mode
+state helpers, hovered-slot selection, conflict-aware key assignment through
+Maya runtime commands/nameCommands, immediate visible key-label refresh, session
+save/discard restoration for touched chords, Escape clear for the current slot,
+Maya menu entries, and Maya smoke coverage for hover/key capture on a visible
+slot. Mouse button and wheel binding remain future work because Maya's native
+Hotkey Editor path is keyboard-command oriented.
+
 ### Flyouts
 
 Flyouts are compact expandable menus attached to a button. They are better than permanent bars when the actions are related but not constantly used.
@@ -501,8 +509,10 @@ tumble/pan/zoom remains usable.
 Add high-leverage interaction patterns:
 
 - searchable Action Book for Maya tools, commands, shelf actions, and macros
-- hover-to-bind hotkeys
-- slot conflict warnings
+- hover-to-bind hotkeys. First keyboard-capture slice implemented for visible
+  action slots.
+- slot conflict warnings. First pass implemented for keyboard chords through
+  existing `HotkeyConflictError` handling and blocked-slot tooltip state.
 - Macro Book for user-authored Python/MEL actions with icons
 - flyout button widget
 - command ring widget

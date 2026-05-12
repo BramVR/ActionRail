@@ -119,12 +119,14 @@ Source: [Qt QToolButton](https://doc.qt.io/qt-6/qtoolbutton.html)
 
 ### 3. Hotkey Label Sync
 
-Status: implemented for ActionRail hotkey assignment and visible slot refresh;
-Bind Mode remains future work.
+Status: implemented for ActionRail hotkey assignment, visible slot refresh, and
+the first keyboard-only Bind Mode slice. Mouse/wheel binding remains future
+work.
 
 Key labels originally rendered only from static preset data. Current ActionRail
-assignment helpers update visible slot badges after binding; future Bind Mode
-should reuse the same runtime-command bridge and conflict checks.
+assignment helpers update visible slot badges after binding; Bind Mode now
+reuses the same runtime-command bridge and conflict checks for visible slot
+keyboard capture.
 
 Required behavior:
 

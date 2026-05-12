@@ -51,6 +51,10 @@ Snapshot:
   `actionrail.slot_binding_targets()`, including slot ids, key labels, runtime
   commands, and Maya nameCommands for current Hotkey Editor use and future
   Bind Mode.
+- The first Bind Mode slice now works for visible action slots: enter Bind
+  Mode, hover a slot, press a keyboard shortcut, update the key badge
+  immediately, clear the hovered slot with Escape, and save or discard touched
+  hotkey changes through Maya menu/API commands.
 - Quick Create Preview is live while visible: layout sliders refresh the active
   viewport preview immediately, and raising the button count adds blank
   generated slots after the template's icon-backed slots.
@@ -141,9 +145,10 @@ Snapshot:
   resource checks, dense icon/pixmap reuse, and dependency-aware Maya state
   sampling before later modes. The forced selection-redraw workaround has been
   removed so native Maya select/delete redraw can be observed without
-  ActionRail scheduling `cmds.refresh()` calls. Do not start Bind Mode,
-  flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
-  yet.
+  ActionRail scheduling `cmds.refresh()` calls. The first keyboard-only Bind
+  Mode slice is now implemented on top of the existing runtime-command bridge.
+  Do not start mouse/wheel binding, Macro Book UI, flyouts, command rings,
+  profile layers, marking-menu export, or Viewport 2.0 yet.
 - Long verification history is archived in
   `docs/history/verification_log.md`; `docs/04_status.md` keeps only the live
   snapshot, blockers, latest handoff, and latest verification summary.
@@ -208,17 +213,18 @@ later authoring modes:
    and pass-through rules for Maya tumble/pan/zoom gestures.
 4. Use `scripts/maya-smoke.ps1` for repeatable MayaSessiond smoke runs when
    Maya verification is feasible.
-5. Do not implement Bind Mode, Macro Book UI, flyouts, command rings, profile
-   layers, marking-menu export, or Viewport 2.0 until the Phase 2 authoring
-   surface has a stable first pass. The current Action Book UI is only the first
-   searchable action-placement slice.
+5. Keep the first keyboard-only Bind Mode slice narrow. Do not implement
+   mouse/wheel binding, Macro Book UI, flyouts, command rings, profile layers,
+   marking-menu export, or Viewport 2.0 until the authoring surface is stable.
+   The current Action Book UI is only the first searchable action-placement
+   slice.
 
 ## Working Rules
 
 - Keep docs current as work changes.
 - Prefer small implementation slices with visible Maya verification.
-- Keep Quick Create, Action Book, icon import, and Edit Mode work scoped to the
-  current Phase 2 authoring slice; do not implement Bind Mode, Macro Book UI,
-  flyouts, command rings, profile layers, marking-menu export, or Viewport 2.0
-  yet.
+- Keep Quick Create, Action Book, icon import, Edit Mode, and the first
+  keyboard-only Bind Mode work scoped to the current WoW-style authoring loop;
+  do not implement mouse/wheel binding, Macro Book UI, flyouts, command rings,
+  profile layers, marking-menu export, or Viewport 2.0 yet.
 - If Maya verification is blocked, record the exact blocker in `docs/04_status.md`.

@@ -80,8 +80,7 @@ def test_module_cli_prints_human_project_map(capsys) -> None:
         "publish polish first pass Maya-smoke verified"
     ) in output
     assert (
-        "Next: Keep the Phase 2 step 2.7 dense overlay foundation stable with "
-        "Maya smoke evidence before moving to later authoring modes"
+        "Next: Harden the first keyboard-only Bind Mode slice in Maya"
     ) in output
     assert "Use --json" in output
 
