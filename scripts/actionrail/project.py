@@ -133,6 +133,14 @@ MODULE_MAP: tuple[dict[str, object], ...] = (
         "tests": ("tests/maya_smoke/actionrail_action_book_ui_smoke.py",),
     },
     {
+        "path": "scripts/actionrail/bind_mode.py",
+        "owns": (
+            "WoW-style Bind Mode state, hovered slot selection, and hotkey "
+            "save/discard restoration"
+        ),
+        "tests": ("tests/test_bind_mode.py",),
+    },
+    {
         "path": "scripts/actionrail/hotkeys.py",
         "owns": "Maya runtime-command publishing, nameCommands, hotkey labels",
         "tests": ("tests/test_hotkeys.py", "tests/maya_smoke/actionrail_hotkey_bridge_smoke.py"),
