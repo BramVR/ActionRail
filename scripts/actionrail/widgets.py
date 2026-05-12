@@ -1114,10 +1114,10 @@ def _bind_mode_chord_from_key_event(qt: object, event: object) -> HotkeyChord | 
     qt_constants = getattr(getattr(qt, "QtCore", None), "Qt", object())
     return HotkeyChord(
         key,
-        ctrl=bool(modifiers & getattr(qt_constants, "ControlModifier", 0)),
-        alt=bool(modifiers & getattr(qt_constants, "AltModifier", 0)),
-        shift=bool(modifiers & getattr(qt_constants, "ShiftModifier", 0)),
-        command=bool(modifiers & getattr(qt_constants, "MetaModifier", 0)),
+        ctrl=bool(modifiers & _qt_flag_value(getattr(qt_constants, "ControlModifier", 0))),
+        alt=bool(modifiers & _qt_flag_value(getattr(qt_constants, "AltModifier", 0))),
+        shift=bool(modifiers & _qt_flag_value(getattr(qt_constants, "ShiftModifier", 0))),
+        command=bool(modifiers & _qt_flag_value(getattr(qt_constants, "MetaModifier", 0))),
     )
 
 
@@ -1135,7 +1135,18 @@ def _event_modifier_value(event: object) -> int:
     if not callable(modifiers):
         return 0
     with suppress(Exception):
-        return int(modifiers())
+        return _qt_flag_value(modifiers())
+    return 0
+
+
+def _qt_flag_value(value: object) -> int:
+    if isinstance(value, int):
+        return value
+    raw_value = getattr(value, "value", None)
+    if isinstance(raw_value, int):
+        return raw_value
+    with suppress(Exception):
+        return int(value)  # type: ignore[arg-type]
     return 0
 
 
