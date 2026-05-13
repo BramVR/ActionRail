@@ -1227,6 +1227,7 @@ def _add_slider_field(  # pragma: no cover
     min_label = qt.QtWidgets.QLabel(_slider_label(minimum, scale_factor))
     max_label = qt.QtWidgets.QLabel(_slider_label(maximum, scale_factor))
     slider = qt.QtWidgets.QSlider(qt.QtCore.Qt.Horizontal)
+    slider.setMinimumHeight(22)
     slider.setRange(minimum, maximum)
     slider.setValue(_widget_to_slider_value(value_widget, scale_factor))
     for label_widget in (min_label, max_label):
@@ -1449,14 +1450,18 @@ QLabel#ActionRailQuickCreateSliderLimit {{
     letter-spacing: 0px;
     min-width: 22px;
 }}
+QSlider:horizontal {{
+    min-height: 22px;
+}}
 QSlider::groove:horizontal {{
-    height: 8px;
+    height: 16px;
     background: {theme.panel_inset_background};
     border: 1px solid {theme.cluster_border};
 }}
 QSlider::handle:horizontal {{
     width: 12px;
-    margin: -4px 0;
+    height: 16px;
+    margin: 0;
     background: {theme.button_active_background};
     border: 1px solid {theme.button_active_border};
 }}

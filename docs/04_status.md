@@ -8,7 +8,7 @@ read_when:
 
 # Status
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 ## Current Snapshot
 
@@ -289,6 +289,12 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Handoff
 
+- The May 13 Quick Create slider polish removes the negative-margin Qt slider
+  handle style that clipped the green handle top edge in Maya. Layout tab
+  sliders now reserve a 22 px control height and draw the 16 px handle fully
+  inside the groove; screenshot probes refreshed
+  `.gg-maya-sessiond/screenshots/slider_probe/quick_create_layout_first_slider.png`
+  and `quick_create_layout_panel.png`.
 - The May 12 Edit Mode lock affordance polish replaces visible `Locked` frame
   text with icon-only lock/unlock controls. Each frame now paints a clickable
   lock state icon in its top-right corner, and the compact panel uses a matching
@@ -416,6 +422,19 @@ $env:PYTHONPATH = "scripts"
 
 ## Latest Verification
 
+- Latest focused Quick Create slider validation:
+  `.\\.venv\\Scripts\\python.exe -m pytest tests\\test_quick_create.py`
+  -> 45 passed.
+- Latest focused Quick Create slider Ruff:
+  `.\\.venv\\Scripts\\python.exe -m ruff check scripts\\actionrail\\quick_create_ui.py tests\\test_quick_create.py`
+  -> all checks passed.
+- Latest Quick Create slider screenshot probe:
+  a temporary `script.execute` probe through the running MayaSessiond state on
+  port `7217` saved
+  `.gg-maya-sessiond/screenshots/slider_probe/quick_create_layout_first_slider.png`
+  and `quick_create_layout_panel.png`; the MCP transport returned a JSON parse
+  error after the screenshots were written, but visual inspection confirmed the
+  handle top edge is no longer clipped.
 - Latest full pytest:
   `.\\.venv\\Scripts\\python.exe -m pytest`
   -> 556 passed.

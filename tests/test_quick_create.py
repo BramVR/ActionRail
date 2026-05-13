@@ -35,6 +35,7 @@ from actionrail.quick_create_ui import (
     _set_combo_text,
     _slider_label,
     _slot_input_from_row,
+    _style_sheet,
     _valid_draft_status_text,
     _widget_value_from_slider,
 )
@@ -353,6 +354,15 @@ def test_quick_create_slider_value_preserves_unscaled_integers() -> None:
     assert _widget_value_from_slider(7, 1) == 7
     assert isinstance(_widget_value_from_slider(7, 1), int)
     assert _widget_value_from_slider(125, 100) == 1.25
+
+
+def test_quick_create_slider_style_reserves_handle_height() -> None:
+    style_sheet = _style_sheet()
+
+    assert "QSlider:horizontal" in style_sheet
+    assert "min-height: 22px;" in style_sheet
+    assert "height: 16px;" in style_sheet
+    assert "margin: 0;" in style_sheet
 
 
 def test_quick_create_button_count_helpers_generate_blank_extra_slots() -> None:

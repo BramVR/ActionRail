@@ -10,6 +10,11 @@
 - Include repo/process hygiene only when it changes how future work should be
   done or how the checkout behaves.
 
+## 2026-05-13
+
+- Fixed Quick Create Layout tab sliders in Maya so the green handle is drawn
+  fully inside the slider track instead of clipping its top edge.
+
 ## 2026-05-12
 
 - Added the first WoW-style Bind Mode slice: visible action slots can capture a
